@@ -54,7 +54,9 @@ public class GroupInvite
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
-public enum GroupRole { Member, Organiser }
+/// Organisers run the group (edit, delete, roles); moderators keep it civil (remove messages,
+/// mute, approve requests, remove members, reports). Stored as numbers, so Moderator comes last.
+public enum GroupRole { Member, Organiser, Moderator }
 
 /// Per-group notifications (canvas P3, as on Facebook groups): every chat message; events, notes
 /// and mentions (the default); or off.
@@ -70,5 +72,7 @@ public class GroupMember
     /// "Show me on this group's board" (Strava's hide-from-leaderboards); offered when joining.
     public bool OnBoard { get; set; } = true;
     public GroupNotify Notify { get; set; } = GroupNotify.Important;
+    /// Muted in the group's chat by a moderator until then: can read, can't send.
+    public DateTime? MutedUntil { get; set; }
     public DateTime JoinedAt { get; set; } = DateTime.UtcNow;
 }

@@ -37,6 +37,19 @@
   let joining = $state(false);
   const when = $derived(ev ? new Date(ev.startsAtMs).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" }) : "");
 
+  // The sheet closes (clearing `choosing`) before a choice runs, so each item keeps its action.
+  function scopeItems(action: "edit" | "cancel") {
+    const go = (which: EventScope) => () => {
+      scope = which;
+      if (action === "edit") editing = true;
+      else cancelling = true;
+    };
+    return [
+      { icon: Calendar, label: `Just ${when}`, onSelect: go("one") },
+      { icon: Repeat, label: "This and every one after it", onSelect: go("following") },
+    ];
+  }
+
   function start(action: "edit" | "cancel") {
     if (ev?.repeats) choosing = action;
     else {
@@ -231,9 +244,6 @@
     open={!!choosing}
     onOpenChange={(v) => { if (!v) choosing = null; }}
     title={choosing === "cancel" ? "Cancel which sessions?" : "Change which sessions?"}
-    items={[
-      { icon: Calendar, label: `Just ${when}`, onSelect: () => { const a = choosing; scope = "one"; choosing = null; if (a === "edit") editing = true; else cancelling = true; } },
-      { icon: Repeat, label: "This and every one after it", onSelect: () => { const a = choosing; scope = "following"; choosing = null; if (a === "edit") editing = true; else cancelling = true; } },
-    ]}
+    items={choosing ? scopeItems(choosing) : []}
   />
 {/if}

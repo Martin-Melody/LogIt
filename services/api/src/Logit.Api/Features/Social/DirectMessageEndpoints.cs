@@ -40,11 +40,13 @@ public static class DirectMessageEndpoints
     public record MessageDto(Guid Id, string ClientId, string Body, long CreatedAtMs, bool Mine, string? CardType = null, string? CardJson = null,
         string? PhotoUrl = null, int PhotoWidth = 0, int PhotoHeight = 0, bool PhotoHidden = false,
         string? VoiceUrl = null, int VoiceMs = 0, string? VoicePeaks = null, bool VoiceHidden = false, bool Edited = false,
-        bool Deleted = false, bool RemovedByLogIt = false, PersonDto? From = null);
+        bool Deleted = false, bool RemovedByLogIt = false, PersonDto? From = null, bool RemovedByModerator = false);
     /// Other is null for a deleted account. Accepted = it's in my chats (false = my request).
     /// SeenAtMs = when they last read the thread, only with read receipts on for both and once
     /// they've accepted. CanSend false comes with Why.
-    public record ChatDto(Guid? ThreadId, PersonDto? Other, bool Accepted, long? SeenAtMs, bool CanSend, string? Why, List<MessageDto> Messages, GroupRef? Group = null);
+    /// In a group: CanModerate (you're an organiser or moderator) and MutedUntilMs (you can't send until then).
+    public record ChatDto(Guid? ThreadId, PersonDto? Other, bool Accepted, long? SeenAtMs, bool CanSend, string? Why, List<MessageDto> Messages, GroupRef? Group = null,
+        bool CanModerate = false, long? MutedUntilMs = null);
     public record SendRequest(string? Username, Guid? ThreadId, string ClientId, string? Body, string? CardType = null, string? CardJson = null, Guid? PhotoId = null,
         Guid? VoiceId = null, string? VoicePeaks = null);
 
@@ -66,7 +68,7 @@ public static class DirectMessageEndpoints
             x.CardType == StoryCard && QuoteExpired(x.CardJson, now) ? null : x.CardJson,
             x.PhotoId is { } p && !locked ? Photos.PhotoEndpoints.UrlOf(p) : null, x.PhotoWidth, x.PhotoHeight, locked && x.PhotoId is not null,
             x.VoiceId is { } v && !locked ? Voice.VoiceEndpoints.UrlOf(v) : null, x.VoiceMs, x.VoicePeaks, locked && x.VoiceId is not null, x.EditedAt is not null,
-            x.DeletedAt is not null, x.RemovedByLogIt, Person(from));
+            x.DeletedAt is not null, x.RemovedByLogIt, Person(from), x.RemovedByModerator);
     }
 
     /// The sweeper clears a quoted story within minutes of it expiring; this covers the minutes between.
@@ -83,7 +85,7 @@ public static class DirectMessageEndpoints
 
     /// The list's one-line preview: the text, or what was shared.
     private static string Preview(DirectMessage x) =>
-        x.RemovedByLogIt ? "Message removed by LogIt" : x.DeletedAt is not null ? "Unsent a message"
+        x.RemovedByLogIt ? "Message removed by LogIt" : x.RemovedByModerator ? "Message removed by a moderator" : x.DeletedAt is not null ? "Unsent a message"
         : x.Body.Length > 0 ? x.Body : x.PhotoId is not null ? "Sent a photo"
         : x.VoiceId is not null ? $"Voice message · {x.VoiceMs / 60000}:{x.VoiceMs / 1000 % 60:00}"
         : x.CardType == "PersonalRecord" ? "Shared a record" : x.CardType == GroupInviteCard ? "Sent a group invite"
@@ -216,8 +218,11 @@ public static class DirectMessageEndpoints
                 && !db.Blocks.Any(bl => (bl.BlockerId == me && bl.BlockedId == x.SenderId) || (bl.BlockerId == x.SenderId && bl.BlockedId == me)))
             .OrderByDescending(x => x.CreatedAt).Take(Page).ToListAsync();
         var count = await db.GroupMembers.CountAsync(m => m.GroupId == group.Id);
-        return new ChatDto(mine.ThreadId, null, true, null, true, null,
-            [.. rows.AsEnumerable().Reverse().Select(x => Dto(x, me, now, false, x.SenderId == me ? null : x.Sender))], GroupOf(group, count));
+        var member = await db.GroupMembers.FirstAsync(m => m.GroupId == group.Id && m.UserId == me);
+        var muted = member.MutedUntil > now ? member.MutedUntil : null;
+        return new ChatDto(mine.ThreadId, null, true, null, muted is null, muted is null ? null : "A moderator muted you in this chat.",
+            [.. rows.AsEnumerable().Reverse().Select(x => Dto(x, me, now, false, x.SenderId == me ? null : x.Sender))], GroupOf(group, count),
+            GroupEndpoints.CanModerate(member), muted is { } mu ? Ms(mu) : null);
     }
 
     private static async Task<bool> TheyAcceptedAsync(AppDbContext db, DmMember mine, Guid otherId) =>
@@ -270,6 +275,9 @@ public static class DirectMessageEndpoints
         if (inGroup)
         {
             if (req.CardType is StoryCard or GroupInviteCard) return Results.BadRequest(new { error = "That can't be sent to a group." });
+            var muted = await db.GroupMembers.Where(m => m.GroupId == thread!.GroupId && m.UserId == meId).Select(m => m.MutedUntil).FirstOrDefaultAsync();
+            if (muted > clock.GetUtcNow().UtcDateTime)
+                return Results.Json(new { error = "A moderator muted you in this chat for now. You can still read it." }, statusCode: 403);
         }
         else
         {
@@ -413,7 +421,7 @@ public static class DirectMessageEndpoints
 
     /// Empties a message and deletes the photo or recording sent with it; both people then see where it was
     /// ("unsent a message", or "removed by LogIt" when a report is upheld).
-    public static async Task UnsendAsync(AppDbContext db, Photos.IPhotoStore store, Guid id, CancellationToken ct, bool byLogIt = false)
+    public static async Task UnsendAsync(AppDbContext db, Photos.IPhotoStore store, Guid id, CancellationToken ct, bool byLogIt = false, bool byModerator = false)
     {
         var message = await db.DirectMessages.FirstOrDefaultAsync(m => m.Id == id, ct);
         if (message is null || message.DeletedAt is not null) return;
@@ -431,6 +439,7 @@ public static class DirectMessageEndpoints
         message.PhotoWidth = message.PhotoHeight = 0;
         message.DeletedAt = DateTime.UtcNow;
         message.RemovedByLogIt = byLogIt;
+        message.RemovedByModerator = byModerator;
         message.VoiceId = null;
         message.VoiceMs = 0;
         message.VoicePeaks = null;

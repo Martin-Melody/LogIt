@@ -972,6 +972,9 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<bool>("RemovedByLogIt")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("RemovedByModerator")
+                        .HasColumnType("boolean");
+
                     b.Property<Guid?>("SenderId")
                         .HasColumnType("uuid");
 
@@ -1359,6 +1362,9 @@ namespace Logit.Api.Migrations.Postgres
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("JoinedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("MutedUntil")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("Notify")
@@ -1884,6 +1890,12 @@ namespace Logit.Api.Migrations.Postgres
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("GroupId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("GroupResolvedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Note")

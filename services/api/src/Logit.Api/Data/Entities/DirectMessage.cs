@@ -64,6 +64,8 @@ public class DirectMessage
     /// "unsent a message" where it was; its text, card and photo are gone.
     public DateTime? DeletedAt { get; set; }
     public bool RemovedByLogIt { get; set; }
+    /// Removed by one of its group's moderators (shown "Removed by a moderator").
+    public bool RemovedByModerator { get; set; }
     /// When the push dispatcher dealt with it (sent, or skipped).
     public DateTime? PushedAt { get; set; }
 }

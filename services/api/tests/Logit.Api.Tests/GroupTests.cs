@@ -264,4 +264,48 @@ public class GroupTests : IDisposable
         Assert.Equal("member", (await Json(await ben.PostAsJsonAsync($"/groups/{id}/join", new { }))).GetProperty("status").GetString());
         Assert.Equal(HttpStatusCode.BadRequest, (await ava.PostAsJsonAsync("/dm/send", card with { clientId = "inv2" })).StatusCode); // already in
     }
+
+    [Fact]
+    public async Task Moderators_remove_messages_mute_people_and_work_the_groups_reports_but_cannot_run_the_group()
+    {
+        var (conor, _, _) = await _api.SignUpAsync("conor");
+        var (riya, _, _) = await _api.SignUpAsync("riya");
+        var (dev, _, _) = await _api.SignUpAsync("dev");
+        var (ava, _, _) = await _api.SignUpAsync("ava");
+        var group = await Json(await conor.PostAsJsonAsync("/groups", new { name = "Iron Club" }));
+        var (id, code, thread) = (group.GetProperty("id").GetString(), group.GetProperty("inviteCode").GetString(), group.GetProperty("threadId").GetString()!);
+        foreach (var who in new[] { riya, dev, ava }) (await who.PostAsJsonAsync($"/groups/join/{code}", new { })).EnsureSuccessStatusCode();
+        (await conor.PutAsJsonAsync($"/groups/{id}/members/riya/role", new { role = "Moderator" })).EnsureSuccessStatusCode();
+
+        // Ava reports Dev's spam: it reaches LogIt and the group's list (organiser and moderator told, not who reported).
+        var spam = await Json(await Say(dev, thread, "Selling cheap pre-workout, DM me"));
+        (await ava.PostAsJsonAsync("/reports", new { targetType = "Message", targetId = spam.GetProperty("id").GetString(), reason = "Spam" })).EnsureSuccessStatusCode();
+        Assert.Equal(1, (await Get(riya, $"/groups/{id}")).GetProperty("reports").GetInt32());
+        var list = await Get(riya, $"/groups/{id}/reports");
+        Assert.Equal(("Selling cheap pre-workout, DM me", "dev"), (list[0].GetProperty("body").GetString(), list[0].GetProperty("sender").GetProperty("username").GetString()));
+        Assert.DoesNotContain("\"ava\"", list.GetRawText()); // never who reported it
+        Assert.Equal(HttpStatusCode.Forbidden, (await dev.GetAsync($"/groups/{id}/reports")).StatusCode);
+        await _api.WithDbAsync(async db => Assert.Equal(2, await db.Notifications.CountAsync(n => n.Type == NotificationType.GroupReport)));
+
+        // Riya removes it ("Removed by a moderator") and mutes Dev for an hour: he can read, not send.
+        (await riya.DeleteAsync($"/groups/{id}/messages/{spam.GetProperty("id").GetString()}")).EnsureSuccessStatusCode();
+        var removed = (await Get(ava, $"/dm/chat?threadId={thread}")).GetProperty("messages")[0];
+        Assert.Equal((true, true, ""), (removed.GetProperty("deleted").GetBoolean(), removed.GetProperty("removedByModerator").GetBoolean(), removed.GetProperty("body").GetString()));
+        Assert.Equal(0, (await Get(riya, $"/groups/{id}")).GetProperty("reports").GetInt32());
+        (await riya.PutAsJsonAsync($"/groups/{id}/members/dev/mute", new { minutes = 60 })).EnsureSuccessStatusCode();
+        Assert.Equal(HttpStatusCode.Forbidden, (await Say(dev, thread, "hello?")).StatusCode);
+        var devChat = await Get(dev, $"/dm/chat?threadId={thread}");
+        Assert.Equal((false, JsonValueKind.Number), (devChat.GetProperty("canSend").GetBoolean(), devChat.GetProperty("mutedUntilMs").ValueKind));
+        (await riya.PutAsJsonAsync($"/groups/{id}/members/dev/mute", new { minutes = (int?)null })).EnsureSuccessStatusCode();
+        (await Say(dev, thread, "sorry")).EnsureSuccessStatusCode();
+
+        // Moderators can't run the group: no roles, edits, or removing an organiser; they can remove a member.
+        Assert.Equal(HttpStatusCode.Forbidden, (await riya.PutAsJsonAsync($"/groups/{id}/members/ava/role", new { role = "Moderator" })).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await riya.PatchAsJsonAsync($"/groups/{id}", new { name = "Riya's Club" })).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await riya.DeleteAsync($"/groups/{id}/members/conor")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await riya.PutAsJsonAsync($"/groups/{id}/members/conor/mute", new { minutes = 60 })).StatusCode);
+        (await riya.DeleteAsync($"/groups/{id}/members/dev")).EnsureSuccessStatusCode();
+        var members = (await Get(conor, $"/groups/{id}/members")).EnumerateArray().Select(m => (m.GetProperty("user").GetProperty("username").GetString(), m.GetProperty("role").GetString())).ToList();
+        Assert.Equal([("conor", "Organiser"), ("riya", "Moderator"), ("ava", "Member")], members);
+    }
 }

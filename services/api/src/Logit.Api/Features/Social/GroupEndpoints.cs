@@ -35,6 +35,10 @@ public static class GroupEndpoints
         g.MapDelete("/{id:guid}/members/{username}", Remove).RequireAuthorization();
         g.MapPut("/{id:guid}/me", MySettings).RequireAuthorization();
         g.MapGet("/search", Search).RequireAuthorization();
+        g.MapPut("/{id:guid}/members/{username}/mute", Mute).RequireAuthorization();
+        g.MapDelete("/{id:guid}/messages/{messageId:guid}", RemoveMessage).RequireAuthorization();
+        g.MapGet("/{id:guid}/reports", GroupReports).RequireAuthorization();
+        g.MapPost("/{id:guid}/reports/{messageId:guid}/keep", KeepReported).RequireAuthorization();
         g.MapGet("/{id:guid}/about", About).RequireAuthorization();
         g.MapPost("/{id:guid}/join", JoinById).RequireAuthorization().RequireRateLimiting("social-write");
         g.MapDelete("/{id:guid}/request", CancelRequest).RequireAuthorization();
@@ -49,8 +53,8 @@ public static class GroupEndpoints
     public record MeDto(string Role, bool OnBoard, string Notify);
     /// Requests: how many are waiting (organisers only, else 0).
     public record GroupDto(Guid Id, string Name, string Kind, string? Place, string? PhotoUrl, int Members, Guid ThreadId, string InviteCode,
-        NoteDto? Note, MeDto Me, List<PersonDto> Organisers, List<PersonDto> Preview, string Access, int Requests);
-    public record MemberDto(PersonDto User, string Role, long JoinedAtMs);
+        NoteDto? Note, MeDto Me, List<PersonDto> Organisers, List<PersonDto> Preview, string Access, int Requests, int Reports = 0, long? MutedUntilMs = null);
+    public record MemberDto(PersonDto User, string Role, long JoinedAtMs, long? MutedUntilMs = null);
     /// Requested: you asked to join and wait. InvitedBy: a member invited you from a chat.
     public record PreviewDto(Guid Id, string Name, string Kind, string? Place, string? PhotoUrl, int Members, string? Organiser,
         List<PersonDto> Followed, bool Member, string Access = "InviteOnly", bool Requested = false, string? InvitedBy = null);
@@ -82,6 +86,8 @@ public static class GroupEndpoints
 
     private static IResult Gone() => Results.NotFound(new { error = "This group doesn't exist, or you're not in it." });
     private static IResult NotOrganiser() => Results.Json(new { error = "Only the group's organisers can do that." }, statusCode: 403);
+    private static IResult NotModerator() => Results.Json(new { error = "Only the group's organisers and moderators can do that." }, statusCode: 403);
+    public static bool CanModerate(GroupMember m) => m.Role is GroupRole.Organiser or GroupRole.Moderator;
 
     /// A group always has an organiser: if the last one left or deleted their account, the
     /// longest-standing member becomes one.
@@ -141,14 +147,16 @@ public static class GroupEndpoints
         // The member row's faces: people you follow first, then organisers, then the longest-standing.
         var preview = await db.GroupMembers.Where(m => m.GroupId == groupId && m.UserId != me)
             .OrderByDescending(m => db.Follows.Any(f => f.FollowerId == me && f.FollowedId == m.UserId))
-            .ThenByDescending(m => m.Role).ThenBy(m => m.JoinedAt)
+            .ThenByDescending(m => m.Role == GroupRole.Organiser ? 2 : m.Role == GroupRole.Moderator ? 1 : 0).ThenBy(m => m.JoinedAt)
             .Select(m => m.User).Take(4).ToListAsync();
         var noteBy = g.NoteById is { } nb ? await db.Users.FindAsync(nb) : null;
-        var requests = mine.Role == GroupRole.Organiser ? await db.GroupJoinRequests.CountAsync(r => r.GroupId == groupId) : 0;
+        var requests = CanModerate(mine) ? await db.GroupJoinRequests.CountAsync(r => r.GroupId == groupId) : 0;
+        var reports = CanModerate(mine) ? await db.Reports.CountAsync(r => r.GroupId == groupId && r.GroupResolvedAt == null) : 0;
         return new GroupDto(g.Id, g.Name, g.Kind, g.Place, PhotoOf(g), count, threadId, g.InviteCode,
             g.Note is null ? null : new NoteDto(g.Note, noteBy is null ? null : Person(noteBy), Ms(g.NoteAt ?? g.CreatedAt)),
             new MeDto(mine.Role.ToString(), mine.OnBoard, mine.Notify.ToString()),
-            [.. organisers.Select(Person)], [.. preview.Select(Person)], g.Access.ToString(), requests);
+            [.. organisers.Select(Person)], [.. preview.Select(Person)], g.Access.ToString(), requests, reports,
+            mine.MutedUntil is { } mu && mu > DateTime.UtcNow ? Ms(mu) : null);
     }
 
     private static async Task<IResult> Get(Guid id, ClaimsPrincipal caller, AppDbContext db)
@@ -417,7 +425,7 @@ public static class GroupEndpoints
         else
         {
             db.GroupJoinRequests.Add(new GroupJoinRequest { GroupId = id, UserId = me, OnBoard = req?.OnBoard ?? true, GoingTo = goingTo, CreatedAt = now });
-            var organisers = await db.GroupMembers.Where(m => m.GroupId == id && m.Role == GroupRole.Organiser).Select(m => m.UserId).ToListAsync();
+            var organisers = await db.GroupMembers.Where(m => m.GroupId == id && (m.Role == GroupRole.Organiser || m.Role == GroupRole.Moderator)).Select(m => m.UserId).ToListAsync();
             db.Notifications.AddRange(organisers.Select(o => new Notification { UserId = o, ActorId = me, Type = NotificationType.GroupRequest, GroupId = id, CreatedAt = now }));
             try { await db.SaveChangesAsync(); }
             catch (DbUpdateException) { /* asked twice at once */ }
@@ -438,7 +446,7 @@ public static class GroupEndpoints
         var me = caller.GetUserId();
         var mine = await MembershipAsync(db, id, me);
         if (mine is null) return Gone();
-        if (mine.Role != GroupRole.Organiser) return NotOrganiser();
+        if (!CanModerate(mine)) return NotModerator();
         var rows = await db.GroupJoinRequests.Where(r => r.GroupId == id).OrderBy(r => r.CreatedAt)
             .Select(r => new
             {
@@ -455,7 +463,7 @@ public static class GroupEndpoints
         var me = caller.GetUserId();
         var mine = await MembershipAsync(db, id, me);
         if (mine is null) return Gone();
-        if (mine.Role != GroupRole.Organiser) return NotOrganiser();
+        if (!CanModerate(mine)) return NotModerator();
         var request = await db.GroupJoinRequests.FirstOrDefaultAsync(r => r.GroupId == id && r.User.Username == username.ToLowerInvariant());
         if (request is null) return Results.NotFound();
         var now = clock.GetUtcNow().UtcDateTime;
@@ -479,11 +487,78 @@ public static class GroupEndpoints
     {
         var mine = await MembershipAsync(db, id, caller.GetUserId());
         if (mine is null) return Gone();
-        if (mine.Role != GroupRole.Organiser) return NotOrganiser();
+        if (!CanModerate(mine)) return NotModerator();
         var userId = await db.Users.Where(u => u.Username == username.ToLowerInvariant()).Select(u => (Guid?)u.Id).FirstOrDefaultAsync();
         if (userId is null) return Results.NotFound();
         await db.GroupJoinRequests.Where(r => r.GroupId == id && r.UserId == userId).ExecuteDeleteAsync();
         await db.Notifications.Where(n => n.GroupId == id && n.ActorId == userId && n.Type == NotificationType.GroupRequest).ExecuteDeleteAsync();
+        return Results.NoContent();
+    }
+
+    public record MuteRequest(int? Minutes);
+    public record ReportedDto(Guid MessageId, string Body, string? PhotoUrl, PersonDto? Sender, List<string> Reasons, int Count, long LatestAtMs);
+
+    /// A moderator mutes someone in the chat (1 hour, 1 day, 1 week; null lifts it). Not an
+    /// organiser or another moderator, unless you're an organiser.
+    private static async Task<IResult> Mute(Guid id, string username, MuteRequest req, ClaimsPrincipal caller, AppDbContext db, TimeProvider clock)
+    {
+        var mine = await MembershipAsync(db, id, caller.GetUserId());
+        if (mine is null) return Gone();
+        if (!CanModerate(mine)) return NotModerator();
+        var them = await db.GroupMembers.FirstOrDefaultAsync(m => m.GroupId == id && m.User.Username == username.ToLowerInvariant());
+        if (them is null) return Results.NotFound();
+        if (them.UserId == mine.UserId || (them.Role != GroupRole.Member && mine.Role != GroupRole.Organiser)) return NotModerator();
+        if (req.Minutes is { } m && m is < 1 or > 60 * 24 * 30) return Results.BadRequest(new { error = "Between a minute and 30 days." });
+        them.MutedUntil = req.Minutes is { } minutes ? clock.GetUtcNow().UtcDateTime.AddMinutes(minutes) : null;
+        await db.SaveChangesAsync();
+        return Results.NoContent();
+    }
+
+    /// A moderator removes a message from the group's chat ("Removed by a moderator"), with its
+    /// photo or recording, and clears it from the group's reports.
+    private static async Task<IResult> RemoveMessage(Guid id, Guid messageId, ClaimsPrincipal caller, AppDbContext db, IPhotoStore store, TimeProvider clock, CancellationToken ct)
+    {
+        var mine = await MembershipAsync(db, id, caller.GetUserId());
+        if (mine is null) return Gone();
+        if (!CanModerate(mine)) return NotModerator();
+        if (!await db.DirectMessages.AnyAsync(m => m.Id == messageId && m.Thread.GroupId == id && m.DeletedAt == null, ct)) return Results.NotFound();
+        await DirectMessageEndpoints.UnsendAsync(db, store, messageId, ct, byModerator: true);
+        await ResolveAsync(db, id, messageId, clock.GetUtcNow().UtcDateTime);
+        return Results.NoContent();
+    }
+
+    private static Task ResolveAsync(AppDbContext db, Guid groupId, Guid messageId, DateTime now) =>
+        db.Reports.Where(r => r.GroupId == groupId && r.TargetId == messageId && r.GroupResolvedAt == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.GroupResolvedAt, (DateTime?)now));
+
+    /// The group's reports (canvas D3): reported messages still waiting, one row per message with
+    /// its reasons; never who reported it.
+    private static async Task<IResult> GroupReports(Guid id, ClaimsPrincipal caller, AppDbContext db)
+    {
+        var mine = await MembershipAsync(db, id, caller.GetUserId());
+        if (mine is null) return Gone();
+        if (!CanModerate(mine)) return NotModerator();
+        var open = await db.Reports.Where(r => r.GroupId == id && r.GroupResolvedAt == null && r.TargetType == ReportTargetType.Message)
+            .Select(r => new { r.TargetId, Reason = r.Reason.ToString(), r.CreatedAt }).Take(500).ToListAsync();
+        var ids = open.Select(r => r.TargetId).Distinct().ToList();
+        var messages = await db.DirectMessages.Include(m => m.Sender).Where(m => ids.Contains(m.Id) && m.DeletedAt == null).ToDictionaryAsync(m => m.Id);
+        return Results.Ok(open.Where(r => messages.ContainsKey(r.TargetId)).GroupBy(r => r.TargetId)
+            .Select(g =>
+            {
+                var m = messages[g.Key];
+                return new ReportedDto(m.Id, m.Body, m.PhotoId is { } p ? PhotoEndpoints.UrlOf(p) : null, m.Sender is null ? null : Person(m.Sender),
+                    [.. g.Select(r => r.Reason).Distinct()], g.Count(), Ms(g.Max(r => r.CreatedAt)));
+            })
+            .OrderByDescending(r => r.LatestAtMs));
+    }
+
+    /// "Keep it": off the group's list; LogIt's own review isn't affected.
+    private static async Task<IResult> KeepReported(Guid id, Guid messageId, ClaimsPrincipal caller, AppDbContext db, TimeProvider clock)
+    {
+        var mine = await MembershipAsync(db, id, caller.GetUserId());
+        if (mine is null) return Gone();
+        if (!CanModerate(mine)) return NotModerator();
+        await ResolveAsync(db, id, messageId, clock.GetUtcNow().UtcDateTime);
         return Results.NoContent();
     }
 
@@ -505,9 +580,10 @@ public static class GroupEndpoints
         var me = caller.GetUserId();
         if (!await db.GroupMembers.AnyAsync(m => m.GroupId == id && m.UserId == me)) return Gone();
         var rows = await db.GroupMembers.Where(m => m.GroupId == id)
-            .OrderByDescending(m => m.Role).ThenBy(m => m.User.DisplayName)
-            .Select(m => new { m.User, m.Role, m.JoinedAt }).Take(MaxMembers).ToListAsync();
-        return Results.Ok(rows.Select(r => new MemberDto(Person(r.User), r.Role.ToString(), Ms(r.JoinedAt))));
+            .OrderByDescending(m => m.Role == GroupRole.Organiser ? 2 : m.Role == GroupRole.Moderator ? 1 : 0).ThenBy(m => m.User.DisplayName)
+            .Select(m => new { m.User, m.Role, m.JoinedAt, m.MutedUntil }).Take(MaxMembers).ToListAsync();
+        var now = DateTime.UtcNow;
+        return Results.Ok(rows.Select(r => new MemberDto(Person(r.User), r.Role.ToString(), Ms(r.JoinedAt), r.MutedUntil > now ? Ms(r.MutedUntil!.Value) : null)));
     }
 
     private static async Task<IResult> SetRole(Guid id, string username, RoleRequest req, ClaimsPrincipal caller, AppDbContext db)
@@ -532,7 +608,8 @@ public static class GroupEndpoints
         if (mine is null) return Gone();
         var them = await db.GroupMembers.FirstOrDefaultAsync(m => m.GroupId == id && m.User.Username == username.ToLowerInvariant(), ct);
         if (them is null) return Results.NotFound();
-        if (them.UserId != me && mine.Role != GroupRole.Organiser) return NotOrganiser();
+        // Organisers remove anyone; moderators remove members (not organisers or other moderators).
+        if (them.UserId != me && !(mine.Role == GroupRole.Organiser || (mine.Role == GroupRole.Moderator && them.Role == GroupRole.Member))) return NotModerator();
         db.GroupMembers.Remove(them);
         await db.DmMembers.Where(m => m.Thread.GroupId == id && m.UserId == them.UserId).ExecuteDeleteAsync(ct);
         await db.EventRsvps.Where(r => r.Event.GroupId == id && r.UserId == them.UserId).ExecuteDeleteAsync(ct); // off the going lists

@@ -259,7 +259,8 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
         NotificationType.Follow or NotificationType.FollowRequest or NotificationType.FollowAccepted => Kind.Follows,
         NotificationType.Cheer => Kind.Cheers,
         NotificationType.GroupNote or NotificationType.GroupRequest or NotificationType.GroupApproved or NotificationType.GroupEvent
-            or NotificationType.GroupEventChanged or NotificationType.GroupEventCancelled or NotificationType.GroupEventReminder => Kind.Groups,
+            or NotificationType.GroupEventChanged or NotificationType.GroupEventCancelled or NotificationType.GroupEventReminder
+            or NotificationType.GroupReport => Kind.Groups,
         _ => Kind.Coaching,
     };
 
@@ -316,6 +317,7 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
         NotificationType.GroupEventChanged => $"changed the time or place of {n.Event?.Title ?? "an event"}",
         NotificationType.GroupEventCancelled => $"cancelled {n.Event?.Title ?? "an event"}",
         NotificationType.GroupEventReminder => $"{n.Event?.Title ?? "Your event"} is tomorrow",
+        NotificationType.GroupReport => n.Group is null ? "A message in your group was reported" : $"A message in {n.Group.Name} was reported",
         _ => "sent you something",
     };
 
@@ -336,6 +338,7 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
         NotificationType.GroupEventChanged => ("event change", "event changes"),
         NotificationType.GroupEventCancelled => ("cancelled event", "cancelled events"),
         NotificationType.GroupEventReminder => ("event tomorrow", "events tomorrow"),
+        NotificationType.GroupReport => ("report", "reports"),
         _ => ("coaching update", "coaching updates"),
     };
 
@@ -345,6 +348,10 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
     {
         // One group event on its own: the group's name, then who did what ("Conor added Deadlift
         // day"), or just "Deadlift day is tomorrow" for the reminder.
+        // A report in a group: the group's name, never who reported it.
+        if (batch.Count == 1 && batch[0] is { Type: NotificationType.GroupReport, Group: not null } report)
+            return new PushMessage(report.Group.Name, "A message was reported. Open Reports in the group's ⋯", "social",
+                new Dictionary<string, string> { ["type"] = "GroupReport", ["count"] = "1", ["notificationId"] = report.Id.ToString() });
         if (batch.Count == 1 && batch[0] is { Event: not null, Group: not null } one)
             return new PushMessage(one.Group.Name, one.Type == NotificationType.GroupEventReminder ? What(one) : $"{NameOf(one.Actor)} {What(one)}", "social",
                 new Dictionary<string, string> { ["type"] = one.Type.ToString(), ["count"] = "1", ["notificationId"] = one.Id.ToString(), ["eventId"] = one.EventId.ToString()! });

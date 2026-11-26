@@ -109,6 +109,9 @@
           { icon: Link2, label: "Reset the invite link", onSelect: () => (confirm = "reset") },
         ]
       : []),
+    ...(group && (group.me.role === "Organiser" || group.me.role === "Moderator")
+      ? [{ icon: Flag, label: group.reports ? `Reports (${group.reports})` : "Reports", onSelect: () => void goto(`/groups/${id}/reports`) }]
+      : []),
     { icon: Settings2, label: "Your settings", onSelect: () => void goto(`/groups/${id}/settings`) },
     ...(organiser ? [] : [{ icon: Flag, label: "Report group", destructive: true, onSelect: () => (sheet = "report") }]),
     { icon: LogOut, label: `Leave ${group?.name ?? "the group"}`, destructive: true, onSelect: () => (confirm = "leave") },
@@ -149,6 +152,11 @@
       </div>
     </div>
 
+    {#if group.reports > 0}
+      <a href="/groups/{group.id}/reports" class="mx-3 mt-3.5 flex min-h-12 items-center justify-between gap-3 rounded-2xl border border-destructive/30 bg-card px-3.5 text-[14px] font-medium text-inherit no-underline">
+        {group.reports === 1 ? "1 reported message to look at" : `${group.reports} reported messages to look at`}<ChevronRight class="size-4 text-muted-foreground" />
+      </a>
+    {/if}
     {#if group.requests > 0}
       <a href="/groups/{group.id}/members" class="mx-3 mt-3.5 flex min-h-12 items-center justify-between gap-3 rounded-2xl border border-border bg-card px-3.5 text-[14px] font-medium text-inherit no-underline">
         {group.requests === 1 ? "1 person asked to join" : `${group.requests} people asked to join`}<ChevronRight class="size-4 text-muted-foreground" />

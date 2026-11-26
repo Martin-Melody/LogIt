@@ -967,6 +967,9 @@ namespace Logit.Api.Migrations
                     b.Property<bool>("RemovedByLogIt")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("RemovedByModerator")
+                        .HasColumnType("INTEGER");
+
                     b.Property<Guid?>("SenderId")
                         .HasColumnType("TEXT");
 
@@ -1354,6 +1357,9 @@ namespace Logit.Api.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("JoinedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("MutedUntil")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("Notify")
@@ -1879,6 +1885,12 @@ namespace Logit.Api.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("GroupId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("GroupResolvedAt")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Note")
