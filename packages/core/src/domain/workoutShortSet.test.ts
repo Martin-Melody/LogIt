@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createSession, replanAfterSet, replanForOrder, useReplan, type SetTarget, type WorkoutSession } from "./workout";
+import { createSession, replanAfterSet, replanForOrder, targetRepsAt, useReplan, type SetTarget, type WorkoutSession } from "./workout";
 
 type S = { reps: number; weight: number; completed?: boolean; setType?: string; target?: SetTarget };
 function session(sets: S[]): WorkoutSession {
@@ -119,5 +119,22 @@ describe("moving an exercise re-plans its untouched sets", () => {
     const s = session([{ reps: 10, weight: 20, completed: true, target: { reps: 10, weight: 20 } }, { reps: 0, weight: 22.5, target: { reps: 9, weight: 20 } }, plan(8, 20)]);
     const out = sets(replanForOrder(s, "b", [{ reps: 8, weight: 15 }]));
     expect(out.map((x) => x.weight)).toEqual([20, 22.5, 15]);
+  });
+});
+
+describe("targetRepsAt: a planned set's weight changed by hand before doing it", () => {
+  it("a bit lighter means a few more reps, never more than 2", () => {
+    expect(targetRepsAt({ reps: 8, weight: 60 }, 57)).toBe(10); // Epley 9.6
+    expect(targetRepsAt({ reps: 10, weight: 50 }, 47)).toBe(12); // Epley 12.6, capped
+    expect(targetRepsAt({ reps: 10, weight: 50 }, 30)).toBe(12);
+  });
+  it("heavier means fewer, at most 2 fewer and never under 1", () => {
+    expect(targetRepsAt({ reps: 10, weight: 50 }, 52.5)).toBe(8); // Epley 8.1
+    expect(targetRepsAt({ reps: 1, weight: 100 }, 120)).toBe(1);
+  });
+  it("the plan's reps at the plan's weight or without a load", () => {
+    expect(targetRepsAt({ reps: 8, weight: 60 }, 60)).toBe(8);
+    expect(targetRepsAt({ reps: 8, weight: 0 }, 20)).toBe(8);
+    expect(targetRepsAt({ reps: 8, weight: 60 }, 0)).toBe(8);
   });
 });

@@ -90,7 +90,8 @@ public static class ModerationEndpoints
     private static async Task<IResult> CreateReport(
         [FromBody] CreateReportRequest req,
         ClaimsPrincipal caller,
-        AppDbContext db)
+        AppDbContext db,
+        TimeProvider clock)
     {
         if (!Enum.TryParse<ReportTargetType>(req.TargetType, ignoreCase: true, out var targetType))
             return Results.BadRequest(new { error = "Unknown target type." });
@@ -108,7 +109,7 @@ public static class ModerationEndpoints
             ReportTargetType.Message => await db.DirectMessages.AnyAsync(m => m.Id == req.TargetId && m.SenderId != callerId && m.DeletedAt == null
                 && db.DmMembers.Any(x => x.ThreadId == m.ThreadId && x.UserId == callerId)),
             // Someone else's story you can see.
-            ReportTargetType.Story => await StoryEndpoints.Visible(db, callerId, DateTime.UtcNow).AnyAsync(s => s.Id == req.TargetId && s.AuthorId != callerId),
+            ReportTargetType.Story => await StoryEndpoints.Visible(db, callerId, clock.GetUtcNow().UtcDateTime).AnyAsync(s => s.Id == req.TargetId && s.AuthorId != callerId),
             _ => false,
         };
         if (!targetExists) return Results.NotFound();
