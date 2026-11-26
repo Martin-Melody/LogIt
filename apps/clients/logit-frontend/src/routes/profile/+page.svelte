@@ -60,7 +60,7 @@
     </div>
     {#if $profile.bio}<p class="whitespace-pre-wrap px-4 pb-3 text-sm">{$profile.bio}</p>{/if}
     <div class="px-4 pb-3">
-      <button type="button" class="h-9 w-full rounded-lg bg-muted text-sm font-semibold" data-guide="profile-edit" onclick={() => goto("/profile/edit")}>Edit profile</button>
+      <button type="button" class="h-10 w-full rounded-lg bg-muted text-sm font-semibold" data-guide="profile-edit" onclick={() => goto("/profile/edit")}>Edit profile</button>
     </div>
     <div class="mx-4 mb-2 flex flex-col gap-3 rounded-xl border border-border p-3.5">
       <div class="flex items-start gap-2.5">

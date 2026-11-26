@@ -318,19 +318,19 @@
 
   <div class="grid grid-cols-2 gap-2 px-4 pb-3.5">
     {#if isSelf}
-      <button type="button" class="h-9 rounded-lg bg-muted text-sm font-semibold" data-guide="profile-edit" onclick={() => goto("/profile/edit")}>Edit profile</button>
-      <button type="button" class="h-9 rounded-lg bg-muted text-sm font-semibold" onclick={() => (shareOpen = true)}>Share profile</button>
+      <button type="button" class="h-10 rounded-lg bg-muted text-sm font-semibold" data-guide="profile-edit" onclick={() => goto("/profile/edit")}>Edit profile</button>
+      <button type="button" class="h-10 rounded-lg bg-muted text-sm font-semibold" onclick={() => (shareOpen = true)}>Share profile</button>
     {:else}
       {#if followStatus === "following"}
-        <button type="button" class="flex h-9 items-center justify-center gap-1 rounded-lg bg-muted text-sm font-semibold disabled:opacity-50" disabled={followLoading} onclick={openFollowMenu}>Following <ChevronDown class="size-4" /></button>
+        <button type="button" class="flex h-10 items-center justify-center gap-1 rounded-lg bg-muted text-sm font-semibold disabled:opacity-50" disabled={followLoading} onclick={openFollowMenu}>Following <ChevronDown class="size-4" /></button>
       {:else if followStatus === "requested"}
-        <button type="button" class="h-9 rounded-lg bg-muted text-sm font-semibold disabled:opacity-50" disabled={followLoading} onclick={toggleFollow} aria-label="Requested. Tap to withdraw the request">Requested</button>
+        <button type="button" class="h-10 rounded-lg bg-muted text-sm font-semibold disabled:opacity-50" disabled={followLoading} onclick={toggleFollow} aria-label="Requested. Tap to withdraw the request">Requested</button>
       {:else}
-        <button type="button" class="h-9 rounded-lg bg-primary text-sm font-semibold text-primary-foreground disabled:opacity-50" disabled={followLoading} onclick={toggleFollow}>
+        <button type="button" class="h-10 rounded-lg bg-primary text-sm font-semibold text-primary-foreground disabled:opacity-50" disabled={followLoading} onclick={toggleFollow}>
           {profile.followsYou ? "Follow back" : profile.isPrivate ? "Request to follow" : "Follow"}
         </button>
       {/if}
-      <button type="button" class="h-9 rounded-lg bg-muted text-sm font-semibold" onclick={() => goto(`/messages/chat?u=${encodeURIComponent(profile!.username)}`)}>Message</button>
+      <button type="button" class="h-10 rounded-lg bg-muted text-sm font-semibold" onclick={() => goto(`/messages/chat?u=${encodeURIComponent(profile!.username)}`)}>Message</button>
     {/if}
   </div>
 
