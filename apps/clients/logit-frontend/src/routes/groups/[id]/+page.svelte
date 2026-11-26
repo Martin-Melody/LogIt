@@ -21,7 +21,7 @@
   import GroupFormSheet from "$lib/components/social/GroupFormSheet.svelte";
   import GroupInviteSheet from "$lib/components/social/GroupInviteSheet.svelte";
   import PinNoteSheet from "$lib/components/social/PinNoteSheet.svelte";
-  import GroupPostsTab from "$lib/components/social/GroupPostsTab.svelte";
+  import ForumList from "$lib/components/social/ForumList.svelte";
   import EventRow from "$lib/components/social/EventRow.svelte";
   import EventFormSheet from "$lib/components/social/EventFormSheet.svelte";
   import { eventsApi, gatherSeries, type GroupEvent } from "@logit/core/api/eventsApi";
@@ -156,15 +156,13 @@
       </div>
     </div>
 
-    {#if group.posts?.on}
-      <div role="tablist" aria-label="Group" class="mx-4 mt-1 flex border-b border-border">
-        {#each [["overview", "Overview"], ["posts", "Posts"]] as [t, label] (t)}
-          <button type="button" role="tab" aria-selected={tab === t} class="h-11 flex-1 text-[14px] {tab === t ? 'border-b-2 border-foreground font-semibold' : 'font-medium text-muted-foreground'}" onclick={() => setTab(t as "overview" | "posts")}>{label}</button>
-        {/each}
-      </div>
-    {/if}
-    {#if tab === "posts" && group.posts?.on}
-      <GroupPostsTab {group} />
+    <div role="tablist" aria-label="Group" class="mx-4 mt-1 flex border-b border-border">
+      {#each [["overview", "Overview"], ["posts", "Posts"]] as [t, label] (t)}
+        <button type="button" role="tab" aria-selected={tab === t} class="h-11 flex-1 text-[14px] {tab === t ? 'border-b-2 border-foreground font-semibold' : 'font-medium text-muted-foreground'}" onclick={() => setTab(t as "overview" | "posts")}>{label}</button>
+      {/each}
+    </div>
+    {#if tab === "posts"}
+      <ForumList filter={{ group: group.id }} group={{ id: group.id, name: group.name, access: group.access }} sorts={["active", "new"]} />
     {:else}
     {#if group.reports > 0}
       <a href="/groups/{group.id}/reports" class="mx-3 mt-3.5 flex min-h-12 items-center justify-between gap-3 rounded-2xl border border-destructive/30 bg-card px-3.5 text-[14px] font-medium text-inherit no-underline">

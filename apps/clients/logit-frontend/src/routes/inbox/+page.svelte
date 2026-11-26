@@ -237,7 +237,7 @@
     if (n.type.startsWith("GroupEvent") && n.event) return `/events/${n.event.id}`;
     if (n.type === "GroupNote" || n.type === "GroupApproved") return n.group ? `/groups/${n.group.id}` : "/messages";
     if (n.type === "GroupReport") return n.group ? `/groups/${n.group.id}/reports` : "/messages";
-    if (n.type === "GroupPostReply") return n.groupPostId ? `/groups/posts/${n.groupPostId}` : "/messages";
+    if (n.type === "GroupPostReply") return n.groupPostId ? `/social/forum/${n.groupPostId}` : "/messages";
     if (n.type === "GroupRequest") return n.group ? `/groups/${n.group.id}/members` : "/messages";
     return n.postId ? `/social/post/${n.postId}` : `/social/${n.actor.username}`;
   }

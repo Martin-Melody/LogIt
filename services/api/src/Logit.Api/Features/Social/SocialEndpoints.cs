@@ -256,6 +256,7 @@ public static class SocialEndpoints
         db.Posts.Add(repost);
         db.AddRepost(userId, target, body is null ? null : repost);
         await db.AddMentionsAsync(repost.AuthorId, repost.Body, repost.Id);
+        await db.SetForPostAsync(repost);
         await db.SaveChangesAsync();
 
         await db.Entry(repost).Reference(p => p.Author).LoadAsync();
@@ -296,12 +297,21 @@ public static class SocialEndpoints
         if (before is not null)
             query = query.Where(p => p.CreatedAt < before);
 
-        return Results.Ok(await PageAsync(db, query, limit, userId));
+        // Forum posts from the same stretch of time come along as title cards (canvas F1); the
+        // app slots them in by time.
+        var page = await PageAsync(db, query, limit, userId);
+        var forum = await GroupPostEndpoints.FeedCardsAsync(db, userId, followedIds, blocked, page.NextCursor is null ? null : page.Oldest, before);
+        return Results.Ok(new { page.Posts, page.NextCursor, forum });
     }
 
     /// Shared: order newest-first, take limit+1 to detect a next page, project to
     /// DTOs, and hand back an opaque cursor.
-    private static async Task<object> PageAsync(AppDbContext db, IQueryable<Post> query, int limit, Guid? callerId)
+    public record Page(IEnumerable<PostDto> Posts, string? NextCursor)
+    {
+        [System.Text.Json.Serialization.JsonIgnore] public DateTime? Oldest { get; init; }
+    }
+
+    public static async Task<Page> PageAsync(AppDbContext db, IQueryable<Post> query, int limit, Guid? callerId)
     {
         var rows = await query.OrderByDescending(p => p.CreatedAt).Take(limit + 1).ToListAsync();
         string? nextCursor = null;
@@ -311,7 +321,7 @@ public static class SocialEndpoints
             rows = rows.Take(limit).ToList();
         }
         var hidden = await db.HiddenRepostAuthorsAsync(callerId, rows);
-        return new { posts = rows.Select(p => p.ToDto(callerId, hidden)), nextCursor };
+        return new Page(rows.Select(p => p.ToDto(callerId, hidden)), nextCursor) { Oldest = rows.LastOrDefault()?.CreatedAt };
     }
 
     private static async Task<IResult> CreatePost(
@@ -329,6 +339,7 @@ public static class SocialEndpoints
 
         db.Posts.Add(post);
         await db.AddMentionsAsync(post.AuthorId, post.Body, post.Id);
+        await db.SetForPostAsync(post);
         await db.SaveChangesAsync();
 
         await db.Entry(post).Reference(p => p.Author).LoadAsync();
@@ -357,6 +368,7 @@ public static class SocialEndpoints
 
         post.Body = req.Body.Trim();
         post.EditedAt = DateTime.UtcNow;
+        await db.SetForPostAsync(post);
         await db.SaveChangesAsync();
 
         var hiddenEdit = await db.HiddenRepostAuthorsAsync(post.AuthorId, [post]);
@@ -370,6 +382,7 @@ public static class SocialEndpoints
         if (post.AuthorId != caller.GetUserId()) return Results.Forbid();
 
         post.DeletedAt = DateTime.UtcNow;
+        await db.SetForPostAsync(post);
         await db.SaveChangesAsync();
         return Results.NoContent();
     }

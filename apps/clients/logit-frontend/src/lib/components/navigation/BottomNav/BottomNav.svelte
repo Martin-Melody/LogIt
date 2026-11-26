@@ -16,7 +16,7 @@
   // Hidden on the plan screen (a step with its own Start bar) and on the workout screen, whose
   // own bottom bar (Add to workout, music, rest) stands in for it; minimise goes back. Hidden in
   // a chat too, as on Instagram: the message box is the bottom bar there (Start covered it).
-  const inChat = $derived(/^\/messages\/(chat|(?!requests$)[^/]+)$/.test(page.url.pathname) || page.url.pathname.startsWith("/groups/posts/"));
+  const inChat = $derived(/^\/messages\/(chat|(?!requests$)[^/]+)$/.test(page.url.pathname) || page.url.pathname.startsWith("/social/forum/"));
   const hidden = $derived(
     $keyboard.visible || $overlayOpen || inChat || page.url.pathname.startsWith("/session/plan") || (page.url.pathname.startsWith("/session/current") && hasSession),
   );

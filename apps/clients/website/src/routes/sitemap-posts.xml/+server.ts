@@ -1,4 +1,4 @@
-// The group posts on the web, for search engines (design canvas Q6).
+// Forum posts on the web, for search engines (design canvas Q6, F4).
 import { env } from "$env/dynamic/public";
 import { HOSTED_API } from "@logit/core/domain/friendInvite";
 import { SITE_URL } from "$lib/site";
@@ -7,7 +7,7 @@ export const prerender = false;
 
 export async function GET({ fetch }) {
   const api = (env.PUBLIC_LOGIT_API ?? HOSTED_API).replace(/\/+$/, "");
-  const res = await fetch(`${api}/public/group-posts`).catch(() => null);
+  const res = await fetch(`${api}/public/forum`).catch(() => null);
   const rows: { path: string; lastModMs: number }[] = res?.ok ? await res.json() : [];
   const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
   const body = `<?xml version="1.0" encoding="UTF-8"?>

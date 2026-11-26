@@ -2,13 +2,18 @@
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
-  import { Loader2, Search, PenSquare, Settings2, Check } from "lucide-svelte";
+  import { Loader2, Search, PenSquare, Settings2, Check, MessagesSquare } from "lucide-svelte";
+  import ActionSheet from "$lib/components/ActionSheet.svelte";
+  import NewPostSheet from "$lib/components/social/NewPostSheet.svelte";
   import { onMount } from "svelte";
   import CommentSheet from "$lib/components/CommentSheet.svelte";
   import PostCard from "$lib/components/social/PostCard.svelte";
   import { authStore } from "$lib/api/authStore.svelte";
   import { discoverApi, socialApi, type ApiPost, type DiscoverPost, type SocialSettings } from "@logit/core/api/socialApi";
-  import { caughtUpIndex } from "@logit/core/domain/socialFeed";
+  import { caughtUpIndex, withForumCards } from "@logit/core/domain/socialFeed";
+  import { tagsApi, type ForumPost, type TagCount } from "@logit/core/api/forumApi";
+  import ForumCard from "$lib/components/social/ForumCard.svelte";
+  import ForumList from "$lib/components/social/ForumList.svelte";
   import PeopleStrip from "$lib/components/social/PeopleStrip.svelte";
   import FriendsRow from "$lib/components/social/FriendsRow.svelte";
   import FriendsBoardStrip from "$lib/components/social/FriendsBoardStrip.svelte";
@@ -19,6 +24,8 @@
 
 
   let posts = $state<ApiPost[]>([]);
+  // Forum posts from people you follow and your groups, as title cards (canvas F1).
+  let forumCards = $state<ForumPost[]>([]);
   // One status instead of three loading flags: the flags let a refresh and a "load more" run at
   // once, and whichever finished first cleared all three, so the next page could be fetched
   // twice or an old page appended to a freshly refreshed feed.
@@ -33,17 +40,25 @@
   let nextCursor = $state<string | null>(null);
   let showConnectPrompt = $state(false);
   let showCreatePost = $state(false);
+  // One way in for both kinds (Martin, 26 Nov): the header's pen asks which.
+  let choosing = $state(false);
+  let writingForum = $state(false);
   let showSearch = $state(false);
   let commentPost = $state<ApiPost | null>(null);
   let sentinel = $state<HTMLDivElement | null>(null);
 
   // Following (people you follow, newest first, then "You're all caught up" and suggested
-  // posts) or Discover (picked by the server's Discover service).
-  type Tab = "following" | "discover";
-  const tab = $derived<Tab>(page.url.searchParams.get("tab") === "discover" ? "discover" : "following");
+  // posts), Discover (picked by the server's Discover service) or the Forum (canvas F2).
+  type Tab = "following" | "discover" | "forum";
+  const tab = $derived<Tab>(({ discover: "discover", forum: "forum" } as const)[page.url.searchParams.get("tab") ?? ""] ?? "following");
   function setTab(t: Tab) {
-    void goto(t === "discover" ? "/social?tab=discover" : "/social", { replaceState: true, noScroll: true, keepFocus: true });
+    void goto(t === "following" ? "/social" : `/social?tab=${t}`, { replaceState: true, noScroll: true, keepFocus: true });
   }
+  let trending = $state<TagCount[] | null>(null);
+  let forumKey = $state(0);
+  $effect(() => {
+    if (tab === "forum" && trending === null && authStore.isAuthenticated) void tagsApi.trending().then((t) => (trending = t)).catch(() => (trending = []));
+  });
 
   let settings = $state<SocialSettings | null>(null);
   async function answerDiscover(show: boolean) {
@@ -60,6 +75,11 @@
   const caughtUp = $derived(status === "ready" || status === "more" ? caughtUpIndex(posts, !!nextCursor, Date.now()) : null);
   const newPosts = $derived(caughtUp === null ? posts : posts.slice(0, caughtUp));
   const olderPosts = $derived(caughtUp === null ? [] : posts.slice(caughtUp));
+  // The same split with forum cards slotted in by time.
+  const items = $derived(withForumCards(posts, forumCards));
+  const splitMs = $derived(caughtUp !== null && caughtUp < posts.length ? Date.parse(posts[caughtUp]!.createdAt) : -Infinity);
+  const newItems = $derived(items.filter((i) => i.at > splitMs));
+  const olderItems = $derived(items.filter((i) => i.at <= splitMs));
 
   $effect(() => {
     if (tab !== "following" || caughtUp === null || suggested !== null) return;
@@ -144,6 +164,7 @@
       dragging = false;
       if (pullDist > PULL_THRESHOLD) {
         if (tab === "discover") void loadDiscover("refresh");
+        else if (tab === "forum") { trending = null; forumKey++; }
         else { suggested = null; showOlder = false; void load("refresh"); }
       }
       pullDist = 0;
@@ -175,6 +196,7 @@
       const page = await socialApi.getFeed(20, mode === "more" ? nextCursor ?? undefined : undefined);
       if (request !== latestRequest) return;
       posts = mode === "more" ? [...posts, ...page.posts] : page.posts;
+      forumCards = mode === "more" ? [...forumCards, ...(page.forum ?? [])] : (page.forum ?? []);
       nextCursor = page.nextCursor;
       status = "ready";
     } catch {
@@ -228,7 +250,7 @@
       <button type="button" class="p-2 text-muted-foreground" aria-label="Privacy" onclick={() => goto("/settings/privacy")}>
         <Settings2 class="h-[1.15rem] w-[1.15rem]" />
       </button>
-      <button type="button" class="p-2 text-muted-foreground" aria-label="New post" onclick={() => (showCreatePost = true)}>
+      <button type="button" class="p-2 text-muted-foreground" aria-label="New post" onclick={() => (choosing = true)}>
         <PenSquare class="h-[1.15rem] w-[1.15rem]" />
       </button>
     {/if}
@@ -250,11 +272,13 @@
     <FriendsRow />
     <FriendsBoardStrip />
     <div class="px-4 pb-2.5">
-      <div role="tablist" aria-label="Feed" class="grid grid-cols-2 gap-[3px] rounded-[10px] bg-muted p-[3px]">
+      <div role="tablist" aria-label="Feed" class="grid grid-cols-3 gap-[3px] rounded-[10px] bg-muted p-[3px]">
         <button type="button" role="tab" aria-selected={tab === "following"} onclick={() => setTab("following")}
           class="h-[34px] rounded-lg text-sm {tab === 'following' ? 'bg-primary font-semibold text-primary-foreground' : 'text-muted-foreground'}">Following</button>
         <button type="button" role="tab" aria-selected={tab === "discover"} onclick={() => setTab("discover")}
           class="h-[34px] rounded-lg text-sm {tab === 'discover' ? 'bg-primary font-semibold text-primary-foreground' : 'text-muted-foreground'}">Discover</button>
+        <button type="button" role="tab" aria-selected={tab === "forum"} onclick={() => setTab("forum")}
+          class="h-[34px] rounded-lg text-sm {tab === 'forum' ? 'bg-primary font-semibold text-primary-foreground' : 'text-muted-foreground'}">Forum</button>
       </div>
     </div>
 
@@ -293,8 +317,9 @@
           </div>
         {:else}
           <div class="divide-y divide-border">
-            {#each newPosts as post (post.id)}
-              <PostCard {post} onopencomments={(p) => (commentPost = p)} onchange={(next) => onPostChange(post.id, next)} />
+            {#each newItems as item (`${item.kind}:${item.post.id}`)}
+              {#if item.kind === "forum"}<ForumCard post={item.post} />
+              {:else}<PostCard post={item.post} onopencomments={(p) => (commentPost = p)} onchange={(next) => onPostChange(item.post.id, next)} />{/if}
             {/each}
           </div>
 
@@ -324,8 +349,9 @@
             {#if showOlder}
               <p class="border-t border-border px-4 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Older posts</p>
               <div class="divide-y divide-border">
-                {#each olderPosts as post (post.id)}
-                  <PostCard {post} onopencomments={(p) => (commentPost = p)} onchange={(next) => onPostChange(post.id, next)} />
+                {#each olderItems as item (`${item.kind}:${item.post.id}`)}
+                  {#if item.kind === "forum"}<ForumCard post={item.post} />
+                  {:else}<PostCard post={item.post} onopencomments={(p) => (commentPost = p)} onchange={(next) => onPostChange(item.post.id, next)} />{/if}
                 {/each}
               </div>
             {/if}
@@ -337,6 +363,18 @@
           {/if}
         {/if}
 
+      {:else if tab === "forum"}
+        {#key forumKey}
+          <ForumList canPost={false}>
+            {#snippet top()}
+              {#if trending?.length}
+                <div class="flex gap-2 overflow-x-auto px-4 pb-2.5 [scrollbar-width:none]" aria-label="Trending tags">
+                  {#each trending as t (t.tag)}<a href="/social/tag/{encodeURIComponent(t.tag)}" class="flex h-9 shrink-0 items-center rounded-full border border-border px-3 text-[13px] text-sky-700 no-underline dark:text-sky-300">#{t.tag}</a>{/each}
+                </div>
+              {/if}
+            {/snippet}
+          </ForumList>
+        {/key}
       {:else}
         <PeopleStrip />
         {#if discStatus === "idle" || (discStatus === "loading" && disc.length === 0)}
@@ -371,6 +409,12 @@
   onposted={(post) => { posts = [post, ...posts]; }}
   onclose={() => (showCreatePost = false)}
 />
+
+<ActionSheet open={choosing} onOpenChange={(v) => (choosing = v)} title="New" items={[
+  { icon: PenSquare, label: "Post", value: "For your followers", onSelect: () => (showCreatePost = true) },
+  { icon: MessagesSquare, label: "Forum post", value: "Ask or start a thread", onSelect: () => (writingForum = true) },
+]} />
+{#if writingForum}<NewPostSheet onclose={() => (writingForum = false)} />{/if}
 
 <UserSearchSheet open={showSearch} onclose={() => (showSearch = false)} />
 

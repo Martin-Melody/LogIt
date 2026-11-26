@@ -1,4 +1,4 @@
-<!-- A group post on the web, signed in (design canvas Q7): read, upvote, comment and reply at any
+<!-- A forum post on the web, signed in (design canvas Q7, F1–F6): read, upvote, comment and reply at any
      depth, as in the app. Reddit's nesting: replies under what they answer, three shown then
      "Show more", "Continue this thread" past six levels. Open to every account. -->
 <script lang="ts">
@@ -7,19 +7,20 @@
   import { toast } from "svelte-sonner";
   import { ApiError } from "@logit/core/api/client";
   import { photoSrc } from "@logit/core/api/photosApi";
-  import { groupPostsApi, type GroupComment, type GroupThread } from "@logit/core/api/groupPostsApi";
+  import { forumApi, type ForumComment, type ForumThread } from "@logit/core/api/forumApi";
   import { branch, buildTree, visibleRows } from "@logit/core/domain/commentTree";
   import { Button } from "$lib/components/ui/button";
   import { Textarea } from "$lib/components/ui/textarea";
   import { Skeleton } from "$lib/components/ui/skeleton";
   import ReportDialog from "$lib/features/social/ReportDialog.svelte";
+  import MentionText from "$lib/features/social/MentionText.svelte";
 
-  const id = $derived(page.params.postId ?? "");
+  const id = $derived(page.params.id ?? "");
   const branchId = $derived(page.url.searchParams.get("branch"));
-  let thread = $state<GroupThread | null>(null);
+  let thread = $state<ForumThread | null>(null);
   let error = $state<string | null>(null);
   let draft = $state("");
-  let replyTo = $state<GroupComment | null>(null);
+  let replyTo = $state<ForumComment | null>(null);
   let replyDraft = $state("");
   let expanded = $state(new Set<string>());
   let folded = $state(new Set<string>());
@@ -28,7 +29,7 @@
 
   async function load() {
     try {
-      thread = await groupPostsApi.thread(id);
+      thread = await forumApi.thread(id);
     } catch (e) {
       error = e instanceof ApiError && e.status === 404 ? "This post doesn't exist, or it's in a group you can't see." : "Couldn't load the post.";
     }
@@ -46,7 +47,7 @@
   async function send(body: string, parentId: string | null) {
     if (!post || !body.trim()) return;
     try {
-      const c = await groupPostsApi.comment(post.id, body.trim(), parentId);
+      const c = await forumApi.comment(post.id, body.trim(), parentId);
       thread = { post: { ...post, commentCount: post.commentCount + 1 }, comments: [...thread!.comments, c] };
       if (parentId) expanded = new Set([...expanded, parentId]);
       if (parentId) { replyTo = null; replyDraft = ""; } else draft = "";
@@ -59,21 +60,21 @@
     if (!post) return;
     const up = !post.upvoted;
     thread = { ...thread!, post: { ...post, upvoted: up, upvotes: post.upvotes + (up ? 1 : -1) } };
-    await groupPostsApi.vote(post.id, up).catch(() => {});
+    await forumApi.vote(post.id, up).catch(() => {});
   }
-  async function voteComment(c: GroupComment) {
+  async function voteComment(c: ForumComment) {
     const up = !c.upvoted;
     thread = { ...thread!, comments: thread!.comments.map((x) => (x.id === c.id ? { ...x, upvoted: up, upvotes: x.upvotes + (up ? 1 : -1) } : x)) };
-    await groupPostsApi.voteComment(c.id, up).catch(() => {});
+    await forumApi.voteComment(c.id, up).catch(() => {});
   }
-  async function removeComment(c: GroupComment) {
-    await groupPostsApi.removeComment(c.id).then(load).catch(() => toast.error("Couldn't do that."));
+  async function removeComment(c: ForumComment) {
+    await forumApi.removeComment(c.id).then(load).catch(() => toast.error("Couldn't do that."));
   }
   const toggle = (cid: string) => (folded = folded.has(cid) ? new Set([...folded].filter((x) => x !== cid)) : new Set([...folded, cid]));
 </script>
 
 <div class="mx-auto flex max-w-[760px] flex-col gap-4">
-  {#if post}<a href="/groups/{post.group.id}" class="text-[13px] text-muted-foreground hover:text-foreground">‹ {post.group.name} · Posts</a>{/if}
+  {#if post}<a href={post.group ? `/groups/${post.group.id}` : "/social?tab=forum"} class="text-[13px] text-muted-foreground hover:text-foreground">‹ {post.group ? `${post.group.name} · Posts` : "Forum"}</a>{/if}
   {#if error}
     <p class="py-16 text-center text-sm text-muted-foreground">{error}</p>
   {:else if !thread || !post}
@@ -81,12 +82,12 @@
   {:else}
     {#if !branchId}
       <article class="flex flex-col gap-2">
-        <span class="w-fit rounded bg-muted px-1.5 py-0.5 text-[11px] font-semibold text-muted-foreground">{post.kind}</span>
         {#if post.deleted}<p class="italic text-muted-foreground">{post.removedByModerator ? "Removed by a moderator" : "Deleted by its author"}</p>{:else}
           <h1 class="text-2xl font-bold tracking-tight">{post.title}</h1>
-          <span class="text-sm text-muted-foreground">{name(post)}{post.authorRole ? ` · ${post.authorRole}` : ""}{post.authorIsMember ? "" : " · Not a member"} · {ago(post.createdAtMs)}</span>
-          {#if post.body}<p class="whitespace-pre-wrap text-[15px] leading-relaxed">{post.body}</p>{/if}
+          <span class="text-sm text-muted-foreground">{#if post.author}<a href="/social/{post.author.username}" class="font-medium text-foreground hover:underline">{name(post)}</a>{:else}{name(post)}{/if}{post.authorRole ? ` · ${post.authorRole}` : ""}{post.group && !post.authorIsMember ? " · Not a member" : ""} · {ago(post.createdAtMs)}</span>
+          {#if post.body}<MentionText text={post.body} class="text-[15px] leading-relaxed" />{/if}
           {#if post.photoUrl}<img src={photoSrc(post.photoUrl)} alt="" class="max-h-[420px] w-fit rounded-xl border border-border" />{/if}
+          {#if post.tags.length}<span class="flex flex-wrap gap-x-2 text-sm">{#each post.tags as t (t)}<a href="/social/tag/{encodeURIComponent(t)}" class="text-sky-700 hover:underline dark:text-sky-300">#{t}</a>{/each}</span>{/if}
         {/if}
         <div class="flex items-center gap-2">
           <Button size="sm" variant={post.upvoted ? "default" : "outline"} onclick={votePost} disabled={post.deleted}><ChevronUpIcon class="size-4" />{post.upvotes}</Button>
@@ -101,7 +102,7 @@
         </form>
       {:else if post.whyNot}<p class="text-sm text-muted-foreground">{post.whyNot}</p>{/if}
     {:else}
-      <a href="/groups/posts/{post.id}" class="text-sm text-muted-foreground hover:text-foreground">← All comments on "{post.title}"</a>
+      <a href="/social/forum/{post.id}" class="text-sm text-muted-foreground hover:text-foreground">← All comments on "{post.title}"</a>
     {/if}
 
     <div class="flex flex-col">
@@ -112,12 +113,14 @@
           {#if row.type === "comment"}
             {@const c = row.node.comment}
             <div class="flex flex-col gap-0.5 py-2 pl-2">
-              <button type="button" class="w-fit text-left text-xs" onclick={() => toggle(c.id)} aria-expanded={!folded.has(c.id)}>
-                <strong class="font-semibold">{c.deleted ? "Removed" : name(c)}</strong>{#if c.authorRole}{" · "}{c.authorRole}{/if}{#if !c.deleted && !c.authorIsMember}{" · Not a member"}{/if}<span class="text-muted-foreground">{" · "}{ago(c.createdAtMs)}{folded.has(c.id) ? " · folded" : ""}</span>
+              <span class="flex flex-wrap items-center text-xs">
+              {#if !c.deleted && c.author}<a href="/social/{c.author.username}" class="font-semibold hover:underline">{name(c)}</a>{:else}<strong class="font-semibold">{c.deleted ? "Removed" : name(c)}</strong>{/if}
+              <button type="button" class="text-left" onclick={() => toggle(c.id)} aria-expanded={!folded.has(c.id)}>{#if c.authorRole}{" · "}{c.authorRole}{/if}{#if !c.deleted && post.group && !c.authorIsMember}{" · Not a member"}{/if}<span class="text-muted-foreground">{" · "}{ago(c.createdAtMs)}{folded.has(c.id) ? " · folded" : ""}</span>
               </button>
+              </span>
               {#if !folded.has(c.id)}
                 {#if c.deleted}<span class="text-sm italic text-muted-foreground">{c.removedByModerator ? "Removed by a moderator" : "Deleted"}</span>{:else}
-                  <span class="whitespace-pre-wrap text-sm">{c.body}</span>
+                  <MentionText text={c.body} class="text-sm" />
                   <span class="flex items-center gap-3 text-xs text-muted-foreground">
                     <button type="button" aria-pressed={c.upvoted} class="flex items-center {c.upvoted ? 'font-semibold text-foreground' : ''}" onclick={() => voteComment(c)}><ChevronUpIcon class="size-3.5" />{c.upvotes}</button>
                     {#if post.canComment}<button type="button" onclick={() => { replyTo = c; replyDraft = ""; }}>Reply</button>{/if}
@@ -137,7 +140,7 @@
             {@const pid = row.parent.comment.id}
             <button type="button" class="py-1.5 pl-2 text-left text-sm font-semibold" onclick={() => (expanded = new Set([...expanded, pid]))}>Show {row.hidden} more {row.hidden === 1 ? "reply" : "replies"}</button>
           {:else}
-            <a href="/groups/posts/{post.id}?branch={row.node.comment.id}" class="block py-1.5 pl-2 text-sm font-semibold">Continue this thread →</a>
+            <a href="/social/forum/{post.id}?branch={row.node.comment.id}" class="block py-1.5 pl-2 text-sm font-semibold">Continue this thread →</a>
           {/if}
         </div>
       {/each}

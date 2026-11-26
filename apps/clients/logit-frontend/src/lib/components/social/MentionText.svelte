@@ -6,9 +6,9 @@
 
   const segments = $derived(parseMentions(text));
 
-  function openProfile(e: MouseEvent, username: string) {
+  function open(e: MouseEvent, path: string) {
     e.stopPropagation();
-    void goto(`/social/${username}`);
+    void goto(path);
   }
 </script>
 
@@ -17,7 +17,11 @@
     {#if seg.type === "mention"}<button
         type="button"
         class="text-primary font-medium hover:underline"
-        onclick={(e) => openProfile(e, seg.username)}
-      >@{seg.username}</button>{:else}{seg.value}{/if}
+        onclick={(e) => open(e, `/social/${seg.username}`)}
+      >@{seg.username}</button>{:else if seg.type === "tag"}<button
+        type="button"
+        class="text-sky-700 dark:text-sky-300 hover:underline"
+        onclick={(e) => open(e, `/social/tag/${encodeURIComponent(seg.tag)}`)}
+      >#{seg.tag}</button>{:else}{seg.value}{/if}
   {/each}
 </p>

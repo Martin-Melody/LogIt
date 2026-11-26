@@ -22,13 +22,6 @@ public class Group
     public DateTime? NoteAt { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public GroupAccess Access { get; set; } = GroupAccess.InviteOnly;
-    /// For web addresses (getlogit.app/g/{slug}/…); unique.
-    public string Slug { get; set; } = "";
-    /// Posts (canvas Q4): on, who can post, who can comment, and whether posts show on the web
-    /// (findable groups only; off until an organiser turns it on).
-    public bool PostsOn { get; set; } = true;
-    public GroupPosting WhoCanPost { get; set; } = GroupPosting.Anyone;
-    public GroupCommenting WhoCanComment { get; set; } = GroupCommenting.Anyone;
     public ICollection<GroupMember> Members { get; set; } = [];
 }
 

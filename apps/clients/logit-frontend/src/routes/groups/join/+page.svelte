@@ -128,10 +128,10 @@
       {/if}
     </div>
 
-    {#if preview.posts?.on}
+    {#if preview.access !== "InviteOnly"}
       <a href="/groups/{preview.id}/posts" class="mt-5 flex h-12 items-center justify-center gap-2 rounded-lg border border-border text-[15px] font-medium text-inherit no-underline"><MessagesSquare class="size-[18px]" />See posts</a>
     {/if}
-    <section aria-labelledby="share-h" class="{preview.posts?.on ? 'mt-3' : 'mt-6'} flex flex-col gap-2.5 rounded-2xl border border-border bg-card px-4 py-3.5">
+    <section aria-labelledby="share-h" class="{preview.access !== "InviteOnly" ? 'mt-3' : 'mt-6'} flex flex-col gap-2.5 rounded-2xl border border-border bg-card px-4 py-3.5">
       <h2 id="share-h" class="text-[15px] font-semibold">What members see</h2>
       <ul class="flex list-disc flex-col gap-1.5 pl-[18px] text-[14px] leading-snug">
         <li>Your name and photo, which events you're going to, and the group chat</li>

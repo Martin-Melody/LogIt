@@ -31,6 +31,7 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
     public DbSet<GroupPost> GroupPosts => Set<GroupPost>();
     public DbSet<GroupComment> GroupComments => Set<GroupComment>();
     public DbSet<GroupVote> GroupVotes => Set<GroupVote>();
+    public DbSet<Hashtag> Hashtags => Set<Hashtag>();
     public DbSet<DmMember> DmMembers => Set<DmMember>();
     public DbSet<DirectMessage> DirectMessages => Set<DirectMessage>();
     public DbSet<Story> Stories => Set<Story>();
@@ -353,8 +354,6 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
             e.Property(g => g.InviteCode).HasMaxLength(24);
             e.HasIndex(g => g.InviteCode).IsUnique();
             e.Property(g => g.Note).HasMaxLength(500);
-            e.Property(g => g.Slug).HasMaxLength(80);
-            e.HasIndex(g => g.Slug);
             e.HasIndex(g => g.Access);
         });
         model.Entity<GroupEvent>(e =>
@@ -374,12 +373,14 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
         {
             e.Property(p => p.Title).HasMaxLength(200);
             e.Property(p => p.Body).HasMaxLength(10000);
-            e.Property(p => p.Kind).HasMaxLength(30);
+            e.Property(p => p.Tags).HasMaxLength(420);
             e.Property(p => p.Slug).HasMaxLength(120);
             e.Property(p => p.CardType).HasMaxLength(32);
             e.Property(p => p.CardJson).HasMaxLength(4000);
             e.HasIndex(p => new { p.GroupId, p.LastActivityAt });
             e.HasIndex(p => new { p.GroupId, p.CreatedAt });
+            e.HasIndex(p => p.LastActivityAt);
+            e.HasIndex(p => new { p.AuthorId, p.CreatedAt });
             e.HasOne(p => p.Group).WithMany().HasForeignKey(p => p.GroupId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(p => p.Author).WithMany().HasForeignKey(p => p.AuthorId).OnDelete(DeleteBehavior.SetNull);
         });
@@ -396,6 +397,15 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
             e.HasIndex(v => v.PostId);
             e.HasOne<GroupPost>().WithMany().HasForeignKey(v => v.PostId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne<User>().WithMany().HasForeignKey(v => v.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+        model.Entity<Hashtag>(e =>
+        {
+            e.Property(h => h.Tag).HasMaxLength(40);
+            e.HasIndex(h => new { h.Tag, h.CreatedAt });
+            e.HasIndex(h => h.ForumPostId);
+            e.HasIndex(h => h.PostId);
+            e.HasOne<GroupPost>().WithMany().HasForeignKey(h => h.ForumPostId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Post>().WithMany().HasForeignKey(h => h.PostId).OnDelete(DeleteBehavior.Cascade);
         });
         model.Entity<BoardWeek>(e =>
         {

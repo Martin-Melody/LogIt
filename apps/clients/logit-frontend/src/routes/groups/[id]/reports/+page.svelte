@@ -9,7 +9,7 @@
   import { toast } from "svelte-sonner";
   import { photoSrc } from "@logit/core/api/photosApi";
   import { groupsApi, type Group, type GroupReport } from "@logit/core/api/groupsApi";
-  import { groupPostsApi } from "@logit/core/api/groupPostsApi";
+  import { forumApi } from "@logit/core/api/forumApi";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import ActionSheet from "$lib/components/ActionSheet.svelte";
@@ -38,8 +38,8 @@
   async function act(r: GroupReport, remove: boolean) {
     reports = (reports ?? []).filter((x) => x.messageId !== r.messageId);
     try {
-      if (remove && r.kind === "post") await groupPostsApi.moderate(r.messageId, { remove: true });
-      else if (remove && r.kind === "comment") await groupPostsApi.removeComment(r.messageId);
+      if (remove && r.kind === "post") await forumApi.moderate(r.messageId, { remove: true });
+      else if (remove && r.kind === "comment") await forumApi.removeComment(r.messageId);
       else if (remove) await groupsApi.removeMessage(id, r.messageId);
       else await groupsApi.keep(id, r.messageId);
       toast.success(remove ? "Message removed" : "Kept. It's off the group's list.");
@@ -83,8 +83,8 @@
           <PersonAvatar name={r.sender?.displayName ?? null} src={r.sender?.avatarUrl} size={32} />
           <span class="flex min-w-0 flex-col gap-1">
             <span class="text-[13px] font-semibold">{r.sender ? r.sender.displayName || r.sender.username : "Deleted account"}</span>
-            {#if r.title}<a href="/groups/posts/{r.postId}" class="text-[14px] font-semibold text-inherit">{r.title}</a>{/if}
-            {#if r.kind === "comment" && r.postId}<a href="/groups/posts/{r.postId}" class="text-[12px] text-muted-foreground">Open the post</a>{/if}
+            {#if r.title}<a href="/social/forum/{r.postId}" class="text-[14px] font-semibold text-inherit">{r.title}</a>{/if}
+            {#if r.kind === "comment" && r.postId}<a href="/social/forum/{r.postId}" class="text-[12px] text-muted-foreground">Open the post</a>{/if}
             {#if r.body}<span class="w-fit max-w-full whitespace-pre-wrap break-words rounded-2xl bg-muted px-3 py-2 text-[14px]">{r.body}</span>{/if}
             {#if r.photoUrl}<img src={photoSrc(r.photoUrl)} alt="Reported" class="max-h-48 w-fit rounded-xl border border-border object-contain" />{/if}
           </span>

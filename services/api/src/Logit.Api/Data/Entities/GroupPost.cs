@@ -1,30 +1,30 @@
 namespace Logit.Api.Data.Entities;
 
-/// A thread in a group's Posts (design canvas Q1–Q7; Martin's notes 25 Nov), Reddit-style: a
-/// title, text, a kind ("Question", or the poster's own), an optional photo or shared card;
-/// upvotes only; comments nest under what they answer. Kept apart from feed posts so feeds,
-/// profiles and Discover never pick them up.
+/// A forum post (design canvas row 19; Martin, 25 Nov), Reddit-style: a title, text, #tags, an
+/// optional photo or shared card, and optionally a group it's labelled with; upvotes only;
+/// comments nest under what they answer. Kept apart from regular feed posts: the feed only shows
+/// a title card for forum posts from people you follow and your groups.
 public class GroupPost
 {
     /// Permanent id (federation rule 3).
     public Guid Id { get; set; } = Guid.NewGuid();
-    public Guid GroupId { get; set; }
-    public Group Group { get; set; } = null!;
+    /// The group it's labelled with, if any. Posts labelled with an invite-only group stay inside it.
+    public Guid? GroupId { get; set; }
+    public Group? Group { get; set; }
     /// Null once the author deleted their account (shown "Deleted account").
     public Guid? AuthorId { get; set; }
     public User? Author { get; set; }
     public string Title { get; set; } = "";
     public string Body { get; set; } = "";
-    public string Kind { get; set; } = "Question";
-    /// For the web address: getlogit.app/g/{group slug}/{slug}-{short id}.
+    /// Its #tags, lower case, space-separated ("sligo gyms"); indexed in Hashtags.
+    public string Tags { get; set; } = "";
+    /// For the web address: getlogit.app/forum/{slug}-{short id}.
     public string Slug { get; set; } = "";
     public Guid? PhotoId { get; set; }
     public int PhotoWidth { get; set; }
     public int PhotoHeight { get; set; }
     public string? CardType { get; set; }
     public string? CardJson { get; set; }
-    /// Members only for this post's comments, narrower than the group's setting.
-    public bool MembersOnlyComments { get; set; }
     public bool Pinned { get; set; }
     /// Comments locked by a moderator.
     public bool Locked { get; set; }
@@ -64,7 +64,13 @@ public class GroupVote
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
-/// Anyone: anyone signed in, members or not (Martin, 25 Nov), in groups anyone can find. Anyone
-/// is 0 so groups from before the setting existed are open too.
-public enum GroupPosting { Anyone, Members, Staff }
-public enum GroupCommenting { Anyone, Members }
+/// One #tag on a forum post or a regular post (canvas F3, F4): what tag pages, suggestions and
+/// trending read. Lower case, so #Sligo = #sligo.
+public class Hashtag
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string Tag { get; set; } = "";
+    public Guid? ForumPostId { get; set; }
+    public Guid? PostId { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}

@@ -13,7 +13,10 @@
     type DiscoverPost,
     type SocialSettings,
   } from "@logit/core/api/socialApi";
-  import { appendUnique, caughtUpIndex } from "@logit/core/domain/socialFeed";
+  import { appendUnique, caughtUpIndex, withForumCards } from "@logit/core/domain/socialFeed";
+  import { tagsApi, type ForumPost, type TagCount } from "@logit/core/api/forumApi";
+  import ForumCard from "$lib/features/social/ForumCard.svelte";
+  import ForumPosts from "$lib/features/social/ForumPosts.svelte";
   import PostCard from "$lib/features/social/PostCard.svelte";
   import Composer from "$lib/features/social/Composer.svelte";
   import PeopleSuggestions from "$lib/features/social/PeopleSuggestions.svelte";
@@ -28,10 +31,14 @@
   // "You're all caught up" and suggested posts from Discover carry on below. Discover is its
   // own tab, fed by the server's Discover service.
 
-  type Tab = "following" | "discover" | "notifications";
+  type Tab = "following" | "discover" | "forum" | "notifications";
   const tab = $derived<Tab>(
-    (["discover", "notifications"] as const).find((t) => t === page.url.searchParams.get("tab")) ?? "following",
+    (["discover", "forum", "notifications"] as const).find((t) => t === page.url.searchParams.get("tab")) ?? "following",
   );
+  let trending = $state<TagCount[] | null>(null);
+  $effect(() => {
+    if (tab === "forum" && trending === null) void tagsApi.trending().then((t) => (trending = t)).catch(() => (trending = []));
+  });
   function go(t: Tab) {
     void goto(t === "following" ? "/social" : `/social?tab=${t}`, { noScroll: true, keepFocus: true });
     if (t === "discover") guideSignal("social.discover-opened");
@@ -50,6 +57,8 @@
 
   // ── Following ───────────────────────────────────────────────────────────────
   let feed = $state<ApiPost[]>([]);
+  // Forum posts from people you follow and your groups, as title cards (canvas F1).
+  let forumCards = $state<ForumPost[]>([]);
   let feedCursor = $state<string | null>(null);
   let feedStatus = $state<"loading" | "ready" | "more" | "error">("loading");
   let feedRequest = 0;
@@ -65,6 +74,7 @@
       const pageData = await socialApi.getFeed(20, more ? feedCursor ?? undefined : undefined);
       if (req !== feedRequest) return;
       feed = more ? appendUnique(feed, pageData.posts) : pageData.posts;
+      forumCards = more ? [...forumCards, ...(pageData.forum ?? [])] : (pageData.forum ?? []);
       feedCursor = pageData.nextCursor;
       feedStatus = "ready";
     } catch {
@@ -76,6 +86,8 @@
   const caughtUp = $derived(feedStatus === "loading" ? null : caughtUpIndex(feed, !!feedCursor, Date.now()));
   const newPosts = $derived(caughtUp === null ? feed : feed.slice(0, caughtUp));
   const olderPosts = $derived(caughtUp === null ? [] : feed.slice(caughtUp));
+  const items = $derived(withForumCards(feed, forumCards));
+  const splitMs = $derived(caughtUp !== null && caughtUp < feed.length ? Date.parse(feed[caughtUp]!.createdAt) : -Infinity);
 
   // Suggested posts once the divider is placed.
   $effect(() => {
@@ -151,7 +163,7 @@
     <header class="flex flex-wrap items-center justify-between gap-3">
       <h1 class="text-[26px] font-bold tracking-tight">Social</h1>
       <div role="tablist" aria-label="Feed" data-guide="social-tabs" class="flex gap-1 rounded-[10px] border border-border bg-card p-1">
-        {#each [["following", "Following"], ["discover", "Discover"], ["notifications", socialBadge.count ? `Notifications · ${socialBadge.count}` : "Notifications"]] as [t, label] (t)}
+        {#each [["following", "Following"], ["discover", "Discover"], ["forum", "Forum"], ["notifications", socialBadge.count ? `Notifications · ${socialBadge.count}` : "Notifications"]] as [t, label] (t)}
           <button type="button" role="tab" aria-selected={tab === t} onclick={() => go(t as Tab)}
             class="h-8 rounded-lg px-3 text-[13px] {tab === t ? 'bg-primary font-semibold text-primary-foreground' : 'text-muted-foreground'}">{label}</button>
         {/each}
@@ -173,8 +185,9 @@
       {:else if feedStatus === "error"}
         <Alert.Root variant="destructive"><Alert.Description>Couldn't load your feed. <button type="button" class="underline" onclick={() => loadFeed()}>Try again</button></Alert.Description></Alert.Root>
       {:else}
-        {#each newPosts as post (post.id)}
-          <PostCard {post} onchange={(n) => onFeedChange(post.id, n)} onposted={posted} />
+        {#each items.filter((i) => i.at > splitMs) as item (`${item.kind}:${item.post.id}`)}
+          {#if item.kind === "forum"}<ForumCard post={item.post} />
+          {:else}<PostCard post={item.post} onchange={(n) => onFeedChange(item.post.id, n)} onposted={posted} />{/if}
         {/each}
 
         {#if caughtUp !== null}
@@ -199,8 +212,9 @@
           </div>
           {#if showOlder}
             <h2 class="pt-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Older posts</h2>
-            {#each olderPosts as post (post.id)}
-              <PostCard {post} onchange={(n) => onFeedChange(post.id, n)} onposted={posted} />
+            {#each items.filter((i) => i.at <= splitMs) as item (`${item.kind}:${item.post.id}`)}
+              {#if item.kind === "forum"}<ForumCard post={item.post} />
+              {:else}<PostCard post={item.post} onchange={(n) => onFeedChange(item.post.id, n)} onposted={posted} />{/if}
             {/each}
           {/if}
         {/if}
@@ -225,6 +239,17 @@
         {#if discStatus === "more"}<Skeleton class="h-32" />{/if}
       {/if}
 
+    {:else if tab === "forum"}
+      <p class="text-[13px] text-muted-foreground">Questions and threads from anyone on LogIt. Tag posts so people can find them: #sligo, #deadlift.</p>
+      <ForumPosts>
+        {#snippet top()}
+          {#if trending?.length}
+            <div class="flex flex-wrap gap-2" aria-label="Trending tags">
+              {#each trending as t (t.tag)}<a href="/social/tag/{encodeURIComponent(t.tag)}" class="rounded-full border border-border px-3 py-1 text-[13px] text-sky-700 hover:bg-muted/40 dark:text-sky-300">#{t.tag}</a>{/each}
+            </div>
+          {/if}
+        {/snippet}
+      </ForumPosts>
     {:else}
       <Notifications />
     {/if}

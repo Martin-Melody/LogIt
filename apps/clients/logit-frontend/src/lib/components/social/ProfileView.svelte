@@ -4,7 +4,7 @@
   import { goto } from "$app/navigation";
   import {
     Loader2, UserPlus, UserCheck, MoreHorizontal, Flag, Ban,
-    ChevronDown, ChevronRight, Dumbbell, Pencil, Lock, Clock,
+    Pencil, Lock, Clock,
   } from "lucide-svelte";
   import { socialApi, type ApiProfile, type ApiPost, type FollowStatus, type PublicProfileData } from "@logit/core/api/socialApi";
   import { ApiError } from "@logit/core/api/client";
@@ -12,6 +12,7 @@
   import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
   import { toast } from "svelte-sonner";
   import PostCard from "./PostCard.svelte";
+  import ForumList from "./ForumList.svelte";
   import ReportSheet from "./ReportSheet.svelte";
   import CommentSheet from "$lib/components/CommentSheet.svelte";
   import WeightTrendWidget from "$lib/features/profileWidgets/components/WeightTrendWidget.svelte";
@@ -45,7 +46,8 @@
   let reportOpen = $state(false);
   let confirmBlock = $state(false);
   let blocking = $state(false);
-  let statsOpen = $state(false);
+  // Posts | Forum | Training (design canvas F5); Training only when there's something to show.
+  let view = $state<"posts" | "forum" | "training">("posts");
   let commentPost = $state<ApiPost | null>(null);
 
   const isSelf = $derived(profile?.isSelf ?? authStore.user?.username === username);
@@ -277,15 +279,18 @@
       </p>
     </div>
   {:else}
-  <!-- Stats (collapsible) -->
-  {#if stats.length > 0}
-    <div class="border-b border-border">
-      <button type="button" class="w-full flex items-center justify-between px-4 py-3 text-sm font-medium" onclick={() => (statsOpen = !statsOpen)}>
-        <span class="flex items-center gap-2"><Dumbbell class="h-4 w-4 text-muted-foreground" /> Training stats</span>
-        {#if statsOpen}<ChevronDown class="h-4 w-4 text-muted-foreground" />{:else}<ChevronRight class="h-4 w-4 text-muted-foreground" />{/if}
-      </button>
-      {#if statsOpen && publicData}
-        <div class="px-4 pb-4 flex flex-col gap-3">
+  <div role="tablist" aria-label="@{username}" class="flex border-b border-border">
+    {#each [["posts", "Posts"], ["forum", "Forum"], ...(stats.length > 0 ? [["training", "Training"]] : [])] as [v, label] (v)}
+      <button type="button" role="tab" aria-selected={view === v} class="h-11 flex-1 text-[14px] {view === v ? 'border-b-2 border-foreground font-semibold' : 'font-medium text-muted-foreground'}" onclick={() => (view = v as typeof view)}>{label}</button>
+    {/each}
+  </div>
+
+  {#if view === "forum"}
+    <ForumList filter={{ user: username }} canPost={isSelf} sorts={["new", "top"]} empty={isSelf ? "Your forum posts show here." : "No forum posts yet."} />
+  {:else if view === "training" && stats.length > 0}
+    <div>
+      {#if publicData}
+        <div class="px-4 py-4 flex flex-col gap-3">
           {#each stats as s (s.key)}
             {#if s.render === "body" && publicData.bodyStats}
               <div class="rounded-lg border border-border p-3">
@@ -340,10 +345,7 @@
         </div>
       {/if}
     </div>
-  {/if}
-
-  <!-- Posts -->
-  {#if postsLoading}
+  {:else if postsLoading}
     <div class="flex justify-center py-12"><Loader2 class="h-4 w-4 animate-spin text-muted-foreground" /></div>
   {:else if posts.length === 0}
     <p class="text-sm text-muted-foreground text-center py-12">No posts yet.</p>
