@@ -32,6 +32,7 @@
     useReplan,
     shortBy,
     isUntouchedPlannedSet,
+    targetRepsAt,
     getExercises,
   } from "@logit/core/domain/workout";
   import { suggestionToPlan } from "@logit/core/domain/progression";
@@ -358,7 +359,8 @@
   async function machineSaved(r: { machine: PlaceMachine; place: Place; createdPlace: boolean }) {
     editorSaved = true;
     if (r.createdPlace) myGymNote = r.place;
-    if (!machineEditor.machineId) forceReplan = true;
+    // A new machine, or the one in use edited (its weights filled in mid-workout), re-plans onto it.
+    if (!machineEditor.machineId || machineEditor.machineId === chosen?.id) forceReplan = true;
     if (editorPlace === undefined && get(currentSession)?.placeId !== r.place.id) {
       await onMutate((s: WorkoutSession) => ({ ...s, placeId: r.place.id, placeAsked: true }));
     }
@@ -687,7 +689,7 @@
     let fill: { reps: number; weight?: number } | null = null;
     if (!wasCompleted && set.reps === 0) {
       if (set.target) {
-        fill = { reps: set.target.reps, ...(set.weight === 0 ? { weight: set.target.weight } : {}) };
+        fill = { reps: bodyweight ? set.target.reps : targetRepsAt(set.target, set.weight), ...(set.weight === 0 ? { weight: set.target.weight } : {}) };
       } else if (!setTypeMeta(set.setType).repsPlaceholder) {
         focusSetId = null;
         queueMicrotask(() => (focusSetId = set.id));
@@ -955,7 +957,7 @@
     if (workingSets.length && done.length === workingSets.length) return setsLine(done, unit, bodyweight);
     const todo = workingSets.filter((x) => !x.completed).map((x) => ({
       weight: x.weight || x.target?.weight || 0,
-      reps: x.reps || x.target?.reps || 0,
+      reps: x.reps || (x.target ? (bodyweight ? x.target.reps : targetRepsAt(x.target, x.weight)) : 0),
     }));
     return todo.length ? setsLine(todo, unit, bodyweight) : "";
   });

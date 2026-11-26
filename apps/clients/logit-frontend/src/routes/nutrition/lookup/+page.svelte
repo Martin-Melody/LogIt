@@ -55,7 +55,7 @@
   async function add(r: AmountResult) {
     if (!picked || !r.meal) return;
     const food = picked.food;
-    const item = loggedItemFromFood(food, r.meal, r.grams, r.label, { amount: r.amount, portionId: r.portionId });
+    const item = { ...loggedItemFromFood(food, r.meal, r.grams, r.label, { amount: r.amount, portionId: r.portionId }), loggedAtMs: r.loggedAtMs };
     if (food.id.startsWith(SNAPSHOT_PREFIX)) {
       delete item.sourceId;
       delete item.sourceKind;
@@ -87,6 +87,7 @@
     day={ctx}
     meal={null}
     askMeal={mealForNow()}
+    dateIso={today}
     favourite={p.food.id.startsWith(SNAPSHOT_PREFIX) ? null : { on: favIds.has(p.food.id), toggle: () => void toggleFav(p.food) }}
     onconfirm={(r) => void add(r)}
     onclose={() => (picked = null)}
