@@ -39,7 +39,7 @@ export const FEATURES: Feature[] = [
       "/", "/settings", "/settings/walkthroughs", "/settings/navbar", "/settings/diagnostics", "/settings/music", "/settings/sounds", "/home/customize",
       "/settings/workout", "/settings/units", "/settings/appearance", "/settings/plugins", "/settings/about",
       "/settings/notifications", "/settings/notifications/[kind]", "/settings/notifications/quiet",
-      "/profile", "/profile/customize", "/onboarding", "/onboarding/first-workout", "/onboarding/week-done", "/onboarding/coaching", "/onboarding/coach",
+      "/profile", "/profile/edit", "/profile/customize", "/onboarding", "/onboarding/first-workout", "/onboarding/week-done", "/onboarding/coaching", "/onboarding/coach",
     ],
     wherePhone: "Settings",
     docs: "/docs/settings",

@@ -76,6 +76,11 @@ function createProfileConfigStore() {
     store.set(merged);
   }
 
+  /** A new card order and on/off from Edit profile. */
+  function setSlots(slots: WidgetSlot[]) {
+    update(() => withRegistry({ slots: slots.map((s, i) => ({ ...s, orderIndex: i })) }));
+  }
+
   function toggleWidget(id: string) {
     update((c) => ({
       ...c,
@@ -103,7 +108,7 @@ function createProfileConfigStore() {
     });
   }
 
-  return { subscribe: store.subscribe, toggleWidget, moveUp, moveDown, applyRemote, reloadForAccount: () => store.set(load()) };
+  return { subscribe: store.subscribe, setSlots, toggleWidget, moveUp, moveDown, applyRemote, reloadForAccount: () => store.set(load()) };
 }
 
 export const profileConfig = createProfileConfigStore();

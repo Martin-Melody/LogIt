@@ -1,5 +1,6 @@
 ---
 title: Self-hosting LogIt
+description: "Run your own LogIt sync server and web dashboard with Docker Compose: what you need, the setup, connecting the app and updating."
 ---
 
 <p class="lead">Run your own sync server and web dashboard. Free, no account with us, and your data stays on machines you control.</p>

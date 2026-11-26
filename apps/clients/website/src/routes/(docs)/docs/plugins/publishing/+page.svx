@@ -1,5 +1,6 @@
 ---
 title: Publishing
+description: "Publish a LogIt plugin so people can find and install it from the plugin registry."
 ---
 
 Discovery is just a static `registry.json` — an array of catalogue entries. There

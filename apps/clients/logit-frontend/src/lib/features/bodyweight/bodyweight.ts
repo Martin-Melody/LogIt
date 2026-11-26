@@ -53,6 +53,7 @@ export async function saveBodyweight(value: number, unit: WeightUnit): Promise<v
   const profileUnit = (get(profile).weightUnit ?? "kg") as WeightUnit;
   profile.save({ weight: Math.round(kgToDisplay(kg, profileUnit) * 10) / 10 });
   cached = null;
+  void import("$lib/features/profileWidgets/publicProfileSync").then((m) => m.syncOwnProfile());
 }
 
 /** What a session's volume needs beyond its sets: bodyweight by date and exercise types. */

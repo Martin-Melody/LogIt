@@ -38,7 +38,7 @@
   <ul>
     <li><strong>Account details:</strong> your email address, a securely hashed password, and a display name and username.</li>
     <li><strong>Your training and health data</strong> (with Pro or Studio): workouts, splits, food diary entries and any meal photos you attach, body weight, habits and goals, so they are available on your other devices.</li>
-    <li><strong>Social content</strong> (only if you post): posts, comments and likes you create, shown to other users with your username. With a public account (the default) your name, photo, bio, follower counts and posts can also be read by anyone on the web at getlogit.app/@yourname, and search engines can list them; with a private account nothing is on the web. Posts and comments in groups anyone can find are public on the web the same way. Stories, messages, who you follow and your workouts that you haven't posted never are.</li>
+    <li><strong>Social content</strong> (only if you post): posts, comments and likes you create, shown to other users with your username. With a public account (the default) your name, photo, bio, follower counts, posts and the training cards you choose to show on your profile (for example your split, records or weight trend) can also be read by anyone on the web at getlogit.app/@yourname, and search engines can list them; with a private account nothing is on the web. Posts and comments in groups anyone can find are public on the web the same way. Stories, messages, who you follow and your workouts that you haven't posted never are.</li>
     <li><strong>Technical data</strong> needed to run the service: authentication tokens and basic server request logs (including IP address), kept for security and troubleshooting and rotated regularly.</li>
   </ul>
   <p>

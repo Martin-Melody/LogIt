@@ -11,8 +11,7 @@
   import BottomSheet from "$lib/features/nutrition/ui/BottomSheet.svelte";
   import { chip } from "$lib/components/ui/choice";
   import { Input } from "$lib/components/ui/input";
-  import { pickImageFile } from "$lib/platform/filePick";
-  import { resizeImageFile } from "$lib/platform/imageResize";
+  import { choosePhoto } from "$lib/features/photos/photoChooser.svelte";
 
   const { group = null, onclose, onsaved }: { group?: Group | null; onclose: () => void; onsaved?: (g: Group) => void } = $props();
 
@@ -37,11 +36,8 @@
   const changedPhoto = $derived(photo !== (group?.photoUrl ?? null));
 
   async function choose() {
-    try {
-      photo = await resizeImageFile(await pickImageFile(), 1024, 0.85);
-    } catch {
-      // cancelled
-    }
+    const chosen = await choosePhoto({ title: "Group photo", crop: { aspect: 1 }, maxPx: 1024, canRemove: !!photo });
+    if (chosen) photo = "photo" in chosen ? chosen.photo : null;
   }
 
   async function save() {

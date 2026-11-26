@@ -1,5 +1,6 @@
 ---
 title: What each plan can do
+description: "What you get free on your phone, what a free account adds, and what Pro and Studio unlock."
 ---
 
 <script>

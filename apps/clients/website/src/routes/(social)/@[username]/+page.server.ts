@@ -8,7 +8,7 @@ import type { PageServerLoad } from "./$types";
 
 export const prerender = false;
 
-export type PublicProfile = { username: string; displayName: string; bio: string | null; avatarUrl: string | null; posts: number; followers: number; following: number };
+export type PublicProfile = { username: string; displayName: string; bio: string | null; avatarUrl: string | null; posts: number; followers: number; following: number; publicProfileJson?: string | null };
 
 export const load: PageServerLoad = async ({ params, fetch, setHeaders }) => {
   const api = publicApi();

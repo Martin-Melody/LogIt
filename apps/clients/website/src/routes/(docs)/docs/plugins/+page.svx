@@ -1,5 +1,6 @@
 ---
-title: Plugins
+title: Building plugins
+description: "Build plugins for LogIt: exercise packs, progression and nutrition algorithms, analytics and home-screen widgets."
 ---
 
 A LogIt plugin extends the app with one of nine things:

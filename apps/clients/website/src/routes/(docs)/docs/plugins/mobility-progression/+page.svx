@@ -1,5 +1,6 @@
 ---
 title: Mobility progression
+description: "Write a mobility progression algorithm that decides your next targets for stretching and mobility drills."
 ---
 
 A mobility progression algorithm decides your next targets for a **stretching /

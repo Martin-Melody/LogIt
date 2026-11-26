@@ -28,6 +28,8 @@
 
 <svelte:head>
   <title>{g.name} · LogIt</title>
+  <!-- Same rule as the groups sitemap: listed once it has a forum post or an upcoming event. -->
+  {#if data.events.length === 0 && data.posts.length === 0}<meta name="robots" content="noindex" />{/if}
   <meta name="description" content="{g.name}: {facts}. Sessions, meets and posts on LogIt." />
   <link rel="canonical" href="{SITE_URL}{g.webPath}" />
   <meta property="og:title" content={g.name} />

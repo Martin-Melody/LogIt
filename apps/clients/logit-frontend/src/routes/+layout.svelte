@@ -14,6 +14,7 @@
   import AppHeader from "$lib/components/navigation/AppHeader/AppHeader.svelte";
   import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { Toaster } from "$lib/components/ui/sonner/index";
+  import PhotoChooserHost from "$lib/features/photos/PhotoChooserHost.svelte";
   import { onMount } from "svelte";
   import { page } from "$app/state";
   import { appInit } from "$lib/platform/appInit";
@@ -147,6 +148,7 @@
 {/if}
 
 <Toaster position="top-center" richColors />
+<PhotoChooserHost />
 <CheerPill />
 {#if inviteSheet.open}<InviteFriendSheet onclose={() => (inviteSheet.open = false)} />{/if}
 {#if stories.watching !== null}<StoryViewer training={stories.training} onclose={() => (stories.watching = null)} />{/if}

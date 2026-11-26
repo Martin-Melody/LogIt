@@ -4,7 +4,9 @@
   import GripVerticalIcon from "@lucide/svelte/icons/grip-vertical";
   import { toast } from "$lib/components/ui/sonner";
   import { socialApi, type ApiProfile } from "@logit/core/api/socialApi";
-  import { updateOwnProfile } from "$lib/features/ownProfile";
+  import { apiClient } from "@logit/core/api/client";
+  import ImageCropper from "@logit/ui/ImageCropper.svelte";
+  import * as Dialog from "$lib/components/ui/dialog";
   import { createReorder, SLIDE_MS } from "$lib/reorder.svelte";
   import Avatar from "./Avatar.svelte";
   import ProfileCardBody from "./ProfileCardBody.svelte";
@@ -12,7 +14,7 @@
 
   /**
    * Your own profile in edit mode: photo, name, bio, and which cards show in what order.
-   * Saved to your public profile and to your synced profile, so the phone gets it too.
+   * Saved to your account's profile; the phone takes it from there the next time it syncs.
    * The cards' numbers still come from the phone's snapshot.
    */
   let { profile, oncancel, onsaved }: { profile: ApiProfile; oncancel: () => void; onsaved: (p: ApiProfile) => void } = $props();
@@ -63,30 +65,31 @@
     shown = [...shown, id];
   }
 
-  // Same as the phone: shrunk in the browser and kept as a data URL.
-  function resize(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        const scale = Math.min(AVATAR_PX / img.width, AVATAR_PX / img.height, 1);
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.round(img.width * scale);
-        canvas.height = Math.round(img.height * scale);
-        canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
-        URL.revokeObjectURL(img.src);
-        resolve(canvas.toDataURL("image/jpeg", 0.82));
-      };
-      img.onerror = reject;
-      img.src = URL.createObjectURL(file);
-    });
-  }
+  // Picked photos go through the cropper (design canvas U6) and come out 512 px square.
+  let cropSrc = $state<string | null>(null);
+  let cropper = $state<ReturnType<typeof ImageCropper> | null>(null);
 
-  async function pickPhoto(e: Event & { currentTarget: HTMLInputElement }) {
+  function pickPhoto(e: Event & { currentTarget: HTMLInputElement }) {
     const file = e.currentTarget.files?.[0];
     e.currentTarget.value = "";
     if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("That isn't a photo");
+      return;
+    }
+    if (cropSrc) URL.revokeObjectURL(cropSrc);
+    cropSrc = URL.createObjectURL(file);
+  }
+
+  function closeCrop() {
+    if (cropSrc) URL.revokeObjectURL(cropSrc);
+    cropSrc = null;
+  }
+
+  async function useCrop() {
     try {
-      avatar = await resize(file);
+      avatar = await cropper!.result(AVATAR_PX, 0.82);
+      closeCrop();
     } catch {
       toast.error("Couldn't read that image");
     }
@@ -112,17 +115,7 @@
         avatarUrl: avatar ?? "",
         ...(data && nextWidgets ? { publicProfileJson: JSON.stringify({ ...data, widgets: nextWidgets }) } : {}),
       });
-      // The phone keeps its own copy and pushes it back now and then, so it has to get this too.
-      try {
-        await updateOwnProfile(() => ({
-          displayName,
-          bio: bio.trim(),
-          avatarDataUrl: avatar,
-          ...(nextWidgets ? { profileConfigJson: JSON.stringify({ slots: nextWidgets.map((w) => ({ id: w.id, enabled: w.enabled, orderIndex: w.order })) }) } : {}),
-        }), { bump: true });
-      } catch {
-        toast.warning("Saved, but your phone hasn't synced a profile yet, so it may put back its own name and bio. Open LogIt on your phone and edit it there if that happens.");
-      }
+      apiClient.rememberDisplayName(updated.displayName);
       toast.success("Profile saved");
       onsaved(updated);
     } catch {
@@ -171,7 +164,7 @@
 <div class="flex flex-wrap items-baseline justify-between gap-2">
   <h2 class="text-[15px] font-semibold">Cards on your profile</h2>
   {#if data}
-    <span class="text-xs text-muted-foreground">Drag to reorder. The numbers come from your phone and update when you open your profile there.</span>
+    <span class="text-xs text-muted-foreground">Drag to reorder. The numbers come from your phone and update after each workout or weigh-in.</span>
   {/if}
 </div>
 
@@ -226,3 +219,19 @@
     </div>
   {/if}
 {/if}
+
+<Dialog.Root open={!!cropSrc} onOpenChange={(o) => { if (!o) closeCrop(); }}>
+  <Dialog.Content class="gap-0 overflow-hidden p-0 sm:max-w-[460px]">
+    <Dialog.Header class="px-5 pt-4 pb-3">
+      <Dialog.Title>Profile photo</Dialog.Title>
+      <Dialog.Description>Drag or use the arrow keys to move it, scroll or use the slider to zoom. The circle is what everyone sees.</Dialog.Description>
+    </Dialog.Header>
+    {#if cropSrc}
+      <ImageCropper bind:this={cropper} src={cropSrc} aspect={1} round class="h-[420px]" />
+    {/if}
+    <Dialog.Footer class="px-5 pt-2 pb-4">
+      <button type="button" class="h-9 rounded-[9px] border border-border px-3.5 text-sm" onclick={closeCrop}>Cancel</button>
+      <button type="button" class="h-9 rounded-[9px] bg-primary px-3.5 text-sm font-semibold text-primary-foreground" onclick={useCrop}>Use photo</button>
+    </Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>

@@ -3,3 +3,5 @@
 
 /* Colours, Inter, radius and base styles are shared with the phone app and the website. */
 @import "@logit/ui/theme.css";
+/* Shared components in packages/ui use Tailwind classes too. */
+@source "../../../../../packages/ui/src";

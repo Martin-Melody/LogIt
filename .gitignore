@@ -59,3 +59,6 @@ apps/clients/website/static/docs/shots/
 
 # Local compose overrides (e.g. the homelab: Postgres, port 3010). Never part of the self-host setup.
 docker-compose.override.yml
+
+# Photos the API stores on disk when run locally (Photos__Root defaults to ./photos).
+services/api/src/Logit.Api/photos/
