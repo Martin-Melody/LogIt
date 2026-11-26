@@ -131,7 +131,7 @@
     if (!sheet) return;
     const food = sheet.picked.food;
     const toMeal = r.meal ?? meal;
-    const item = loggedItemFromFood(food, toMeal, r.grams, r.label, { amount: r.amount, portionId: r.portionId });
+    const item = { ...loggedItemFromFood(food, toMeal, r.grams, r.label, { amount: r.amount, portionId: r.portionId }), loggedAtMs: r.loggedAtMs };
     if (food.id.startsWith(SNAPSHOT_PREFIX)) {
       delete item.sourceId;
       delete item.sourceKind;
@@ -161,9 +161,9 @@
     await log(mealTemplateToItems(t, meal), [t.id], meal);
   }
 
-  async function addQuick(r: { name: string; computed: MacroTotals; meal: MealSlot }) {
+  async function addQuick(r: { name: string; computed: MacroTotals; meal: MealSlot; loggedAtMs?: number }) {
     quick = false;
-    await log([{ meal: r.meal, name: r.name, grams: 0, computed: r.computed }], [], r.meal);
+    await log([{ meal: r.meal, name: r.name, grams: 0, computed: r.computed, loggedAtMs: r.loggedAtMs }], [], r.meal);
   }
 
   function done() {
@@ -231,6 +231,7 @@
     initial={p.initial}
     day={ctx}
     {meal}
+    {dateIso}
     favourite={p.food.id.startsWith(SNAPSHOT_PREFIX) ? null : { on: favIds.has(p.food.id), toggle: () => void toggleFav(p.food) }}
     onconfirm={(r) => void confirmAmount(r)}
     onclose={() => (sheet = null)}
@@ -254,5 +255,5 @@
 {/if}
 
 {#if quick}
-  <QuickAddSheet {meal} onadd={(r) => void addQuick(r)} onclose={() => (quick = false)} />
+  <QuickAddSheet {meal} {dateIso} onadd={(r) => void addQuick(r)} onclose={() => (quick = false)} />
 {/if}
