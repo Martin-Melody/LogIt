@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Checkbox } from "$lib/components/ui/checkbox/index.js";
   import * as NativeSelect from "$lib/components/ui/native-select/index.js";
   import * as Tabs from "$lib/components/ui/tabs/index.js";
   import { goto } from "$app/navigation";
@@ -345,7 +346,7 @@
             <legend class="pb-1.5 text-xs font-medium text-muted-foreground">What it gets</legend>
             {#each WIDGET_NEEDS as n (n.need)}
               <label class="flex items-start gap-2 text-[13px] leading-snug" title={n.detail}>
-                <input type="checkbox" checked={needs?.includes(n.need) ?? false} onchange={(e) => toggleNeed(n.need, e.currentTarget.checked)} class="mt-0.5" />
+                <Checkbox checked={needs?.includes(n.need) ?? false} onCheckedChange={(v) => toggleNeed(n.need, v)} class="mt-0.5" />
                 {n.label}
               </label>
             {/each}

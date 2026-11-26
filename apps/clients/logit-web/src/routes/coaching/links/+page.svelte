@@ -230,8 +230,8 @@
                     <td class="whitespace-nowrap px-3 py-3 {live ? '' : 'text-muted-foreground'}">{peopleText(l)}</td>
                     <td class="px-3 py-3">
                       {#if live && paymentsReady && packages.length}
-                        <NativeSelect.Root value={l.packageId ?? ""} onchange={(e) => changePackage(l, e.currentTarget.value)} aria-label="What people pay for through {l.name}"
-                          class="h-[30px] max-w-[200px] rounded-lg border border-input bg-background px-1.5 text-xs">
+                        <NativeSelect.Root size="sm" value={l.packageId ?? ""} onchange={(e) => changePackage(l, e.currentTarget.value)} aria-label="What people pay for through {l.name}"
+                          class="max-w-[200px]">
                           <NativeSelect.Option value="">Free</NativeSelect.Option>
                           {#each packages as p (p.id)}<NativeSelect.Option value={p.id}>{p.name}</NativeSelect.Option>{/each}
                         </NativeSelect.Root>

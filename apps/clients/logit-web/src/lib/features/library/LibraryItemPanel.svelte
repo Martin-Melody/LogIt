@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Checkbox } from "$lib/components/ui/checkbox/index.js";
   import * as NativeSelect from "$lib/components/ui/native-select/index.js";
   import type { Equipment, Exercise, ExerciseType, MuscleGroup } from "@logit/core/domain/exercise";
   import { EQUIPMENT } from "@logit/core/domain/exercise";
@@ -188,7 +189,7 @@
         </div>
         <div>
           <span class={label}>Sides</span>
-          <label class="flex h-9 items-center gap-2 text-sm"><input type="checkbox" bind:checked={perSide} /> Each side separately</label>
+          <label class="flex h-9 items-center gap-2 text-sm"><Checkbox bind:checked={perSide} /> Each side separately</label>
         </div>
       {/if}
     </div>

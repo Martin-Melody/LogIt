@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { DateField } from "$lib/components/ui/date-field/index.js";
+  import { Checkbox } from "$lib/components/ui/checkbox/index.js";
   import * as Dialog from "$lib/components/ui/dialog";
   import { Button } from "$lib/components/ui/button";
   import type { Goal, GoalTarget } from "@logit/core/domain/goals";
@@ -197,18 +199,17 @@
             <input id="goal-count" inputmode="numeric" bind:value={countTarget} class={field} />
           </div>
           <div class="flex flex-col gap-1.5">
-            <label for="goal-start" class="text-xs text-muted-foreground">Counting from</label>
-            <input id="goal-start" type="date" bind:value={startIso} class={field} />
+            <span class="text-xs text-muted-foreground">Counting from</span>
+            <DateField aria-label="Counting from" bind:value={startIso} />
           </div>
         </div>
       {/if}
 
       <div class="flex flex-wrap items-end gap-3">
-        <label class="flex h-9 items-center gap-2 text-[13px]"><input type="checkbox" bind:checked={hasDeadline} /> By a date</label>
+        <label class="flex h-9 items-center gap-2 text-[13px]"><Checkbox bind:checked={hasDeadline} /> By a date</label>
         {#if hasDeadline}
           <div class="flex flex-col gap-1.5">
-            <label for="goal-by" class="sr-only">By</label>
-            <input id="goal-by" type="date" bind:value={deadlineIso} class="{field} w-44" />
+            <DateField aria-label="By" bind:value={deadlineIso} class="w-44" />
           </div>
         {/if}
       </div>

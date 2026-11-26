@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Checkbox } from "$lib/components/ui/checkbox/index.js";
   import * as NativeSelect from "$lib/components/ui/native-select/index.js";
   import { page } from "$app/state";
   import { goto } from "$app/navigation";
@@ -186,8 +187,8 @@
         {/if}
 
         <label class="text-sm flex items-center gap-2">
-          <input type="checkbox" checked={!!habit.target}
-            onchange={(e) => void run({ target: e.currentTarget.checked ? { value: habit?.target?.value || 1, unit: habit?.target?.unit } : undefined })} />
+          <Checkbox checked={!!habit.target}
+            onCheckedChange={(v) => void run({ target: v ? { value: habit?.target?.value || 1, unit: habit?.target?.unit } : undefined })} />
           <span>Track a number</span>
         </label>
         {#if habit.target}

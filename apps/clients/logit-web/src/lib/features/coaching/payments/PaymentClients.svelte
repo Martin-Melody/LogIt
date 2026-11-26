@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { DateField } from "$lib/components/ui/date-field/index.js";
+  import * as RadioGroup from "$lib/components/ui/radio-group";
   import MoreHorizontalIcon from "@lucide/svelte/icons/more-horizontal";
   import * as Dialog from "$lib/components/ui/dialog";
   import * as AlertDialog from "$lib/components/ui/alert-dialog";
@@ -234,18 +236,17 @@
       <Dialog.Title>If {ruleFor ? nameOf(ruleFor) : ""}'s payment fails</Dialog.Title>
       <Dialog.Description>Stripe retries the card and emails them a link to update it. Choose what happens to their coaching meanwhile.</Dialog.Description>
     </Dialog.Header>
-    <fieldset class="flex flex-col gap-2">
-      <legend class="sr-only">Rule</legend>
+    <RadioGroup.Root bind:value={ruleChoice} aria-label="Rule" class="flex flex-col gap-2">
       {#each [["default", `Your default (${ruleText(data.settings.failRule, data.settings.failDays).toLowerCase()})`], ["keep", "Keep coaching, just tell me"], ["pause", "Pause coaching after"], ["end", "End coaching after"]] as [value, label] (value)}
         <label class="flex items-center gap-2.5 rounded-[9px] border px-3 py-2.5 text-[13px] {ruleChoice === value ? 'border-primary bg-muted' : 'border-border'}">
-          <input type="radio" name="client-rule" {value} bind:group={ruleChoice} class="accent-primary" />
+          <RadioGroup.Item {value} />
           <span>{label}</span>
           {#if (value === "pause" || value === "end") && ruleChoice === value}
             <input type="number" min="1" max="60" bind:value={ruleDays} aria-label="Days" class="h-8 w-16 rounded-md border border-input bg-background px-2 text-center" /> <span>days</span>
           {/if}
         </label>
       {/each}
-    </fieldset>
+    </RadioGroup.Root>
     <Dialog.Footer>
       <button type="button" onclick={() => (ruleFor = null)} class="h-9 rounded-[9px] border border-border px-3 text-[13px]">Cancel</button>
       <button type="button" onclick={saveRule} class="h-9 rounded-[9px] bg-primary px-3 text-[13px] font-semibold text-primary-foreground">Save</button>
@@ -263,7 +264,7 @@
       </Dialog.Description>
     </Dialog.Header>
     <label class="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground">Paid up to
-      <input type="date" bind:value={elsewhereUntil} class="h-9 rounded-[9px] border border-input bg-background px-2.5 text-[13px] text-foreground" />
+      <DateField aria-label="Paid up to" bind:value={elsewhereUntil} class="text-[13px]" />
     </label>
     <Dialog.Footer>
       <button type="button" onclick={() => (elsewhereFor = null)} class="h-9 rounded-[9px] border border-border px-3 text-[13px]">Cancel</button>

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { DateField } from "$lib/components/ui/date-field/index.js";
+  import * as RadioGroup from "$lib/components/ui/radio-group";
   import * as NativeSelect from "$lib/components/ui/native-select/index.js";
   import { guideSignal } from "$lib/features/guide/signal";
   import { onMount } from "svelte";
@@ -225,16 +227,16 @@
         {#each clients as c (c.client.id)}<NativeSelect.Option value={c.client.id}>{c.client.displayName || c.client.username}</NativeSelect.Option>{/each}
       </NativeSelect.Root>
     </label>
-    <fieldset class="flex flex-col gap-1.5">
-      <legend class="pb-1.5 text-xs font-medium text-muted-foreground">Starts</legend>
+    <span id="lib-start" class="text-xs font-medium text-muted-foreground">Starts</span>
+    <RadioGroup.Root bind:value={startMode} aria-labelledby="lib-start" class="flex flex-col gap-1.5">
       <label class="flex items-center gap-2.5 rounded-[9px] border px-3 py-2 text-[13px] {startMode === 'date' ? 'border-primary bg-muted' : 'border-border'}">
-        <input type="radio" name="lib-start" value="date" bind:group={startMode} /><span class="flex-1">On a date</span>
-        <input type="date" bind:value={startDate} aria-label="Start date" disabled={startMode !== "date"} class="h-8 rounded-md border border-input bg-background px-2 text-[13px]" />
+        <RadioGroup.Item value="date" /><span class="flex-1">On a date</span>
+        <DateField bind:value={startDate} aria-label="Start date" disabled={startMode !== "date"} class="h-8 w-auto text-[13px]" />
       </label>
       <label class="flex items-center gap-2.5 rounded-[9px] border px-3 py-2.5 text-[13px] {startMode === 'manual' ? 'border-primary bg-muted' : 'border-border'}">
-        <input type="radio" name="lib-start" value="manual" bind:group={startMode} /><span>When they tap Start on their phone</span>
+        <RadioGroup.Item value="manual" /><span>When they tap Start on their phone</span>
       </label>
-    </fieldset>
+    </RadioGroup.Root>
     <Dialog.Footer>
       <button type="button" onclick={() => (assignOpen = false)} class="h-9 rounded-[9px] border border-border px-3.5 text-[13px] hover:bg-muted">Cancel</button>
       <button type="button" disabled={busy || !assignTo} onclick={assign} class="h-9 rounded-[9px] bg-primary px-3.5 text-[13px] font-semibold text-primary-foreground disabled:opacity-50">Assign</button>

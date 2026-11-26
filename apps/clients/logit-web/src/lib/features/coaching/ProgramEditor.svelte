@@ -1,8 +1,11 @@
 <script lang="ts">
+  import ConfirmDialog, { type Ask } from "$lib/components/Dialogs/ConfirmDialog.svelte";
+  import { DateField } from "$lib/components/ui/date-field/index.js";
+  import { Checkbox } from "$lib/components/ui/checkbox/index.js";
   import * as NativeSelect from "$lib/components/ui/native-select/index.js";
   import { guideSignal } from "$lib/features/guide/signal";
   import { onMount } from "svelte";
-  import { beforeNavigate } from "$app/navigation";
+  import { beforeNavigate, goto } from "$app/navigation";
   import * as P from "@logit/core/domain/CoachProgram";
   import type { CoachProgram, ProgramDay, ProgramSet, ProgramStrength } from "@logit/core/domain/CoachProgram";
   import { SET_TYPE_META, type SetType } from "@logit/core/domain/workout";
@@ -55,8 +58,14 @@
     index = await loadExerciseIndex([]).catch(() => null);
   });
 
+  let ask = $state<Ask | null>(null);
+  let leaving = false;
   beforeNavigate((nav) => {
-    if (dirty && !saving && !confirm("Leave without saving? Your changes to this program will be lost.")) nav.cancel();
+    if (leaving || !dirty || saving) return;
+    nav.cancel(); // closing the tab ('leave') gets the browser's own prompt from this
+    const to = nav.to?.url;
+    if (nav.type === "leave" || !to) return;
+    ask = { title: "Leave without saving?", text: "Your changes to this program will be lost.", action: "Leave", run: () => { leaving = true; void goto(to); } };
   });
 
   function edit(fn: (p: CoachProgram) => CoachProgram) {
@@ -166,10 +175,10 @@
 
   function removeWeek() {
     if (!week || draft.weeks.length <= 1) return;
-    if (week.days.length && !confirm(`Remove week ${week.weekNumber} and its days?`)) return;
     const id = week.id;
-    edit((p) => P.removeWeek(p, id));
-    weekId = draft.weeks[0]?.id ?? "";
+    const remove = () => { edit((p) => P.removeWeek(p, id)); weekId = draft.weeks[0]?.id ?? ""; };
+    if (!week.days.length) return remove();
+    ask = { title: `Remove week ${week.weekNumber} and its days?`, action: "Remove week", run: remove };
   }
 
   function addDay() {
@@ -232,8 +241,8 @@
         <NativeSelect.Option value="fixed-date">On a date</NativeSelect.Option>
       </NativeSelect.Root>
       {#if draft.startMode === "fixed-date"}
-        <input type="date" aria-label="Start date" class={input} value={draft.startDateMs != null ? P.toDateInputValue(draft.startDateMs) : ""}
-          onchange={(e) => { const ms = P.fromDateInputValue(e.currentTarget.value); if (ms != null) edit((p) => P.setProgramStart(p, { mode: "fixed-date", startDateMs: ms })); }} />
+        <DateField aria-label="Start date" class="h-8 w-auto text-[13px]"
+          bind:value={() => (draft.startDateMs != null ? P.toDateInputValue(draft.startDateMs) : undefined), (v) => { const ms = v ? P.fromDateInputValue(v) : null; if (ms != null) edit((p) => P.setProgramStart(p, { mode: "fixed-date", startDateMs: ms })); }} />
       {:else if draft.clientStartedAtMs}
         <span class="text-xs text-muted-foreground">They started on {new Date(draft.clientStartedAtMs).toLocaleDateString(undefined, { day: "numeric", month: "short" })}</span>
       {/if}
@@ -283,7 +292,7 @@
             </NativeSelect.Root>
           </span>
           <span class="flex gap-3">
-            <button type="button" class="text-xs text-destructive hover:underline" onclick={() => { if (!day.blocks.length || confirm(`Remove ${day.name ?? "this day"}?`)) edit((p) => P.removeDay(p, week.id, day.id)); }}>Remove day</button>
+            <button type="button" class="text-xs text-destructive hover:underline" onclick={() => { const remove = () => edit((p) => P.removeDay(p, week.id, day.id)); if (!day.blocks.length) remove(); else ask = { title: `Remove ${day.name ?? "this day"}?`, action: "Remove day", run: remove }; }}>Remove day</button>
             <button type="button" class="text-xs text-muted-foreground hover:text-foreground" onclick={() => (openDay = null)}>Close</button>
           </span>
         </div>
@@ -397,7 +406,7 @@
         {#if mode === "library" && copies.length}
           <span class="text-xs text-muted-foreground">Also update:</span>
           {#each copies as c (c.id)}
-            <label class="flex items-center gap-1.5 text-[13px]"><input type="checkbox" value={c.id} bind:group={tick} /> {c.label}</label>
+            <label class="flex items-center gap-1.5 text-[13px]"><Checkbox checked={tick.includes(c.id)} onCheckedChange={(v) => (tick = v ? [...tick, c.id] : tick.filter((x) => x !== c.id))} /> {c.label}</label>
           {/each}
         {/if}
       </div>
@@ -410,3 +419,5 @@
     {#if mode === "copy"}<p class="-mt-1 text-xs text-muted-foreground">Only this client's copy changes. It reaches their phone on its next sync.</p>{/if}
   {/if}
 </div>
+
+<ConfirmDialog bind:ask />

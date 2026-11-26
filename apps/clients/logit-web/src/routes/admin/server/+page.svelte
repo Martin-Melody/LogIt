@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as RadioGroup from "$lib/components/ui/radio-group";
   import { onMount } from "svelte";
   import * as Alert from "$lib/components/ui/alert";
   import { Skeleton } from "$lib/components/ui/skeleton";
@@ -126,15 +127,15 @@
     {@const mismatch = webOriginMismatch(info.webOrigin)}
     <section aria-labelledby="signups" class="{card} border-border">
       <h2 id="signups" class="text-[15px] font-semibold">Who can sign up</h2>
-      <div class="flex flex-wrap gap-2.5" role="radiogroup" aria-labelledby="signups">
+      <RadioGroup.Root value={info.registrationMode} disabled={busy === "mode"} onValueChange={(v) => setMode(v as "open" | "invite")} class="flex flex-wrap gap-2.5" aria-labelledby="signups">
         {#each [["invite", "Only people with an invite", "You hand out codes from Invites. Good for family, a gym or a team."], ["open", "Anyone who knows the address", "Open sign-up. Sign-ups are still limited per address so bots can't flood it."]] as [mode, title, text] (mode)}
           {@const on = info.registrationMode === mode}
           <label class="flex flex-[1_1_260px] cursor-pointer items-start gap-3 rounded-xl border px-3.5 py-3 transition-colors {on ? 'border-primary/60 bg-muted' : 'border-border hover:bg-muted/50'}">
-            <input type="radio" name="mode" class="mt-1 accent-primary" checked={on} disabled={busy === "mode"} onchange={() => setMode(mode as "open" | "invite")} />
+            <RadioGroup.Item value={mode} class="mt-0.5" />
             <span><span class="block text-sm font-medium">{title}</span><span class="block text-[13px] text-muted-foreground">{text}</span></span>
           </label>
         {/each}
-      </div>
+      </RadioGroup.Root>
       <p class="text-[13px] text-muted-foreground">
         {#if info.registrationModeSource === "console"}Set here. It wins over <code class={code}>REGISTRATION_MODE</code> in .env.{:else}From <code class={code}>REGISTRATION_MODE</code> in .env. A change here is saved on the server and wins over it.{/if}
       </p>

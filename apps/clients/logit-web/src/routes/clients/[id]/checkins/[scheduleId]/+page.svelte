@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Checkbox } from "$lib/components/ui/checkbox/index.js";
   import * as NativeSelect from "$lib/components/ui/native-select/index.js";
   import { page } from "$app/state";
   import { goto } from "$app/navigation";
@@ -170,8 +171,8 @@
                   {#each qTypes as t}<NativeSelect.Option value={t.v}>{t.l}</NativeSelect.Option>{/each}
                 </NativeSelect.Root>
                 <label class="flex items-center gap-1 text-muted-foreground">
-                  <input type="checkbox" checked={q.required ?? false}
-                    onchange={(e) => void run((s) => C.updateQuestion(s, q.id, { required: e.currentTarget.checked }))} />
+                  <Checkbox checked={q.required ?? false}
+                    onCheckedChange={(v) => void run((s) => C.updateQuestion(s, q.id, { required: v }))} />
                   Required
                 </label>
               </div>

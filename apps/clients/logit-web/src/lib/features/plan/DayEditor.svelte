@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Checkbox } from "$lib/components/ui/checkbox/index.js";
   import * as NativeSelect from "$lib/components/ui/native-select/index.js";
   import GripVerticalIcon from "@lucide/svelte/icons/grip-vertical";
   import { flip } from "svelte/animate";
@@ -308,15 +309,15 @@
             <div class="flex flex-col gap-1.5">
               <label for="day-weekday" class="text-xs text-muted-foreground">Day</label>
               <NativeSelect.Root id="day-weekday" value={String(day.weekday ?? "")} onchange={(e) => setWeekday(e.currentTarget.value)}
-                class="h-9 w-36 rounded-lg border border-input bg-background px-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-ring">
+                class="w-36">
                 {#if day.weekday == null}<NativeSelect.Option value="" disabled>Pick a day</NativeSelect.Option>{/if}
                 {#each WEEKDAYS as w (w.n)}<NativeSelect.Option value={String(w.n)}>{w.label}</NativeSelect.Option>{/each}
               </NativeSelect.Root>
             </div>
           {:else if !isFirst}
             <label class="flex h-9 items-center gap-2 text-[13px]">
-              <input type="checkbox" checked={!!day.sameDayAsPrevious}
-                onchange={(e) => onChange(setSameDayAsPrevious(split, dayId, e.currentTarget.checked))} />
+              <Checkbox checked={!!day.sameDayAsPrevious}
+                onCheckedChange={(v) => onChange(setSameDayAsPrevious(split, dayId, v))} />
               Same day as the one before (a second workout)
             </label>
           {/if}
@@ -361,7 +362,7 @@
                     {@const info = b.type === "strength" ? index.get(b.exerciseName) : undefined}
                     <td class="px-1 py-1.5 align-middle">
                       {#if grouping}
-                        <input type="checkbox" aria-label="Pick {plannedBlockName(b)}" checked={picked.includes(b.id)} onchange={() => togglePick(b.id)} class="ml-1.5" />
+                        <Checkbox aria-label="Pick {plannedBlockName(b)}" checked={picked.includes(b.id)} onCheckedChange={() => togglePick(b.id)} class="ml-1.5" />
                       {:else}
                         <button type="button" draggable="true" aria-label="Move {plannedBlockName(b)} (arrow keys)"
                           ondragstart={(e) => runOrder.start(runs.map(runKey), key, e, (e.currentTarget as HTMLElement).closest("tr"))}
@@ -424,9 +425,9 @@
                             onchange={(e) => { const n = num(e.currentTarget.value); editDay((d) => setPlannedGroupSettings(d, g.id, { roundRestMs: n == null ? null : n * 1000 })); }} />
                           {#if run.members.length === 2}
                             <label for="kind-{g.id}" class="sr-only">Kind</label>
-                            <NativeSelect.Root id="kind-{g.id}" value={kind}
+                            <NativeSelect.Root size="sm" id="kind-{g.id}" value={kind}
                               onchange={(e) => { const k = e.currentTarget.value as "superset" | "circuit"; editDay((d) => setPlannedGroupKind(d, g.id, k)); }}
-                              class="h-7 rounded-md border border-input bg-background px-1.5 text-xs">
+                              >
                               <NativeSelect.Option value="superset">Superset</NativeSelect.Option><NativeSelect.Option value="circuit">Circuit</NativeSelect.Option>
                             </NativeSelect.Root>
                           {/if}

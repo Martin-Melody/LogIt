@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { DateField } from "$lib/components/ui/date-field/index.js";
   import { onMount } from "svelte";
   import * as Card from "$lib/components/ui/card";
   import * as Alert from "$lib/components/ui/alert";
@@ -86,7 +87,7 @@
         </label>
         <label class="flex flex-col gap-1">
           <span class="text-xs text-muted-foreground">Date</span>
-          <input type="date" max={localDateIso()} class="h-8 rounded border border-border bg-background px-2 text-sm" bind:value={dateIso} />
+          <DateField aria-label="Date" maxIso={localDateIso()} class="h-8" bind:value={dateIso} />
         </label>
         <Button size="sm" class="h-8" onclick={save}>Log</Button>
       </Card.Content>

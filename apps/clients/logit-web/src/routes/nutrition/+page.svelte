@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { DateField } from "$lib/components/ui/date-field/index.js";
   import { onMount } from "svelte";
   import * as Card from "$lib/components/ui/card";
   import * as Alert from "$lib/components/ui/alert";
@@ -316,7 +317,7 @@
       <div class="flex flex-wrap items-end gap-2 rounded border border-border p-2">
         <label class="flex flex-col gap-1">
           <span class="text-xs text-muted-foreground">Copy meals from</span>
-          <input type="date" max={localDateIso()} class="h-8 rounded border border-border bg-background px-2 text-sm" bind:value={copyFrom} />
+          <DateField aria-label="Copy meals from" maxIso={localDateIso()} class="h-8" bind:value={copyFrom} />
         </label>
         <button type="button" class="text-xs text-primary pb-2" onclick={() => (copyFrom = dayBefore(dateIso))}>Yesterday</button>
         <Button size="sm" class="h-8" disabled={copyBusy} onclick={doCopy}>{copyBusy ? "Copying…" : "Copy"}</Button>

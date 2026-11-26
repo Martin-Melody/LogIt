@@ -1,4 +1,6 @@
 <script lang="ts">
+  import * as RadioGroup from "$lib/components/ui/radio-group";
+  import { Checkbox } from "$lib/components/ui/checkbox/index.js";
   import * as NativeSelect from "$lib/components/ui/native-select/index.js";
   import { untrack } from "svelte";
   import { toast } from "$lib/components/ui/sonner";
@@ -244,7 +246,7 @@
             <textarea bind:value={form.description} maxlength="600" rows="3" placeholder="Custom program, weekly check-in with written feedback, messages within 24 h." class="rounded-[9px] border border-input bg-background px-2.5 py-2 text-[13px] text-foreground"></textarea>
           </label>
           {#if editing !== "new"}
-            <label class="flex items-center gap-2.5 text-[13px]"><input type="checkbox" bind:checked={form.hidden} class="size-4 accent-primary" /> Hidden: comes off its links; clients already on it keep paying</label>
+            <label class="flex items-center gap-2.5 text-[13px]"><Checkbox bind:checked={form.hidden} /> Hidden: comes off its links; clients already on it keep paying</label>
             <p class="text-xs text-muted-foreground">A new price applies to people who pay from now on. Clients already paying keep their price.</p>
           {/if}
           {#if formError}<p class="text-xs text-destructive">{formError}</p>{/if}
@@ -261,11 +263,10 @@
         <h2 class="text-sm font-semibold">When a payment fails</h2>
         <p class="mt-1 text-[13px] leading-relaxed text-muted-foreground">LogIt emails your client a link to update their card, and Stripe tries it again over a few days. Choose what happens to coaching meanwhile. The same applies when a one-off package runs out or a monthly plan is stopped. This is your default; you can change it for one client on the Clients tab.</p>
       </div>
-      <fieldset class="flex flex-col gap-2">
-        <legend class="sr-only">If a payment fails</legend>
+      <RadioGroup.Root bind:value={settings.failRule} aria-label="If a payment fails" class="flex flex-col gap-2">
         {#each rules as r (r.value)}
           <label class="flex items-start gap-3 rounded-[9px] border p-3 text-[13px] {settings.failRule === r.value ? 'border-primary bg-muted' : 'border-border'}">
-            <input type="radio" name="fail-rule" value={r.value} bind:group={settings.failRule} class="mt-0.5 size-4 accent-primary" />
+            <RadioGroup.Item value={r.value} />
             <span class="flex flex-col gap-1">
               <span class="flex flex-wrap items-center gap-1.5 font-medium">
                 {r.title}
@@ -278,9 +279,9 @@
             </span>
           </label>
         {/each}
-      </fieldset>
-      <label class="flex items-center gap-2.5 text-[13px]"><input type="checkbox" bind:checked={settings.emailOnFail} class="size-4 accent-primary" /> Email me about payments (new clients and failed cards)</label>
-      <label class="flex items-center gap-2.5 text-[13px]"><input type="checkbox" bind:checked={settings.showClientNote} class="size-4 accent-primary" /> Show the client a note in the app (no price, no pay button)</label>
+      </RadioGroup.Root>
+      <label class="flex items-center gap-2.5 text-[13px]"><Checkbox bind:checked={settings.emailOnFail} /> Email me about payments (new clients and failed cards)</label>
+      <label class="flex items-center gap-2.5 text-[13px]"><Checkbox bind:checked={settings.showClientNote} /> Show the client a note in the app (no price, no pay button)</label>
       <div class="flex justify-end"><button type="submit" disabled={savingSettings} class="h-[34px] rounded-[9px] bg-primary px-3 text-[13px] font-semibold text-primary-foreground disabled:opacity-50">Save</button></div>
     </form>
   {/if}
