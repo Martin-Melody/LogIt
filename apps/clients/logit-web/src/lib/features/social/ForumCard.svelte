@@ -6,11 +6,10 @@
   import type { ForumPost } from "@logit/core/api/forumApi";
 
   const { post }: { post: ForumPost } = $props();
-  const who = $derived(post.author ? post.author.displayName || post.author.username : "Someone");
 </script>
 
 <div class="flex flex-col gap-2 rounded-[10px] border border-border bg-card px-[18px] py-3.5">
-  <span class="flex items-center gap-1.5 text-xs text-muted-foreground"><MessageCircleIcon class="size-3.5" />Forum · {who} posted{post.group ? ` in ${post.group.name}` : ""}</span>
+  <span class="flex items-center gap-1.5 text-xs text-muted-foreground"><MessageCircleIcon class="size-3.5" />Forum · {#if post.author}<a href="/social/{post.author.username}" class="font-medium text-foreground hover:underline">{post.author.displayName || post.author.username}</a>{:else}Someone{/if} posted{post.group ? ` in ${post.group.name}` : ""}</span>
   <a href="/social/forum/{post.id}" class="flex flex-col gap-1.5 rounded-lg border border-border px-3.5 py-3 hover:bg-muted/40">
     <span class="text-base font-semibold">{post.title}</span>
     {#if post.body}<span class="line-clamp-2 text-sm text-muted-foreground">{post.body}</span>{/if}

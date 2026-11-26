@@ -6,12 +6,13 @@
   import { shortAgo } from "$lib/features/friends/dmTime";
 
   const { post }: { post: ForumPost } = $props();
-  const who = $derived(post.author ? post.author.displayName || post.author.username : "Someone");
 </script>
 
 <div class="flex flex-col gap-2 px-4 py-3">
   <span class="flex items-center gap-1.5 text-[12px] text-muted-foreground">
-    <MessageCircle class="size-3.5" />Forum · {who} posted{post.group ? ` in ${post.group.name}` : ""} · {shortAgo(post.createdAtMs, Date.now())}
+    <MessageCircle class="size-3.5" />Forum ·
+    {#if post.author}<a href="/social/{post.author.username}" class="flex min-h-8 items-center font-medium text-foreground no-underline">{post.author.displayName || post.author.username}</a>{:else}Someone{/if}
+    posted{post.group ? ` in ${post.group.name}` : ""} · {shortAgo(post.createdAtMs, Date.now())}
   </span>
   <a href="/social/forum/{post.id}" class="flex flex-col gap-1.5 rounded-xl border border-border bg-card px-3.5 py-3 text-inherit no-underline active:bg-muted/50">
     <span class="text-[16px] font-semibold leading-snug">{post.title}</span>

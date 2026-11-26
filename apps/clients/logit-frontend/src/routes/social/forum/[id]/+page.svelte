@@ -203,7 +203,7 @@
           {:else}
             <h1 class="text-[20px] font-bold leading-tight tracking-tight">{post.title}</h1>
             <span class="flex items-center gap-2 text-[12px] text-muted-foreground">
-              <PersonAvatar name={name(post)} src={post.author?.avatarUrl} size={22} />{name(post)}{post.authorRole ? ` · ${post.authorRole}` : ""}{post.group && !post.authorIsMember ? " · Not a member" : ""} · {shortAgo(post.createdAtMs, Date.now())}{post.edited ? " · Edited" : ""}
+              {#if post.author}<a href="/social/{post.author.username}" class="flex min-h-9 items-center gap-2 font-semibold text-foreground no-underline"><PersonAvatar name={name(post)} src={post.author.avatarUrl} size={22} />{name(post)}</a>{:else}<PersonAvatar name={null} src={null} size={22} />{name(post)}{/if}<span class="-ml-1.5">{post.authorRole ? ` · ${post.authorRole}` : ""}{post.group && !post.authorIsMember ? " · Not a member" : ""} · {shortAgo(post.createdAtMs, Date.now())}{post.edited ? " · Edited" : ""}</span>
             </span>
             {#if post.body}<MentionText text={post.body} class="whitespace-pre-wrap break-words text-[15px] leading-relaxed" />{/if}
             {#if post.photoUrl}<MessagePhoto url={post.photoUrl} width={post.photoWidth} height={post.photoHeight} />{/if}
@@ -230,14 +230,19 @@
             {@const c = row.node.comment}
             {@const isFolded = folded.has(c.id)}
             <div class="flex select-none gap-2 py-1.5 pr-3" style="padding-left: {16 + depth * 14}px" use:longpress={() => { if (!c.deleted) picked = c; }}>
-              <button type="button" aria-label={isFolded ? "Show this branch" : "Fold this branch"} aria-expanded={!isFolded} class="shrink-0 self-start pt-0.5" onclick={() => toggleFold(c.id)}><PersonAvatar name={c.deleted ? null : name(c)} src={c.author?.avatarUrl} size={22} /></button>
+              {#if !c.deleted && c.author}<a href="/social/{c.author.username}" aria-label="{name(c)}'s profile" class="shrink-0 self-start pt-0.5"><PersonAvatar name={name(c)} src={c.author.avatarUrl} size={22} /></a>
+              {:else}<span class="shrink-0 self-start pt-0.5"><PersonAvatar name={null} src={null} size={22} /></span>{/if}
               <span class="flex min-w-0 flex-1 flex-col gap-0.5">
-                <button type="button" class="flex flex-wrap items-center gap-x-1.5 text-left text-[12px]" onclick={() => toggleFold(c.id)}>
-                  <span class="font-semibold">{c.deleted ? (c.removedByModerator ? "Removed" : "Deleted") : name(c)}</span>
+                <span class="flex flex-wrap items-center gap-x-1.5 text-[12px]">
+                {#if !c.deleted && c.author}<a href="/social/{c.author.username}" class="font-semibold text-foreground no-underline">{name(c)}</a>
+                {:else}<span class="font-semibold">{c.deleted ? (c.removedByModerator ? "Removed" : "Deleted") : name(c)}</span>{/if}
+                <!-- Tapping the rest of the line folds the branch (as Reddit). -->
+                <button type="button" aria-expanded={!isFolded} class="flex flex-1 flex-wrap items-center gap-x-1.5 text-left" onclick={() => toggleFold(c.id)}>
                   {#if !c.deleted && c.authorRole}<span class="rounded border border-border px-1 text-[10px] text-muted-foreground">{c.authorRole}</span>{/if}
                   {#if !c.deleted && post.group && !c.authorIsMember}<span class="rounded border border-border px-1 text-[10px] text-muted-foreground">Not a member</span>{/if}
                   <span class="text-muted-foreground">· {shortAgo(c.createdAtMs, Date.now())}{c.edited ? " · edited" : ""}{isFolded ? ` · ${countUnder(row.node)} more` : ""}</span>
                 </button>
+                </span>
                 {#if !isFolded}
                   {#if c.deleted}
                     <span class="text-[14px] italic text-muted-foreground">{c.removedByModerator ? "Removed by a moderator" : "Deleted"}</span>

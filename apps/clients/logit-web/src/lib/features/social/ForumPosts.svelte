@@ -108,15 +108,16 @@
   {:else}
     <div class="overflow-hidden rounded-xl border border-border">
       {#each posts as p (p.id)}
-        <a href="/social/forum/{p.id}" class="flex flex-col gap-1 border-b border-border px-4 py-3 last:border-b-0 hover:bg-muted/40">
+        <!-- The title's link covers the row (::after), so the author's name can be its own link. -->
+        <div class="relative flex flex-col gap-1 border-b border-border px-4 py-3 last:border-b-0 hover:bg-muted/40">
           {#if p.pinned || (p.group && !filter.group)}
             <span class="flex items-center gap-2 text-[11px] text-muted-foreground">{#if p.pinned}<PinIcon class="size-3" />Pinned{/if}{#if p.group && !filter.group}<span class="rounded border border-border px-1.5 py-0.5">{p.group.name}</span>{/if}</span>
           {/if}
-          <span class="text-[15px] font-semibold">{p.deleted ? "Removed" : p.title}</span>
+          <a href="/social/forum/{p.id}" class="text-[15px] font-semibold after:absolute after:inset-0 after:content-['']">{p.deleted ? "Removed" : p.title}</a>
           {#if p.body}<span class="line-clamp-2 text-sm text-muted-foreground">{p.body}</span>{/if}
           {#if p.tags.length}<span class="text-[13px] text-sky-700 dark:text-sky-300">{p.tags.map((t) => `#${t}`).join(" ")}</span>{/if}
-          <span class="flex items-center gap-3 text-xs text-muted-foreground"><span class="flex items-center gap-0.5"><ChevronUpIcon class="size-3.5" />{p.upvotes}</span><span class="flex items-center gap-1"><MessageCircleIcon class="size-3.5" />{p.commentCount}</span><span class="ml-auto">{p.author?.displayName || p.author?.username || "Deleted account"} · {ago(p.lastActivityAtMs)}</span></span>
-        </a>
+          <span class="flex items-center gap-3 text-xs text-muted-foreground"><span class="flex items-center gap-0.5"><ChevronUpIcon class="size-3.5" />{p.upvotes}</span><span class="flex items-center gap-1"><MessageCircleIcon class="size-3.5" />{p.commentCount}</span><span class="ml-auto">{#if p.author}<a href="/social/{p.author.username}" class="relative z-10 font-medium text-foreground hover:underline">{p.author.displayName || p.author.username}</a>{:else}Deleted account{/if} · {ago(p.lastActivityAtMs)}</span></span>
+        </div>
       {/each}
     </div>
     {#if more}<button type="button" onclick={() => load(false)} class="h-8 self-center rounded-[9px] border border-border px-3 text-xs">Show more</button>{/if}
