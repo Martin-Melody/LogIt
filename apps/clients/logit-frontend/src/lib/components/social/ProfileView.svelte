@@ -2,7 +2,8 @@
   import { photoSrc } from "@logit/core/api/photosApi";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
-  import { ChevronDown, Loader2, Lock, Flag, Ban, Share2, Star, UserMinus } from "lucide-svelte";
+  import { ChevronDown, CirclePlay, ImageIcon, Loader2, Lock, Flag, Ban, Plus, Share2, Star, UserMinus } from "lucide-svelte";
+  import { longpress } from "$lib/swipe";
   import { socialApi, type ApiProfile, type ApiPost, type FollowStatus, type PublicProfileData } from "@logit/core/api/socialApi";
   import { storiesApi } from "@logit/core/api/storiesApi";
   import { trainingApi, type TrainingFriend } from "@logit/core/api/trainingApi";
@@ -22,6 +23,7 @@
   import { shownCards } from "@logit/core/domain/profileCards";
   import ShareProfileSheet from "./ShareProfileSheet.svelte";
   import TrainingNowSheet from "./TrainingNowSheet.svelte";
+  import AvatarViewer from "./AvatarViewer.svelte";
   import CommentSheet from "$lib/components/CommentSheet.svelte";
 
   interface Props {
@@ -191,10 +193,30 @@
     return name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
   }
 
+  // Instagram's avatar: tap = the story if there is one, else the picture (yours: add to your
+  // story); hold = a menu with both when there's a story to choose between.
+  let viewingPhoto = $state(false);
+  let avatarMenuOpen = $state(false);
+  let held = false;
+
   function tapAvatar() {
+    if (held) { held = false; return; } // the release after a hold
     if (storyAuthor) watch(username);
-    else if (isSelf) stories.picking = true;
+    else if (isSelf && authStore.isAuthenticated) stories.picking = true;
+    else if (shownAvatar) viewingPhoto = true;
   }
+
+  function holdAvatar() {
+    if (!storyAuthor && !isSelf) { held = true; if (shownAvatar) viewingPhoto = true; return; }
+    held = true;
+    avatarMenuOpen = true;
+  }
+
+  const avatarItems = $derived<ActionItem[]>([
+    ...(storyAuthor ? [{ icon: CirclePlay, label: "View story", onSelect: () => watch(username) }] : []),
+    ...(shownAvatar ? [{ icon: ImageIcon, label: "View profile picture", onSelect: () => (viewingPhoto = true) }] : []),
+    ...(isSelf && authStore.isAuthenticated ? [{ icon: Plus, label: "Add to your story", onSelect: () => (stories.picking = true) }] : []),
+  ]);
 
   async function openFollowMenu() {
     followMenuOpen = true;
@@ -253,11 +275,12 @@
 {:else if profile}
   <!-- Head (design canvas PR1/PR6/PR7): photo and counts, name, bio, then the buttons. -->
   <div class="flex items-center gap-[18px] px-4 pt-3.5 pb-2.5">
-    <button type="button" data-guide={avatarGuideMark} onclick={tapAvatar} disabled={!storyAuthor && !isSelf}
-      aria-label={storyAuthor ? `${shownName}'s story` : isSelf ? "Add to your story" : shownName}
+    <button type="button" data-guide={avatarGuideMark} onclick={tapAvatar} onpointerdown={() => (held = false)} use:longpress={holdAvatar} oncontextmenu={(e) => e.preventDefault()}
+      disabled={!storyAuthor && !isSelf && !shownAvatar}
+      aria-label={storyAuthor ? `${shownName}'s story. Hold for the profile picture` : isSelf && authStore.isAuthenticated ? "Add to your story. Hold for more" : `${shownName}'s profile picture`}
       class="relative flex size-[84px] shrink-0 items-center justify-center rounded-full {storyRing === 'new' ? 'ring-[2.5px] ring-foreground ring-offset-[3px] ring-offset-background' : storyRing === 'seen' ? 'ring-[1.5px] ring-border ring-offset-[3px] ring-offset-background' : ''}">
-      <span class="flex size-full items-center justify-center overflow-hidden rounded-full bg-muted text-[28px] font-bold">
-        {#if shownAvatar}<img src={photoSrc(shownAvatar)} alt="" class="size-full object-cover" />{:else}{initials(shownName || username)}{/if}
+      <span class="flex size-full select-none items-center justify-center overflow-hidden rounded-full bg-muted text-[28px] font-bold [-webkit-touch-callout:none]">
+        {#if shownAvatar}<img src={photoSrc(shownAvatar)} alt="" draggable="false" class="size-full object-cover" />{:else}{initials(shownName || username)}{/if}
       </span>
       {#if isSelf && !storyAuthor && authStore.isAuthenticated}
         <span aria-hidden="true" class="absolute -right-0.5 -bottom-0.5 flex size-[26px] items-center justify-center rounded-full border-[3px] border-background bg-primary text-base font-bold leading-none text-primary-foreground">+</span>
@@ -361,6 +384,8 @@
 {/if}
 
 <ActionSheet open={menuOpen} onOpenChange={(v) => (menuOpen = v)} title="@{username}" items={menuItems} />
+<ActionSheet open={avatarMenuOpen} onOpenChange={(v) => (avatarMenuOpen = v)} title={shownName} items={avatarItems} />
+{#if viewingPhoto && shownAvatar}<AvatarViewer src={shownAvatar} name={shownName} onclose={() => (viewingPhoto = false)} />{/if}
 <ActionSheet open={followMenuOpen} onOpenChange={(v) => (followMenuOpen = v)} title={shownName} items={followItems} />
 {#if shareOpen}<ShareProfileSheet {username} onclose={() => (shareOpen = false)} />{/if}
 {#if trainingSheet && trainingFriend}<TrainingNowSheet friend={trainingFriend} onclose={() => (trainingSheet = false)} />{/if}

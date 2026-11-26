@@ -10,6 +10,8 @@
   import { ApiError, apiClient } from "@logit/core/api/client";
   import { isPrivateError, socialApi, type ApiPost, type ApiProfile, type FollowStatus } from "@logit/core/api/socialApi";
   import Avatar from "$lib/features/social/Avatar.svelte";
+  import * as Dialog from "$lib/components/ui/dialog";
+  import { photoSrc } from "@logit/core/api/photosApi";
   import FollowButton from "$lib/features/social/FollowButton.svelte";
   import PostCard from "$lib/features/social/PostCard.svelte";
   import ProfileCards from "$lib/features/social/ProfileCards.svelte";
@@ -36,6 +38,7 @@
   let removing = $state<ApiProfile | null>(null);
   let removeOpen = $state(false);
   let editing = $state(false);
+  let viewingPhoto = $state(false);
 
   const locked = $derived(!!profile && profile.canSeeContent === false);
   const cardsShown = $derived(shownCards(parseProfileData(profile?.publicProfileJson)).length > 0);
@@ -144,7 +147,11 @@
   {:else}
     <!-- Head (design canvas PR4): photo, name and buttons, counts, bio. -->
     <section class="flex items-start gap-7 px-1">
-      <Avatar name={profile.displayName} url={profile.avatarUrl} size={96} />
+      {#if profile.avatarUrl}
+        <button type="button" aria-label="View {profile.displayName}'s profile picture" onclick={() => (viewingPhoto = true)} class="shrink-0 rounded-full focus-visible:ring-2 focus-visible:ring-ring"><Avatar name={profile.displayName} url={profile.avatarUrl} size={96} /></button>
+      {:else}
+        <Avatar name={profile.displayName} url={profile.avatarUrl} size={96} />
+      {/if}
       <div class="flex min-w-0 flex-1 flex-col gap-2">
         <div class="flex flex-wrap items-center gap-x-3.5 gap-y-2">
           <h1 class="flex items-center gap-2 text-[22px] font-bold">{profile.displayName}{#if profile.isPrivate}<LockIcon class="size-4 text-muted-foreground" aria-label="Private account" />{/if}</h1>
@@ -252,6 +259,16 @@
       </div>
     {/if}
 
+    <Dialog.Root bind:open={viewingPhoto}>
+      <Dialog.Content showCloseButton={false} class="w-auto max-w-none border-0 bg-transparent p-0 shadow-none sm:max-w-none">
+        <Dialog.Title class="sr-only">{profile.displayName}'s profile picture</Dialog.Title>
+        {#if profile.avatarUrl}
+          <button type="button" aria-label="Close" onclick={() => (viewingPhoto = false)}>
+            <img src={photoSrc(profile.avatarUrl)} alt="{profile.displayName}'s profile picture" class="size-[min(80vw,420px)] rounded-full object-cover" />
+          </button>
+        {/if}
+      </Dialog.Content>
+    </Dialog.Root>
     <ReportDialog bind:open={reportOpen} targetType="User" targetId={profile.id} what="@{profile.username}" />
     <AlertDialog.Root bind:open={blockOpen}>
       <AlertDialog.Content>

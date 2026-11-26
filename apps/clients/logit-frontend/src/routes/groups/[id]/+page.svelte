@@ -17,6 +17,7 @@
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import ReportSheet from "$lib/components/social/ReportSheet.svelte";
   import GroupAvatar from "$lib/components/social/GroupAvatar.svelte";
+  import AvatarViewer from "$lib/components/social/AvatarViewer.svelte";
   import PersonAvatar from "$lib/components/social/PersonAvatar.svelte";
   import GroupFormSheet from "$lib/components/social/GroupFormSheet.svelte";
   import GroupInviteSheet from "$lib/components/social/GroupInviteSheet.svelte";
@@ -121,6 +122,7 @@
     { icon: LogOut, label: `Leave ${group?.name ?? "the group"}`, destructive: true, onSelect: () => (confirm = "leave") },
     ...(organiser ? [{ icon: Trash2, label: "Delete the group", destructive: true, onSelect: () => (confirm = "delete") }] : []),
   ]);
+  let viewingPhoto = $state(false);
 </script>
 
 <div class="flex flex-col pb-24">
@@ -140,7 +142,11 @@
   {:else}
     <div class="flex flex-col gap-3.5 border-b border-border px-4 pb-4">
       <div class="flex items-center gap-3.5">
-        <GroupAvatar name={group.name} src={group.photoUrl} size={64} />
+        {#if group.photoUrl}
+          <button type="button" aria-label="{group.name}'s photo" onclick={() => (viewingPhoto = true)}><GroupAvatar name={group.name} src={group.photoUrl} size={64} /></button>
+        {:else}
+          <GroupAvatar name={group.name} src={group.photoUrl} size={64} />
+        {/if}
         <span class="flex min-w-0 flex-col gap-0.5">
           <h1 class="truncate text-2xl font-bold tracking-tight">{group.name}</h1>
           <span class="text-[13px] text-muted-foreground">{[group.kind, group.place, `${group.members} ${group.members === 1 ? "member" : "members"}`].filter(Boolean).join(" · ")}</span>
@@ -247,3 +253,4 @@
     onConfirm={act}
   />
 {/if}
+{#if viewingPhoto && group?.photoUrl}<AvatarViewer src={group.photoUrl} name={group.name} group onclose={() => (viewingPhoto = false)} />{/if}
