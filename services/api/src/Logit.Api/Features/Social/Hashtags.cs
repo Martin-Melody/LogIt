@@ -54,6 +54,12 @@ public static partial class Hashtags
     public static List<string> Split(string tags) => [.. tags.Split(' ', StringSplitOptions.RemoveEmptyEntries)];
 
     public record TagCountDto(string Tag, int Count);
+
+    /// Tags anyone may know about: not on a forum post in an invite-only group, nor on a private
+    /// account's post. Counts, suggestions and trending read only these.
+    public static IQueryable<Hashtag> Public(AppDbContext db) => db.Hashtags.Where(h =>
+        (h.ForumPostId == null || db.GroupPosts.Any(p => p.Id == h.ForumPostId && (p.GroupId == null || p.Group!.Access != GroupAccess.InviteOnly)))
+        && (h.PostId == null || db.Posts.Any(p => p.Id == h.PostId && !p.Author.IsPrivate)));
     public record TagDto(string Tag, int ForumPosts, int Posts);
 
     public static void MapTagEndpoints(this IEndpointRouteBuilder app)
@@ -71,15 +77,15 @@ public static partial class Hashtags
     {
         var prefix = Normalize(q);
         if (prefix is null) return Results.Ok(Array.Empty<TagCountDto>());
-        return Results.Ok(await Counted(db.Hashtags.Where(h => h.Tag.StartsWith(prefix)), 8));
+        return Results.Ok(await Counted(Public(db).Where(h => h.Tag.StartsWith(prefix)), 8));
     }
 
     /// The Forum tab's row (F2): the most-used tags this week, topped up with all-time ones.
     private static async Task<IResult> Trending(AppDbContext db, TimeProvider clock)
     {
         var since = clock.GetUtcNow().UtcDateTime.AddDays(-7);
-        var week = await Counted(db.Hashtags.Where(h => h.CreatedAt >= since), 10);
-        if (week.Count < 10) week.AddRange((await Counted(db.Hashtags, 20)).Where(x => week.All(w => w.Tag != x.Tag)).Take(10 - week.Count));
+        var week = await Counted(Public(db).Where(h => h.CreatedAt >= since), 10);
+        if (week.Count < 10) week.AddRange((await Counted(Public(db), 20)).Where(x => week.All(w => w.Tag != x.Tag)).Take(10 - week.Count));
         return Results.Ok(week);
     }
 
@@ -92,8 +98,13 @@ public static partial class Hashtags
     {
         var t = Normalize(tag);
         if (t is null) return Results.NotFound();
-        return Results.Ok(new TagDto(t, await db.Hashtags.CountAsync(h => h.Tag == t && h.ForumPostId != null),
-            await db.Hashtags.CountAsync(h => h.Tag == t && h.PostId != null)));
+        return Results.Ok(await AboutAsync(db, t));
+    }
+
+    public static async Task<TagDto> AboutAsync(AppDbContext db, string tag)
+    {
+        var rows = Public(db).Where(h => h.Tag == tag);
+        return new TagDto(tag, await rows.CountAsync(h => h.ForumPostId != null), await rows.CountAsync(h => h.PostId != null));
     }
 
     /// Regular posts with the tag that the caller can see (F4's Posts tab), newest first.

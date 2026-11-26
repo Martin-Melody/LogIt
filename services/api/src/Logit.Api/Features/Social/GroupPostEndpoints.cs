@@ -445,7 +445,7 @@ public static partial class GroupPostEndpoints
         var posts = await Hashtags.TaggedPosts(db, t).Where(p => !p.Author.IsPrivate).OrderByDescending(p => p.CreatedAt).Take(12).ToListAsync();
         if (forum.Count == 0 && posts.Count == 0) return Results.NotFound();
         var hidden = await db.HiddenRepostAuthorsAsync(null, posts);
-        return Results.Ok(new PublicTagDto(new(t, await db.Hashtags.CountAsync(h => h.Tag == t && h.ForumPostId != null), await db.Hashtags.CountAsync(h => h.Tag == t && h.PostId != null)),
+        return Results.Ok(new PublicTagDto(await Hashtags.AboutAsync(db, t),
             await PostDtosAsync(db, forum, null), [.. posts.Select(p => p.ToDto(null, hidden))]));
     }
 

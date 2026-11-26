@@ -109,16 +109,17 @@
     <label class="flex flex-col gap-1.5"><span class="text-[13px] font-medium">Title</span><Input bind:value={title} maxlength={200} placeholder="Best gyms in Sligo for powerlifting?" class="h-12 text-[15px]" /></label>
     <label class="flex flex-col gap-1.5"><span class="text-[13px] font-medium">Post (optional)</span><Textarea bind:value={body} rows={4} maxlength={10000} placeholder="Say more" class="min-h-28 text-[15px]" /></label>
 
-    <div class="relative flex flex-col gap-1.5">
+    <div class="flex flex-col gap-1.5">
       <label for="post-tags" class="text-[13px] font-medium">Tags</label>
-      <div class="flex min-h-12 flex-wrap items-center gap-1.5 rounded-lg border border-input px-2.5 py-2 focus-within:border-primary">
-        {#each tags as t (t)}
-          <span transition:fade={{ duration: 120 }} class="flex h-8 items-center gap-0.5 rounded-full bg-muted pl-2.5 text-[13px] text-sky-700 dark:text-sky-300">#{t}<button type="button" aria-label="Remove #{t}" class="flex size-8 items-center justify-center text-muted-foreground" onclick={() => (tags = tags.filter((x) => x !== t))}><X class="size-3.5" /></button></span>
-        {/each}
-        {#if tags.length < MAX_TAGS}
-          <input id="post-tags" bind:value={typed} onkeydown={onKey} onblur={() => setTimeout(() => (found = []), 150)} autocomplete="off" autocapitalize="none"
-            placeholder={tags.length ? "" : "#sligo, #deadlift…"} class="h-8 min-w-24 flex-1 bg-transparent text-[15px] text-sky-700 outline-none placeholder:text-muted-foreground dark:text-sky-300" />
-        {/if}
+      <div class="relative">
+        <div class="flex min-h-12 flex-wrap items-center gap-1.5 rounded-lg border border-input px-2.5 py-2 focus-within:border-primary">
+          {#each tags as t (t)}
+            <span transition:fade={{ duration: 120 }} class="flex h-8 items-center gap-0.5 rounded-full bg-muted pl-2.5 text-[13px] text-sky-700 dark:text-sky-300">#{t}<button type="button" aria-label="Remove #{t}" class="flex size-8 items-center justify-center text-muted-foreground" onclick={() => (tags = tags.filter((x) => x !== t))}><X class="size-3.5" /></button></span>
+          {/each}
+          {#if tags.length < MAX_TAGS}
+            <input id="post-tags" bind:value={typed} onkeydown={onKey} onblur={() => setTimeout(() => (found = []), 150)} autocomplete="off" autocapitalize="none"
+              placeholder={tags.length ? "" : "#sligo, #deadlift…"} class="h-8 min-w-24 flex-1 bg-transparent text-[15px] text-sky-700 outline-none placeholder:text-muted-foreground dark:text-sky-300" />
+          {/if}
       </div>
       {#if found.length}
         <ul transition:fade={{ duration: 120 }} class="absolute inset-x-0 top-full z-10 mt-1 flex flex-col overflow-hidden rounded-xl border border-border bg-popover shadow-lg" aria-label="Tags in use">
@@ -129,6 +130,7 @@
           {/each}
         </ul>
       {/if}
+      </div>
       {#if SUGGESTED_TAGS.some((t) => !tags.includes(t))}
         <div class="flex flex-wrap items-center gap-1.5 pt-1">
           <span class="text-[12px] text-muted-foreground">Suggested</span>

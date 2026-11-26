@@ -100,6 +100,8 @@ public class ForumTests : IDisposable
         Assert.Equal(2, (await Get(conor, $"/forum?group={g}")).GetArrayLength());
         Assert.Empty((await Get(conor, "/forum")).EnumerateArray());
         Assert.Empty((await Get(conor, "/forum?tag=ironclub")).EnumerateArray());
+        Assert.Equal(0, (await Get(conor, "/tags/ironclub")).GetProperty("forumPosts").GetInt32());
+        Assert.Empty((await Get(kate, "/tags?q=iron")).EnumerateArray());
         Assert.Single((await Get(conor, "/forum?user=ava")).EnumerateArray());
         Assert.Empty((await Get(kate, "/forum?user=ava")).EnumerateArray());
         Assert.Empty((await Get(_api.CreateClient(), "/public/forum")).EnumerateArray());
