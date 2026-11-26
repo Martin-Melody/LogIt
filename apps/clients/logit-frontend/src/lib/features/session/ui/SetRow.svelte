@@ -3,7 +3,7 @@
   import type { GripAction } from "$lib/features/session/blocks/types";
   import type { WeightUnit } from "@logit/core/domain/units";
   import { toDisplayWeight, fromDisplayWeight, roundDisplayWeight, trimWeight, formatLoad } from "@logit/core/domain/units";
-  import { setTypeMeta, type SetTarget } from "@logit/core/domain/workout";
+  import { setTypeMeta, targetRepsAt, type SetTarget } from "@logit/core/domain/workout";
   import { formatTargetReps } from "$lib/features/session/planFormat";
   import { effortLabel } from "./effort";
   import { popIn } from "$lib/transitions";
@@ -107,7 +107,7 @@
 
   const repsValue = $derived(reps > 0 || completed ? String(reps) : "");
   const repsPlaceholder = $derived(
-    planned && target ? formatTargetReps(target) : (meta.repsPlaceholder ?? (prev && prev.reps > 0 ? String(prev.reps) : "")),
+    planned && target ? (weightIsPlan || bodyweight ? formatTargetReps(target) : String(targetRepsAt(target, weight))) : (meta.repsPlaceholder ?? (prev && prev.reps > 0 ? String(prev.reps) : "")),
   );
 
   let repsEl = $state<HTMLInputElement | null>(null);
