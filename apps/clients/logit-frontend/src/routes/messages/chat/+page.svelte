@@ -24,9 +24,7 @@
   import VoiceRecorderBar from "$lib/components/social/VoiceRecorderBar.svelte";
   import type { MessageVoice } from "@logit/core/api/voiceApi";
   import MessagePhoto from "$lib/components/social/MessagePhoto.svelte";
-  import { pickImageFile } from "$lib/platform/filePick";
-  import { resizeImageFile } from "$lib/platform/imageResize";
-  import { photoSrc, uploadPhoto } from "@logit/core/api/photosApi";
+  import { photoSrc } from "@logit/core/api/photosApi";
   import { ApiError } from "@logit/core/api/client";
   import MessageCard from "$lib/components/social/MessageCard.svelte";
   import ShareCardSheet from "$lib/components/social/ShareCardSheet.svelte";
@@ -40,7 +38,8 @@
   import PersonAvatar from "$lib/components/social/PersonAvatar.svelte";
   import * as Message from "$lib/components/ui/message/index.js";
   import * as Bubble from "$lib/components/ui/bubble/index.js";
-  import * as Attachment from "$lib/components/ui/attachment/index.js";
+  import StagedPhotoCard from "$lib/components/social/StagedPhotoCard.svelte";
+  import { StagedPhoto } from "$lib/features/chat/stagedPhoto.svelte";
   import * as InputGroup from "$lib/components/ui/input-group/index.js";
   import ChatText from "$lib/components/social/ChatText.svelte";
   import ChatReactions from "$lib/components/social/ChatReactions.svelte";
@@ -69,10 +68,8 @@
   let now = $state(Date.now());
   let sharing = $state(false);
   let attachOpen = $state(false);
-  // A picked photo waits above the box (Attachment) while it uploads, so a caption can go
-  // with it and one Send sends both (canvas board 18).
-  type Staged = { file: File; preview: string; state: "uploading" | "done" | "error"; photo?: Awaited<ReturnType<typeof uploadPhoto>> };
-  let staged = $state<Staged | null>(null);
+  // A picked photo waits above the box while it uploads, so a caption can go with it (canvas board 18).
+  const staged = new StagedPhoto();
   let recording = $state(false);
 
   // A voice message is uploaded by the recording bar; the message then waits in the outbox.
@@ -257,10 +254,10 @@
   async function send() {
     if (editing) return saveEdit();
     const body = draft.trim();
-    const photo = staged?.state === "done" ? staged.photo : undefined;
-    if ((!body && !photo) || !chat || !to || (staged && !photo)) return;
+    const photo = staged.ready;
+    if ((!body && !photo) || !chat || !to || (staged.current && !photo)) return;
     draft = "";
-    if (photo) dropStaged();
+    if (photo) staged.drop();
     const target: DmTo = chat.threadId ? { threadId: chat.threadId } : to;
     const sending = queueDm(target, body, photo ? { photo } : {});
     await scrollDown();
@@ -279,37 +276,6 @@
 
   // Photos are uploaded first, so they need a connection; the message itself then waits in the
   // outbox like any other.
-  async function pickPhoto(from: "photos" | "camera") {
-    if (!chat || !to) return;
-    let file: File;
-    try {
-      file = await pickImageFile(from);
-    } catch {
-      return; // cancelled
-    }
-    dropStaged();
-    staged = { file, preview: URL.createObjectURL(file), state: "uploading" };
-    void uploadStaged();
-  }
-
-  async function uploadStaged() {
-    const s = staged;
-    if (!s) return;
-    staged = { ...s, state: "uploading" };
-    try {
-      const photo = await uploadPhoto(await resizeImageFile(s.file, 2048, 0.85));
-      if (staged?.file === s.file) staged = { ...staged, state: "done", photo };
-    } catch (e) {
-      if (staged?.file === s.file) staged = { ...staged, state: "error" };
-      toast.error(e instanceof ApiError && e.status < 500 && e.message ? e.message : "Photos need a connection. Try again when you're online.");
-    }
-  }
-
-  function dropStaged() {
-    if (staged) URL.revokeObjectURL(staged.preview);
-    staged = null;
-  }
-
   // Double-tap a message for ❤️, or pick from the long-press sheet; your own again takes it back.
   async function react(m: DmMessage, emoji: string) {
     if (!chat || m.deleted || !chat.accepted) return;
@@ -536,27 +502,8 @@
         <button type="button" aria-label="Stop editing" class="flex size-9 items-center justify-center" onclick={() => { editing = null; draft = ""; }}><X class="size-4" /></button>
       </div>
     {/if}
-    {#if staged}
-      {@const st = staged}
-      <!-- The picked photo waits here (shadcn Attachment) until Send; a caption can go with it. -->
-      <div transition:fade={{ duration: 120 }} class="shrink-0 {editing ? '' : 'border-t'} border-border px-3 pt-2">
-        <Attachment.Root state={st.state === "done" ? "idle" : st.state} class="w-full rounded-2xl">
-          <Attachment.Media variant="image" class="w-14 rounded-xl">
-            <img src={st.preview} alt="" />
-            {#if st.state === "uploading"}<Spinner class="absolute size-5 text-white" />{/if}
-          </Attachment.Media>
-          <Attachment.Content>
-            <Attachment.Title class="text-[14px]">Photo</Attachment.Title>
-            <Attachment.Description class="text-[13px] text-muted-foreground">{st.state === "uploading" ? "Uploading…" : st.state === "error" ? "Couldn't upload it." : "Ready. Add a caption or just send it."}</Attachment.Description>
-          </Attachment.Content>
-          <Attachment.Actions class="gap-1">
-            {#if st.state === "error"}<button type="button" class="h-9 rounded-lg border border-border px-3 text-[13px] font-medium" onclick={() => void uploadStaged()}>Try again</button>{/if}
-            <button type="button" aria-label="Remove the photo" class="flex size-11 items-center justify-center rounded-full text-muted-foreground" onclick={dropStaged}><X class="size-5" /></button>
-          </Attachment.Actions>
-        </Attachment.Root>
-      </div>
-    {/if}
-    <form class="flex shrink-0 items-end gap-2 {editing || staged ? '' : 'border-t'} border-border px-3 py-2" onsubmit={(e) => { e.preventDefault(); void send(); }}>
+    <StagedPhotoCard {staged} bordered={!editing} />
+    <form class="flex shrink-0 items-end gap-2 {editing || staged.current ? '' : 'border-t'} border-border px-3 py-2" onsubmit={(e) => { e.preventDefault(); void send(); }}>
       <!-- One rounded box (shadcn Input Group): + and camera inside, mic or Send beside it. -->
       <InputGroup.Root class="min-h-11 flex-1 rounded-[22px] dark:bg-transparent">
         <InputGroup.Addon align="inline-start" class="self-end pb-0.5">
@@ -566,20 +513,20 @@
           bind:value={draft}
           rows={1}
           maxlength={2000}
-          placeholder={staged ? "Add a caption…" : `Message ${name}…`}
+          placeholder={staged.current ? "Add a caption…" : `Message ${name}…`}
           aria-label="Message {name}"
           class="max-h-32 min-h-10 py-2.5 text-[15px]"
           onkeydown={(e: KeyboardEvent) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }}
         />
-        {#if !staged && !editing}
+        {#if !staged.current && !editing}
           <InputGroup.Addon align="inline-end" class="self-end pb-0.5">
-            <button type="button" aria-label="Take a photo" class="flex size-10 items-center justify-center rounded-full text-muted-foreground" onclick={() => void pickPhoto("camera")}><Camera class="size-5" /></button>
+            <button type="button" aria-label="Take a photo" class="flex size-10 items-center justify-center rounded-full text-muted-foreground" onclick={() => void staged.pick("camera")}><Camera class="size-5" /></button>
           </InputGroup.Addon>
         {/if}
       </InputGroup.Root>
-      {#if draft.trim() || staged}
-        <button type="submit" aria-label="Send" disabled={!!staged && staged.state !== "done"} class="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-50">
-          {#if staged?.state === "uploading"}<Spinner class="size-[18px]" />{:else}<Send class="size-[18px]" />{/if}
+      {#if draft.trim() || staged.current}
+        <button type="submit" aria-label="Send" disabled={!!staged.current && !staged.ready} class="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-50">
+          {#if staged.current?.state === "uploading"}<Spinner class="size-[18px]" />{:else}<Send class="size-[18px]" />{/if}
         </button>
       {:else}
         <button type="button" aria-label="Record a voice message" class="flex size-11 shrink-0 items-center justify-center rounded-full bg-muted text-foreground" onclick={() => (recording = true)}>
@@ -596,8 +543,8 @@
   onOpenChange={(v) => (attachOpen = v)}
   title="Send"
   items={[
-    { icon: ImageIcon, label: "Photo", onSelect: () => void pickPhoto("photos") },
-    { icon: Camera, label: "Camera", onSelect: () => void pickPhoto("camera") },
+    { icon: ImageIcon, label: "Photo", onSelect: () => void staged.pick("photos") },
+    { icon: Camera, label: "Camera", onSelect: () => void staged.pick("camera") },
     { icon: Dumbbell, label: "Workout or record", onSelect: () => (sharing = true) },
   ]}
 />
