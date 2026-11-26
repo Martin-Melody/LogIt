@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ClientHoverCard from "$lib/features/coaching/ClientHoverCard.svelte";
   import * as Table from "$lib/components/ui/table/index.js";
   import * as ContextMenu from "$lib/components/ui/context-menu";
   import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
@@ -202,7 +203,7 @@
                 <Table.Cell class="px-3 py-3">
                   <a href="/clients/{c.id}" class="flex items-center gap-2.5" onclick={() => guideSignal("client.opened")}>
                     <Avatar name={c.name} url={c.avatarUrl} size={30} />
-                    <span><span class="block font-medium">{c.name}{#if c.isSample}<SampleBadge />{/if}</span><span class="text-xs text-muted-foreground">{c.isSample ? "Sample client" : `@${c.username}`}</span></span>
+                    <span><span class="block font-medium"><ClientHoverCard clientId={c.id} span>{c.name}</ClientHoverCard>{#if c.isSample}<SampleBadge />{/if}</span><span class="text-xs text-muted-foreground">{c.isSample ? "Sample client" : `@${c.username}`}</span></span>
                   </a>
                 </Table.Cell>
                 {#if c.sharing.workouts}

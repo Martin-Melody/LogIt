@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageCrumbs from "$lib/components/PageCrumbs.svelte";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
@@ -226,6 +227,7 @@
       {@const name = nameOf(p)}
       <div class="flex flex-col gap-4">
         <a href="/admin/people" class="{btnSecondary} self-start md:hidden"><ArrowLeftIcon class="mr-1.5 size-4" />All people</a>
+        <PageCrumbs class="max-md:hidden" crumbs={[{ label: "Admin", href: "/admin" }, { label: "People", href: "/admin/people" }, { label: name }]} />
         <header class="flex items-center gap-3.5">
           <Avatar {name} url={p.avatarUrl} size={48} />
           <div class="min-w-0">

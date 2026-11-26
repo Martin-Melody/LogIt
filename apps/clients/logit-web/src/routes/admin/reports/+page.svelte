@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageCrumbs from "$lib/components/PageCrumbs.svelte";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
@@ -177,6 +178,7 @@
       {@const r = selected}
       <div class="flex flex-col gap-4">
         <a href="/admin/reports" class="{btn} self-start bg-muted md:hidden"><ArrowLeftIcon class="mr-1.5 size-4" />All reports</a>
+        <PageCrumbs class="max-md:hidden" crumbs={[{ label: "Admin", href: "/admin" }, { label: "Reports", href: "/admin/reports" }, { label: `${r.targetType} by @${preview?.author ?? "someone"}` }]} />
         <header>
           <h2 class="text-[22px] font-bold tracking-tight">{r.targetType} by {#if preview?.author}<PersonHoverCard username={preview.author} id={author?.id} class="underline decoration-foreground/30 underline-offset-4 hover:decoration-foreground">@{preview.author}</PersonHoverCard>{:else}someone{/if}, reported as {r.reason.toLowerCase()}</h2>
           <p class="text-[13px] text-muted-foreground">Reported by <PersonHoverCard username={r.reporter.username} id={r.reporter.id} class="hover:text-foreground hover:underline">@{r.reporter.username}</PersonHoverCard> · {ago(at(r.createdAt))}{sameTarget > 1 ? ` · ${sameTarget} open reports on this ${r.targetType.toLowerCase()}` : ""}</p>

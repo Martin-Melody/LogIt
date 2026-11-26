@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageCrumbs from "$lib/components/PageCrumbs.svelte";
   import { page } from "$app/state";
   import * as Alert from "$lib/components/ui/alert";
   import { Skeleton } from "$lib/components/ui/skeleton";
@@ -21,7 +22,7 @@
 
 {#if error}
   <div class="flex flex-col gap-3">
-    <a href="/plugins" class="text-[13px] text-muted-foreground hover:text-foreground">‹ Browse</a>
+    <PageCrumbs crumbs={[{ label: "Plugins", href: "/plugins" }, { label: data?.manifest.name ?? "Plugin" }]} />
     <Alert.Root variant="destructive"><Alert.Description>{error}</Alert.Description></Alert.Root>
   </div>
 {:else if !data}

@@ -2,6 +2,7 @@
      depth, as in the app. Reddit's nesting: replies under what they answer, three shown then
      "Show more", "Continue this thread" past six levels. Open to every account. -->
 <script lang="ts">
+  import PageCrumbs from "$lib/components/PageCrumbs.svelte";
   import { page } from "$app/state";
   import ProfileHoverCard from "$lib/features/social/ProfileHoverCard.svelte";
   import ChevronUpIcon from "@lucide/svelte/icons/chevron-up";
@@ -75,7 +76,7 @@
 </script>
 
 <div class="mx-auto flex max-w-[760px] flex-col gap-4">
-  {#if post}<a href={post.group ? `/groups/${post.group.id}` : "/social?tab=forum"} class="text-[13px] text-muted-foreground hover:text-foreground">‹ {post.group ? `${post.group.name} · Posts` : "Forum"}</a>{/if}
+  {#if post}<PageCrumbs crumbs={[{ label: "Social", href: "/social" }, post.group ? { label: post.group.name, href: `/groups/${post.group.id}` } : { label: "Forum", href: "/social?tab=forum" }, { label: post.title }]} />{/if}
   {#if error}
     <p class="py-16 text-center text-sm text-muted-foreground">{error}</p>
   {:else if !thread || !post}

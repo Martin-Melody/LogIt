@@ -1,4 +1,6 @@
 <script lang="ts">
+  import PageCrumbs from "$lib/components/PageCrumbs.svelte";
+  import { clientName } from "$lib/features/coaching/clientName";
   import { page } from "$app/state";
   import * as Card from "$lib/components/ui/card";
   import { Button } from "$lib/components/ui/button";
@@ -122,7 +124,7 @@
 
 <div class="flex flex-col gap-4 max-w-3xl">
   <div>
-    <a href="/clients/{clientId}?u={username}" class="text-xs text-muted-foreground hover:text-foreground">&larr; @{username}</a>
+    <PageCrumbs crumbs={[{ label: "Clients", href: "/clients" }, { label: clientName(clientId, username ? `@${username}` : "Client"), href: `/clients/${clientId}`, clientId }, { label: "Nutrition", href: `/clients/${clientId}?tab=nutrition` }, { label: "Meal plan" }]} />
     <h1 class="mt-1 text-[26px] font-bold tracking-tight">Meal plan</h1>
   </div>
 

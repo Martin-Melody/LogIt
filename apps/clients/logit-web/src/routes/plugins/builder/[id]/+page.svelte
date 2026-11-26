@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageCrumbs from "$lib/components/PageCrumbs.svelte";
   import { Checkbox } from "$lib/components/ui/checkbox/index.js";
   import * as NativeSelect from "$lib/components/ui/native-select/index.js";
   import * as Tabs from "$lib/components/ui/tabs/index.js";
@@ -274,7 +275,7 @@
 
 {#if isNew}
   <div class="flex flex-col gap-4">
-    <a href="/plugins?tab=mine" class="text-[13px] text-muted-foreground hover:text-foreground">‹ My plugins</a>
+    <PageCrumbs crumbs={[{ label: "Plugins", href: "/plugins" }, { label: "My plugins", href: "/plugins?tab=mine" }, { label: isNew ? "New plugin" : name || plugin?.pluginId || "Plugin" }]} />
     <section class="mx-auto flex w-full max-w-[560px] flex-col gap-4 rounded-[12px] border border-border bg-card p-6">
       <div>
         <h1 class="text-xl font-bold">New plugin</h1>
@@ -304,7 +305,7 @@
   </div>
 {:else if loadError}
   <div class="flex flex-col gap-3">
-    <a href="/plugins?tab=mine" class="text-[13px] text-muted-foreground hover:text-foreground">‹ My plugins</a>
+    <PageCrumbs crumbs={[{ label: "Plugins", href: "/plugins" }, { label: "My plugins", href: "/plugins?tab=mine" }, { label: isNew ? "New plugin" : name || plugin?.pluginId || "Plugin" }]} />
     <Alert.Root variant="destructive"><Alert.Description>{loadError}</Alert.Description></Alert.Root>
   </div>
 {:else if !plugin}
@@ -313,7 +314,7 @@
   <div class="flex flex-col gap-3.5">
     <header class="flex flex-wrap items-center justify-between gap-3">
       <div class="flex flex-wrap items-center gap-3">
-        <a href="/plugins?tab=mine" class="text-[13px] text-muted-foreground hover:text-foreground">‹ My plugins</a>
+        <PageCrumbs crumbs={[{ label: "Plugins", href: "/plugins" }, { label: "My plugins", href: "/plugins?tab=mine" }, { label: isNew ? "New plugin" : name || plugin?.pluginId || "Plugin" }]} />
         <h1 class="text-[15px] font-semibold">{name || plugin.pluginId}</h1>
         <span class="rounded-full px-2 py-0.5 text-[11px] font-semibold {saveState === 'error' ? 'bg-destructive/15 text-destructive' : 'bg-sky-500/15 text-sky-700 dark:text-sky-200'}" aria-live="polite">{SAVE_LABEL[saveState]}</span>
         {#if status}<span class="rounded-full px-2 py-0.5 text-[11px] font-semibold {status.tone}">{STATUS_LABEL[status.release.status]} {status.release.version}</span>{/if}

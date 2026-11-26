@@ -1,4 +1,6 @@
 <script lang="ts">
+  import PageCrumbs from "$lib/components/PageCrumbs.svelte";
+  import { clientName } from "$lib/features/coaching/clientName";
   import * as Tabs from "$lib/components/ui/tabs/index.js";
   import { guideSignal } from "$lib/features/guide/signal";
   import { untrack } from "svelte";
@@ -107,7 +109,7 @@
 </script>
 
 <div class="flex flex-col gap-4">
-  <a href="/clients" class="w-fit text-[13px] text-muted-foreground hover:text-foreground">‹ Clients</a>
+  <PageCrumbs crumbs={[{ label: "Clients", href: "/clients" }, { label: c?.name ?? clientName(clientId) }]} />
 
   {#if error}
     <Alert.Root variant="destructive"><Alert.Description>{error}</Alert.Description></Alert.Root>

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import PageCrumbs from "$lib/components/PageCrumbs.svelte";
+  import { clientName } from "$lib/features/coaching/clientName";
   import { Checkbox } from "$lib/components/ui/checkbox/index.js";
   import * as NativeSelect from "$lib/components/ui/native-select/index.js";
   import { page } from "$app/state";
@@ -99,7 +101,7 @@
 
 <div class="flex flex-col gap-4 max-w-3xl" data-guide="checkin-form-editor">
   <div class="flex items-center justify-between">
-    <a href="/clients/{clientId}?u={username}" class="text-xs text-muted-foreground hover:text-foreground">&larr; @{username}</a>
+    <PageCrumbs crumbs={[{ label: "Clients", href: "/clients" }, { label: clientName(clientId, username ? `@${username}` : "Client"), href: `/clients/${clientId}`, clientId }, { label: "Check-ins", href: `/clients/${clientId}?tab=checkins` }, { label: schedule?.name ?? "Check-in form" }]} />
     {#if schedule}
       <AlertDialog.Root bind:open={confirmDeleteOpen}>
         <AlertDialog.Trigger>

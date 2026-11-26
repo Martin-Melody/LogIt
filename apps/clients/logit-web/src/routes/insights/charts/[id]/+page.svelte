@@ -1,4 +1,6 @@
 <script lang="ts">
+  import PageCrumbs from "$lib/components/PageCrumbs.svelte";
+  import { clientName } from "$lib/features/coaching/clientName";
   import { Checkbox } from "$lib/components/ui/checkbox/index.js";
   import * as NativeSelect from "$lib/components/ui/native-select/index.js";
   import { guideSignal } from "$lib/features/guide/signal";
@@ -184,7 +186,9 @@
 </script>
 
 <div class="flex flex-col gap-4">
-  <a href={backHref} class="w-fit text-[13px] text-muted-foreground hover:text-foreground">‹ {clientId ? (client?.name ?? "Client") : "Insights"}</a>
+  <PageCrumbs crumbs={clientId
+    ? [{ label: "Clients", href: "/clients" }, { label: client?.name ?? clientName(clientId), href: `/clients/${clientId}`, clientId }, { label: "Insights", href: backHref }, { label: chart?.name || "New chart" }]
+    : [{ label: "Insights", href: "/insights" }, { label: chart?.name || "New chart" }]} />
 
   {#if error && !chart}
     <Alert.Root variant="destructive"><Alert.Description>{error}</Alert.Description></Alert.Root>
