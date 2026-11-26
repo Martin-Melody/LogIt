@@ -4,7 +4,11 @@
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount, onDestroy, tick } from "svelte";
   import { page } from "$app/state";
-  import { Camera, Image as ImageIcon, Mic, Plus, Send } from "lucide-svelte";
+  import { Camera, Copy, Image as ImageIcon, Mic, Plus, Send } from "lucide-svelte";
+  import ChatReactions from "$lib/components/social/ChatReactions.svelte";
+  import { longpress } from "$lib/swipe";
+  import { messagesApi } from "@logit/core/api/messagesApi";
+  import { DM_REACTIONS } from "@logit/core/api/dmApi";
   import VoiceMessage from "$lib/components/social/VoiceMessage.svelte";
   import VoiceRecorderBar from "$lib/components/social/VoiceRecorderBar.svelte";
   import type { MessageVoice } from "@logit/core/api/voiceApi";
@@ -75,6 +79,25 @@
     }
   }
 
+  // Their messages: double-tap for ❤️, long-press for the reaction row and Copy (canvas board 17).
+  // Needs a connection; the reaction then syncs like the message.
+  let picked = $state<CoachMessage | null>(null);
+  async function react(m: CoachMessage, emoji: string) {
+    if (m.mine) return;
+    const next = m.reaction === emoji ? null : emoji;
+    const before = m.reaction ?? null;
+    const set = (reaction: string | null) => (messages = messages.map((x) => (x.id === m.id ? { ...x, reaction } : x)));
+    set(next);
+    try {
+      await messagesApi.react(relationshipId, m.id, next);
+      await getMessagesRepo().upsertFromRemote({ ...m, reaction: next });
+    } catch {
+      set(before);
+      toast.error("Reactions need a connection. Try again when you're online.");
+    }
+  }
+  const reactionsOf = (m: CoachMessage) => (m.reaction ? [{ emoji: m.reaction, count: 1, mine: !m.mine }] : []);
+
   // Runs of messages from one side (shadcn Message): joined corners, one time under the run.
   const runs = $derived.by(() => {
     const out: { key: string; mine: boolean; time: boolean; items: CoachMessage[] }[] = [];
@@ -121,7 +144,8 @@
             {#each run.items as m, k (m.id)}
               {@const first = k === 0}
               {@const end = k === run.items.length - 1}
-              <div class="flex w-full flex-col gap-1 {m.mine ? 'items-end' : 'items-start'} {m.mine && !m.synced ? 'opacity-60' : ''}">
+              <div use:longpress={() => (picked = m)} ondblclick={() => void react(m, "❤️")} role="presentation"
+                class="relative flex w-full select-none flex-col gap-1 {m.mine ? 'items-end' : 'items-start'} {m.mine && !m.synced ? 'opacity-60' : ''} {m.reaction ? 'mb-4' : ''}">
                 {#if m.photo && m.body}
                   <Bubble.Root variant={m.mine ? "default" : "muted"} align={m.mine ? "end" : "start"} class="max-w-[78%]">
                     <Bubble.Content class="overflow-hidden rounded-[20px] p-0 text-[15px] leading-snug {joined(m.mine, first, end)}">
@@ -138,6 +162,7 @@
                     </Bubble.Root>
                   {/if}
                 {/if}
+                {#if m.reaction}<ChatReactions reactions={reactionsOf(m)} align={m.mine ? "end" : "start"} onpick={(e) => void react(m, e)} />{/if}
               </div>
             {/each}
             <Message.Footer class="px-1 text-[12px] font-normal">{new Date(last.createdAtMs).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}{#if run.items.some((m) => m.mine && !m.synced)} · sending…{/if}</Message.Footer>
@@ -190,3 +215,22 @@
     { icon: Camera, label: "Camera", onSelect: () => void staged.pick("camera") },
   ]}
 />
+<ActionSheet
+  open={!!picked}
+  onOpenChange={(v) => { if (!v) picked = null; }}
+  title={picked?.mine ? "Your message" : `${name}'s message`}
+  items={picked?.body ? [{ icon: Copy, label: "Copy text", onSelect: () => { const b = picked?.body ?? ""; void navigator.clipboard?.writeText(b).then(() => toast.success("Copied")); } }] : []}
+>
+  {#snippet header()}
+    {#if picked && !picked.mine}
+      {@const m = picked}
+      <div role="group" aria-label="React" class="mb-1 flex justify-between gap-1 rounded-2xl bg-muted/60 p-1.5">
+        {#each DM_REACTIONS as e (e)}
+          <button type="button" aria-label="React {e}" aria-pressed={m.reaction === e}
+            class="flex size-11 items-center justify-center rounded-full text-[24px] transition-transform active:scale-90 {m.reaction === e ? 'bg-primary/25' : ''}"
+            onclick={() => { const target = m; picked = null; void react(target, e); }}>{e}</button>
+        {/each}
+      </div>
+    {/if}
+  {/snippet}
+</ActionSheet>

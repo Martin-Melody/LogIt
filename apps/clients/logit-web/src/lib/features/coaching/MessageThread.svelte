@@ -15,6 +15,11 @@
   import * as Bubble from "$lib/components/ui/bubble/index.js";
   import * as InputGroup from "$lib/components/ui/input-group/index.js";
   import StagedPhotoCard from "$lib/features/chat/StagedPhotoCard.svelte";
+  import ChatReactions from "$lib/features/chat/ChatReactions.svelte";
+  import * as ContextMenu from "$lib/components/ui/context-menu";
+  import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
+  import SmilePlusIcon from "@lucide/svelte/icons/smile-plus";
+  import { DM_REACTIONS } from "@logit/core/api/dmApi";
   import { StagedPhoto, imageFrom } from "$lib/features/chat/stagedPhoto.svelte";
 
   // One coach↔client conversation: messages, read marks, a composer. Used by Messages (coach),
@@ -124,6 +129,22 @@
       error = e instanceof Error ? e.message : "Couldn't send the voice message";
     }
   }
+  // Their messages: react from the hover bar, right-click or a double-click (❤️). One each.
+  async function react(m: RemoteMessage, emoji: string) {
+    if (m.mine) return;
+    const next = m.reaction === emoji ? null : emoji;
+    const before = m.reaction ?? null;
+    const set = (reaction: string | null) => (messages = messages.map((x) => (x.messageId === m.messageId ? { ...x, reaction } : x)));
+    set(next);
+    try {
+      await messagesApi.react(relationshipId, m.messageId, next);
+    } catch (e) {
+      set(before);
+      error = e instanceof Error ? e.message : "Couldn't react";
+    }
+  }
+  const reactionsOf = (m: RemoteMessage) => (m.reaction ? [{ emoji: m.reaction, count: 1, mine: !m.mine }] : []);
+
   function onPaste(e: ClipboardEvent) {
     const file = imageFrom(e.clipboardData);
     if (!file) return;
@@ -188,9 +209,14 @@
             {@const first = k === 0}
             {@const end = k === run.items.length - 1}
             {@const align = m.mine ? "end" : "start"}
-            <div class="flex w-full flex-col gap-1 {m.mine ? 'items-end' : 'items-start'}">
+            <ContextMenu.Root>
+            <ContextMenu.Trigger disabled={m.mine && !m.body}>
+            {#snippet child({ props })}
+            <div {...props} role="group" aria-label="{m.mine ? 'Your' : `${otherName}'s`} message" ondblclick={() => void react(m, "❤️")}
+              class="group/row flex w-full items-center gap-1 {m.mine ? 'flex-row-reverse' : ''} {m.reaction ? 'mb-3.5' : ''}">
+            <div class="relative flex min-w-0 max-w-[78%] flex-col gap-1 {m.mine ? 'items-end' : 'items-start'}">
               {#if m.photoUrl && m.body}
-                <Bubble.Root variant={m.mine ? "default" : "muted"} {align} class="max-w-[78%]">
+                <Bubble.Root variant={m.mine ? "default" : "muted"} {align} class="max-w-full">
                   <Bubble.Content class="overflow-hidden rounded-[18px] p-0 text-[13px] {joined(m.mine, first, end)}">
                     <ChatPhoto url={m.photoUrl} width={m.photoWidth ?? 0} height={m.photoHeight ?? 0} mine={m.mine} bare />
                     <div class="whitespace-pre-wrap break-words px-3 py-2">{m.body}</div>
@@ -200,7 +226,7 @@
                 {#if m.photoUrl}<div class={joinedKids(m.mine, first, end)}><ChatPhoto url={m.photoUrl} width={m.photoWidth ?? 0} height={m.photoHeight ?? 0} mine={m.mine} /></div>{/if}
                 {#if m.voiceUrl}<div class={joinedKids(m.mine, first, end)}><ChatVoice voice={{ url: m.voiceUrl, ms: m.voiceMs ?? 0, peaks: m.voicePeaks ?? "" }} mine={m.mine} /></div>{/if}
                 {#if m.body || m.contextDateIso}
-                  <Bubble.Root variant={m.mine ? "default" : "muted"} {align} class="max-w-[78%]">
+                  <Bubble.Root variant={m.mine ? "default" : "muted"} {align} class="max-w-full">
                     <Bubble.Content class="rounded-[18px] px-3 py-2 text-[13px] leading-relaxed {joined(m.mine, first, end)}">
                       {#if m.contextDateIso}
                         <span class="mb-1 inline-block rounded-md bg-background/60 px-1.5 py-0.5 text-[11px] font-semibold text-muted-foreground">Diary · {contextLabel(m.contextDateIso)}</span><br />
@@ -210,7 +236,37 @@
                   </Bubble.Root>
                 {/if}
               {/if}
+              {#if m.reaction}<ChatReactions reactions={reactionsOf(m)} {align} onpick={(e) => void react(m, e)} />{/if}
             </div>
+            {#if !m.mine && !compact}
+              <DropdownMenu.Root>
+                <DropdownMenu.Trigger>
+                  {#snippet child({ props: p })}
+                    <button {...p} type="button" aria-label="React" class="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground focus-visible:opacity-100 group-hover/row:opacity-100 data-[state=open]:opacity-100"><SmilePlusIcon class="size-4" /></button>
+                  {/snippet}
+                </DropdownMenu.Trigger>
+                <DropdownMenu.Content side="top" align="start" class="flex min-w-0 gap-0.5 rounded-full p-1">
+                  {#each DM_REACTIONS as e (e)}
+                    <DropdownMenu.Item onSelect={() => void react(m, e)} aria-label="React {e}" class="size-8 justify-center rounded-full p-0 text-lg {m.reaction === e ? 'bg-primary/20' : ''}">{e}</DropdownMenu.Item>
+                  {/each}
+                </DropdownMenu.Content>
+              </DropdownMenu.Root>
+            {/if}
+            </div>
+            {/snippet}
+            </ContextMenu.Trigger>
+            <ContextMenu.Content class="w-auto min-w-44">
+              {#if !m.mine}
+                <ContextMenu.Group class="flex gap-0.5 p-0.5" aria-label="React">
+                  {#each DM_REACTIONS as e (e)}
+                    <ContextMenu.Item onSelect={() => void react(m, e)} aria-label="React {e}" class="size-8 justify-center rounded-full p-0 text-lg {m.reaction === e ? 'bg-primary/20' : ''}">{e}</ContextMenu.Item>
+                  {/each}
+                </ContextMenu.Group>
+                {#if m.body}<ContextMenu.Separator />{/if}
+              {/if}
+              {#if m.body}<ContextMenu.Item onSelect={() => void navigator.clipboard?.writeText(m.body)}>Copy text</ContextMenu.Item>{/if}
+            </ContextMenu.Content>
+            </ContextMenu.Root>
           {/each}
           <Message.Footer class="px-1 text-[10px] font-normal">{time(run.items.at(-1)!.createdAtMs)}{#if run.mine && lastMine && run.items.includes(lastMine) && lastMine.readAtMs != null} · Seen{/if}</Message.Footer>
         </Message.Content>
