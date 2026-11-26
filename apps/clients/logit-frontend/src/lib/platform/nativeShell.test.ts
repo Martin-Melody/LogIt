@@ -28,6 +28,11 @@ describe("links that open the app", () => {
     expect(routeForAppLink(`logit://u/ava/p/${id}`)).toBe(`/social/post/${id}`);
     expect(routeForAppLink("https://getlogit.app/@ava/other")).toBeNull();
   });
+  it("sends a forum post or a tag on the web to it in the app", () => {
+    expect(routeForAppLink("https://getlogit.app/forum/best-gyms-in-sligo-1a2b3c4d")).toBe("/social/forum/best-gyms-in-sligo-1a2b3c4d");
+    expect(routeForAppLink("https://getlogit.app/t/sligo?ref=x")).toBe("/social/tag/sligo");
+    expect(routeForAppLink("https://getlogit.app/forum/a/b")).toBeNull();
+  });
   it("ignores anything else", () => {
     expect(routeForAppLink("logit://somewhere")).toBeNull();
   });

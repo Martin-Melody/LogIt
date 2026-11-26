@@ -1,0 +1,10 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "ie.logit.app",
+      "sha256_cert_fingerprints": ["62:0B:04:6B:87:EF:9B:BE:4F:DF:81:B9:A8:8F:97:3B:92:97:38:15:A3:DB:53:F6:6F:7D:15:40:90:07:EF:58"]
+    }
+  }
+]

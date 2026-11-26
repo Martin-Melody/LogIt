@@ -104,6 +104,15 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" android:host="getlogit.app" android:pathPrefix="/@" />
             </intent-filter>
+            <!-- A forum post or a tag on the web (canvas F4): getlogit.app/forum/<slug>-<id> and
+                 getlogit.app/t/<tag> open the same screens in the app. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="getlogit.app" android:pathPrefix="/forum/" />
+                <data android:scheme="https" android:host="getlogit.app" android:pathPrefix="/t/" />
+            </intent-filter>
 
         </activity>
 
