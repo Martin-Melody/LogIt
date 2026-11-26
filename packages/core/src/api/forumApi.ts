@@ -94,6 +94,8 @@ export const forumApi = {
   editComment: (id: string, body: string) => apiClient.fetch<void>(`/forum-comments/${id}`, json("PATCH", { body })),
   removeComment: (id: string) => apiClient.fetch<void>(`/forum-comments/${id}`, { method: "DELETE" }),
   voteComment: (id: string, up: boolean) => apiClient.fetch<{ upvotes: number; upvoted: boolean }>(`/forum-comments/${id}/vote`, json("PUT", { up })),
+  /** A post by its web address ("best-gyms-in-sligo-1a2b3c4d"), for links from getlogit.app. */
+  byWebSlug: (slug: string) => apiClient.fetch<ForumThread>(`/public/forum/${encodeURIComponent(slug)}`),
   /** By title, text, tag or group; "#sligo" is that tag. */
   search: (q: string) => apiClient.fetch<ForumPost[]>(`/forum/search?q=${encodeURIComponent(q)}`),
 };

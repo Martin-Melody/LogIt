@@ -91,6 +91,10 @@ export function routeForAppLink(url: string): string | null {
   // website's "Open in LogIt" (logit://u/ava[/p/<id>]).
   const web = url.match(/^(?:https:\/\/getlogit\.app\/@|logit:\/\/u\/)([A-Za-z0-9_.-]+)(?:\/p\/([0-9a-f-]{36}))?\/?(?:[?#].*)?$/);
   if (web) return web[2] ? `/social/post/${web[2]}` : `/social/${encodeURIComponent(web[1].toLowerCase())}`;
+  // A forum post or a tag on the web (canvas F4): getlogit.app/forum/<slug>-<id8>, getlogit.app/t/<tag>.
+  // The thread screen looks a web address up by its slug.
+  const page = url.match(/^https:\/\/getlogit\.app\/(forum|t)\/([^/?#]+)\/?(?:[?#].*)?$/);
+  if (page) return page[1] === "forum" ? `/social/forum/${page[2]}` : `/social/tag/${page[2]}`;
   return null;
 }
 

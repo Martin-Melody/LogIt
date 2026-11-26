@@ -4,7 +4,7 @@
      (?branch=). Upvotes only. Its #tags open their pages. The post's ⋯: share, delete (yours),
      report, and for moderators pin (in a group), lock, remove, take a tag off. Long-press a comment for copy, reply, delete, report. -->
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { fade } from "svelte/transition";
   import { ChevronUp, Copy, Flag, Hash, Loader2, Lock, MessageCircle, MoreHorizontal, Pin, Send, Share2, Trash2, Unlock, X } from "lucide-svelte";
@@ -48,13 +48,22 @@
 
   async function load() {
     try {
+      // A link from getlogit.app carries the web address instead of the id.
+      if (!/^[0-9a-f-]{36}$/.test(id)) {
+        const found = await forumApi.byWebSlug(id);
+        await goto(`/social/forum/${found.post.id}`, { replaceState: true });
+        return;
+      }
       thread = await forumApi.thread(id);
       error = null;
     } catch (e) {
       error = e instanceof ApiError && e.status === 404 ? "This post doesn't exist, or you can't see it." : "Couldn't load the post.";
     }
   }
-  onMount(load);
+  $effect(() => {
+    void id;
+    void load();
+  });
 
   const post = $derived(thread?.post ?? null);
   const roots = $derived.by(() => {

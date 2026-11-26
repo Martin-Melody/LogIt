@@ -32,11 +32,9 @@ the social feed **is** built, and the placeholder URLs/prices no longer apply.
       converted GBP/USD prices come out round.
 - [ ] **Decide**: how many days to act on an emailed deletion request, and how long
       server backups are kept (the delete-account page says 30 and 30 for now).
-- [ ] **Shared-algorithm links open the app directly** (optional; they work without it through the
-      "Open in LogIt" button on getlogit.app/a). Once Play App Signing is set up, copy the **app signing
-      key's SHA-256** from Play Console › Setup › App integrity and tell Claude, who adds
-      `apps/clients/website/static/.well-known/assetlinks.json` for `ie.logit.app`. The manifest already
-      has the `https://getlogit.app/a` filter with `autoVerify`.
+- [x] **getlogit.app links open the app directly** (App Links, 2026-11-26): `apps/clients/website/static/.well-known/assetlinks.json`
+      lists the Play app signing key's SHA-256 (read from the Play API, `generatedApks`). Covers /a, /f, /g, /@name,
+      /forum/… and /t/… for Play-installed builds (`ie.logit.app`); lab debug builds (`ie.logit.app.dev`) still open the browser.
 - [x] **Cloudflare Pages project** `logit-website`: created by the first deploy 2026-11-13, live at
       https://logit-website.pages.dev. GitHub has `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID`, so pushes to main deploy it.
 - [ ] **Stripe for coach payments** (built 2026-11-16, off until this is done; not needed for launch):
