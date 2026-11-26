@@ -5,7 +5,7 @@
   import { clientActions } from "$lib/features/commands/commands.svelte";
   import { canCoach } from "$lib/workspace";
   import { guideSignal } from "$lib/features/guide/signal";
-  import { onSampleActivity } from "$lib/features/guide/sandbox.svelte";
+  import { onSampleActivity, practice } from "$lib/features/guide/sandbox.svelte";
   import SampleBadge from "$lib/features/guide/SampleBadge.svelte";
   import SandboxCard from "$lib/features/guide/SandboxCard.svelte";
   import { onMount } from "svelte";
@@ -19,6 +19,7 @@
   import Avatar from "$lib/features/coaching/Avatar.svelte";
   import { coachBadges } from "$lib/features/coaching/badges.svelte";
   import {
+    inView,
     loadCoachingOverview,
     needsYou,
     type ClientSummary,
@@ -40,7 +41,7 @@
     try {
       overview = await loadCoachingOverview();
       coachBadges.fromOverview(overview);
-      viewingClient.setClients(await coachApi.listClients());
+      viewingClient.setClients(inView(await coachApi.listClients()));
       error = null;
     } catch (e) {
       error = e instanceof Error ? e.message : "Couldn't load your clients";
@@ -54,11 +55,8 @@
   });
   onMount(() => onSampleActivity(() => void load()));
 
-  let show = $state<"all" | "real" | "sample">("all");
-  const shownClients = $derived(
-    (overview?.clients ?? []).filter((c) => show === "all" || (show === "sample") === c.isSample),
-  );
-  const sampleCount = $derived((overview?.clients ?? []).filter((c) => c.isSample).length);
+  // Practice view already decides which clients these are (samples or real ones).
+  const shownClients = $derived(overview?.clients ?? []);
 
   async function invite(e: Event) {
     e.preventDefault();
@@ -127,11 +125,12 @@
     <form class="flex flex-col gap-1" onsubmit={invite}>
       <div class="flex gap-2">
         <label for="invite-username" class="sr-only">Client's username</label>
-        <input id="invite-username" bind:value={inviteName} placeholder="Client's username" autocomplete="off"
-          class="h-9 w-[220px] rounded-[10px] border border-input bg-card px-3 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring" />
-        <button type="submit" disabled={inviting || !inviteName.trim()}
+        <input id="invite-username" bind:value={inviteName} placeholder="Client's username" autocomplete="off" disabled={practice.on}
+          class="h-9 w-[220px] rounded-[10px] border border-input bg-card px-3 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50" />
+        <button type="submit" disabled={inviting || !inviteName.trim() || practice.on}
           class="h-9 rounded-[10px] bg-primary px-3.5 text-[13px] font-semibold text-primary-foreground disabled:opacity-50">Invite</button>
       </div>
+      {#if practice.on}<span class="text-xs text-muted-foreground">Inviting reaches a real person: turn off Practice view first.</span>{/if}
       {#if inviteError}<span class="text-xs text-destructive">{inviteError}</span>{/if}
     </form>
   </header>
@@ -165,14 +164,6 @@
 
     <div id="sandbox" class="scroll-mt-16"><SandboxCard /></div>
 
-    {#if sampleCount > 0}
-      <div role="group" aria-label="Show" class="flex w-fit gap-[3px] rounded-[9px] bg-muted p-[3px]">
-        {#each [["all", `All ${overview.clients.length}`], ["real", `Real ${overview.clients.length - sampleCount}`], ["sample", `Sample ${sampleCount}`]] as [k, label] (k)}
-          <button type="button" aria-pressed={show === k} onclick={() => (show = k as typeof show)}
-            class="h-7 rounded-[7px] px-3 text-xs {show === k ? 'bg-primary font-semibold text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}">{label}</button>
-        {/each}
-      </div>
-    {/if}
 
     <section data-guide="clients-list" class="rounded-[10px] border border-border bg-card px-1.5 py-2">
       <div class="overflow-x-auto">

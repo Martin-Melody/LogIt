@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { onSampleActivity } from "$lib/features/guide/sandbox.svelte";
+  import { inView } from "$lib/features/coaching/coachingData";
   import ClientHoverCard from "$lib/features/coaching/ClientHoverCard.svelte";
   import { canCoach } from "$lib/workspace";
   import { onMount } from "svelte";
@@ -45,7 +47,7 @@
         messagesApi.unreadCounts().catch(() => []),
         messagesApi.listAll(0).catch(() => []),
       ]);
-      threads = clients
+      threads = inView(clients)
         .map((c) => {
           const last = all.filter((m) => m.relationshipId === c.relationshipId).sort((a, b) => b.createdAtMs - a.createdAtMs)[0];
           return {
@@ -67,6 +69,7 @@
     }
   }
 
+  onMount(() => onSampleActivity(() => void load()));
   onMount(() => {
     if (!canCoach()) void goto("/my-coach", { replaceState: true });
     else void load();

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { inView } from "$lib/features/coaching/coachingData";
   import * as Table from "$lib/components/ui/table/index.js";
   import OptionSelect from "$lib/components/option-select.svelte";
   import SampleBadge from "$lib/features/guide/SampleBadge.svelte";
@@ -44,7 +45,7 @@
         coachPaymentsApi.overview().catch(() => null),
       ]);
       links = l;
-      requests = r;
+      requests = inView(r);
       packages = payments?.packages.filter((p) => !p.hidden) ?? [];
       paymentsReady = payments?.account.ready ?? false;
       error = null;

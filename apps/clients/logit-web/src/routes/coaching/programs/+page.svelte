@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { onSampleActivity } from "$lib/features/guide/sandbox.svelte";
+  import { inView } from "$lib/features/coaching/coachingData";
   import { DateField } from "$lib/components/ui/date-field/index.js";
   import * as RadioGroup from "$lib/components/ui/radio-group";
   import OptionSelect from "$lib/components/option-select.svelte";
@@ -62,6 +64,7 @@
         coachApi.getCoachSettings().catch(() => ({ swapRule: "any" as SwapRule })),
       ]);
       swapRule = settings.swapRule;
+      clients = inView(clients);
       error = null;
     } catch (e) {
       error = e instanceof Error ? e.message : "Couldn't load your programs";
@@ -70,6 +73,8 @@
     }
   }
   onMount(load);
+  // Practice view switched, or a sample did something: the clients to assign to change.
+  onMount(() => onSampleActivity(() => void load()));
 
   function select(id: string) {
     void goto(`/coaching/programs?id=${id}`, { noScroll: true, keepFocus: true });
