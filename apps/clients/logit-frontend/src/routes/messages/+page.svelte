@@ -2,6 +2,7 @@
      Instagram's inbox. Message requests are a row at the top with their count; they never badge
      Social. Bold = unread; a green dot = training now. -->
 <script lang="ts">
+  import { Skeleton } from "$lib/components/ui/skeleton/index.js";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { Ban, ChevronRight, Flag, MessageSquare, Trash2, User, Users } from "lucide-svelte";
@@ -175,7 +176,7 @@
     <p class="px-4 py-6 text-sm text-muted-foreground">Couldn't load your messages. <button type="button" class="font-medium text-foreground underline underline-offset-4" onclick={load}>Try again</button></p>
   {:else if rows === null}
     <div class="flex flex-col">
-      {#each [0, 1, 2] as i (i)}<div class="flex items-center gap-3 px-4 py-3"><span class="size-12 animate-pulse rounded-full bg-muted"></span><span class="h-4 w-40 animate-pulse rounded bg-muted"></span></div>{/each}
+      {#each [0, 1, 2] as i (i)}<div class="flex items-center gap-3 px-4 py-3"><Skeleton class="size-12 rounded-full" /><Skeleton class="h-4 w-40 rounded" /></div>{/each}
     </div>
   {:else if rows.length === 0}
     <div class="flex flex-col items-center gap-2 px-6 py-14 text-center text-muted-foreground">

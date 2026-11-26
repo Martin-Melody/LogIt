@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Separator } from "$lib/components/ui/separator/index.js";
   import { Slider } from "$lib/components/ui/slider/index.js";
   import * as Dialog from "$lib/components/ui/dialog/index.js";
   import { goto } from "$app/navigation";
@@ -147,7 +148,7 @@
           >+15</button>
         </div>
 
-        <div class="h-px bg-border"></div>
+        <Separator />
       {:else}
         <p class="pr-8 text-sm text-muted-foreground">
           Nothing's playing. Start one of your playlists, or play something in your music app.

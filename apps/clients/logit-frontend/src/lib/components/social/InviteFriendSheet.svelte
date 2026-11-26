@@ -1,6 +1,7 @@
 <!-- "Invite a friend" (design canvas T3): a QR to scan and a link to share. Accepting makes you
      follow each other. No contacts are uploaded. -->
 <script lang="ts">
+  import { Skeleton } from "$lib/components/ui/skeleton/index.js";
   import { onMount } from "svelte";
   import { Copy, Link2, RefreshCw } from "lucide-svelte";
   import { toast } from "svelte-sonner";
@@ -93,7 +94,7 @@
       {/if}
       <button type="button" class="flex h-11 items-center justify-center gap-2 rounded-lg border border-border text-sm font-medium disabled:opacity-60" disabled={renewing} onclick={renew}><RefreshCw class="size-4" />Make a new link</button>
     {:else}
-      <div class="mx-auto size-[168px] animate-pulse rounded-xl bg-muted"></div>
+      <Skeleton class="mx-auto size-[168px] rounded-xl" />
     {/if}
     <button type="button" class="h-11 rounded-lg text-sm font-medium text-muted-foreground" onclick={onclose}>Not now</button>
     <p class="text-[13px] leading-snug text-muted-foreground">Always in Social › Find people. No contacts are uploaded.</p>

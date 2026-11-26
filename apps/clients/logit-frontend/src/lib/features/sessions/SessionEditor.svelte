@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Separator } from "$lib/components/ui/separator/index.js";
   import { TimeField } from "$lib/components/ui/time-field/index.js";
   import { DateField } from "$lib/components/ui/date-field/index.js";
   import { Plus, MoreHorizontal, X, ArrowUp, ArrowDown, ArrowLeftRight, Trash2, Link2 } from "lucide-svelte";
@@ -260,7 +261,7 @@
       {/if}
       <DropdownMenu.Item disabled={!canMove(b.id, -1)} onSelect={() => move(b.id, -1)}><ArrowUp /> Move up</DropdownMenu.Item>
       <DropdownMenu.Item disabled={!canMove(b.id, 1)} onSelect={() => move(b.id, 1)}><ArrowDown /> Move down</DropdownMenu.Item>
-      <div class="my-1 h-px bg-border" role="separator"></div>
+      <Separator class="my-1" />
       <DropdownMenu.Item variant="destructive" onSelect={() => apply((s) => removeExercise(s, b.id))}>
         <Trash2 /> Remove
       </DropdownMenu.Item>

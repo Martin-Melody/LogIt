@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Separator } from "$lib/components/ui/separator/index.js";
   import {
     addDay,
     renameSplit,
@@ -300,7 +301,7 @@
     </div>
   {/if}
 
-  <div class="h-px bg-border"></div>
+  <Separator />
 
   {#if selected}
     <DayEditor {split} dayId={selected.id} {index} {unit} {onChange} onSelectDay={(id) => (selectedId = id)} />

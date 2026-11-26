@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Separator } from "$lib/components/ui/separator/index.js";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import {
@@ -341,7 +342,7 @@
           {#if authStore.isAuthenticated}
             <DropdownMenu.Item onSelect={() => (sharing = true)}><Share2 /> Share as a post</DropdownMenu.Item>
           {/if}
-          <div class="my-1 h-px bg-border" role="separator"></div>
+          <Separator class="my-1" />
           <DropdownMenu.Item onSelect={() => void toggleExclude()} class="h-auto min-h-11 py-1.5">
             <EyeOff />
             <span class="flex flex-col">
@@ -349,7 +350,7 @@
               <span class="text-[11px] text-muted-foreground">{session.excludeFromProgression ? "It's left out now" : "Won't change future weights"}</span>
             </span>
           </DropdownMenu.Item>
-          <div class="my-1 h-px bg-border" role="separator"></div>
+          <Separator class="my-1" />
           <DropdownMenu.Item variant="destructive" onSelect={() => (confirmDelete = true)}><Trash2 /> Delete session</DropdownMenu.Item>
         </DropdownMenu.Content>
       </DropdownMenu.Root>

@@ -2,6 +2,7 @@
      events (Going / Go), members. The week's board joins it in the next step. The ⋯ has Your settings, Report and
      Leave for everyone, plus Pin a note, Edit, Reset the link and Delete for organisers (G8). -->
 <script lang="ts">
+  import { Skeleton } from "$lib/components/ui/skeleton/index.js";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
@@ -134,8 +135,8 @@
     <p class="px-6 py-14 text-center text-sm text-muted-foreground">{error}</p>
   {:else if !group}
     <div class="flex flex-col gap-4 px-4 pt-2">
-      <div class="flex items-center gap-3.5"><span class="size-16 animate-pulse rounded-2xl bg-muted"></span><span class="h-6 w-40 animate-pulse rounded bg-muted"></span></div>
-      <div class="h-11 animate-pulse rounded-lg bg-muted"></div>
+      <div class="flex items-center gap-3.5"><Skeleton class="size-16 rounded-2xl" /><Skeleton class="h-6 w-40 rounded" /></div>
+      <Skeleton class="h-11 rounded-lg" />
     </div>
   {:else}
     <div class="flex flex-col gap-3.5 border-b border-border px-4 pb-4">

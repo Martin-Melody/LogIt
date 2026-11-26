@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Separator } from "$lib/components/ui/separator/index.js";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
@@ -251,7 +252,7 @@
         <span class="text-muted-foreground">g</span>
       </label>
 
-      <div class="my-3.5 h-px bg-border"></div>
+      <Separator class="my-3.5" />
       {#if r.ingredients.length === 0}
         <p class="text-sm text-muted-foreground">Add ingredients and the numbers show up here.</p>
       {:else if byWeight}

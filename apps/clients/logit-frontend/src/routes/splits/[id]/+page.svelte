@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Separator } from "$lib/components/ui/separator/index.js";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
@@ -603,7 +604,7 @@
                       </span>
                     </DropdownMenu.Item>
                   {/if}
-                  <div class="my-1 h-px bg-border"></div>
+                  <Separator class="my-1" />
                 {/if}
                 <DropdownMenu.Item variant="destructive" onSelect={() => (pendingRemoveDay = d)}>
                   <Trash2 /> {d.rest ? "Remove rest day" : "Delete day"}

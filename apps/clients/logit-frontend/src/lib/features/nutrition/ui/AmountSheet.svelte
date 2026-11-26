@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Separator } from "$lib/components/ui/separator/index.js";
   import { untrack, type Snippet } from "svelte";
   import { Minus, Plus, Star, Trash2 } from "lucide-svelte";
   import {
@@ -272,7 +273,7 @@
     {#if day && target}
       {@const left = target.kcal - kcalAfter}
       {@const pLeft = target.proteinG - protAfter}
-      <div class="my-3 h-px bg-border"></div>
+      <Separator class="my-3" />
       <p class="mb-2 text-xs font-semibold">Your day after this</p>
       <div class="flex justify-between text-xs">
         <span class="text-muted-foreground">Calories</span>
@@ -293,7 +294,7 @@
     {/if}
 
     {#if extra}
-      <div class="my-3 h-px bg-border"></div>
+      <Separator class="my-3" />
       {@render extra({ grams })}
     {/if}
   </div>

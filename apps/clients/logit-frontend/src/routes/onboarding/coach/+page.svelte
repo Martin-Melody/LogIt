@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Separator } from "$lib/components/ui/separator/index.js";
   import { Spinner } from "$lib/components/ui/spinner/index.js";
   // "I have a coach" from the goal screen (design canvas C3). Coaching needs an account (a
   // free one is enough), so without one this asks for that first and comes back. Then the
@@ -122,7 +123,7 @@
     </div>
 
     {#if isNativePlatform()}
-      <div class="my-4 flex items-center gap-2.5 text-[13px] text-muted-foreground"><span class="h-px flex-1 bg-border"></span>or<span class="h-px flex-1 bg-border"></span></div>
+      <div class="my-4 flex items-center gap-2.5 text-[13px] text-muted-foreground"><Separator class="flex-1" />or<Separator class="flex-1" /></div>
       <button type="button" class="flex h-12 items-center justify-center gap-2.5 rounded-[10px] border border-border text-[15px] font-semibold" onclick={() => void scan()}>
         <ScanLine class="h-[18px] w-[18px]" /> Scan your coach's QR code
       </button>

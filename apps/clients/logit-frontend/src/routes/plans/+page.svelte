@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Skeleton } from "$lib/components/ui/skeleton/index.js";
   import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
@@ -174,7 +175,7 @@
               {#if amount}
                 <span class="text-[15px] font-semibold">{amount}<span class="text-xs font-normal text-muted-foreground"> / {perWord}</span></span>
               {:else if billing.productsState === "loading"}
-                <span class="h-4 w-16 animate-pulse rounded bg-muted" aria-label="Loading price"></span>
+                <Skeleton class="h-4 w-16 rounded" aria-label="Loading price" />
               {/if}
             </span>
             <span class="text-[13px] text-muted-foreground">{p.blurb}</span>

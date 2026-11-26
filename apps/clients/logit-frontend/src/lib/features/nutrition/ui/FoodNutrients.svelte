@@ -1,4 +1,5 @@
 <script lang="ts">
+import { Separator } from "$lib/components/ui/separator/index.js";
 import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
   import { ChevronDown, Info } from "lucide-svelte";
   import {
@@ -58,7 +59,7 @@ import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
 
 {#if part === "label"}
   {#if hasLabelNutrients(nutrients)}
-    <div class="my-3 h-px bg-border"></div>
+    <Separator class="my-3" />
     <div class="grid grid-cols-4 gap-2 text-center" data-testid="label-nutrients">
       {#each LABEL_NUTRIENT_IDS as id (id)}
         {@const v = nutrients?.[id]}
