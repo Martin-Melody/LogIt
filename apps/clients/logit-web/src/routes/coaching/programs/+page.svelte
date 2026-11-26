@@ -3,7 +3,7 @@
   import * as RadioGroup from "$lib/components/ui/radio-group";
   import * as NativeSelect from "$lib/components/ui/native-select/index.js";
   import { guideSignal } from "$lib/features/guide/signal";
-  import { onMount } from "svelte";
+  import { onMount, untrack } from "svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import * as Alert from "$lib/components/ui/alert";
@@ -90,6 +90,12 @@
       busy = false;
     }
   }
+
+  // ?new=1 (from ⌘K): start a new program once the list has loaded.
+  $effect(() => {
+    if (loading || !page.url.searchParams.has("new")) return;
+    untrack(() => void goto("/coaching/programs", { replaceState: true, noScroll: true }).then(create));
+  });
 
   async function duplicate() {
     if (!selected) return;

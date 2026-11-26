@@ -1,4 +1,6 @@
 <script lang="ts">
+  import PageCrumbs from "$lib/components/PageCrumbs.svelte";
+  import { clientName } from "$lib/features/coaching/clientName";
   import { Checkbox } from "$lib/components/ui/checkbox/index.js";
   import * as NativeSelect from "$lib/components/ui/native-select/index.js";
   import { page } from "$app/state";
@@ -116,7 +118,7 @@
 
 <div class="flex flex-col gap-4 max-w-2xl">
   <div class="flex items-center justify-between">
-    <a href="/clients/{clientId}?u={username}" class="text-xs text-muted-foreground hover:text-foreground">&larr; @{username}</a>
+    <PageCrumbs crumbs={[{ label: "Clients", href: "/clients" }, { label: clientName(clientId, username ? `@${username}` : "Client"), href: `/clients/${clientId}`, clientId }, { label: "Habits", href: `/clients/${clientId}?tab=habits` }, { label: habit?.name ?? "Habit" }]} />
     {#if habit}
       <AlertDialog.Root bind:open={confirmDeleteOpen}>
         <AlertDialog.Trigger>

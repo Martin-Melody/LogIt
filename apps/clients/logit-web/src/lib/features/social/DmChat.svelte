@@ -19,7 +19,18 @@
   import ReportDialog from "./ReportDialog.svelte";
   import { socialApi } from "@logit/core/api/socialApi";
   import { DM_EDIT_WINDOW_MS, unsent, type DmMessage } from "@logit/core/api/dmApi";
-  import { pickAndUploadPhoto } from "./chatPhoto";
+  import * as Message from "$lib/components/ui/message/index.js";
+  import * as Bubble from "$lib/components/ui/bubble/index.js";
+  import * as ContextMenu from "$lib/components/ui/context-menu";
+  import * as InputGroup from "$lib/components/ui/input-group/index.js";
+  import SmilePlusIcon from "@lucide/svelte/icons/smile-plus";
+  import RowMenuItems from "$lib/features/commands/RowMenuItems.svelte";
+  import type { RowAction } from "$lib/features/commands/commands.svelte";
+  import ChatReactions from "$lib/features/chat/ChatReactions.svelte";
+  import StagedPhotoCard from "$lib/features/chat/StagedPhotoCard.svelte";
+  import { StagedPhoto, imageFrom } from "$lib/features/chat/stagedPhoto.svelte";
+  import { DM_REACTIONS } from "@logit/core/api/dmApi";
+  import { nextReaction, withMyReaction } from "@logit/core/domain/dmReactions";
   import DumbbellIcon from "@lucide/svelte/icons/dumbbell";
   import TrophyIcon from "@lucide/svelte/icons/trophy";
   import { cardTitle, readCard, readGroupInvite, readStoryPhoto, readStoryQuote, recordCard, workoutCard } from "@logit/core/domain/messageCard";
@@ -81,6 +92,7 @@
       currentKey = key;
       chat = null;
       draft = "";
+      staged.drop();
       sendError = null;
       void load(true);
     }
@@ -96,15 +108,20 @@
     older = page.messages.length >= 50;
   }
 
+  // A photo waits in the box (picked, pasted or dropped) so a caption can go with it (canvas board 19).
+  const staged = new StagedPhoto();
+
   async function send() {
     if (editing) return saveEdit();
     const body = draft.trim();
-    if (!body || sending || !chat) return;
+    const photo = staged.ready;
+    if ((!body && !photo) || sending || !chat || (staged.current && !photo)) return;
     sending = true;
     sendError = null;
     try {
-      await dmApi.send(chat.threadId ? { threadId: chat.threadId } : to, crypto.randomUUID(), body);
+      await dmApi.send(chat.threadId ? { threadId: chat.threadId } : to, crypto.randomUUID(), body, photo ? { photoId: photo.id } : {});
       draft = "";
+      if (photo) staged.drop();
       await load(true);
       onchange?.();
     } catch (e) {
@@ -126,7 +143,6 @@
     }
   }
 
-  let uploading = $state(false);
   let recording = $state(false);
   async function sendVoice(voice: MessageVoice) {
     recording = false;
@@ -180,21 +196,67 @@
     report = { type, id, what };
     reportOpen = true;
   }
-  async function sendPhoto() {
-    if (!chat) return;
-    sendError = null;
+  // Double-click a message for ❤️, or pick from its menus; your own again takes it back.
+  async function react(m: DmMessage, emoji: string) {
+    if (!chat || m.deleted || !chat.accepted) return;
+    const next = nextReaction(m.reactions, emoji);
+    const before = m.reactions ?? null;
+    const set = (reactions: DmMessage["reactions"]) => {
+      if (chat) chat = { ...chat, messages: chat.messages.map((x) => (x.id === m.id ? { ...x, reactions } : x)) };
+    };
+    set(withMyReaction(before, next));
     try {
-      const photo = await pickAndUploadPhoto();
-      if (!photo) return;
-      uploading = true;
-      await dmApi.send(chat.threadId ? { threadId: chat.threadId } : to, crypto.randomUUID(), "", { photoId: photo.id });
-      await load(true);
-      onchange?.();
+      const after = await dmApi.react(m.id, next);
+      set(after.length ? after : null);
     } catch (e) {
-      sendError = e instanceof Error ? `${e.message} Try again.` : "Couldn't send the photo. Try again.";
-    } finally {
-      uploading = false;
+      set(before);
+      sendError = e instanceof Error && e.message ? e.message : "Couldn't react. Try again.";
     }
+  }
+
+  // One list for a message's ⋯ and its right-click menu (canvas board 16).
+  function messageActions(m: DmMessage): RowAction[] {
+    return [
+      ...(canEdit(m) ? [{ id: "edit", label: "Edit", run: () => startEdit(m) }] : []),
+      ...(m.body ? [{ id: "copy", label: "Copy text", run: () => void navigator.clipboard?.writeText(m.body) }] : []),
+      m.mine
+        ? { id: "unsend", label: "Unsend…", run: () => (confirmUnsend = m), danger: true, separatorBefore: true }
+        : { id: "report", label: "Report…", run: () => openReport("Message", m.id, "message"), danger: true, separatorBefore: true },
+    ];
+  }
+
+  // Runs of messages from one person (shadcn Message): one avatar, one name, joined corners.
+  type Run = { key: string; mine: boolean; day: boolean; items: DmMessage[] };
+  const runs = $derived.by(() => {
+    const out: Run[] = [];
+    const list = chat?.messages ?? [];
+    list.forEach((m, i) => {
+      const day = i === 0 || dayLabel(m.createdAtMs) !== dayLabel(list[i - 1]!.createdAtMs);
+      const prev = out.at(-1);
+      const near = prev && m.createdAtMs - prev.items.at(-1)!.createdAtMs < 3_600_000;
+      if (prev && !day && near && prev.mine === m.mine && (m.mine || prev.items[0]!.from?.id === m.from?.id)) prev.items.push(m);
+      else out.push({ key: m.id, mine: m.mine, day, items: [m] });
+    });
+    return out;
+  });
+  const joined = (mine: boolean, first: boolean, last: boolean) =>
+    mine ? `${first ? "" : "rounded-tr-md!"} ${last ? "" : "rounded-br-md!"}` : `${first ? "" : "rounded-tl-md!"} ${last ? "" : "rounded-bl-md!"}`;
+  const joinedKids = (mine: boolean, first: boolean, last: boolean) =>
+    mine ? `${first ? "" : "*:rounded-tr-md!"} ${last ? "" : "*:rounded-br-md!"}` : `${first ? "" : "*:rounded-tl-md!"} ${last ? "" : "*:rounded-bl-md!"}`;
+
+  function onPaste(e: ClipboardEvent) {
+    const file = imageFrom(e.clipboardData);
+    if (!file || !chat?.canSend) return;
+    e.preventDefault();
+    void staged.stage(file);
+  }
+  let dragging = $state(false);
+  function onDrop(e: DragEvent) {
+    dragging = false;
+    const file = imageFrom(e.dataTransfer);
+    if (!file || !chat?.canSend || !chat.accepted) return;
+    e.preventDefault();
+    void staged.stage(file);
   }
 
   function openShare() {
@@ -257,7 +319,7 @@
   const time = (ms: number) => new Date(ms).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
 </script>
 
-<div class="flex min-h-0 flex-1 flex-col">
+<div class="flex min-h-0 min-w-0 flex-1 flex-col">
   {#if chat}
     <header class="flex items-center gap-3 border-b border-border px-4 py-3">
       {#if group}
@@ -290,7 +352,9 @@
     </header>
   {/if}
 
-  <div bind:this={listEl} class="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto px-4 py-3">
+  <div bind:this={listEl} role="log" aria-label="Messages" class="relative flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto px-4 py-3 {dragging ? 'bg-muted/40' : ''}"
+    ondragover={(e) => { if (chat?.canSend && chat.accepted && e.dataTransfer?.types.includes("Files")) { e.preventDefault(); dragging = true; } }}
+    ondragleave={() => (dragging = false)} ondrop={onDrop}>
     {#if error}
       <p class="m-auto text-[13px] text-muted-foreground">{error}</p>
     {:else if !chat}
@@ -300,79 +364,123 @@
       {#if chat.messages.length === 0}
         <p class="m-auto max-w-[36ch] text-center text-[13px] text-muted-foreground">{chat.canSend ? `Say hello to ${name}. Messages to people who don't follow you go to their requests.` : chat.why}</p>
       {/if}
-      {#each chat.messages as m, i (m.id)}
-        {#if i === 0 || dayLabel(m.createdAtMs) !== dayLabel(chat.messages[i - 1]!.createdAtMs)}
-          <div class="py-1.5 text-center text-[11px] text-muted-foreground">{dayLabel(m.createdAtMs)}</div>
-        {/if}
-        {@const story = m.cardType === "Story"}
-        {@const card = story ? readStoryQuote(m.cardJson) : readCard(m.cardType, m.cardJson)}
-        {@const storyPhoto = story ? readStoryPhoto(m.cardJson) : null}
-        {@const invite = m.cardType === "GroupInvite" ? readGroupInvite(m.cardJson) : null}
-        <div class="group flex shrink-0 items-center gap-1 {m.mine ? 'flex-row-reverse self-end' : 'self-start'} max-w-full {editing?.id === m.id ? 'opacity-60' : ''}">
-        <div class="flex min-w-0 flex-col gap-1 {m.mine ? 'items-end' : 'items-start'}">
-        {#if group && !m.mine && (i === 0 || chat.messages[i - 1]!.from?.id !== m.from?.id || chat.messages[i - 1]!.mine)}<span class="px-1 text-[11px] text-muted-foreground">{senderName(m)}</span>{/if}
-        {#if story}<span class="px-1 text-[11px] text-muted-foreground {m.mine ? 'self-end' : 'self-start'}">{m.mine ? `Replied to ${name}'s story` : "Replied to your story"}{card || storyPhoto ? "" : " · no longer available"}</span>{/if}
-        {#if invite}
-          <div class="flex w-[260px] max-w-[70%] flex-col gap-1.5 rounded-xl border border-border bg-background px-3 py-2.5 {m.mine ? 'self-end' : 'self-start'}">
-            <span class="text-[11px] text-muted-foreground">{m.mine ? "You sent an invite to a group" : "Invited you to a group"}</span>
-            <span class="text-[13px] font-semibold">{invite.name}</span>
-            <span class="text-xs text-muted-foreground">{[invite.kind, invite.place, `${invite.members} members`].filter(Boolean).join(" · ")}</span>
-            {#if !m.mine}<span class="text-xs text-muted-foreground">Open the chat in the LogIt app to join.</span>{/if}
-            <span class="text-right text-[10px] text-muted-foreground">{time(m.createdAtMs)}</span>
-          </div>
-        {/if}
-        {#if storyPhoto}
-          <div class="aspect-[9/16] w-28 shrink-0 overflow-hidden rounded-xl bg-black {m.mine ? 'self-end' : 'self-start'}"><img src={photoSrc(storyPhoto.url)} alt="The story" loading="lazy" class="size-full object-cover" /></div>
-        {:else if card}
-          <div class="flex w-[280px] max-w-[70%] flex-col gap-1 rounded-xl border border-border bg-background px-3 py-2.5 {m.mine ? 'self-end' : 'self-start'}">
-            <span class="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-              {#if card.type === "PersonalRecord"}<TrophyIcon class="size-3" />New record{:else}<DumbbellIcon class="size-3" />Workout{/if}
-            </span>
-            <span class="text-[13px] font-semibold tabular-nums">{cardTitle(card)}</span>
-            {#if card.type === "WorkoutSession" && card.data.exercises?.length}<span class="text-xs text-muted-foreground">{card.data.exercises.map((e) => `${e.name} (${e.sets})`).join(" · ")}</span>{/if}
-            <span class="text-right text-[10px] text-muted-foreground">{time(m.createdAtMs)}</span>
-          </div>
-        {/if}
-        {#if m.photoUrl || m.photoHidden}
-          <ChatPhoto url={m.photoUrl} width={m.photoWidth} height={m.photoHeight} hidden={m.photoHidden} mine={m.mine} />
-          {#if !m.body}<span class="px-1 text-[10px] text-muted-foreground">{time(m.createdAtMs)}</span>{/if}
-        {/if}
-        {#if m.voiceUrl || m.voiceHidden}
-          <ChatVoice voice={m.voiceUrl ? { url: m.voiceUrl, ms: m.voiceMs, peaks: m.voicePeaks ?? "" } : null} hidden={m.voiceHidden} mine={m.mine} />
-          {#if !m.body}<span class="px-1 text-[10px] text-muted-foreground">{time(m.createdAtMs)}</span>{/if}
-        {/if}
-        {#if m.body}
-          <div class="max-w-[520px] rounded-xl px-3 py-2 text-[13px] leading-relaxed {m.mine ? 'bg-primary/15' : 'bg-muted'}">
-            <span class="whitespace-pre-wrap break-words">{m.body}</span>
-            <span class="mt-0.5 block text-right text-[10px] text-muted-foreground">{m.edited ? "Edited · " : ""}{time(m.createdAtMs)}</span>
-          </div>
-        {/if}
-        {#if m.deleted}
-          <span class="rounded-xl border border-border px-3 py-2 text-[13px] italic text-muted-foreground">{m.removedByLogIt ? "Removed by LogIt" : m.removedByModerator ? "Removed by a moderator" : m.mine ? "You unsent a message" : `${senderName(m)} unsent a message`}</span>
-        {/if}
-        </div>
-        {#if !m.deleted}
-        <DropdownMenu.Root>
-          <DropdownMenu.Trigger>
-            {#snippet child({ props })}
-              <button {...props} type="button" aria-label="Message options" class="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 hover:bg-muted focus-visible:opacity-100 group-hover:opacity-100 data-[state=open]:opacity-100"><MoreHorizontalIcon class="size-4" /></button>
-            {/snippet}
-          </DropdownMenu.Trigger>
-          <DropdownMenu.Content align={m.mine ? "end" : "start"}>
-            {#if canEdit(m)}<DropdownMenu.Item onclick={() => startEdit(m)}>Edit</DropdownMenu.Item>{/if}
-            {#if m.body}<DropdownMenu.Item onclick={() => void navigator.clipboard?.writeText(m.body)}>Copy text</DropdownMenu.Item>{/if}
-            {#if m.mine}
-              <DropdownMenu.Item class="text-destructive" onclick={() => (confirmUnsend = m)}>Unsend</DropdownMenu.Item>
-            {:else}
-              <DropdownMenu.Item class="text-destructive" onclick={() => openReport("Message", m.id, "message")}>Report</DropdownMenu.Item>
-            {/if}
-          </DropdownMenu.Content>
-        </DropdownMenu.Root>
-        {/if}
-        </div>
+      {#each runs as run, r (run.key)}
+        {@const lead = run.items[0]!}
+        {#if run.day}<div class="py-1.5 text-center text-[11px] text-muted-foreground">{dayLabel(lead.createdAtMs)}</div>{/if}
+        <Message.Root align={run.mine ? "end" : "start"} class="shrink-0 gap-2 text-[13px] {r > 0 && !run.day ? 'mt-1.5' : ''}">
+          {#if !run.mine}
+            <Message.Avatar class="min-w-6 bg-transparent">
+              {#if group}<Avatar name={senderName(lead)} url={lead.from?.avatarUrl} size={24} />{:else}<Avatar name={name} url={chat.other?.avatarUrl} size={24} />{/if}
+            </Message.Avatar>
+          {/if}
+          <Message.Content class="gap-1">
+            {#if group && !run.mine}<Message.Header class="px-1 text-[11px] font-normal">{senderName(lead)}</Message.Header>{/if}
+            {#each run.items as m, k (m.id)}
+              {@const first = k === 0}
+              {@const end = k === run.items.length - 1}
+              {@const story = m.cardType === "Story"}
+              {@const card = story ? readStoryQuote(m.cardJson) : readCard(m.cardType, m.cardJson)}
+              {@const storyPhoto = story ? readStoryPhoto(m.cardJson) : null}
+              {@const invite = m.cardType === "GroupInvite" ? readGroupInvite(m.cardJson) : null}
+              {@const align = m.mine ? "end" : "start"}
+              {@const actions = messageActions(m)}
+              <ContextMenu.Root>
+                <ContextMenu.Trigger disabled={m.deleted}>
+                  {#snippet child({ props })}
+                    <div {...props} ondblclick={() => void react(m, "❤️")} role="group" aria-label="{m.mine ? 'Your' : `${senderName(m)}'s`} message"
+                      class="group/row relative flex w-full items-center gap-1 {m.mine ? 'flex-row-reverse' : ''} {editing?.id === m.id ? 'opacity-60' : ''} {m.reactions?.length && !m.deleted ? 'mb-3.5' : ''}">
+                      <div class="relative flex min-w-0 max-w-[75%] flex-col gap-1 {m.mine ? 'items-end' : 'items-start'}">
+                        {#if story}<span class="px-1 text-[11px] text-muted-foreground">{m.mine ? `Replied to ${name}'s story` : "Replied to your story"}{card || storyPhoto ? "" : " · no longer available"}</span>{/if}
+                        {#if invite}
+                          <div class="flex w-[260px] flex-col gap-1.5 rounded-[18px] border border-border bg-background px-3 py-2.5 {joined(m.mine, first, end)}">
+                            <span class="text-[11px] text-muted-foreground">{m.mine ? "You sent an invite to a group" : "Invited you to a group"}</span>
+                            <span class="text-[13px] font-semibold">{invite.name}</span>
+                            <span class="text-xs text-muted-foreground">{[invite.kind, invite.place, `${invite.members} members`].filter(Boolean).join(" · ")}</span>
+                            {#if !m.mine}<span class="text-xs text-muted-foreground">Open the chat in the LogIt app to join.</span>{/if}
+                          </div>
+                        {/if}
+                        {#if storyPhoto}
+                          <div class="aspect-[9/16] w-28 shrink-0 overflow-hidden rounded-xl bg-black"><img src={photoSrc(storyPhoto.url)} alt="The story" loading="lazy" class="size-full object-cover" /></div>
+                        {:else if card}
+                          <div class="flex w-[280px] flex-col gap-1 rounded-[18px] border border-border bg-background px-3 py-2.5 {joined(m.mine, first, end)}">
+                            <span class="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                              {#if card.type === "PersonalRecord"}<TrophyIcon class="size-3" />New record{:else}<DumbbellIcon class="size-3" />Workout{/if}
+                            </span>
+                            <span class="text-[13px] font-semibold tabular-nums">{cardTitle(card)}</span>
+                            {#if card.type === "WorkoutSession" && card.data.exercises?.length}<span class="text-xs text-muted-foreground">{card.data.exercises.map((e) => `${e.name} (${e.sets})`).join(" · ")}</span>{/if}
+                          </div>
+                        {/if}
+                        {#if m.photoUrl && m.body}
+                          <!-- A photo and its caption: one bubble. -->
+                          <Bubble.Root variant={m.mine ? "default" : "muted"} {align} class="max-w-full">
+                            <Bubble.Content class="overflow-hidden rounded-[18px] p-0 text-[13px] {joined(m.mine, first, end)}">
+                              <ChatPhoto url={m.photoUrl} width={m.photoWidth} height={m.photoHeight} mine={m.mine} bare />
+                              <div class="whitespace-pre-wrap break-words px-3 py-2">{m.body}</div>
+                            </Bubble.Content>
+                          </Bubble.Root>
+                        {:else}
+                          {#if m.photoUrl || m.photoHidden}<div class={joinedKids(m.mine, first, end)}><ChatPhoto url={m.photoUrl} width={m.photoWidth} height={m.photoHeight} hidden={m.photoHidden} mine={m.mine} /></div>{/if}
+                          {#if m.voiceUrl || m.voiceHidden}<div class={joinedKids(m.mine, first, end)}><ChatVoice voice={m.voiceUrl ? { url: m.voiceUrl, ms: m.voiceMs, peaks: m.voicePeaks ?? "" } : null} hidden={m.voiceHidden} mine={m.mine} /></div>{/if}
+                          {#if m.body}
+                            <Bubble.Root variant={m.mine ? "default" : "muted"} {align} class="max-w-full">
+                              <Bubble.Content class="max-w-[520px] rounded-[18px] px-3 py-2 text-[13px] leading-relaxed {joined(m.mine, first, end)}"><span class="whitespace-pre-wrap break-words">{m.body}</span></Bubble.Content>
+                            </Bubble.Root>
+                          {/if}
+                        {/if}
+                        {#if m.deleted}
+                          <span class="rounded-[18px] border border-dashed border-border px-3 py-2 text-[13px] italic text-muted-foreground">{m.removedByLogIt ? "Removed by LogIt" : m.removedByModerator ? "Removed by a moderator" : m.mine ? "You unsent a message" : `${senderName(m)} unsent a message`}</span>
+                        {:else if m.edited}<span class="px-1 text-[10px] text-muted-foreground">Edited</span>{/if}
+                        {#if m.reactions?.length && !m.deleted}<ChatReactions reactions={m.reactions} {align} onpick={(e) => void react(m, e)} />{/if}
+                      </div>
+                      {#if !m.deleted}
+                        <!-- Hover bar: react and ⋯ (right-click opens the same menu). -->
+                        <div class="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover/row:opacity-100 has-[[data-state=open]]:opacity-100">
+                          {#if chat?.accepted}
+                            <DropdownMenu.Root>
+                              <DropdownMenu.Trigger>
+                                {#snippet child({ props })}
+                                  <button {...props} type="button" aria-label="React" class="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"><SmilePlusIcon class="size-4" /></button>
+                                {/snippet}
+                              </DropdownMenu.Trigger>
+                              <DropdownMenu.Content side="top" align={m.mine ? "end" : "start"} class="flex w-auto min-w-0 gap-0.5 rounded-full p-1">
+                                {#each DM_REACTIONS as e (e)}
+                                  <DropdownMenu.Item onSelect={() => void react(m, e)} aria-label="React {e}" class="size-8 justify-center rounded-full p-0 text-lg {m.reactions?.find((x) => x.mine)?.emoji === e ? 'bg-primary/20' : ''}">{e}</DropdownMenu.Item>
+                                {/each}
+                              </DropdownMenu.Content>
+                            </DropdownMenu.Root>
+                          {/if}
+                          <DropdownMenu.Root>
+                            <DropdownMenu.Trigger>
+                              {#snippet child({ props })}
+                                <button {...props} type="button" aria-label="Message options" class="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"><MoreHorizontalIcon class="size-4" /></button>
+                              {/snippet}
+                            </DropdownMenu.Trigger>
+                            <DropdownMenu.Content align={m.mine ? "end" : "start"} class="w-auto min-w-44"><RowMenuItems {actions} kind="dropdown" /></DropdownMenu.Content>
+                          </DropdownMenu.Root>
+                        </div>
+                      {/if}
+                    </div>
+                  {/snippet}
+                </ContextMenu.Trigger>
+                <ContextMenu.Content class="w-auto min-w-48">
+                  {#if chat.accepted}
+                    <ContextMenu.Group class="flex gap-0.5 p-0.5" aria-label="React">
+                      {#each DM_REACTIONS as e (e)}
+                        <ContextMenu.Item onSelect={() => void react(m, e)} aria-label="React {e}" class="size-8 justify-center rounded-full p-0 text-lg {m.reactions?.find((x) => x.mine)?.emoji === e ? 'bg-primary/20' : ''}">{e}</ContextMenu.Item>
+                      {/each}
+                    </ContextMenu.Group>
+                    <ContextMenu.Separator />
+                  {/if}
+                  <RowMenuItems actions={actions.map((a, n) => (n === 0 ? { ...a, separatorBefore: false } : a))} kind="context" />
+                </ContextMenu.Content>
+              </ContextMenu.Root>
+            {/each}
+            {#if seen && r === runs.length - 1}<Message.Footer class="px-1 text-[11px] font-normal">Seen</Message.Footer>
+            {:else if run.items.length}<Message.Footer class="px-1 text-[10px] font-normal opacity-0 transition-opacity group-hover/message:opacity-100">{time(run.items.at(-1)!.createdAtMs)}</Message.Footer>{/if}
+          </Message.Content>
+        </Message.Root>
       {/each}
-      {#if uploading}<span class="self-end text-[11px] text-muted-foreground">Sending photo…</span>{/if}
-      {#if seen}<span class="self-end text-[11px] text-muted-foreground">Seen</span>{/if}
+      {#if dragging}<div class="pointer-events-none absolute inset-3 grid place-items-center rounded-xl border-2 border-dashed border-ring/60 text-sm text-muted-foreground">Drop the photo to add it</div>{/if}
     {/if}
   </div>
 
@@ -393,14 +501,22 @@
       {#if recording}
         <VoiceRecorder onsend={sendVoice} oncancel={() => (recording = false)} onerror={(m) => (sendError = m)} />
       {:else}
+      <StagedPhotoCard {staged} />
       <div class="flex items-end gap-2">
-        <button type="button" onclick={sendPhoto} disabled={uploading} aria-label="Send a photo" class="flex size-9 shrink-0 items-center justify-center rounded-[9px] border border-border text-muted-foreground hover:text-foreground disabled:opacity-50"><ImageIcon class="size-4" /></button>
-        <button type="button" onclick={openShare} aria-label="Share a workout or record" class="flex size-9 shrink-0 items-center justify-center rounded-[9px] border border-border text-muted-foreground hover:text-foreground"><PlusIcon class="size-4" /></button>
-        <label for="dm-compose" class="sr-only">Message {name}</label>
-        <textarea id="dm-compose" bind:value={draft} onkeydown={onKey} rows={2} maxlength={2000} placeholder="Message {name}"
-          class="flex-1 resize-y rounded-[10px] border border-input bg-background px-3 py-2 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring"></textarea>
-        <button type="button" onclick={() => { sendError = null; recording = true; }} aria-label="Record a voice message" class="flex size-9 shrink-0 items-center justify-center rounded-[9px] border border-border text-muted-foreground hover:text-foreground"><MicIcon class="size-4" /></button>
-        <button type="submit" disabled={sending || !draft.trim()} class="h-9 rounded-[9px] bg-primary px-3.5 text-[13px] font-semibold text-primary-foreground disabled:opacity-50">Send</button>
+        <!-- One box (shadcn Input Group): photo and share inside, mic beside. Paste or drop a photo too. -->
+        <InputGroup.Root class="flex-1 rounded-[12px]">
+          <InputGroup.Addon align="inline-start" class="self-end pb-1.5">
+            <button type="button" onclick={() => { sendError = null; staged.choose(); }} aria-label="Add a photo" class="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"><ImageIcon class="size-4" /></button>
+            <button type="button" onclick={openShare} aria-label="Share a workout or record" class="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"><PlusIcon class="size-4" /></button>
+          </InputGroup.Addon>
+          <label for="dm-compose" class="sr-only">Message {name}</label>
+          <InputGroup.Textarea id="dm-compose" bind:value={draft} onkeydown={onKey} onpaste={onPaste} rows={1} maxlength={2000}
+            placeholder={staged.current ? "Add a caption…" : `Message ${name}`} class="max-h-40 min-h-9 py-2 text-[13px]" />
+          <InputGroup.Addon align="inline-end" class="self-end pb-1.5">
+            <button type="button" onclick={() => { sendError = null; recording = true; }} aria-label="Record a voice message" class="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"><MicIcon class="size-4" /></button>
+          </InputGroup.Addon>
+        </InputGroup.Root>
+        <button type="submit" disabled={sending || (!draft.trim() && !staged.ready) || (!!staged.current && !staged.ready)} class="h-9 rounded-[9px] bg-primary px-3.5 text-[13px] font-semibold text-primary-foreground disabled:opacity-50">Send</button>
       </div>
       {/if}
       {#if sendError}<p class="text-xs text-destructive">{sendError}</p>{:else}<span class="text-[11px] text-muted-foreground">Enter sends · Shift+Enter for a new line</span>{/if}

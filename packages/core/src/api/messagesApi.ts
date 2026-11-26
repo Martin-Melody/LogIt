@@ -13,6 +13,8 @@ export interface RemoteMessage {
   voiceUrl?: string | null;
   voiceMs?: number;
   voicePeaks?: string | null;
+  /** The other person's reaction (only the person it was sent to reacts). */
+  reaction?: string | null;
 }
 
 export interface SendMessageInput {
@@ -47,6 +49,11 @@ export function messagesApiFor(api: ApiFetcher) {
         `/coach/messages/all?since=${since}`,
       );
       return messages;
+    },
+
+    /** React to the other person's message, change it, or take it back with null. */
+    async react(relationshipId: string, messageId: string, emoji: string | null): Promise<void> {
+      await api.fetch("/coach/messages/reaction", { method: "PUT", body: JSON.stringify({ relationshipId, messageId, emoji }) });
     },
 
     async markRead(relationshipId: string, upToMs: number): Promise<void> {

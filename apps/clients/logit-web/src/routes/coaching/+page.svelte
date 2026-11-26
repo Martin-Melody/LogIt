@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ClientHoverCard from "$lib/features/coaching/ClientHoverCard.svelte";
   import { onSampleActivity } from "$lib/features/guide/sandbox.svelte";
   import { apiClient } from "@logit/core/api/client";
   import WelcomeCard from "$lib/features/guide/WelcomeCard.svelte";
@@ -191,7 +192,7 @@
           <a href="/clients/{c.id}?tab=training" class="flex items-center gap-3 border-t border-border py-3 hover:opacity-90">
             <Avatar name={c.name} url={c.avatarUrl} />
             <span class="flex min-w-0 flex-1 flex-col">
-              <span class="text-[13px] font-medium">{c.name}</span>
+              <ClientHoverCard clientId={c.id} span class="w-fit text-[13px] font-medium">{c.name}</ClientHoverCard>
               {#if !c.sharing.workouts}
                 <span class="text-xs text-muted-foreground">Doesn't share workouts</span>
               {:else if c.lastSessionAtMs && when(c.lastSessionAtMs) === "today"}

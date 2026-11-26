@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ClientHoverCard from "$lib/features/coaching/ClientHoverCard.svelte";
   import { canCoach } from "$lib/workspace";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
@@ -120,7 +121,7 @@
       {#if active}
         <section aria-label="Conversation with {active.name}" data-guide="messages-thread" class="flex min-w-0 flex-[999_1_560px] flex-col rounded-[10px] border border-border bg-card">
           <div class="flex items-center justify-between gap-3 border-b border-border px-[18px] py-3.5">
-            <span class="flex items-center gap-2.5"><Avatar name={active.name} url={active.avatarUrl} /><span class="text-sm font-semibold">{active.name}</span></span>
+            <span class="flex items-center gap-2.5"><Avatar name={active.name} url={active.avatarUrl} /><ClientHoverCard clientId={active.clientId} class="text-sm font-semibold hover:underline">{active.name}</ClientHoverCard></span>
             <a href="/clients/{active.clientId}" class="text-xs text-muted-foreground hover:text-foreground">Open client ›</a>
           </div>
           <div class="flex flex-1 flex-col px-[18px] pb-4 pt-2">

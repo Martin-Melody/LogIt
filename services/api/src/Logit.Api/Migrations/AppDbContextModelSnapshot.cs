@@ -538,6 +538,15 @@ namespace Logit.Api.Migrations
                     b.Property<DateTime?>("PushedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("ReactedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Reaction")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ReactionPushedAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<long?>("ReadAtMs")
                         .HasColumnType("INTEGER");
 
@@ -1069,6 +1078,34 @@ namespace Logit.Api.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("DmMembers");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.DmReaction", b =>
+                {
+                    b.Property<Guid>("MessageId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Emoji")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("PushedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("MessageId", "UserId");
+
+                    b.HasIndex("PushedAt");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("DmReactions");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.DmThread", b =>
@@ -3480,6 +3517,25 @@ namespace Logit.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Thread");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.DmReaction", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.DirectMessage", "Message")
+                        .WithMany()
+                        .HasForeignKey("MessageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Logit.Api.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Message");
 
                     b.Navigation("User");
                 });

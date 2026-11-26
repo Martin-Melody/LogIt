@@ -98,6 +98,7 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
 
         sent += await DispatchMessagesAsync(db, sender, now, ct);
         sent += await DispatchDirectMessagesAsync(db, sender, now, ct);
+        sent += await DispatchReactionsAsync(db, sender, now, ct);
         await db.SaveChangesAsync(ct);
         return sent;
     }
@@ -218,6 +219,70 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
                 sent += await SendAsync(db, sender, group.Key, new PushMessage(g.Name, body, "messages",
                     new Dictionary<string, string> { ["type"] = "DirectMessage", ["threadId"] = chat.Key.ToString() }), ct);
             }
+        }
+        return sent;
+    }
+
+    /// Reactions to your messages (Instagram: "Sam reacted 💪 to your message"), in chats between
+    /// people and coach threads. Only to the message's sender, never for your own, never across a
+    /// block; the Messages switch, pause and a group's Off drop them; quiet mode holds them.
+    private static async Task<int> DispatchReactionsAsync(AppDbContext db, IPushSender sender, DateTime now, CancellationToken ct)
+    {
+        var tooOld = now - MaxAge;
+        await db.DmReactions.Where(r => r.PushedAt == null && r.CreatedAt < tooOld).ExecuteUpdateAsync(s => s.SetProperty(r => r.PushedAt, now), ct);
+        await db.CoachMessages.Where(m => m.Reaction != null && m.ReactionPushedAt == null && m.ReactedAt < tooOld)
+            .ExecuteUpdateAsync(s => s.SetProperty(m => m.ReactionPushedAt, now), ct);
+
+        // (recipient, who reacted, emoji, chat title or null, push data)
+        var items = new List<(Guid To, User From, string Emoji, string? Title, Dictionary<string, string> Data, Action Hold)>();
+        var dm = await db.DmReactions.Include(r => r.User).Include(r => r.Message).ThenInclude(m => m.Thread).ThenInclude(t => t!.Group)
+            .Where(r => r.PushedAt == null).OrderBy(r => r.CreatedAt).Take(2000).ToListAsync(ct);
+        foreach (var r in dm)
+        {
+            r.PushedAt = now;
+            var m = r.Message;
+            if (m.SenderId is not { } to || to == r.UserId || m.DeletedAt is not null) continue;
+            var thread = m.Thread;
+            if (thread.GroupId is { } gid
+                && await db.GroupMembers.AnyAsync(g => g.GroupId == gid && g.UserId == to && g.Notify == GroupNotify.Off, ct)) continue;
+            items.Add((to, r.User, r.Emoji, thread.Group?.Name, new Dictionary<string, string> { ["type"] = "DirectMessage", ["threadId"] = thread.Id.ToString() },
+                () => r.PushedAt = null));
+        }
+        var coach = await db.CoachMessages.Include(m => m.Relationship)
+            .Where(m => m.Reaction != null && m.ReactionPushedAt == null).Take(2000).ToListAsync(ct);
+        foreach (var m in coach)
+        {
+            m.ReactionPushedAt = now;
+            var reactorId = m.SenderUserId == m.Relationship.CoachId ? m.Relationship.ClientId : m.Relationship.CoachId;
+            var reactor = await db.Users.FirstOrDefaultAsync(u => u.Id == reactorId, ct);
+            if (reactor is null) continue;
+            items.Add((m.SenderUserId, reactor, m.Reaction!, null,
+                new Dictionary<string, string> { ["type"] = "Message", ["relationshipId"] = m.RelationshipId.ToString() },
+                () => m.ReactionPushedAt = null));
+        }
+
+        var sent = 0;
+        foreach (var group in items.GroupBy(i => i.To))
+        {
+            if (!await db.PushDevices.AnyAsync(d => d.UserId == group.Key, ct)) continue;
+            var settings = await SettingsFor(db, group.Key, ct);
+            if (!settings.Messages || settings.PausedUntil > now) continue;
+            var blocked = await db.Blocks.Where(b => b.BlockerId == group.Key || b.BlockedId == group.Key)
+                .Select(b => b.BlockerId == group.Key ? b.BlockedId : b.BlockerId).ToListAsync(ct);
+            var wanted = group.Where(i => !blocked.Contains(i.From.Id)).ToList();
+            if (wanted.Count == 0) continue;
+            if (InQuiet(settings, now))
+            {
+                foreach (var i in wanted) i.Hold(); // held until quiet time ends
+                continue;
+            }
+            var last = wanted[^1];
+            var who = NameOf(last.From);
+            var message = wanted.Count == 1
+                ? new PushMessage(last.Title ?? who, last.Title is null ? $"reacted {last.Emoji} to your message" : $"{who} reacted {last.Emoji} to your message", "messages", last.Data)
+                : new PushMessage(wanted.Select(i => i.From.Id).Distinct().Count() == 1 ? who : "Reactions", $"{wanted.Count} reactions to your messages", "messages",
+                    wanted.Select(i => string.Join(",", i.Data.Values)).Distinct().Count() == 1 ? last.Data : new Dictionary<string, string> { ["type"] = last.Data["type"] });
+            sent += await SendAsync(db, sender, group.Key, message, ct);
         }
         return sent;
     }

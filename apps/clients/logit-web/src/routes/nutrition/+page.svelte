@@ -6,6 +6,12 @@
   import { Badge } from "$lib/components/ui/badge";
   import { Button } from "$lib/components/ui/button";
   import { Spinner } from "$lib/components/ui/spinner";
+  import * as ContextMenu from "$lib/components/ui/context-menu";
+  import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
+  import * as Dialog from "$lib/components/ui/dialog";
+  import { toast } from "$lib/components/ui/sonner";
+  import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
+  import FoodMenuItems from "$lib/features/nutrition/FoodMenuItems.svelte";
   import {
     copyDiaryItems,
     createDiaryDay,
@@ -16,11 +22,15 @@
     mealTotals,
     recentFoodsFromDays,
     removeDiaryItem,
+    resizeDiaryItem,
+    moveDiaryItem,
+    setDiaryItems,
     addDiaryItem,
     roundMacros,
     scaleMacros,
     MEAL_SLOTS,
     type DiaryDay,
+    type LoggedItem,
     type FoodRef,
     type MacroTotals,
     type MealSlot,
@@ -171,9 +181,36 @@
     }
   }
 
+  // A food's ⋯ / right-click (canvas board 13). Delete happens at once with Undo, like the phone.
   async function deleteItem(itemId: string) {
     if (!day) return;
+    const before = day;
+    const it = before.items.find((x) => x.id === itemId);
     await persist(removeDiaryItem(day, itemId));
+    if (it) toast(`${it.name} deleted`, { action: { label: "Undo", onClick: () => { if (day?.dateIso === before.dateIso) void persist(setDiaryItems(day, before.items)); } } });
+  }
+
+  let resizing = $state<LoggedItem | null>(null);
+  let resizeGrams = $state("");
+  async function saveResize() {
+    const g = Number(resizeGrams);
+    if (!day || !resizing || !(g > 0)) return;
+    await persist(resizeDiaryItem(day, resizing.id, g));
+    resizing = null;
+  }
+
+  // Copy one food onto another day (tomorrow, or one picked in the dialog).
+  let copying = $state<LoggedItem | null>(null);
+  let copyTo = $state<string | undefined>(undefined);
+  async function copyItemTo(it: LoggedItem, toIso: string) {
+    try {
+      const target = (await deps.nutritionRepo.getDay(toIso)) ?? createDiaryDay(toIso);
+      await deps.nutritionRepo.saveDay(copyDiaryItems(target, [it]));
+      toast.success(`${it.name} logged on ${new Date(toIso + "T12:00:00").toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })}`);
+      void loadWeek();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't copy it");
+    }
   }
 
   // ── Add food ──────────────────────────────────────────────────────────────
@@ -368,14 +405,34 @@
           {:else}
             <ul class="flex flex-col divide-y divide-border">
               {#each day.items.filter((i) => i.meal === meal) as it (it.id)}
-                <li class="flex items-center gap-2 py-1.5 text-sm">
+                {#snippet items(kind: "context" | "dropdown")}
+                  <FoodMenuItems item={it} labels={mealLabels} {kind}
+                    onamount={() => { resizing = it; resizeGrams = String(Math.round(it.grams)); }}
+                    onmove={(m) => day && void persist(moveDiaryItem(day, it.id, m))}
+                    ontomorrow={() => void copyItemTo(it, addDays(dateIso, 1))}
+                    oncopy={() => { copying = it; copyTo = addDays(dateIso, 1); }}
+                    ondelete={() => void deleteItem(it.id)} />
+                {/snippet}
+                <ContextMenu.Root>
+                <ContextMenu.Trigger>
+                {#snippet child({ props })}
+                <li {...props} class="group/row -mx-1.5 flex items-center gap-2 rounded-md px-1.5 py-1.5 text-sm data-[state=open]:bg-muted/60">
                   <span class="flex-1 truncate">
                     {it.name}
                     {#if it.servingLabel}<span class="text-muted-foreground"> · {it.servingLabel}</span>{/if}
                   </span>
                   <span class="tabular-nums text-muted-foreground">{fmtKcal(it.computed.kcal)}</span>
-                  <button type="button" class="text-xs text-destructive" onclick={() => deleteItem(it.id)}>×</button>
+                  <DropdownMenu.Root>
+                    <DropdownMenu.Trigger aria-label="More for {it.name}" class="grid size-7 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground data-[state=open]:bg-muted">
+                      <EllipsisIcon class="size-4" />
+                    </DropdownMenu.Trigger>
+                    <DropdownMenu.Content align="end" class="min-w-52">{@render items("dropdown")}</DropdownMenu.Content>
+                  </DropdownMenu.Root>
                 </li>
+                {/snippet}
+                </ContextMenu.Trigger>
+                <ContextMenu.Content class="min-w-52">{@render items("context")}</ContextMenu.Content>
+                </ContextMenu.Root>
               {/each}
             </ul>
           {/if}
@@ -485,3 +542,26 @@
     </div>
   </div>
 {/if}
+
+<Dialog.Root open={resizing !== null} onOpenChange={(o) => { if (!o) resizing = null; }}>
+  <Dialog.Content class="sm:max-w-sm">
+    <Dialog.Header><Dialog.Title>How much {resizing?.name ?? ""}?</Dialog.Title></Dialog.Header>
+    <form class="flex items-end gap-2" onsubmit={(e) => { e.preventDefault(); void saveResize(); }}>
+      <label class="flex flex-1 flex-col gap-1.5 text-[13px] font-medium">Grams
+        <input type="number" inputmode="decimal" min="1" step="any" bind:value={resizeGrams} class="h-9 rounded-[9px] border border-input bg-background px-2.5 text-sm" />
+      </label>
+      <Button type="submit" disabled={!(Number(resizeGrams) > 0)}>Save</Button>
+    </form>
+    <p class="text-xs text-muted-foreground">Calories and macros change with it.</p>
+  </Dialog.Content>
+</Dialog.Root>
+
+<Dialog.Root open={copying !== null} onOpenChange={(o) => { if (!o) copying = null; }}>
+  <Dialog.Content class="sm:max-w-sm">
+    <Dialog.Header><Dialog.Title>Copy {copying?.name ?? ""} to</Dialog.Title></Dialog.Header>
+    <form class="flex items-end gap-2" onsubmit={(e) => { e.preventDefault(); if (copying && copyTo) { const it = copying; copying = null; void copyItemTo(it, copyTo); } }}>
+      <DateField aria-label="Day" class="h-9 flex-1" bind:value={copyTo} />
+      <Button type="submit" disabled={!copyTo}>Copy</Button>
+    </form>
+  </Dialog.Content>
+</Dialog.Root>

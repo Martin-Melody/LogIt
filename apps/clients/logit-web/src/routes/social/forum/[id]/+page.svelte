@@ -2,7 +2,9 @@
      depth, as in the app. Reddit's nesting: replies under what they answer, three shown then
      "Show more", "Continue this thread" past six levels. Open to every account. -->
 <script lang="ts">
+  import PageCrumbs from "$lib/components/PageCrumbs.svelte";
   import { page } from "$app/state";
+  import ProfileHoverCard from "$lib/features/social/ProfileHoverCard.svelte";
   import ChevronUpIcon from "@lucide/svelte/icons/chevron-up";
   import { toast } from "svelte-sonner";
   import { ApiError } from "@logit/core/api/client";
@@ -74,7 +76,7 @@
 </script>
 
 <div class="mx-auto flex max-w-[760px] flex-col gap-4">
-  {#if post}<a href={post.group ? `/groups/${post.group.id}` : "/social?tab=forum"} class="text-[13px] text-muted-foreground hover:text-foreground">‹ {post.group ? `${post.group.name} · Posts` : "Forum"}</a>{/if}
+  {#if post}<PageCrumbs crumbs={[{ label: "Social", href: "/social" }, post.group ? { label: post.group.name, href: `/groups/${post.group.id}` } : { label: "Forum", href: "/social?tab=forum" }, { label: post.title }]} />{/if}
   {#if error}
     <p class="py-16 text-center text-sm text-muted-foreground">{error}</p>
   {:else if !thread || !post}
@@ -84,7 +86,7 @@
       <article class="flex flex-col gap-2">
         {#if post.deleted}<p class="italic text-muted-foreground">{post.removedByModerator ? "Removed by a moderator" : "Deleted by its author"}</p>{:else}
           <h1 class="text-2xl font-bold tracking-tight">{post.title}</h1>
-          <span class="text-sm text-muted-foreground">{#if post.author}<a href="/social/{post.author.username}" class="font-medium text-foreground hover:underline">{name(post)}</a>{:else}{name(post)}{/if}{post.authorRole ? ` · ${post.authorRole}` : ""}{post.group && !post.authorIsMember ? " · Not a member" : ""} · {ago(post.createdAtMs)}</span>
+          <span class="text-sm text-muted-foreground">{#if post.author}<ProfileHoverCard username={post.author.username} class="font-medium text-foreground hover:underline">{name(post)}</ProfileHoverCard>{:else}{name(post)}{/if}{post.authorRole ? ` · ${post.authorRole}` : ""}{post.group && !post.authorIsMember ? " · Not a member" : ""} · {ago(post.createdAtMs)}</span>
           {#if post.body}<MentionText text={post.body} class="text-[15px] leading-relaxed" />{/if}
           {#if post.photoUrl}<img src={photoSrc(post.photoUrl)} alt="" class="max-h-[420px] w-fit rounded-xl border border-border" />{/if}
           {#if post.tags.length}<span class="flex flex-wrap gap-x-2 text-sm">{#each post.tags as t (t)}<a href="/social/tag/{encodeURIComponent(t)}" class="text-sky-700 hover:underline dark:text-sky-300">#{t}</a>{/each}</span>{/if}
@@ -114,7 +116,7 @@
             {@const c = row.node.comment}
             <div class="flex flex-col gap-0.5 py-2 pl-2">
               <span class="flex flex-wrap items-center text-xs">
-              {#if !c.deleted && c.author}<a href="/social/{c.author.username}" class="font-semibold hover:underline">{name(c)}</a>{:else}<strong class="font-semibold">{c.deleted ? "Removed" : name(c)}</strong>{/if}
+              {#if !c.deleted && c.author}<ProfileHoverCard username={c.author.username} class="font-semibold hover:underline">{name(c)}</ProfileHoverCard>{:else}<strong class="font-semibold">{c.deleted ? "Removed" : name(c)}</strong>{/if}
               <button type="button" class="text-left" onclick={() => toggle(c.id)} aria-expanded={!folded.has(c.id)}>{#if c.authorRole}{" · "}{c.authorRole}{/if}{#if !c.deleted && post.group && !c.authorIsMember}{" · Not a member"}{/if}<span class="text-muted-foreground">{" · "}{ago(c.createdAtMs)}{folded.has(c.id) ? " · folded" : ""}</span>
               </button>
               </span>

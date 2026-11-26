@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Logit.Api.Data.Entities;
 using Logit.Api.Features.Push;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -157,5 +158,104 @@ public class DirectMessageTests : IDisposable
         Assert.Equal(HttpStatusCode.BadRequest, (await ben.PostAsJsonAsync("/dm/send", new { username = "ava", clientId = "card2", cardType = "Algorithm", cardJson = "{}" })).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await ben.PostAsJsonAsync("/dm/send", new { username = "ava", clientId = "card3", cardType = "WorkoutSession", cardJson = "not json" })).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await ben.PostAsJsonAsync("/dm/send", new { username = "ava", clientId = "card4", body = "  " })).StatusCode);
+    }
+
+    [Fact]
+    public async Task Reactions_one_per_person_change_or_take_back_and_go_with_an_unsend()
+    {
+        var (ava, _, _) = await _api.SignUpAsync("ava");
+        var (ben, _, _) = await _api.SignUpAsync("ben");
+        var (dev, _, _) = await _api.SignUpAsync("dev");
+        await Follow(ava, "ben");
+        var sent = await (await Send(ben, "ava", "180 for a triple")).Content.ReadFromJsonAsync<JsonElement>(ApiFactory.Json);
+        var id = sent.GetProperty("id").GetString();
+        async Task<JsonElement> React(HttpClient who, string? emoji) =>
+            await (await who.PutAsJsonAsync($"/dm/messages/{id}/reaction", new { emoji })).Content.ReadFromJsonAsync<JsonElement>(ApiFactory.Json);
+        JsonElement Reactions(JsonElement chat) => chat.GetProperty("messages")[0].GetProperty("reactions");
+
+        var r = await React(ava, "💪");
+        Assert.Equal(("💪", 1, true), (r[0].GetProperty("emoji").GetString(), r[0].GetProperty("count").GetInt32(), r[0].GetProperty("mine").GetBoolean()));
+        await React(ben, "💪");
+        var seenByBen = Reactions(await Get(ben, "/dm/chat?username=ava"));
+        Assert.Equal((2, true), (seenByBen[0].GetProperty("count").GetInt32(), seenByBen[0].GetProperty("mine").GetBoolean()));
+
+        // Picking another changes it; null takes it back.
+        r = await React(ava, "🔥");
+        Assert.Equal(2, r.GetArrayLength());
+        r = await React(ava, null);
+        Assert.Equal(1, r.GetArrayLength());
+
+        // Only the six offered, only by people in the chat.
+        Assert.Equal(HttpStatusCode.BadRequest, (await ava.PutAsJsonAsync($"/dm/messages/{id}/reaction", new { emoji = "🍕" })).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await dev.PutAsJsonAsync($"/dm/messages/{id}/reaction", new { emoji = "💪" })).StatusCode);
+
+        // Unsent: the reactions go with it.
+        (await ben.DeleteAsync($"/dm/messages/{id}")).EnsureSuccessStatusCode();
+        Assert.Equal(JsonValueKind.Null, Reactions(await Get(ava, "/dm/chat?username=ben")).ValueKind);
+        Assert.Equal(HttpStatusCode.NotFound, (await ava.PutAsJsonAsync($"/dm/messages/{id}/reaction", new { emoji = "💪" })).StatusCode);
+    }
+
+    [Fact]
+    public async Task Reacting_waits_for_an_accepted_request()
+    {
+        var (ava, _, _) = await _api.SignUpAsync("ava");
+        var (dev, _, _) = await _api.SignUpAsync("dev");
+        var sent = await (await Send(dev, "ava", "hi")).Content.ReadFromJsonAsync<JsonElement>(ApiFactory.Json);
+        var id = sent.GetProperty("id").GetString();
+        Assert.Equal(HttpStatusCode.BadRequest, (await ava.PutAsJsonAsync($"/dm/messages/{id}/reaction", new { emoji = "👏" })).StatusCode);
+    }
+
+    [Fact]
+    public async Task A_reaction_pushes_the_messages_sender_but_not_your_own()
+    {
+        var (ava, _, _) = await _api.SignUpAsync("ava");
+        var (ben, _, _) = await _api.SignUpAsync("ben");
+        await Follow(ava, "ben");
+        (await ben.PutAsJsonAsync("/push/devices", new { token = "ben-phone", timeZone = "UTC" })).EnsureSuccessStatusCode();
+        (await ben.PutAsJsonAsync("/push/settings", new { quietOn = false })).EnsureSuccessStatusCode();
+        var sent = await (await Send(ben, "ava", "180 for a triple")).Content.ReadFromJsonAsync<JsonElement>(ApiFactory.Json);
+        await Dispatch();
+        _push.Sent.Clear();
+
+        var id = sent.GetProperty("id").GetString();
+        (await ava.PutAsJsonAsync($"/dm/messages/{id}/reaction", new { emoji = "🔥" })).EnsureSuccessStatusCode();
+        (await ben.PutAsJsonAsync($"/dm/messages/{id}/reaction", new { emoji = "💪" })).EnsureSuccessStatusCode(); // his own: no push
+        Assert.Equal(1, await Dispatch());
+        Assert.Equal(("ava", "reacted 🔥 to your message"), (_push.Sent[0].Message.Title, _push.Sent[0].Message.Body));
+        Assert.Equal(0, await Dispatch()); // once
+    }
+
+    [Fact]
+    public async Task In_a_coach_thread_the_other_person_reacts_it_syncs_and_pushes()
+    {
+        var (client, clientId, _) = await _api.SignUpAsync("ava");
+        var (coach, coachId, _) = await _api.SignUpAsync("niamh", UserTier.Studio);
+        var rel = Guid.NewGuid();
+        await _api.WithDbAsync(async db =>
+        {
+            db.CoachClientRelationships.Add(new CoachClientRelationship { Id = rel, CoachId = coachId, ClientId = clientId, Status = CoachClientStatus.Active });
+            await db.SaveChangesAsync();
+        });
+        (await coach.PutAsJsonAsync("/push/devices", new { token = "coach-phone", timeZone = "UTC" })).EnsureSuccessStatusCode();
+        (await coach.PutAsJsonAsync("/push/settings", new { quietOn = false })).EnsureSuccessStatusCode();
+        (await coach.PostAsJsonAsync("/coach/messages", new { relationshipId = rel, messageId = "m1", body = "Week 3 is in", createdAtMs = 1 })).EnsureSuccessStatusCode();
+        await Dispatch();
+        _push.Sent.Clear();
+        var before = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - 1;
+
+        Assert.Equal(HttpStatusCode.NotFound, (await coach.PutAsJsonAsync("/coach/messages/reaction", new { relationshipId = rel, messageId = "m1", emoji = "👏" })).StatusCode); // own message
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.PutAsJsonAsync("/coach/messages/reaction", new { relationshipId = rel, messageId = "m1", emoji = "🍕" })).StatusCode);
+        (await client.PutAsJsonAsync("/coach/messages/reaction", new { relationshipId = rel, messageId = "m1", emoji = "👏" })).EnsureSuccessStatusCode();
+
+        // An incremental pull after the reaction picks it up.
+        var pulled = (await coach.GetFromJsonAsync<JsonElement>($"/coach/messages/all?since={before}", ApiFactory.Json)).GetProperty("messages");
+        Assert.Equal("👏", pulled[0].GetProperty("reaction").GetString());
+        Assert.Equal(1, await Dispatch());
+        Assert.Equal(("ava", "reacted 👏 to your message"), (_push.Sent[0].Message.Title, _push.Sent[0].Message.Body));
+
+        (await client.PutAsJsonAsync("/coach/messages/reaction", new { relationshipId = rel, messageId = "m1", emoji = (string?)null })).EnsureSuccessStatusCode();
+        var thread = (await client.GetFromJsonAsync<JsonElement>($"/coach/messages?relationshipId={rel}&since=0", ApiFactory.Json)).GetProperty("messages");
+        Assert.Equal(JsonValueKind.Null, thread[0].GetProperty("reaction").ValueKind);
+        Assert.Equal(0, await Dispatch());
     }
 }

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ClientHoverCard from "$lib/features/coaching/ClientHoverCard.svelte";
   import * as Tabs from "$lib/components/ui/tabs/index.js";
   import { guideSignal } from "$lib/features/guide/signal";
   import { onSampleActivity } from "$lib/features/guide/sandbox.svelte";
@@ -153,7 +154,7 @@
         <div class="flex flex-wrap items-center gap-3 border-b border-border py-3 last:border-0">
           <Avatar name={c.name} url={c.avatarUrl} />
           <span class="flex min-w-0 flex-[1_1_240px] flex-col">
-            <a href="/clients/{c.id}?tab=checkins" class="text-[13px] font-semibold hover:underline">{c.name}</a>
+            <ClientHoverCard clientId={c.id} href="/clients/{c.id}?tab=checkins" class="w-fit text-[13px] font-semibold hover:underline">{c.name}</ClientHoverCard>
             <span class="text-xs text-muted-foreground">{c.missed!.schedule.name} · was due {weekdayDate(c.missed!.dueMs)}{late > 0 ? ` · ${late} day${late === 1 ? "" : "s"} late` : ""}</span>
           </span>
           <a href="/messages?c={c.relationshipId}&draft={encodeURIComponent(NUDGE)}" class="h-[30px] rounded-lg border border-border px-2.5 text-xs leading-[30px] hover:bg-muted">Nudge</a>
@@ -168,7 +169,7 @@
       {#each overview.clients as c (c.id)}
         {@const forms = overview.schedules.filter((s) => s.recipientUserId === c.id)}
         <div class="flex flex-col gap-1 border-t border-border py-3">
-          <a href="/clients/{c.id}?tab=checkins" class="text-[13px] font-semibold hover:underline">{c.name}</a>
+          <ClientHoverCard clientId={c.id} href="/clients/{c.id}?tab=checkins" class="w-fit text-[13px] font-semibold hover:underline">{c.name}</ClientHoverCard>
           {#each forms as f (f.schedule.id)}
             <a href="/clients/{c.id}/checkins/{f.schedule.id}?u={c.username}" class="flex justify-between gap-3 text-[13px] text-muted-foreground hover:text-foreground">
               <span>{f.schedule.name}{f.schedule.archived ? " (archived)" : ""}</span>

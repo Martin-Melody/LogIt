@@ -17,8 +17,10 @@
 
   // New post: words, and optionally one thing from your training. Algorithms and widgets
   // are set up on the phone, so they're shared from there.
-  let { open = $bindable(false), discoverOn = true, onposted }: {
+  let { open = $bindable(false), discoverOn = true, workoutId, onposted }: {
     open?: boolean;
+    /** Open with this workout already attached (Sessions' "Post it to my feed"). */
+    workoutId?: string;
     /** Whether your posts also go to Discover (for the line under the box). */
     discoverOn?: boolean;
     onposted?: (p: ApiPost) => void;
@@ -43,10 +45,17 @@
   $effect(() => {
     if (!open) return;
     body = "";
-    kind = "none";
+    kind = workoutId ? "workout" : "none";
     picked = null;
     showAll = false;
     if (!sources) void loadComposerSources().then((s) => (sources = s)).catch(() => (loadError = true));
+  });
+
+  $effect(() => {
+    if (open && workoutId && sources && kind === "workout" && picked === null) {
+      const i = sources.sessions.findIndex((x) => x.session.id === workoutId);
+      if (i >= 0) picked = i;
+    }
   });
 
   type Option = { title: string; detail: string };

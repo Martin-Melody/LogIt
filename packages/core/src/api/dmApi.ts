@@ -63,7 +63,19 @@ export interface DmMessage {
   removedByModerator?: boolean;
   /** In a group: who sent it (null for your own). */
   from?: (DmPerson & { id: string }) | null;
+  /** Reactions, oldest emoji first; null when none (or the message was unsent). */
+  reactions?: DmReaction[] | null;
 }
+
+export interface DmReaction {
+  emoji: string;
+  count: number;
+  /** You picked this one. */
+  mine: boolean;
+}
+
+/** The reactions on offer, in this order (the server refuses others). */
+export const DM_REACTIONS = ["💪", "🔥", "❤️", "😂", "👏", "😮"] as const;
 
 /** What's left of a message once it's unsent, for showing it before the next reload. */
 export const unsent = (m: DmMessage): DmMessage => ({ ...m, deleted: true, body: "", cardType: null, cardJson: null, photoUrl: null, photoHidden: false, voiceUrl: null, voiceHidden: false });
@@ -116,4 +128,7 @@ export const dmApi = {
   edit: (messageId: string, body: string) => apiClient.fetch<DmMessage>(`/dm/messages/${messageId}`, { method: "PATCH", body: JSON.stringify({ body }) }),
   /** Unsend: gone for everyone. */
   unsend: (messageId: string) => apiClient.fetch<void>(`/dm/messages/${messageId}`, { method: "DELETE" }),
+  /** Add or change your reaction, or take it back with null; returns the message's reactions now. */
+  react: (messageId: string, emoji: string | null) =>
+    apiClient.fetch<DmReaction[]>(`/dm/messages/${messageId}/reaction`, { method: "PUT", body: JSON.stringify({ emoji }) }),
 };

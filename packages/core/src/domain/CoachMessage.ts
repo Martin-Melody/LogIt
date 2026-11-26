@@ -19,6 +19,8 @@ export type CoachMessage = {
   photo?: MessagePhoto;
   /** A voice message (up to a minute). */
   voice?: MessageVoice;
+  /** The other person's reaction to it (only the person it was sent to reacts). */
+  reaction?: string | null;
 };
 
 export type MessageVoice = { id?: string; url: string; ms: number; peaks: string };

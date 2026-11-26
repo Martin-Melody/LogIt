@@ -1,5 +1,6 @@
 <script lang="ts">
   import * as AlertDialog from "$lib/components/ui/alert-dialog";
+  import ProfileHoverCard from "./ProfileHoverCard.svelte";
   import { toast } from "$lib/components/ui/sonner";
   import { socialApi, type ApiComment } from "@logit/core/api/socialApi";
   import Avatar from "./Avatar.svelte";
@@ -120,7 +121,7 @@
     <div class="flex gap-2.5 {isReply ? 'ml-10' : ''} {c.id === justSent ? 'rounded-lg bg-sky-500/10 ring-[6px] ring-sky-500/10' : ''}">
       <a href="/social/{c.authorUsername}"><Avatar name={c.authorDisplayName} url={c.authorAvatarUrl} size={isReply ? 24 : 30} /></a>
       <div class="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span class="text-xs font-semibold"><a href="/social/{c.authorUsername}" class="hover:underline">{c.authorId === self?.id ? "You" : c.authorDisplayName}</a> <span class="font-normal text-muted-foreground">· {timeAgo(c.createdAt)}{c.authorId === postAuthorId ? " · author" : ""}{c.editedAt ? " · edited" : ""}</span></span>
+        <span class="text-xs font-semibold"><ProfileHoverCard username={c.authorUsername} class="hover:underline">{c.authorId === self?.id ? "You" : c.authorDisplayName}</ProfileHoverCard> <span class="font-normal text-muted-foreground">· {timeAgo(c.createdAt)}{c.authorId === postAuthorId ? " · author" : ""}{c.editedAt ? " · edited" : ""}</span></span>
         {#if editingId === c.id}
           <label for="edit-c-{c.id}" class="sr-only">Edit comment</label>
           <textarea id="edit-c-{c.id}" bind:value={editDraft} rows="2" class="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-[13px]"></textarea>

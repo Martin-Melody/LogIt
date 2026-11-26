@@ -1,4 +1,6 @@
 <script lang="ts">
+  import PageCrumbs from "$lib/components/PageCrumbs.svelte";
+  import { clientName } from "$lib/features/coaching/clientName";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import * as Alert from "$lib/components/ui/alert";
@@ -49,7 +51,7 @@
 
 <div class="flex flex-col gap-4">
   <div class="flex items-center justify-between gap-3">
-    <a href="/clients/{clientId}?tab=programs" class="text-[13px] text-muted-foreground hover:text-foreground">‹ Back to the client</a>
+    <PageCrumbs crumbs={[{ label: "Clients", href: "/clients" }, { label: clientName(clientId, username ? `@${username}` : "Client"), href: `/clients/${clientId}`, clientId }, { label: "Programs", href: `/clients/${clientId}?tab=programs` }, { label: program?.name ?? "Program" }]} />
     {#if program}
       <button type="button" onclick={() => (confirmDelete = true)} class="h-[30px] rounded-lg border border-border px-2.5 text-xs text-destructive hover:bg-muted">Delete</button>
     {/if}

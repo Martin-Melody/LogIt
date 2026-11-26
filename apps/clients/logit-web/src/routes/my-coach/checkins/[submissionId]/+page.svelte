@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageCrumbs from "$lib/components/PageCrumbs.svelte";
   import { onMount } from "svelte";
   import { page } from "$app/state";
   import * as Alert from "$lib/components/ui/alert";
@@ -35,7 +36,7 @@
 </script>
 
 <div class="mx-auto flex w-full max-w-[720px] flex-col gap-4">
-  <a href="/my-coach/checkins" class="w-fit text-[13px] text-muted-foreground hover:text-foreground">‹ Check-ins</a>
+  <PageCrumbs crumbs={[{ label: "My coach", href: "/my-coach" }, { label: "Check-ins", href: "/my-coach/checkins" }, { label: form?.name ?? "Check-in" }]} />
 
   {#if error}
     <Alert.Root variant="destructive"><Alert.Description>{error}</Alert.Description></Alert.Root>

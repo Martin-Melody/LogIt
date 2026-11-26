@@ -15,6 +15,7 @@
 <script lang="ts">
   import * as Dialog from "$lib/components/ui/dialog/index.js";
   import { menuRow } from "$lib/components/ui/choice";
+  import type { Snippet } from "svelte";
 
   // A bottom-sheet menu (design canvas S-block-menu): a title, then one row per action. A row
   // closes the sheet, then acts, so a sheet it opens isn't stacked on this one.
@@ -24,12 +25,15 @@
     title,
     subtitle = null,
     items,
+    header,
   }: {
     open: boolean;
     onOpenChange: (v: boolean) => void;
     title: string;
     subtitle?: string | null;
     items: ActionItem[];
+    /** Something above the rows, e.g. a message's reaction picker. */
+    header?: Snippet;
   } = $props();
 </script>
 
@@ -39,6 +43,7 @@
       <Dialog.Title class="text-[19px] font-semibold">{title}</Dialog.Title>
       {#if subtitle}<Dialog.Description class="text-[13px]">{subtitle}</Dialog.Description>{:else}<Dialog.Description class="sr-only">{title} options</Dialog.Description>{/if}
     </div>
+    {@render header?.()}
     {#each items as item (item.label)}
       <button
         type="button"

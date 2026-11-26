@@ -24,6 +24,7 @@
   import { guide, walkthroughsFor } from "$lib/features/guide/guide.svelte";
   import { sandbox } from "$lib/features/guide/sandbox.svelte";
   import { adminState } from "$lib/features/admin/adminState.svelte";
+  import CommandLayer from "$lib/features/commands/CommandLayer.svelte";
 
   let { children } = $props();
 
@@ -228,7 +229,7 @@
       tier={apiClient.getUser()?.tier ?? "Free"}
       onLogout={logout}
     />
-    <Sidebar.Inset class="min-h-svh">
+    <Sidebar.Inset class="min-h-svh min-w-0">
       <header class="flex h-11 shrink-0 items-center gap-2 border-b border-border px-3 md:hidden">
         <Sidebar.Trigger class="-ml-1" />
         <span class="text-sm font-medium">{pageTitle}</span>
@@ -253,6 +254,7 @@
       </main>
     </Sidebar.Inset>
   </Sidebar.Provider>
+  <CommandLayer coach={isStudio} />
   <GuidePanel {walkthroughs} />
   <GuideLayer />
   <StudioModeDialog />

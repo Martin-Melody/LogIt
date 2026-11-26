@@ -1,5 +1,6 @@
 <script lang="ts">
   import * as Table from "$lib/components/ui/table/index.js";
+  import PersonHoverCard from "$lib/features/admin/PersonHoverCard.svelte";
   import { onMount } from "svelte";
   import * as Alert from "$lib/components/ui/alert";
   import { Skeleton } from "$lib/components/ui/skeleton";
@@ -82,7 +83,7 @@
           <Table.Body>
             {#each rows as s (s.id)}
               <Table.Row class="border-t border-border">
-                <Table.Cell class="py-2.5"><a href="/admin/people?id={s.user.id}" class="text-primary hover:underline">{s.user.username}</a></Table.Cell>
+                <Table.Cell class="py-2.5"><PersonHoverCard username={s.user.username} id={s.user.id} class="text-primary hover:underline">{s.user.username}</PersonHoverCard></Table.Cell>
                 <Table.Cell class="py-2.5">{s.plan}</Table.Cell>
                 <Table.Cell class="py-2.5">{store[s.source]}</Table.Cell>
                 <Table.Cell class="py-2.5"><span class="rounded-full px-2 py-px text-xs font-semibold {tone(s.state)}">{stateText[s.state] ?? s.state}</span></Table.Cell>
