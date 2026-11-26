@@ -120,6 +120,40 @@ test.describe("nutrition log — add to meal", () => {
 
 // ── Favourites ────────────────────────────────────────────────────────────────
 
+test.describe("nutrition log — time eaten", () => {
+  test("starts at now; a changed time is saved and shown in the day", async ({ page }) => {
+    await seedNutrition(page);
+    const dateIso = await goToLogViaNutritionPage(page);
+
+    await page.getByRole("button", { name: "Quick add", exact: true }).click();
+    await page.getByLabel("kcal", { exact: true }).fill("200");
+    await expect(page.getByText("Now", { exact: true })).toBeVisible();
+    await page.getByRole("spinbutton").nth(0).click();
+    await page.keyboard.type("19");
+    await page.getByRole("spinbutton").nth(1).click();
+    await page.keyboard.type("02");
+    await expect(page.getByRole("button", { name: "Use now" })).toBeVisible();
+    await page.getByRole("button", { name: "Add to Breakfast" }).click();
+    await page.getByRole("button", { name: "Done" }).click();
+    await page.waitForURL(/\/nutrition$/);
+
+    const at = await page.evaluate((iso) => {
+      const days = JSON.parse(localStorage.getItem("logit:nutritionDays:v1") ?? "{}");
+      const d = new Date(days[`nday_${iso}`].items[0].loggedAtMs);
+      return `${d.getHours()}:${d.getMinutes()}`;
+    }, dateIso);
+    expect(at).toBe("19:2");
+    await expect(page.getByText(/· 19:02/)).toBeVisible();
+  });
+
+  test("an earlier day starts with no time", async ({ page }) => {
+    await seedNutrition(page);
+    await goToLog(page);
+    await page.getByRole("button", { name: "Quick add", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Add a time" })).toBeVisible();
+  });
+});
+
 test.describe("nutrition log — favourites", () => {
   test("shows the empty-favourites hint with none saved", async ({ page }) => {
     await seedNutrition(page);

@@ -30,6 +30,7 @@ import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
   import DateField from "$lib/components/ui/date-field";
   import {
     copyDiaryItems,
+    timeOfDay,
     createDiaryDay,
     dayTotals,
     dayNutrients,
@@ -192,6 +193,7 @@ import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
       computed: r.computed,
       nutrients: r.nutrients,
       meal: r.meal ?? editing.item.meal,
+      ...(r.loggedAtMs !== undefined ? { loggedAtMs: r.loggedAtMs } : {}),
     });
     editing = null;
     await commit(next);
@@ -218,15 +220,16 @@ import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
   let quickEdit = $state<LoggedItem | null>(null);
   let quickNew = $state<MealSlot | null>(null);
 
-  async function saveQuick(r: { name: string; computed: MacroTotals; meal: MealSlot }) {
+  async function saveQuick(r: { name: string; computed: MacroTotals; meal: MealSlot; loggedAtMs?: number }) {
+    const at = r.loggedAtMs !== undefined ? { loggedAtMs: r.loggedAtMs } : {};
     if (quickEdit && day) {
       const id = quickEdit.id;
       quickEdit = null;
-      await commit(updateDiaryItem(day, id, { name: r.name, computed: r.computed, meal: r.meal }));
+      await commit(updateDiaryItem(day, id, { name: r.name, computed: r.computed, meal: r.meal, ...at }));
       return;
     }
     quickNew = null;
-    const { day: d } = await addItems(dateIso, [{ meal: r.meal, name: r.name, grams: 0, computed: r.computed }]);
+    const { day: d } = await addItems(dateIso, [{ meal: r.meal, name: r.name, grams: 0, computed: r.computed, ...at }]);
     generation++;
     day = d;
     void loadWeek();
@@ -588,7 +591,7 @@ import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
                       {it.name}
                       {#if it.sourceKind === "recipe"}<span class="ml-1 rounded-md border border-border px-1.5 text-[11px] text-muted-foreground">Recipe</span>{/if}
                     </span>
-                    <span class="block truncate text-xs text-muted-foreground">{it.servingLabel ?? (it.grams > 0 ? `${Math.round(it.grams)} g` : "Quick add")}</span>
+                    <span class="block truncate text-xs text-muted-foreground">{it.servingLabel ?? (it.grams > 0 ? `${Math.round(it.grams)} g` : "Quick add")}{it.loggedAtMs !== undefined ? ` · ${timeOfDay(it.loggedAtMs)}` : ""}</span>
                   </span>
                   <span class="font-medium tabular-nums">{fmtNum(it.computed.kcal)}</span>
                 </button>
@@ -642,6 +645,8 @@ import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
     initial={{ amount: ed.item.amount, portionId: ed.item.portionId, grams: ed.item.grams }}
     day={target ? { eaten: { kcal: eaten.kcal - ed.item.computed.kcal, proteinG: eaten.proteinG - ed.item.computed.proteinG, carbsG: eaten.carbsG - ed.item.computed.carbsG, fatG: eaten.fatG - ed.item.computed.fatG }, target } : null}
     meal={ed.item.meal}
+    {dateIso}
+    loggedAtMs={ed.item.loggedAtMs ?? null}
     confirmText={() => "Save"}
     ondelete={() => void deleteItem(ed.item)}
     onconfirm={(r) => void saveEdit(r)}
@@ -656,7 +661,7 @@ import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
 {/if}
 
 {#if quickNew || quickEdit}
-  <QuickAddSheet meal={quickEdit?.meal ?? quickNew ?? "snack"} onadd={(r) => void saveQuick(r)} onclose={() => { quickNew = null; quickEdit = null; }} />
+  <QuickAddSheet meal={quickEdit?.meal ?? quickNew ?? "snack"} {dateIso} loggedAtMs={quickEdit ? (quickEdit.loggedAtMs ?? null) : undefined} onadd={(r) => void saveQuick(r)} onclose={() => { quickNew = null; quickEdit = null; }} />
 {/if}
 
 {#if menuFor}
