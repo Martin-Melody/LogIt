@@ -1,4 +1,4 @@
-// The API the public social pages read (getlogit.app/g/…, /@name): the hosted server unless
+// The API the public social pages read (getlogit.app/forum/…, /t/…, /@name): the hosted server unless
 // PUBLIC_LOGIT_API points elsewhere (a local API in development).
 import { env } from "$env/dynamic/public";
 import { HOSTED_API } from "@logit/core/domain/friendInvite";

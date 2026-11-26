@@ -1,3 +1,4 @@
+import type { ForumPost } from "./forumApi";
 import { apiClient } from "./client";
 
 export interface PublicWidgetSlot {
@@ -156,6 +157,8 @@ export interface RepostSource {
 export interface FeedPage {
   posts: ApiPost[];
   nextCursor: string | null;
+  /** The feed only: forum posts from people you follow and your groups, from the same stretch of time (canvas F1). */
+  forum?: ForumPost[];
 }
 
 export interface ApiComment {

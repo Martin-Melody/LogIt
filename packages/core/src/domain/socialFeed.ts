@@ -25,3 +25,13 @@ export function appendUnique<T extends { id: string }>(shown: T[], page: T[]): T
   const ids = new Set(shown.map((p) => p.id));
   return [...shown, ...page.filter((p) => !ids.has(p.id))];
 }
+
+export type FeedItem<P, F> = { kind: "post"; post: P; at: number } | { kind: "forum"; post: F; at: number };
+
+/** The Following feed's posts with forum title cards (canvas F1) slotted in by time, newest
+ * first; a card that came with more than one page shows once. */
+export function withForumCards<P extends { createdAt: string }, F extends { id: string; createdAtMs: number }>(posts: P[], cards: F[]): FeedItem<P, F>[] {
+  const seen = new Set<string>();
+  const forum = cards.filter((c) => !seen.has(c.id) && seen.add(c.id)).map((c) => ({ kind: "forum" as const, post: c, at: c.createdAtMs }));
+  return [...posts.map((p) => ({ kind: "post" as const, post: p, at: Date.parse(p.createdAt) })), ...forum].sort((a, b) => b.at - a.at);
+}

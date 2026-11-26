@@ -7,12 +7,12 @@ namespace Logit.Api.Features.Social;
 /// People's own profiles and posts on the web, signed out (design canvas row 18). Public means
 /// public everywhere (Martin, 25 Nov): a public account's profile and posts are readable at
 /// getlogit.app/@name, a private one's never are. A private account, a sample account and a name
-/// nobody has all get the same 404, so the page never says which. Only name, photo, bio, counts
-/// and posts: never the profile card (gym, progress photo), stories, follow lists or anything else.
+/// nobody has all get the same 404, so the page never says which. Only name, photo, bio, counts,
+/// posts and forum posts: never the profile card (gym, progress photo), stories, follow lists or anything else.
 public static class PublicProfileEndpoints
 {
     public record ProfileDto(string Username, string DisplayName, string? Bio, string? AvatarUrl, int Posts, int Followers, int Following);
-    public record ProfilePageDto(ProfileDto Profile, List<PostDto> Posts);
+    public record ProfilePageDto(ProfileDto Profile, List<PostDto> Posts, List<GroupPostEndpoints.PostDto> Forum);
     public record PostPageDto(ProfileDto Profile, PostDto Post, List<CommentDto> Comments, List<PostDto> More);
 
     public static void MapPublicProfileEndpoints(this IEndpointRouteBuilder app)
@@ -49,7 +49,7 @@ public static class PublicProfileEndpoints
         var user = await PublicUserAsync(db, username);
         if (user is null) return Results.NotFound();
         var rows = await PostsOf(db, user.Id).OrderByDescending(p => p.CreatedAt).Take(12).ToListAsync();
-        return Results.Ok(new ProfilePageDto(await ProfileOfAsync(db, user), await DtosAsync(db, rows)));
+        return Results.Ok(new ProfilePageDto(await ProfileOfAsync(db, user), await DtosAsync(db, rows), await GroupPostEndpoints.PublicByAuthorAsync(db, user.Id, 10)));
     }
 
     private static async Task<IResult> Post(string username, Guid id, AppDbContext db)

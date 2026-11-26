@@ -1227,29 +1227,12 @@ namespace Logit.Api.Migrations
                         .HasMaxLength(60)
                         .HasColumnType("TEXT");
 
-                    b.Property<bool>("PostsOn")
-                        .HasColumnType("INTEGER");
-
-
-                    b.Property<string>("Slug")
-                        .IsRequired()
-                        .HasMaxLength(80)
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("WhoCanComment")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("WhoCanPost")
-                        .HasColumnType("INTEGER");
-
                     b.HasKey("Id");
 
                     b.HasIndex("Access");
 
                     b.HasIndex("InviteCode")
                         .IsUnique();
-
-                    b.HasIndex("Slug");
 
                     b.ToTable("Groups");
                 });
@@ -1473,12 +1456,7 @@ namespace Logit.Api.Migrations
                     b.Property<DateTime?>("EditedAt")
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid>("GroupId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Kind")
-                        .IsRequired()
-                        .HasMaxLength(30)
+                    b.Property<Guid?>("GroupId")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("LastActivityAt")
@@ -1486,10 +1464,6 @@ namespace Logit.Api.Migrations
 
                     b.Property<bool>("Locked")
                         .HasColumnType("INTEGER");
-
-                    b.Property<bool>("MembersOnlyComments")
-                        .HasColumnType("INTEGER");
-
 
                     b.Property<int>("PhotoHeight")
                         .HasColumnType("INTEGER");
@@ -1511,6 +1485,11 @@ namespace Logit.Api.Migrations
                         .HasMaxLength(120)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Tags")
+                        .IsRequired()
+                        .HasMaxLength(420)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -1521,7 +1500,9 @@ namespace Logit.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AuthorId");
+                    b.HasIndex("LastActivityAt");
+
+                    b.HasIndex("AuthorId", "CreatedAt");
 
                     b.HasIndex("GroupId", "CreatedAt");
 
@@ -1556,6 +1537,37 @@ namespace Logit.Api.Migrations
                         .IsUnique();
 
                     b.ToTable("GroupVotes");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.Hashtag", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ForumPostId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("PostId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Tag")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ForumPostId");
+
+                    b.HasIndex("PostId");
+
+                    b.HasIndex("Tag", "CreatedAt");
+
+                    b.ToTable("Hashtags");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.HostedPlugin", b =>
@@ -3645,8 +3657,7 @@ namespace Logit.Api.Migrations
                     b.HasOne("Logit.Api.Data.Entities.Group", "Group")
                         .WithMany()
                         .HasForeignKey("GroupId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("Author");
 
@@ -3666,6 +3677,19 @@ namespace Logit.Api.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.Hashtag", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.GroupPost", null)
+                        .WithMany()
+                        .HasForeignKey("ForumPostId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Logit.Api.Data.Entities.Post", null)
+                        .WithMany()
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade);
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.HostedPlugin", b =>

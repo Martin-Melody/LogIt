@@ -2,6 +2,7 @@
 // search engines read it. Private, sample and unknown accounts are all the same 404 (W6).
 import { error } from "@sveltejs/kit";
 import type { ApiPost } from "@logit/core/api/socialApi";
+import type { ForumPost } from "@logit/core/api/forumApi";
 import { publicApi } from "$lib/social/publicApi";
 import type { PageServerLoad } from "./$types";
 
@@ -15,6 +16,6 @@ export const load: PageServerLoad = async ({ params, fetch, setHeaders }) => {
   if (res.status === 404) error(404, "This profile isn't on the web");
   if (!res.ok) error(502, "Couldn't load this profile. Try again in a moment.");
   setHeaders({ "cache-control": "public, max-age=300" });
-  const page = (await res.json()) as { profile: PublicProfile; posts: ApiPost[] };
+  const page = (await res.json()) as { profile: PublicProfile; posts: ApiPost[]; forum: ForumPost[] };
   return { ...page, api };
 };

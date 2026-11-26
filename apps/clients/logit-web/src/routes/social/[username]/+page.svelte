@@ -16,12 +16,13 @@
   import ProfileEditor from "$lib/features/social/ProfileEditor.svelte";
   import ReportDialog from "$lib/features/social/ReportDialog.svelte";
   import MentionText from "$lib/features/social/MentionText.svelte";
+  import ForumPosts from "$lib/features/social/ForumPosts.svelte";
 
   // Someone's profile (or yours): their cards, posts, followers and who they follow. A
   // private account you don't follow shows only the header and a lock.
   const username = $derived((page.params.username ?? "").toLowerCase());
-  type Tab = "posts" | "followers" | "following";
-  const tab = $derived<Tab>((["followers", "following"] as const).find((t) => t === page.url.searchParams.get("tab")) ?? "posts");
+  type Tab = "posts" | "forum" | "followers" | "following";
+  const tab = $derived<Tab>((["forum", "followers", "following"] as const).find((t) => t === page.url.searchParams.get("tab")) ?? "posts");
 
   let profile = $state<ApiProfile | null>(null);
   let error = $state<string | null>(null);
@@ -77,7 +78,7 @@
   $effect(() => {
     if (!profile || locked) return;
     if (tab === "posts" && posts === null) void loadPosts();
-    if (tab !== "posts") void loadPeople(tab);
+    if (tab === "followers" || tab === "following") void loadPeople(tab);
   });
 
   function onFollowChange(next: FollowStatus) {
@@ -174,13 +175,15 @@
       <ProfileCards json={profile.publicProfileJson} name={profile.displayName} />
 
       <div role="tablist" aria-label="Profile" class="flex gap-1 border-b border-border">
-        {#each [["posts", "Posts"], ["followers", "Followers"], ["following", "Following"]] as [t, label] (t)}
+        {#each [["posts", "Posts"], ["forum", "Forum"], ["followers", "Followers"], ["following", "Following"]] as [t, label] (t)}
           <button type="button" role="tab" aria-selected={tab === t} onclick={() => setTab(t as Tab)}
             class="-mb-px h-9 border-b-2 px-3 text-[13px] {tab === t ? 'border-primary font-semibold' : 'border-transparent text-muted-foreground'}">{label}</button>
         {/each}
       </div>
 
-      {#if tab === "posts"}
+      {#if tab === "forum"}
+        {#key username}<ForumPosts filter={{ user: username }} canPost={profile.isSelf} sorts={["new", "top"]} empty="No forum posts yet." />{/key}
+      {:else if tab === "posts"}
         {#if posts === null}
           <Skeleton class="h-40" />
         {:else if posts.length === 0}

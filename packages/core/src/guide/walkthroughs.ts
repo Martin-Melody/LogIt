@@ -171,7 +171,7 @@ export const PRO_CHAPTERS: Chapter[] = [
       {
         id: "tabs", on: "web", route: "/social", target: "social-tabs", kind: "look",
         title: "Following and Discover",
-        body: "Open People › Social. Following is people you follow, newest first. Discover suggests posts from people you don't follow yet. Notifications has likes, comments, replies and follow requests.",
+        body: "Open People › Social. Following is people you follow, newest first. Discover suggests posts from people you don't follow yet. Forum has questions and threads from anyone, with #tags. Notifications has likes, comments, replies and follow requests.",
       },
       {
         id: "discover", on: "web", route: "/social", target: "social-tabs", kind: "do", signal: "social.discover-opened",

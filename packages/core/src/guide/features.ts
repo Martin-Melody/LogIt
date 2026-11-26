@@ -215,9 +215,9 @@ export const FEATURES: Feature[] = [
     section: "More",
     plan: "Free",
     summary: "Follow people, share workouts and PRs, and find people in Discover.",
-    web: ["/social", "/social/messages", "/social/post/[id]", "/social/[username]", "/groups/[id]", "/groups/posts/[postId]"],
+    web: ["/social", "/social/messages", "/social/post/[id]", "/social/[username]", "/groups/[id]", "/social/forum/[id]", "/social/tag/[tag]"],
     phone: [
-      "/social", "/social/invite", "/messages/chat", "/messages/requests", "/groups/[id]", "/groups/[id]/members", "/groups/[id]/settings", "/groups/join", "/groups/[id]/events", "/groups/[id]/board", "/social/board", "/groups/[id]/reports", "/groups/posts/[postId]", "/groups/[id]/posts", "/events/[id]", "/events/[id]/people", "/settings/privacy", "/settings/privacy/training", "/settings/privacy/story/[list]", "/settings/privacy/messages", "/social/post/[id]", "/social/post/[id]/content",
+      "/social", "/social/invite", "/messages/chat", "/messages/requests", "/groups/[id]", "/groups/[id]/members", "/groups/[id]/settings", "/groups/join", "/groups/[id]/events", "/groups/[id]/board", "/social/board", "/groups/[id]/reports", "/social/forum/[id]", "/social/tag/[tag]", "/groups/[id]/posts", "/events/[id]", "/events/[id]/people", "/settings/privacy", "/settings/privacy/training", "/settings/privacy/story/[list]", "/settings/privacy/messages", "/social/post/[id]", "/social/post/[id]/content",
       "/social/[username]", "/social/[username]/followers", "/social/[username]/following", "/inbox",
     ],
     whereWeb: "People › Social",
@@ -235,7 +235,8 @@ export const FEATURES: Feature[] = [
       "See this week's board with your friends and in each group: workouts done of planned, weeks kept and volume against your usual, never weights",
       "Keep yourself off every board, or one group's, and still see them",
       "Make members moderators: they remove messages, mute people in the chat, approve requests and handle the group's reports",
-      "Post questions, form checks and advice in groups, with comments that nest like Reddit; posts in groups anyone can find are public on the web too",
+      "Ask questions and start threads in the Forum, with or without a group, with comments that nest like Reddit; forum posts are public on the web too, except in invite-only groups",
+      "Tag posts with #anything (#sligo, #deadlift) and open a tag to see every post with it",
     ],
   },
   {

@@ -1,5 +1,5 @@
-<!-- A group's posts seen from outside (Martin, 25 Nov: anyone signed in can post): the same list
-     and New post as the group's Posts tab, with Join at the top. Members go to their Posts tab. -->
+<!-- A group's posts seen from outside (canvas F6): the Forum filtered to posts labelled with the
+     group, New post picks it, and Join at the top. Members go to their Posts tab. -->
 <script lang="ts">
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
@@ -10,7 +10,7 @@
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import GroupAvatar from "$lib/components/social/GroupAvatar.svelte";
-  import GroupPostsTab from "$lib/components/social/GroupPostsTab.svelte";
+  import ForumList from "$lib/components/social/ForumList.svelte";
   import { back } from "$lib/navigation";
 
   const id = $derived(page.params.id ?? "");
@@ -21,7 +21,7 @@
     try {
       preview = await groupsApi.about(id);
       if (preview.member) await goto(`/groups/${id}?tab=posts`, { replaceState: true });
-      else if (!preview.posts?.on) error = "This group doesn't have posts.";
+      else if (preview.access === "InviteOnly") error = "This group's posts are for members only.";
     } catch (e) {
       error = e instanceof ApiError && e.status === 404 ? "This group's posts are for members only." : "Couldn't load the posts. Try again in a moment.";
     }
@@ -47,7 +47,7 @@
         </span>
         <a href="/groups/join?id={preview.id}" class="flex h-9 shrink-0 items-center rounded-lg border border-border px-3 text-[13px] font-semibold text-inherit no-underline">{preview.requested ? "Requested" : preview.access === "Request" ? "Ask to join" : "Join"}</a>
       </div>
-      <GroupPostsTab group={{ id: preview.id, name: preview.name, posts: preview.posts, me: null }} />
+      <ForumList filter={{ group: preview.id }} group={{ id: preview.id, name: preview.name, access: preview.access }} sorts={["active", "new"]} />
     {/if}
   </div>
 </div>

@@ -19,7 +19,8 @@
   import { ChevronDown, Circle, CircleCheck } from "lucide-svelte";
   import { EVENT_KINDS, EVENT_SPORTS, eventsApi, type EventKind, type EventSport, type GroupEvent } from "@logit/core/api/eventsApi";
   import { dayBadge, eventShort } from "$lib/features/groups/eventTime";
-  import { groupPostsApi, type GroupPost } from "@logit/core/api/groupPostsApi";
+  import { forumApi, normalizeTag, type ForumPost } from "@logit/core/api/forumApi";
+  import { Hash } from "lucide-svelte";
   import PostRow from "$lib/components/social/PostRow.svelte";
 
   const { open, onclose } = $props<{
@@ -29,12 +30,14 @@
 
   let query = $state("");
   let tab = $state<"people" | "groups" | "events" | "posts">("people");
-  let posts = $state<GroupPost[]>([]);
+  let posts = $state<ForumPost[]>([]);
+  // "#sligo" (or a single word) offers that tag's page (canvas F4).
+  const tagHit = $derived(normalizeTag(query));
   let postsLoaded = $state(false);
   async function searchPosts() {
     const q = query.trim();
     if (q.length < 2) { posts = []; postsLoaded = false; return; }
-    posts = await groupPostsApi.search(q).catch(() => []);
+    posts = await forumApi.search(q).catch(() => []);
     postsLoaded = true;
   }
   $effect(() => {
@@ -226,7 +229,7 @@
         bind:value={query}
         oninput={onInput}
         type="search"
-        placeholder={tab === "posts" ? "Search posts in groups…" : tab === "events" ? "Search events by place or name…" : tab === "groups" ? "Search groups by name or place…" : "Search by username or name…"}
+        placeholder={tab === "posts" ? "Search the Forum, or #tags…" : tab === "events" ? "Search events by place or name…" : tab === "groups" ? "Search groups by name or place…" : "Search by username or name…"}
         class="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
       />
       {#if loading}
@@ -242,19 +245,25 @@
         <button type="button" role="tab" aria-selected={tab === "people"} class={segment(tab === "people")} onclick={() => (tab = "people")}>People</button>
         <button type="button" role="tab" aria-selected={tab === "groups"} class={segment(tab === "groups")} onclick={() => (tab = "groups")}>Groups</button>
         <button type="button" role="tab" aria-selected={tab === "events"} class={segment(tab === "events")} onclick={() => (tab = "events")}>Events</button>
-        <button type="button" role="tab" aria-selected={tab === "posts"} class={segment(tab === "posts")} onclick={() => (tab = "posts")}>Posts</button>
+        <button type="button" role="tab" aria-selected={tab === "posts"} class={segment(tab === "posts")} onclick={() => (tab = "posts")}>Forum</button>
       </div>
     </div>
 
     <!-- Results -->
     <div class="overflow-y-auto flex-1">
       {#if tab === "posts"}
+        {#if tagHit}
+          <a href="/social/tag/{encodeURIComponent(tagHit)}" onclick={onclose} class="flex min-h-14 items-center gap-3 border-b border-border px-4 text-inherit no-underline">
+            <span class="flex size-10 items-center justify-center rounded-xl bg-muted text-sky-700 dark:text-sky-300"><Hash class="size-5" /></span>
+            <span class="flex flex-col"><span class="text-[15px] font-semibold">#{tagHit}</span><span class="text-[12px] text-muted-foreground">Forum posts and posts with this tag</span></span>
+          </a>
+        {/if}
         {#if !postsLoaded}
           <p class="px-6 py-10 text-center text-sm text-muted-foreground">Search questions, form checks and advice in groups anyone can find, and your own groups.</p>
         {:else if posts.length === 0}
           <p class="px-6 py-10 text-center text-sm text-muted-foreground">No posts found for "<span class="text-foreground">{query.trim()}</span>".</p>
         {:else}
-          <div class="pb-8" role="presentation" onclick={onclose}>{#each posts as p (p.id)}<PostRow post={p} showGroup />{/each}</div>
+          <div class="pb-8" role="presentation" onclick={onclose}>{#each posts as p (p.id)}<PostRow post={p} />{/each}</div>
         {/if}
       {:else if tab === "events"}
         <div class="flex gap-2 overflow-x-auto px-3 py-2.5">
