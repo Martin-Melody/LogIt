@@ -192,6 +192,8 @@ Gently rounded. The base radius is 10px; set boxes and buttons use 8px; cards us
 
 ## Components
 
+Every component below is a shadcn-svelte component (or bits-ui, when shadcn-svelte has none) styled to these rules. Check shadcn-svelte before drawing or building a new one (PRODUCT.md principle 8, docs/shadcn-components.md).
+
 ### Buttons
 - **Character:** plain and solid, sentence case, verb first ("Start Upper", "Add a set").
 - **Primary:** Chalk Grey fill, dark text, 8px radius, 40px tall (44px for full-width page actions).
