@@ -2,7 +2,9 @@
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
-  import { Loader2, Search, PenSquare, Settings2, Check } from "lucide-svelte";
+  import { Loader2, Search, PenSquare, Settings2, Check, MessagesSquare } from "lucide-svelte";
+  import ActionSheet from "$lib/components/ActionSheet.svelte";
+  import NewPostSheet from "$lib/components/social/NewPostSheet.svelte";
   import { onMount } from "svelte";
   import CommentSheet from "$lib/components/CommentSheet.svelte";
   import PostCard from "$lib/components/social/PostCard.svelte";
@@ -38,6 +40,9 @@
   let nextCursor = $state<string | null>(null);
   let showConnectPrompt = $state(false);
   let showCreatePost = $state(false);
+  // One way in for both kinds (Martin, 26 Nov): the header's pen asks which.
+  let choosing = $state(false);
+  let writingForum = $state(false);
   let showSearch = $state(false);
   let commentPost = $state<ApiPost | null>(null);
   let sentinel = $state<HTMLDivElement | null>(null);
@@ -245,7 +250,7 @@
       <button type="button" class="p-2 text-muted-foreground" aria-label="Privacy" onclick={() => goto("/settings/privacy")}>
         <Settings2 class="h-[1.15rem] w-[1.15rem]" />
       </button>
-      <button type="button" class="p-2 text-muted-foreground" aria-label="New post" onclick={() => (showCreatePost = true)}>
+      <button type="button" class="p-2 text-muted-foreground" aria-label="New post" onclick={() => (choosing = true)}>
         <PenSquare class="h-[1.15rem] w-[1.15rem]" />
       </button>
     {/if}
@@ -360,7 +365,7 @@
 
       {:else if tab === "forum"}
         {#key forumKey}
-          <ForumList>
+          <ForumList canPost={false}>
             {#snippet top()}
               {#if trending?.length}
                 <div class="flex gap-2 overflow-x-auto px-4 pb-2.5 [scrollbar-width:none]" aria-label="Trending tags">
@@ -404,6 +409,12 @@
   onposted={(post) => { posts = [post, ...posts]; }}
   onclose={() => (showCreatePost = false)}
 />
+
+<ActionSheet open={choosing} onOpenChange={(v) => (choosing = v)} title="New" items={[
+  { icon: PenSquare, label: "Post", value: "For your followers", onSelect: () => (showCreatePost = true) },
+  { icon: MessagesSquare, label: "Forum post", value: "Ask or start a thread", onSelect: () => (writingForum = true) },
+]} />
+{#if writingForum}<NewPostSheet onclose={() => (writingForum = false)} />{/if}
 
 <UserSearchSheet open={showSearch} onclose={() => (showSearch = false)} />
 
