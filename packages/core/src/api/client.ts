@@ -601,9 +601,12 @@ class ApiClient {
       method: "PATCH",
       body: JSON.stringify({ displayName }),
     });
-    if (this.cachedUser) {
-      this.saveUser({ ...this.cachedUser, displayName }, this.cachedIsSelfHosted);
-    }
+    this.rememberDisplayName(displayName);
+  }
+
+  /** The name was changed some other way (Edit profile): keep the signed-in account in step. */
+  rememberDisplayName(displayName: string): void {
+    if (this.cachedUser) this.saveUser({ ...this.cachedUser, displayName }, this.cachedIsSelfHosted);
   }
 
   async updateOnboardingCompleted(value: boolean): Promise<void> {

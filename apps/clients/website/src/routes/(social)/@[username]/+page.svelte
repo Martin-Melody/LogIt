@@ -6,9 +6,14 @@
   import ProfileHead from "$lib/social/ProfileHead.svelte";
   import PublicPost from "$lib/social/PublicPost.svelte";
   import ForumRow from "$lib/social/ForumRow.svelte";
+  import TrainingCards from "$lib/social/TrainingCards.svelte";
+  import { shownCards, parseProfileData } from "@logit/core/domain/profileCards";
 
   const { data } = $props();
   const p = $derived(data.profile);
+  // Posts | Training tabs, as in the app (the page's 620 px column has no room for a side column).
+  let view = $state<"posts" | "training">("posts");
+  const hasCards = $derived(shownCards(parseProfileData(p.publicProfileJson)).length > 0);
   const description = $derived((p.bio || `${p.displayName} trains with LogIt.`).replace(/\s+/g, " ").slice(0, 155));
 </script>
 
@@ -27,17 +32,36 @@
     <button type="button" class="rounded-lg bg-primary px-4 py-3 text-center font-semibold text-primary-foreground hover:bg-primary/90" onclick={() => ask("follow", p.displayName)}>Follow</button>
     <a href="logit://u/{p.username}" class="rounded-lg border border-border px-4 py-3 text-center font-semibold hover:bg-muted">Open in the app</a>
   </div>
-  {#if data.posts.length === 0 && data.forum.length === 0}
-    <p class="py-10 text-center text-sm text-muted-foreground">No posts yet.</p>
-  {:else if data.posts.length}
-    <div class="flex flex-col">
-      {#each data.posts as post (post.id)}<PublicPost {post} api={data.api} href="/@{p.username}/p/{post.id}" />{/each}
+  <!-- Design canvas PR5: the same Training cards as the app. Both tabs are in the page for search engines. -->
+  {#if hasCards}
+    <div role="tablist" aria-label="@{p.username}" class="flex border-b border-border">
+      {#each [["posts", "Posts"], ["training", "Training"]] as [v, label] (v)}
+        <button type="button" role="tab" aria-selected={view === v} onclick={() => (view = v as typeof view)}
+          class="-mb-px h-11 flex-1 border-b-2 text-sm {view === v ? 'border-foreground font-semibold text-heading' : 'border-transparent text-muted-foreground'}">{label}</button>
+      {/each}
     </div>
   {/if}
-  {#if data.forum.length}
-    <h2 class="mt-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Forum</h2>
-    <div class="-mx-4 flex flex-col sm:-mx-5">{#each data.forum as post (post.id)}<ForumRow {post} />{/each}</div>
-  {/if}
+  <div class="flex flex-col">
+    <div class="flex min-w-0 flex-col gap-4 {view === 'training' ? 'hidden' : ''}">
+    {#if data.posts.length === 0 && data.forum.length === 0}
+      <p class="py-10 text-center text-sm text-muted-foreground">No posts yet.</p>
+    {:else if data.posts.length}
+      <div class="flex flex-col">
+        {#each data.posts as post (post.id)}<PublicPost {post} api={data.api} href="/@{p.username}/p/{post.id}" />{/each}
+      </div>
+    {/if}
+    {#if data.forum.length}
+      <h2 class="mt-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Forum</h2>
+      <div class="-mx-4 flex flex-col sm:-mx-5">{#each data.forum as post (post.id)}<ForumRow {post} />{/each}</div>
+    {/if}
+    </div>
+    {#if hasCards}
+      <aside aria-label="Training" class="flex flex-col gap-3 {view === 'posts' ? 'hidden' : ''}">
+        <h2 class="sr-only">Training</h2>
+        <TrainingCards json={p.publicProfileJson ?? null} api={data.api} name={p.displayName} />
+      </aside>
+    {/if}
+  </div>
   <div class="mt-2 flex flex-col gap-3 rounded-2xl border border-border p-5 sm:flex-row sm:items-center">
     <p class="flex-1 text-sm text-muted-foreground">Sign in to see more of {p.displayName}'s posts, like and comment. Any LogIt account works, and it's free.</p>
     <span class="flex gap-2">

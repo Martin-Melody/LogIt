@@ -4,8 +4,7 @@
   import { Camera, ImagePlus, Loader2, X } from "lucide-svelte";
   import * as Card from "$lib/components/ui/card";
   import { profile } from "$lib/stores/profile.store";
-  import { pickImageFile } from "$lib/platform/filePick";
-  import { resizeImageFile } from "$lib/platform/imageResize";
+  import { choosePhoto } from "$lib/features/photos/photoChooser.svelte";
 
   // V1 is one current photo, not a gallery/timeline — no object storage exists in the API
   // today. Same storage pattern as the identity avatar (ProfileAvatar.svelte): client-resize
@@ -17,9 +16,8 @@
     if (picking) return;
     picking = true;
     try {
-      const file = await pickImageFile();
-      const dataUrl = await resizeImageFile(file, 1024);
-      profile.save({ progressPhotoDataUrl: dataUrl });
+      const chosen = await choosePhoto({ title: "Progress photo", crop: { aspect: 1 }, maxPx: 1024, canRemove: !!$profile.progressPhotoDataUrl });
+      if (chosen) profile.save({ progressPhotoDataUrl: "photo" in chosen ? chosen.photo : "" });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       if (!msg.toLowerCase().includes("cancel")) log.error("photo", "Progress photo pick failed", err);
@@ -29,7 +27,7 @@
   }
 
   function clear() {
-    profile.save({ progressPhotoDataUrl: undefined });
+    profile.save({ progressPhotoDataUrl: "" });
   }
 </script>
 

@@ -7,12 +7,13 @@
   import * as AlertDialog from "$lib/components/ui/alert-dialog";
   import { Skeleton } from "$lib/components/ui/skeleton";
   import { toast } from "$lib/components/ui/sonner";
-  import { ApiError } from "@logit/core/api/client";
+  import { ApiError, apiClient } from "@logit/core/api/client";
   import { isPrivateError, socialApi, type ApiPost, type ApiProfile, type FollowStatus } from "@logit/core/api/socialApi";
   import Avatar from "$lib/features/social/Avatar.svelte";
   import FollowButton from "$lib/features/social/FollowButton.svelte";
   import PostCard from "$lib/features/social/PostCard.svelte";
   import ProfileCards from "$lib/features/social/ProfileCards.svelte";
+  import { parseProfileData, shownCards } from "$lib/features/social/profileCards";
   import ProfileEditor from "$lib/features/social/ProfileEditor.svelte";
   import ReportDialog from "$lib/features/social/ReportDialog.svelte";
   import MentionText from "$lib/features/social/MentionText.svelte";
@@ -37,9 +38,10 @@
   let editing = $state(false);
 
   const locked = $derived(!!profile && profile.canSeeContent === false);
+  const cardsShown = $derived(shownCards(parseProfileData(profile?.publicProfileJson)).length > 0);
 
   async function loadProfile(u: string) {
-    editing = false;
+    editing = page.url.searchParams.get("edit") === "1";
     profile = null;
     error = null;
     posts = null;
@@ -113,6 +115,18 @@
     }
   }
 
+  async function shareProfile() {
+    if (!profile) return;
+    // Self-hosted servers have no public profile pages: share the name instead.
+    const text = apiClient.isSelfHosted() ? `@${profile.username} on ${location.host}` : `https://getlogit.app/@${profile.username}`;
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success(apiClient.isSelfHosted() ? "Username copied" : "Link copied");
+    } catch {
+      toast.error("Couldn't copy it");
+    }
+  }
+
   function setTab(t: Tab) {
     void goto(t === "posts" ? `/social/${username}` : `/social/${username}?tab=${t}`, { noScroll: true, keepFocus: true });
   }
@@ -126,37 +140,47 @@
   {:else if !profile}
     <Skeleton class="h-36" /><Skeleton class="h-48" />
   {:else if editing && profile.isSelf}
-    <ProfileEditor {profile} oncancel={() => (editing = false)} onsaved={(p) => { profile = { ...profile!, ...p }; editing = false; }} />
+    <ProfileEditor {profile} oncancel={() => (editing = false)} onsaved={(p) => { profile = { ...profile!, displayName: p.displayName, bio: p.bio, avatarUrl: p.avatarUrl, publicProfileJson: p.publicProfileJson }; editing = false; }} />
   {:else}
-    <section class="flex flex-wrap items-center gap-[18px] rounded-[10px] border border-border bg-card px-[22px] py-5">
-      <Avatar name={profile.displayName} url={profile.avatarUrl} size={72} />
-      <div class="flex min-w-0 flex-[1_1_260px] flex-col gap-1">
-        <h1 class="flex items-center gap-2 text-[22px] font-bold">{profile.displayName}{#if profile.isPrivate}<LockIcon class="size-4 text-muted-foreground" aria-label="Private account" />{/if}</h1>
-        <span class="text-[13px] text-muted-foreground">@{profile.username}</span>
-        {#if profile.bio}<MentionText text={profile.bio} class="mt-1 text-sm leading-relaxed" />{/if}
-        <div class="mt-1.5 flex gap-[18px] text-[13px]">
+    <!-- Head (design canvas PR4): photo, name and buttons, counts, bio. -->
+    <section class="flex items-start gap-7 px-1">
+      <Avatar name={profile.displayName} url={profile.avatarUrl} size={96} />
+      <div class="flex min-w-0 flex-1 flex-col gap-2">
+        <div class="flex flex-wrap items-center gap-x-3.5 gap-y-2">
+          <h1 class="flex items-center gap-2 text-[22px] font-bold">{profile.displayName}{#if profile.isPrivate}<LockIcon class="size-4 text-muted-foreground" aria-label="Private account" />{/if}</h1>
+          <span class="text-sm text-muted-foreground">@{profile.username}</span>
+          <span class="ml-auto flex items-center gap-2">
+            {#if profile.isSelf}
+              <button type="button" onclick={() => (editing = true)} class="h-9 rounded-[9px] bg-muted px-3.5 text-[13px] font-semibold hover:bg-muted/70">Edit profile</button>
+              <button type="button" onclick={shareProfile} class="h-9 rounded-[9px] bg-muted px-3.5 text-[13px] font-semibold hover:bg-muted/70">Share profile</button>
+            {:else}
+              <FollowButton username={profile.username} bind:status isPrivate={!!profile.isPrivate} followsYou={!!profile.followsYou} primary class="h-9 px-3.5 text-[13px]" onchange={onFollowChange} />
+              <a href="/social/messages?u={encodeURIComponent(profile.username)}" class="flex h-9 items-center rounded-[9px] bg-muted px-3.5 text-[13px] font-semibold hover:bg-muted/70">Message</a>
+              <DropdownMenu.Root>
+                <DropdownMenu.Trigger>
+                  {#snippet child({ props })}
+                    <button {...props} type="button" aria-label="More: share, report or block" class="flex size-9 items-center justify-center rounded-[9px] bg-muted hover:bg-muted/70"><MoreHorizontalIcon class="size-4" /></button>
+                  {/snippet}
+                </DropdownMenu.Trigger>
+                <DropdownMenu.Content align="end">
+                  <DropdownMenu.Item onclick={shareProfile}>Copy profile link</DropdownMenu.Item>
+                  <DropdownMenu.Item onclick={() => (reportOpen = true)}>Report @{profile.username}</DropdownMenu.Item>
+                  <DropdownMenu.Item class="text-destructive" onclick={() => (blockOpen = true)}>Block @{profile.username}</DropdownMenu.Item>
+                </DropdownMenu.Content>
+              </DropdownMenu.Root>
+            {/if}
+          </span>
+        </div>
+        <div class="flex gap-[22px] text-sm">
+          {#if profile.postCount != null}<span><strong>{profile.postCount}</strong> <span class="text-muted-foreground">{profile.postCount === 1 ? "post" : "posts"}</span></span>{/if}
           <button type="button" disabled={locked} onclick={() => setTab("followers")}><strong>{profile.followerCount}</strong> <span class="text-muted-foreground">{profile.followerCount === 1 ? "follower" : "followers"}</span></button>
           <button type="button" disabled={locked} onclick={() => setTab("following")}><strong>{profile.followingCount}</strong> <span class="text-muted-foreground">following</span></button>
         </div>
-      </div>
-      <div class="flex items-center gap-2">
-        {#if profile.isSelf}
-          <button type="button" onclick={() => (editing = true)} class="h-9 rounded-[9px] border border-border px-3.5 text-[13px] font-medium hover:bg-muted">Edit profile</button>
-        {:else}
-          {#if profile.followsYou}<span class="text-xs text-muted-foreground">Follows you</span>{/if}
-          <FollowButton username={profile.username} bind:status isPrivate={!!profile.isPrivate} followsYou={!!profile.followsYou} primary class="h-9 px-3.5 text-[13px]" onchange={onFollowChange} />
-          <a href="/social/messages?u={encodeURIComponent(profile.username)}" class="flex h-9 items-center rounded-[9px] border border-border px-3.5 text-[13px] font-medium hover:bg-muted">Message</a>
-          <DropdownMenu.Root>
-            <DropdownMenu.Trigger>
-              {#snippet child({ props })}
-                <button {...props} type="button" aria-label="More: block or report" class="flex size-9 items-center justify-center rounded-[9px] border border-border"><MoreHorizontalIcon class="size-4" /></button>
-              {/snippet}
-            </DropdownMenu.Trigger>
-            <DropdownMenu.Content align="end">
-              <DropdownMenu.Item onclick={() => (reportOpen = true)}>Report @{profile.username}</DropdownMenu.Item>
-              <DropdownMenu.Item class="text-destructive" onclick={() => (blockOpen = true)}>Block @{profile.username}</DropdownMenu.Item>
-            </DropdownMenu.Content>
-          </DropdownMenu.Root>
+        {#if profile.bio}<MentionText text={profile.bio} class="text-sm leading-relaxed" />{/if}
+        {#if !profile.isSelf && profile.followedBy?.length}
+          <span class="text-[13px] text-muted-foreground">Followed by <strong class="text-foreground">{profile.followedBy.join(", ")}</strong>{#if (profile.followedByCount ?? 0) > profile.followedBy.length}{" "}and {profile.followedByCount! - profile.followedBy.length} {profile.followedByCount! - profile.followedBy.length === 1 ? "other" : "others"} you follow{/if}</span>
+        {:else if !profile.isSelf && profile.followsYou}
+          <span class="text-[13px] text-muted-foreground">Follows you</span>
         {/if}
       </div>
     </section>
@@ -172,15 +196,14 @@
         </p>
       </section>
     {:else}
-      <ProfileCards json={profile.publicProfileJson} name={profile.displayName} />
-
-      <div role="tablist" aria-label="Profile" class="flex gap-1 border-b border-border">
-        {#each [["posts", "Posts"], ["forum", "Forum"], ["followers", "Followers"], ["following", "Following"]] as [t, label] (t)}
-          <button type="button" role="tab" aria-selected={tab === t} onclick={() => setTab(t as Tab)}
-            class="-mb-px h-9 border-b-2 px-3 text-[13px] {tab === t ? 'border-primary font-semibold' : 'border-transparent text-muted-foreground'}">{label}</button>
-        {/each}
-      </div>
-
+      <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div class="flex min-w-0 flex-col gap-3">
+          <div role="tablist" aria-label="Profile" class="flex gap-1 border-b border-border">
+            {#each tab === "followers" || tab === "following" ? [["posts", "Posts"], ["forum", "Forum"], [tab, tab === "followers" ? "Followers" : "Following"]] : [["posts", "Posts"], ["forum", "Forum"]] as [t, label] (t)}
+              <button type="button" role="tab" aria-selected={tab === t} onclick={() => setTab(t as Tab)}
+                class="-mb-px h-10 border-b-2 px-3 text-[13px] {tab === t ? 'border-foreground font-semibold' : 'border-transparent text-muted-foreground'}">{label}</button>
+            {/each}
+          </div>
       {#if tab === "forum"}
         {#key username}<ForumPosts filter={{ user: username }} canPost={profile.isSelf} sorts={["new", "top"]} empty="No forum posts yet." />{/key}
       {:else if tab === "posts"}
@@ -189,7 +212,7 @@
         {:else if posts.length === 0}
           <p class="py-10 text-center text-[13px] text-muted-foreground">No posts yet.</p>
         {:else}
-          <div class="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] items-start gap-3.5">
+          <div class="flex flex-col gap-3.5">
             {#each posts as post (post.id)}
               <PostCard {post} onchange={(n) => { posts = n ? (posts ?? []).map((p) => (p.id === post.id ? n : p)) : (posts ?? []).filter((p) => p.id !== post.id); }} />
             {/each}
@@ -217,6 +240,16 @@
           </section>
         {/if}
       {/if}
+        </div>
+        <aside aria-label="Training" class="flex flex-col gap-3 max-lg:-order-1">
+          <h2 class="text-[15px] font-semibold">Training</h2>
+          {#if cardsShown}
+            <ProfileCards json={profile.publicProfileJson} name={profile.displayName} column />
+          {:else}
+            <p class="rounded-[10px] border border-dashed border-border px-4 py-6 text-center text-[13px] text-muted-foreground">{profile.isSelf ? "No cards on your profile yet. Choose them in Edit profile." : "Nothing here yet."}</p>
+          {/if}
+        </aside>
+      </div>
     {/if}
 
     <ReportDialog bind:open={reportOpen} targetType="User" targetId={profile.id} what="@{profile.username}" />
