@@ -100,7 +100,9 @@ export const groupsApi = {
   /** The join screen from search or an invite card. */
   about: (id: string) => apiClient.fetch<GroupPreview>(`/groups/${id}/about`),
   /** Straight in (open, or invited), or a request (ask to join). */
-  joinById: (id: string, onBoard: boolean) => apiClient.fetch<{ id: string; status: "member" | "requested" }>(`/groups/${id}/join`, json("POST", { onBoard })),
+  /** eventId: joining from an event in search, so you're going to it once you're in. */
+  joinById: (id: string, onBoard: boolean, eventId?: string) =>
+    apiClient.fetch<{ id: string; status: "member" | "requested" }>(`/groups/${id}/join`, json("POST", { onBoard, eventId })),
   cancelRequest: (id: string) => apiClient.fetch<void>(`/groups/${id}/request`, { method: "DELETE" }),
   requests: (id: string) => apiClient.fetch<GroupRequest[]>(`/groups/${id}/requests`),
   approve: (id: string, username: string) => apiClient.fetch<void>(`/groups/${id}/requests/${encodeURIComponent(username)}`, { method: "POST" }),

@@ -96,6 +96,10 @@
       case "GroupNote": return n.group ? `pinned a note in ${n.group.name}` : "pinned a note in a group";
       case "GroupRequest": return n.group ? `asked to join ${n.group.name}` : "asked to join your group";
       case "GroupApproved": return n.group ? `let you into ${n.group.name}` : "let you into the group";
+      case "GroupEvent": return `added ${n.event?.title ?? "an event"}${n.group ? ` in ${n.group.name}` : ""}`;
+      case "GroupEventChanged": return `changed the time or place of ${n.event?.title ?? "an event"}`;
+      case "GroupEventCancelled": return `cancelled ${n.event?.title ?? "an event"}`;
+      case "GroupEventReminder": return `· ${n.event?.title ?? "Your event"} is tomorrow`;
       default: return "";
     }
   }
@@ -107,7 +111,7 @@
     {#if n.readAt}<span class="w-2 shrink-0"></span>{:else}<span class="mt-3.5 size-2 shrink-0 rounded-full bg-sky-500" aria-label="Unread"></span>{/if}
     <a href="/social/{n.actor.username}" onclick={() => open(n)}><Avatar name={n.actor.displayName} url={n.actor.avatarUrl} /></a>
     <a href={href(n)} onclick={() => open(n)} class="flex min-w-0 flex-1 flex-col gap-0.5">
-      <span class="text-[13px] leading-snug"><strong>{n.actor.displayName}</strong> {text(n)}</span>
+      <span class="text-[13px] leading-snug"><strong>{n.type === "GroupEventReminder" ? (n.group?.name ?? "Reminder") : n.actor.displayName}</strong> {text(n)}</span>
       <span class="text-xs text-muted-foreground">{timeAgo(n.createdAt)}</span>
     </a>
     {#if n.type === "Follow"}

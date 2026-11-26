@@ -17,6 +17,7 @@ const NUTRITION_SEED_KEY = "logit:home-config:nutrition-seeded:v1";
 
 // Same one-shot deal for the Habits widget — on the first time the user has a habit.
 const HABITS_SEED_KEY = "logit:home-config:habits-seeded:v1";
+const MEETUP_SEED_KEY = "logit:home-config:meetup-seeded:v1";
 
 function defaultConfig(): HomeConfig {
   if (!localWidgetRegistry) return { slots: [] };
@@ -182,6 +183,18 @@ function createHomeConfigStore() {
     }));
   }
 
+  /** One-shot: turn the Meetup card on the first time you have an upcoming group event. */
+  function seedMeetupWidget(hasEvent: boolean): void {
+    if (!browser || !hasEvent) return;
+    if (getAccountItem(MEETUP_SEED_KEY)) return;
+    setAccountItem(MEETUP_SEED_KEY, "1");
+    // Right under Today, as drawn (an existing Home got it at the end).
+    update((c) => {
+      const today = c.slots.find((s) => s.id === "today")?.orderIndex ?? -2;
+      return { ...c, slots: c.slots.map((s) => (s.id === "meetup" ? { ...s, enabled: true, orderIndex: today + 0.5 } : s)) };
+    });
+  }
+
   /**
    * Saved Insights charts ("chart:<id>"): a new chart gets a slot (on when ticked "phone
    * home"), a changed tick switches its slot, a chart that's gone loses its slot.
@@ -230,6 +243,7 @@ function createHomeConfigStore() {
     reconcilePlugins,
     seedNutritionWidgets,
     seedHabitsWidget,
+    seedMeetupWidget,
     syncChartSlots,
     applyRemote,
   };

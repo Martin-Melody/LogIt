@@ -11,6 +11,7 @@
   import { pluginRuntime, type RuntimeWidgetDefinition } from "$lib/plugins";
   import { chartWidgets, insightCharts } from "$lib/features/insights/charts.svelte";
   import { authStore } from "$lib/api/authStore.svelte";
+  import { eventsApi } from "@logit/core/api/eventsApi";
   import { connectionStatus } from "@logit/core/api/connectionStatus.svelte";
   import { popIn } from "$lib/transitions";
   import { getNutritionRepo, getHabitRepo } from "$lib/data/repoProvider";
@@ -67,6 +68,7 @@
       .listHabits()
       .then((habits) => homeConfig.seedHabitsWidget(habits.length > 0))
       .catch(() => {});
+    if (authStore.isAuthenticated) void eventsApi.home().then((e) => homeConfig.seedMeetupWidget(!!e)).catch(() => {});
     void pluginRuntime.listWidgets().then((loaded) => {
       baseWidgets = loaded;
     });

@@ -42,6 +42,7 @@ public static class NotificationEndpoints
                 n.PostId,
                 n.CommentId,
                 Group = n.Group == null ? null : new { n.Group.Id, n.Group.Name },
+                Event = n.Event == null ? null : new { n.Event.Id, n.Event.Title, n.Event.StartsAt },
             })
             .ToListAsync();
 
@@ -69,7 +70,7 @@ public static class NotificationEndpoints
 
         var notifications = rows.Select(r => new
         {
-            r.Id, r.Type, r.CreatedAt, r.ReadAt, r.PostId, r.CommentId, r.Group,
+            r.Id, r.Type, r.CreatedAt, r.ReadAt, r.PostId, r.CommentId, r.Group, r.Event,
             Actor = new
             {
                 r.Actor.Id, r.Actor.Username, r.Actor.DisplayName, r.Actor.AvatarUrl, r.Actor.IsPrivate,

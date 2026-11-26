@@ -22,6 +22,7 @@
     ThumbsUp,
     Pin,
     Users as UsersIcon,
+    Calendar as CalendarIcon,
   } from "lucide-svelte";
   import {
     followedByText,
@@ -196,6 +197,7 @@
       : t === "Cheer" || t === "StoryCheer" ? ThumbsUp
       : t === "GroupNote" ? Pin
       : t === "GroupRequest" || t === "GroupApproved" ? UsersIcon
+      : t.startsWith("GroupEvent") ? CalendarIcon
       : UserPlus;
   }
 
@@ -215,6 +217,10 @@
     if (n.type === "GroupNote") return n.group ? `pinned a note in ${n.group.name}` : "pinned a note in a group";
     if (n.type === "GroupRequest") return n.group ? `asked to join ${n.group.name}` : "asked to join your group";
     if (n.type === "GroupApproved") return n.group ? `let you into ${n.group.name}` : "let you into the group";
+    if (n.type === "GroupEvent") return `added ${n.event?.title ?? "an event"}${n.group ? ` in ${n.group.name}` : ""}`;
+    if (n.type === "GroupEventChanged") return `changed the time or place of ${n.event?.title ?? "an event"}`;
+    if (n.type === "GroupEventCancelled") return `cancelled ${n.event?.title ?? "an event"}`;
+    if (n.type === "GroupEventReminder") return `· ${n.event?.title ?? "Your event"} is tomorrow`;
     return n.type === "Comment" ? "commented on your post" : "followed you";
   }
 
@@ -223,6 +229,7 @@
     if (n.type === "CoachProgram") return "/splits";
     if (n.type === "CoachPaymentFailed") return "/clients";
     if (n.type === "Follow") return `/social/${n.actor.username}`;
+    if (n.type.startsWith("GroupEvent") && n.event) return `/events/${n.event.id}`;
     if (n.type === "GroupNote" || n.type === "GroupApproved") return n.group ? `/groups/${n.group.id}` : "/messages";
     if (n.type === "GroupRequest") return n.group ? `/groups/${n.group.id}/members` : "/messages";
     return n.postId ? `/social/post/${n.postId}` : `/social/${n.actor.username}`;
@@ -333,7 +340,7 @@
               </div>
               <div class="min-w-0 flex-1">
                 <p class="text-sm leading-snug">
-                  <span class="font-semibold">{n.actor.displayName}</span>
+                  <span class="font-semibold">{n.type === "GroupEventReminder" ? (n.group?.name ?? "Reminder") : n.actor.displayName}</span>
                   <span class="text-muted-foreground"> {verb(n)}</span>
                 </p>
                 {#if n.postBody}

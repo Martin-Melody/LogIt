@@ -1,5 +1,6 @@
-<!-- Social's search: People and Groups (design canvas G12). Groups lists findable groups by name or
-     place (invite-only ones never show); tapping one opens its join screen, or its page if you're in. -->
+<!-- Social's search: People, Groups (design canvas G12) and Events (V1). Groups lists findable groups
+     by name or place (invite-only ones never show); tapping one opens its join screen, or its page
+     if you're in. Events: upcoming events in findable groups by place or name, sport, kind and when. -->
 <script lang="ts">
   import { photoSrc } from "@logit/core/api/photosApi";
   import { toast } from "svelte-sonner";
@@ -14,6 +15,10 @@
   import { groupsApi, type GroupSearchResult } from "@logit/core/api/groupsApi";
   import { segment, segmentTrack } from "$lib/components/ui/choice";
   import GroupAvatar from "$lib/components/social/GroupAvatar.svelte";
+  import ActionSheet from "$lib/components/ActionSheet.svelte";
+  import { ChevronDown, Circle, CircleCheck } from "lucide-svelte";
+  import { EVENT_KINDS, EVENT_SPORTS, eventsApi, type EventKind, type EventSport, type GroupEvent } from "@logit/core/api/eventsApi";
+  import { dayBadge, eventShort } from "$lib/features/groups/eventTime";
 
   const { open, onclose } = $props<{
     open: boolean;
@@ -21,7 +26,57 @@
   }>();
 
   let query = $state("");
-  let tab = $state<"people" | "groups">("people");
+  let tab = $state<"people" | "groups" | "events">("people");
+  let events = $state<GroupEvent[]>([]);
+  let eventsLoaded = $state(false);
+  let sport = $state<EventSport | null>(null);
+  let kind = $state<EventKind | null>(null);
+  type When = "any" | "week" | "weekend" | "month";
+  let when = $state<When>("any");
+  let picking = $state<"sport" | "kind" | "when" | null>(null);
+  const WHEN: Record<When, string> = { any: "Any time", week: "This week", weekend: "This weekend", month: "This month" };
+
+  function range(w: When): { from: Date | null; to: Date | null } {
+    const now = new Date();
+    const day = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (w === "week") return { from: null, to: new Date(day.getTime() + (8 - (day.getDay() || 7)) * 86_400_000) }; // to the end of Sunday
+    if (w === "weekend") {
+      const sat = new Date(day.getTime() + ((6 - day.getDay() + 7) % 7) * 86_400_000);
+      return { from: day.getDay() === 0 ? null : sat, to: new Date((day.getDay() === 0 ? day : sat).getTime() + (day.getDay() === 0 ? 1 : 2) * 86_400_000) };
+    }
+    if (w === "month") return { from: null, to: new Date(now.getFullYear(), now.getMonth() + 1, 1) };
+    return { from: null, to: null };
+  }
+
+  async function searchEvents() {
+    const q = query.trim();
+    if (q.length < 2 && !sport && !kind) {
+      events = [];
+      eventsLoaded = false;
+      return;
+    }
+    try {
+      events = await eventsApi.search({ q, sport, kind, ...range(when) });
+    } catch {
+      events = [];
+    }
+    eventsLoaded = true;
+  }
+  $effect(() => {
+    void [sport, kind, when, tab];
+    if (tab === "events") void searchEvents();
+  });
+
+  const eventAction = (e: GroupEvent) =>
+    e.member ? (e.answer === true ? "Going" : "Open") : e.requested ? "Requested" : e.groupAccess === "Open" ? "Join group to go" : "Ask to join";
+  const opt = (label: string, on: boolean, pick: () => void) => ({ icon: on ? CircleCheck : Circle, label, onSelect: () => void pick() });
+  const pickItems = $derived(
+    picking === "sport"
+      ? [opt("Any sport", !sport, () => (sport = null)), ...EVENT_SPORTS.map((x) => opt(x, sport === x, () => (sport = x)))]
+      : picking === "kind"
+        ? [opt("Any kind", !kind, () => (kind = null)), ...EVENT_KINDS.map((x) => opt(x, kind === x, () => (kind = x)))]
+        : (Object.keys(WHEN) as When[]).map((w) => opt(WHEN[w], when === w, () => (when = w))),
+  );
   let groups = $state<GroupSearchResult[]>([]);
   let results = $state<UserSearchResult[]>([]);
   let loading = $state(false);
@@ -43,6 +98,8 @@
       query = "";
       tab = "people";
       groups = [];
+      events = [];
+      eventsLoaded = false;
       results = [];
       searched = false;
       followingIds = new Set();
@@ -58,9 +115,10 @@
       results = [];
       groups = [];
       searched = false;
+      if (tab === "events") void searchEvents();
       return;
     }
-    debounceTimer = setTimeout(() => void search(q), 250);
+    debounceTimer = setTimeout(() => { void search(q); if (tab === "events") void searchEvents(); }, 250);
   }
 
   async function search(q: string) {
@@ -125,6 +183,8 @@
     g.state === "member" ? "Open" : g.state === "requested" ? "Requested" : g.state === "invited" || g.access === "Open" ? "Join" : "Ask to join";
 </script>
 
+<ActionSheet open={!!picking} onOpenChange={(v) => { if (!v) picking = null; }} title={picking === "sport" ? "Sport" : picking === "kind" ? "Kind" : "When"} items={pickItems} />
+
 {#if open}
   <!-- Backdrop -->
   <div
@@ -153,7 +213,7 @@
         bind:value={query}
         oninput={onInput}
         type="search"
-        placeholder={tab === "groups" ? "Search groups by name or place…" : "Search by username or name…"}
+        placeholder={tab === "events" ? "Search events by place or name…" : tab === "groups" ? "Search groups by name or place…" : "Search by username or name…"}
         class="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
       />
       {#if loading}
@@ -168,12 +228,43 @@
       <div class={segmentTrack} role="tablist" aria-label="Search for">
         <button type="button" role="tab" aria-selected={tab === "people"} class={segment(tab === "people")} onclick={() => (tab = "people")}>People</button>
         <button type="button" role="tab" aria-selected={tab === "groups"} class={segment(tab === "groups")} onclick={() => (tab = "groups")}>Groups</button>
+        <button type="button" role="tab" aria-selected={tab === "events"} class={segment(tab === "events")} onclick={() => (tab = "events")}>Events</button>
       </div>
     </div>
 
     <!-- Results -->
     <div class="overflow-y-auto flex-1">
-      {#if tab === "groups"}
+      {#if tab === "events"}
+        <div class="flex gap-2 overflow-x-auto px-3 py-2.5">
+          {#each [["sport", sport ?? "Any sport", !!sport], ["kind", kind ?? "Any kind", !!kind], ["when", WHEN[when], when !== "any"]] as [key, label, on] (key)}
+            <button type="button" onclick={() => (picking = key as "sport" | "kind" | "when")}
+              class="flex h-9 shrink-0 items-center gap-1 rounded-full px-3 text-[13px] {on ? 'bg-primary font-semibold text-primary-foreground' : 'border border-border font-medium'}">{label}<ChevronDown class="size-3.5" /></button>
+          {/each}
+        </div>
+        {#if !eventsLoaded}
+          <p class="px-6 py-8 text-center text-sm text-muted-foreground">Find sessions, meets and races by a place ("Sligo") or a name, or pick a sport. Events in invite-only groups don't show here.</p>
+        {:else if events.length === 0}
+          <p class="px-6 py-10 text-center text-sm text-muted-foreground">No upcoming events found. Try another place, or fewer filters.</p>
+        {:else}
+          <ul class="divide-y divide-border pb-8">
+            {#each events as e (e.id)}
+              {@const badge = dayBadge(e.startsAtMs)}
+              {@const action = eventAction(e)}
+              <li>
+                <button type="button" class="flex w-full items-center gap-3 px-4 py-3 text-left" onclick={() => { onclose(); void goto(`/events/${e.id}`); }}>
+                  <span class="flex w-11 shrink-0 flex-col items-center tabular-nums"><span class="text-xl font-bold leading-tight">{badge.day}</span><span class="text-[12px] text-muted-foreground">{badge.month}</span></span>
+                  <span class="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span class="truncate text-sm font-semibold">{e.title}</span>
+                    <span class="truncate text-xs text-muted-foreground">{[eventShort(e.startsAtMs), e.kind === "Session" ? null : e.kind, e.sport, e.repeats].filter(Boolean).join(" · ")}</span>
+                    <span class="truncate text-xs text-muted-foreground">{[e.groupName, e.place ?? e.groupPlace].filter(Boolean).join(" · ")}</span>
+                  </span>
+                  <span class="shrink-0 rounded-md px-2.5 py-1.5 text-xs font-semibold {action === 'Join group to go' || action === 'Ask to join' ? 'bg-primary text-primary-foreground' : 'border border-border'}">{action}</span>
+                </button>
+              </li>
+            {/each}
+          </ul>
+        {/if}
+      {:else if tab === "groups"}
         {#if !searched || query.trim().length < 2}
           <p class="px-6 py-10 text-center text-sm text-muted-foreground">Find a gym, club or team by its name or where it is. Groups that are invite only don't show here.</p>
         {:else if groups.length === 0}

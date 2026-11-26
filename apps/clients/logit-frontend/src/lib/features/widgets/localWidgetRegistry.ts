@@ -6,6 +6,7 @@ import GoalsWidget from "$lib/features/goals/GoalsWidget.svelte";
 import ThisWeekWidget from "$lib/features/onboarding/ThisWeekWidget.svelte";
 import TodayWidget from "$lib/features/home/TodayWidget.svelte";
 import NextStepWidget from "$lib/features/onboarding/NextStepWidget.svelte";
+import MeetupWidget from "$lib/features/groups/MeetupWidget.svelte";
 import { quickStartWidget } from "@logit/core/plugins/builtinWidgets/quickStart";
 import { todaysPlanWidget } from "@logit/core/plugins/builtinWidgets/todaysPlan";
 import { muscleFocusWidget } from "@logit/core/plugins/builtinWidgets/muscleFocus";
@@ -140,6 +141,16 @@ const BUNDLED: WidgetDefinition[] = [
     props: { plugin: mobilityWidget },
     defaultEnabled: false,
     defaultOrder: 9,
+  },
+  {
+    // Your pinned event or the next you're going to (canvas row 6); turned on the first time
+    // there is one, and empty (hidden) when there isn't.
+    id: "meetup",
+    label: "Meetup",
+    description: "Your next group event: a countdown and who's going.",
+    component: MeetupWidget,
+    defaultEnabled: false,
+    defaultOrder: -1,
   },
   {
     id: "goals",

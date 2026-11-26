@@ -52,7 +52,7 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
             .Where(n => n.PushedAt == null && (n.CreatedAt < tooOld || !db.PushDevices.Any(d => d.UserId == n.UserId)))
             .ExecuteUpdateAsync(s => s.SetProperty(n => n.PushedAt, now), ct);
 
-        var pending = await db.Notifications.Include(n => n.Actor).Include(n => n.Group)
+        var pending = await db.Notifications.Include(n => n.Actor).Include(n => n.Group).Include(n => n.Event)
             .Where(n => n.PushedAt == null)
             .OrderBy(n => n.CreatedAt)
             .Take(2000)
@@ -258,7 +258,8 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
         NotificationType.Comment or NotificationType.Reply or NotificationType.Mention or NotificationType.Quote => Kind.Comments,
         NotificationType.Follow or NotificationType.FollowRequest or NotificationType.FollowAccepted => Kind.Follows,
         NotificationType.Cheer => Kind.Cheers,
-        NotificationType.GroupNote or NotificationType.GroupRequest or NotificationType.GroupApproved => Kind.Groups,
+        NotificationType.GroupNote or NotificationType.GroupRequest or NotificationType.GroupApproved or NotificationType.GroupEvent
+            or NotificationType.GroupEventChanged or NotificationType.GroupEventCancelled or NotificationType.GroupEventReminder => Kind.Groups,
         _ => Kind.Coaching,
     };
 
@@ -311,6 +312,10 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
         NotificationType.GroupNote => n.Group is null ? "pinned a note" : $"pinned a note in {n.Group.Name}",
         NotificationType.GroupRequest => n.Group is null ? "asked to join your group" : $"asked to join {n.Group.Name}",
         NotificationType.GroupApproved => n.Group is null ? "let you into the group" : $"let you into {n.Group.Name}",
+        NotificationType.GroupEvent => $"added {n.Event?.Title ?? "an event"}",
+        NotificationType.GroupEventChanged => $"changed the time or place of {n.Event?.Title ?? "an event"}",
+        NotificationType.GroupEventCancelled => $"cancelled {n.Event?.Title ?? "an event"}",
+        NotificationType.GroupEventReminder => $"{n.Event?.Title ?? "Your event"} is tomorrow",
         _ => "sent you something",
     };
 
@@ -327,6 +332,10 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
         NotificationType.GroupNote => ("group note", "group notes"),
         NotificationType.GroupRequest => ("request to join", "requests to join"),
         NotificationType.GroupApproved => ("group joined", "groups joined"),
+        NotificationType.GroupEvent => ("new event", "new events"),
+        NotificationType.GroupEventChanged => ("event change", "event changes"),
+        NotificationType.GroupEventCancelled => ("cancelled event", "cancelled events"),
+        NotificationType.GroupEventReminder => ("event tomorrow", "events tomorrow"),
         _ => ("coaching update", "coaching updates"),
     };
 
@@ -334,6 +343,11 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
     /// "Ava and 2 others" / "4 likes, 2 comments and 1 new follower" (always in that order).
     public static PushMessage Compose(IReadOnlyList<Notification> batch)
     {
+        // One group event on its own: the group's name, then who did what ("Conor added Deadlift
+        // day"), or just "Deadlift day is tomorrow" for the reminder.
+        if (batch.Count == 1 && batch[0] is { Event: not null, Group: not null } one)
+            return new PushMessage(one.Group.Name, one.Type == NotificationType.GroupEventReminder ? What(one) : $"{NameOf(one.Actor)} {What(one)}", "social",
+                new Dictionary<string, string> { ["type"] = one.Type.ToString(), ["count"] = "1", ["notificationId"] = one.Id.ToString(), ["eventId"] = one.EventId.ToString()! });
         var newest = batch.OrderByDescending(n => n.CreatedAt).ToList();
         var names = newest.Select(n => n.Actor).DistinctBy(a => a.Id)
             .Select(NameOf).ToList();

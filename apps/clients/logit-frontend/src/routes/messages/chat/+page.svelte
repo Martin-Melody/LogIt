@@ -8,8 +8,10 @@
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { fade } from "svelte/transition";
-  import { Ban, Camera, Copy, Dumbbell, Flag, Image as ImageIcon, Loader2, Mic, MoreHorizontal, Pencil, Plus, Send, Settings2, Trash2, Undo2, User, Users, X } from "lucide-svelte";
+  import { Ban, Calendar, Camera, Copy, Dumbbell, Flag, Image as ImageIcon, Loader2, Mic, MoreHorizontal, Pencil, Plus, Send, Settings2, Trash2, Undo2, User, Users, X } from "lucide-svelte";
   import GroupAvatar from "$lib/components/social/GroupAvatar.svelte";
+  import { eventsApi, type GroupEvent } from "@logit/core/api/eventsApi";
+  import { eventShort } from "$lib/features/groups/eventTime";
   import ReportSheet from "$lib/components/social/ReportSheet.svelte";
   import { socialApi } from "@logit/core/api/socialApi";
   import { longpress } from "$lib/swipe";
@@ -128,6 +130,13 @@
   let confirmDelete = $state(false);
 
   const group = $derived(chat?.group ?? null);
+  // The group's next event, above its chat (G3).
+  let nextEvent = $state<GroupEvent | null>(null);
+  $effect(() => {
+    const id = group?.id;
+    if (!id) return;
+    void eventsApi.list(id).then((list) => (nextEvent = list.find((e) => !e.cancelled && e.startsAtMs > Date.now()) ?? null)).catch(() => {});
+  });
   const name = $derived(group ? group.name : chat?.other ? chat.other.displayName || chat.other.username : chat ? "Deleted account" : "");
   const senderName = (m: DmMessage) => (m.from ? m.from.displayName || m.from.username : group ? "Someone" : name);
   // In a group, a run of messages from one person gets their name at the top and face at the bottom.
@@ -317,6 +326,13 @@
     {/if}
   </PageHeader>
 
+  {#if nextEvent}
+    <a href="/events/{nextEvent.id}" transition:fade={{ duration: 150 }} class="mx-3 mt-1 flex min-h-12 shrink-0 items-center gap-2.5 rounded-xl border border-border bg-card px-3 text-inherit no-underline">
+      <Calendar class="size-4 shrink-0 text-muted-foreground" />
+      <span class="min-w-0 flex-1 truncate text-[14px]">Next: <strong class="font-semibold">{nextEvent.title}</strong> · {eventShort(nextEvent.startsAtMs)}</span>
+      <span class="shrink-0 text-[13px] {nextEvent.answer === true ? 'text-success' : 'text-muted-foreground'}">{nextEvent.answer === true ? "Going" : nextEvent.answer === false ? "Can't make it" : `${nextEvent.going} going`}</span>
+    </a>
+  {/if}
   <div bind:this={listEl} class="flex flex-1 flex-col gap-1.5 overflow-y-auto px-3 py-3">
     {#if error}
       <p class="py-10 text-center text-sm text-muted-foreground">{error}</p>

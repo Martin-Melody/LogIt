@@ -114,7 +114,7 @@ record on top (a wide photo is shown whole on black), and his reply shows the ph
 The bar waits for the photo to load. Ben can Report story (⋯). Deleting the story, or 24 hours
 passing, deletes the photo too (its address stops working).
 
-**F5 Groups, events, chat** (groups, chat, join, members and settings built in the groups PR; events and boards next). Conor creates Iron Club, pins a note, adds "Deadlift day". Ava joins
+**F5 Groups, events, chat** (groups, chat, join, members and settings in the groups PR; events, Going, reminders and the Home meetup card in the events PR; boards next). Conor creates Iron Club, pins a note, adds "Deadlift day". Ava joins
 from the QR: the join sheet shows what members see and "Show me on the board". Ava taps Going →
 on the event's list; the Home meetup card appears with the countdown; Pin to Home picks another
 event. Conor moves the time → one push to everyone going. Chat from the page and from Messages.
