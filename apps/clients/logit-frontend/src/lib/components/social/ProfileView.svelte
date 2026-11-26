@@ -2,34 +2,40 @@
   import { photoSrc } from "@logit/core/api/photosApi";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
-  import {
-    Loader2, UserPlus, UserCheck, MoreHorizontal, Flag, Ban,
-    Pencil, Lock, Clock,
-  } from "lucide-svelte";
+  import { ChevronDown, CirclePlay, ImageIcon, Loader2, Lock, Flag, Ban, Plus, Share2, Star, UserMinus } from "lucide-svelte";
+  import { longpress } from "$lib/swipe";
   import { socialApi, type ApiProfile, type ApiPost, type FollowStatus, type PublicProfileData } from "@logit/core/api/socialApi";
+  import { storiesApi } from "@logit/core/api/storiesApi";
+  import { trainingApi, type TrainingFriend } from "@logit/core/api/trainingApi";
   import { ApiError } from "@logit/core/api/client";
   import { authStore } from "$lib/api/authStore.svelte";
-  import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
+  import { profile as myProfile } from "$lib/stores/profile.store";
+  import { stories, loadStories, watch } from "$lib/features/friends/stories.svelte";
+  import { minutesIn } from "$lib/features/friends/trainingPresence";
+  import { buildPublicProfileData } from "$lib/features/profileWidgets/publicProfileSync";
   import { toast } from "svelte-sonner";
+  import ActionSheet, { type ActionItem } from "$lib/components/ActionSheet.svelte";
   import PostCard from "./PostCard.svelte";
   import ForumList from "./ForumList.svelte";
   import ReportSheet from "./ReportSheet.svelte";
+  import MentionText from "./MentionText.svelte";
+  import ProfileCards from "./ProfileCards.svelte";
+  import { shownCards } from "@logit/core/domain/profileCards";
+  import ShareProfileSheet from "./ShareProfileSheet.svelte";
+  import TrainingNowSheet from "./TrainingNowSheet.svelte";
+  import AvatarViewer from "./AvatarViewer.svelte";
   import CommentSheet from "$lib/components/CommentSheet.svelte";
-  import WeightTrendWidget from "$lib/features/profileWidgets/components/WeightTrendWidget.svelte";
-  import StreakWidget from "$lib/features/profileWidgets/components/StreakWidget.svelte";
-  import MilestoneBadgesWidget from "$lib/features/profileWidgets/components/MilestoneBadgesWidget.svelte";
 
   interface Props {
     username: string;
-    /** Rendered under the header (e.g. an Edit button on your own profile). */
-    headerActions?: import("svelte").Snippet;
-    /** Walkthrough mark (data-guide) for the avatar element — only the self-profile page passes this
-     * (its onboarding tour needs a stable target); left unset for every other caller so a
-     * visited profile never carries a self-page tour tag. */
+    /** The page's ⋯ button opens this (share, report, block); bound so the header can hold it. */
+    menuOpen?: boolean;
+    /** Walkthrough marks (data-guide) for the avatar and the Training tab, on your own Profile tab only. */
     avatarGuideMark?: string;
+    trainingGuideMark?: string;
   }
 
-  const { username, headerActions, avatarGuideMark }: Props = $props();
+  let { username, menuOpen = $bindable(false), avatarGuideMark, trainingGuideMark }: Props = $props();
 
   let profile = $state<ApiProfile | null>(null);
   let profileError = $state<string | null>(null);
@@ -42,7 +48,13 @@
   let sentinel = $state<HTMLDivElement | null>(null);
 
   let followLoading = $state(false);
-  let menuOpen = $state(false);
+  let followMenuOpen = $state(false);
+  let closeFriend = $state<boolean | null>(null);
+  let shareOpen = $state(false);
+  let trainingFriend = $state<TrainingFriend | null>(null);
+  let trainingSheet = $state(false);
+  /** Your own cards, live from this phone (others see them after the next push). */
+  let liveData = $state<PublicProfileData | null>(null);
   let reportOpen = $state(false);
   let confirmBlock = $state(false);
   let blocking = $state(false);
@@ -61,10 +73,11 @@
     // A private account you can't see: its posts would only answer "private".
     if (!locked) void loadPosts();
     else postsLoading = false;
-  });
-
-  $effect(() => {
-    if (menuOpen) { openOverlay(); return () => closeOverlay(); }
+    if (isSelf) liveData = await buildPublicProfileData().catch(() => null);
+    else if (authStore.isAuthenticated && profile && !locked) {
+      if (!stories.row.length) void loadStories();
+      trainingApi.friends().then((f) => (trainingFriend = f.find((t) => t.username === profile?.username) ?? null)).catch(() => {});
+    }
   });
 
   async function loadProfile() {
@@ -161,38 +174,94 @@
   }
 
   const publicData = $derived.by((): PublicProfileData | null => {
+    if (isSelf && liveData) return liveData;
     if (!profile?.publicProfileJson) return null;
     try { return JSON.parse(profile.publicProfileJson) as PublicProfileData; }
     catch { return null; }
   });
+  const cards = $derived(shownCards(publicData));
 
-  const stats = $derived.by(() => {
-    const d = publicData;
-    if (!d) return [];
-    const enabled = new Set(d.widgets.filter((w) => w.enabled).map((w) => w.id));
-    const out: { key: string; render: "body" | "split" | "prs" | "photo" | "weight" | "streak" | "badges" }[] = [];
-    if (enabled.has("profile-body-stats") && d.bodyStats) out.push({ key: "body", render: "body" });
-    if (enabled.has("profile-active-split") && d.activeSplit) out.push({ key: "split", render: "split" });
-    if (enabled.has("profile-personal-records") && d.personalRecords?.length) out.push({ key: "prs", render: "prs" });
-    if (enabled.has("profile-progress-photo") && d.progressPhoto) out.push({ key: "photo", render: "photo" });
-    if (enabled.has("profile-weight-trend") && d.weightTrend?.points.length) out.push({ key: "weight", render: "weight" });
-    if (enabled.has("profile-streak") && d.streak) out.push({ key: "streak", render: "streak" });
-    if (enabled.has("profile-milestones") && d.badges?.length) out.push({ key: "badges", render: "badges" });
-    return out;
-  });
+  // Your own name, bio and photo as this phone has them: an edit shows at once, even offline.
+  const shownName = $derived(isSelf ? $myProfile.name || profile?.displayName || "" : profile?.displayName ?? "");
+  const shownBio = $derived(isSelf ? $myProfile.bio : profile?.bio ?? "");
+  const shownAvatar = $derived(isSelf ? $myProfile.avatarDataUrl || null : profile?.avatarUrl ?? null);
+
+  const storyAuthor = $derived(stories.row.find((a) => a.user.username === username) ?? null);
+  const storyRing = $derived(!storyAuthor ? "none" : storyAuthor.stories.some((x) => !x.seen) ? "new" : "seen");
 
   function initials(name: string) {
     return name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
   }
 
-  function fmt(v: number | null | undefined, unit: string) {
-    return v != null ? `${v} ${unit}` : "—";
+  // Instagram's avatar: tap = the story if there is one, else the picture (yours: add to your
+  // story); hold = a menu with both when there's a story to choose between.
+  let viewingPhoto = $state(false);
+  let avatarMenuOpen = $state(false);
+  let held = false;
+
+  function tapAvatar() {
+    if (held) { held = false; return; } // the release after a hold
+    if (storyAuthor) watch(username);
+    else if (isSelf && authStore.isAuthenticated) stories.picking = true;
+    else if (shownAvatar) viewingPhoto = true;
   }
+
+  function holdAvatar() {
+    if (!storyAuthor && !isSelf) { held = true; if (shownAvatar) viewingPhoto = true; return; }
+    held = true;
+    avatarMenuOpen = true;
+  }
+
+  const avatarItems = $derived<ActionItem[]>([
+    ...(storyAuthor ? [{ icon: CirclePlay, label: "View story", onSelect: () => watch(username) }] : []),
+    ...(shownAvatar ? [{ icon: ImageIcon, label: "View profile picture", onSelect: () => (viewingPhoto = true) }] : []),
+    ...(isSelf && authStore.isAuthenticated ? [{ icon: Plus, label: "Add to your story", onSelect: () => (stories.picking = true) }] : []),
+  ]);
+
+  async function openFollowMenu() {
+    followMenuOpen = true;
+    closeFriend = null;
+    try {
+      closeFriend = (await storiesApi.lists()).closeFriends.some((p) => p.username === username);
+    } catch {
+      closeFriend = null;
+    }
+  }
+
+  async function setCloseFriend(on: boolean) {
+    try {
+      await (on ? storiesApi.add("close-friends", username) : storiesApi.drop("close-friends", username));
+      toast(on ? `Added to Close friends` : `Removed from Close friends`);
+    } catch {
+      toast.error("Couldn't change that. Try again.");
+    }
+  }
+
+  const followItems = $derived<ActionItem[]>([
+    ...(closeFriend === null ? [] : [{ icon: Star, label: closeFriend ? "Remove from Close friends" : "Add to Close friends", onSelect: () => void setCloseFriend(!closeFriend) }]),
+    { icon: UserMinus, label: "Unfollow", destructive: true, onSelect: () => void toggleFollow() },
+  ]);
+
+  const menuItems = $derived<ActionItem[]>([
+    { icon: Share2, label: "Share profile", onSelect: () => (shareOpen = true) },
+    ...(isSelf ? [] : [
+      { icon: Flag, label: `Report @${username}`, onSelect: () => (reportOpen = true) },
+      { icon: Ban, label: `Block @${username}`, destructive: true, onSelect: () => (confirmBlock = true) },
+    ]),
+  ]);
 
   function onPostChange(id: string, next: ApiPost | null) {
     posts = next ? posts.map((p) => (p.id === id ? next : p)) : posts.filter((p) => p.id !== id);
   }
 </script>
+
+{#snippet count(n: number | undefined, label: string, href: string | null)}
+  {#if href && !locked}
+    <a {href} class="flex min-w-16 flex-col items-center"><strong class="text-[17px] font-bold tabular-nums">{n ?? 0}</strong><span class="text-[13px] text-muted-foreground">{label}</span></a>
+  {:else}
+    <span class="flex min-w-16 flex-col items-center"><strong class="text-[17px] font-bold tabular-nums">{n ?? "–"}</strong><span class="text-[13px] text-muted-foreground">{label}</span></span>
+  {/if}
+{/snippet}
 
 {#if profileLoading}
   <div class="flex justify-center py-16"><Loader2 class="h-5 w-5 animate-spin text-muted-foreground" /></div>
@@ -200,151 +269,102 @@
 {:else if profileError}
   <div class="flex flex-col items-center gap-3 py-16 text-center px-6">
     <p class="text-sm text-muted-foreground">{profileError}</p>
-    <button type="button" class="text-sm text-primary" onclick={loadProfile}>Try again</button>
+    <button type="button" class="h-11 rounded-lg border border-border px-4 text-sm font-medium" onclick={loadProfile}>Try again</button>
   </div>
 
 {:else if profile}
-  <!-- Header -->
-  <div class="flex flex-col items-center gap-3 px-4 pt-6 pb-5 border-b border-border">
-    <div data-guide={avatarGuideMark} class="h-20 w-20 rounded-full bg-muted flex items-center justify-center text-xl font-semibold overflow-hidden">
-      {#if profile.avatarUrl}
-        <img src={photoSrc(profile.avatarUrl)} alt={profile.displayName} class="h-full w-full object-cover" />
-      {:else}
-        {initials(profile.displayName)}
+  <!-- Head (design canvas PR1/PR6/PR7): photo and counts, name, bio, then the buttons. -->
+  <div class="flex items-center gap-[18px] px-4 pt-3.5 pb-2.5">
+    <button type="button" data-guide={avatarGuideMark} onclick={tapAvatar} onpointerdown={() => (held = false)} use:longpress={holdAvatar} oncontextmenu={(e) => e.preventDefault()}
+      disabled={!storyAuthor && !isSelf && !shownAvatar}
+      aria-label={storyAuthor ? `${shownName}'s story. Hold for the profile picture` : isSelf && authStore.isAuthenticated ? "Add to your story. Hold for more" : `${shownName}'s profile picture`}
+      class="relative flex size-[84px] shrink-0 items-center justify-center rounded-full {storyRing === 'new' ? 'ring-[2.5px] ring-foreground ring-offset-[3px] ring-offset-background' : storyRing === 'seen' ? 'ring-[1.5px] ring-border ring-offset-[3px] ring-offset-background' : ''}">
+      <span class="flex size-full select-none items-center justify-center overflow-hidden rounded-full bg-muted text-[28px] font-bold [-webkit-touch-callout:none]">
+        {#if shownAvatar}<img src={photoSrc(shownAvatar)} alt="" draggable="false" class="size-full object-cover" />{:else}{initials(shownName || username)}{/if}
+      </span>
+      {#if isSelf && !storyAuthor && authStore.isAuthenticated}
+        <span aria-hidden="true" class="absolute -right-0.5 -bottom-0.5 flex size-[26px] items-center justify-center rounded-full border-[3px] border-background bg-primary text-base font-bold leading-none text-primary-foreground">+</span>
       {/if}
+      {#if trainingFriend}
+        <span aria-hidden="true" class="absolute right-px bottom-px size-[22px] rounded-full border-4 border-background bg-success"></span>
+      {/if}
+    </button>
+    <div class="flex flex-1 justify-around">
+      {@render count(profile.postCount, profile.postCount === 1 ? "post" : "posts", null)}
+      {@render count(profile.followerCount, profile.followerCount === 1 ? "follower" : "followers", `/social/${username}/followers`)}
+      {@render count(profile.followingCount, "following", `/social/${username}/following`)}
     </div>
+  </div>
 
-    <div class="text-center">
-      <p class="text-lg font-bold leading-tight inline-flex items-center gap-1.5">{profile.displayName}{#if profile.isPrivate}<Lock class="h-3.5 w-3.5 text-muted-foreground" aria-label="Private account" />{/if}</p>
-      <p class="text-sm text-muted-foreground">@{profile.username}</p>
-    </div>
-
-    {#if profile.bio}
-      <p class="text-sm text-muted-foreground text-center max-w-xs whitespace-pre-wrap">{profile.bio}</p>
+  <div class="flex flex-col gap-1 px-4 pb-3">
+    <p class="inline-flex items-center gap-1.5 text-[15px] font-semibold">{shownName}{#if profile.isPrivate}<Lock class="size-3.5 text-muted-foreground" aria-label="Private account" />{/if}</p>
+    {#if shownBio}<MentionText text={shownBio} class="whitespace-pre-wrap text-sm leading-normal" />{/if}
+    {#if !isSelf && profile.followedBy?.length}
+      <p class="mt-1 text-[13px] text-muted-foreground">
+        Followed by <strong class="font-semibold text-foreground">{profile.followedBy.join(", ")}</strong>{#if (profile.followedByCount ?? 0) > profile.followedBy.length}{" "}and {profile.followedByCount! - profile.followedBy.length} {profile.followedByCount! - profile.followedBy.length === 1 ? "other" : "others"} you follow{/if}
+      </p>
+    {:else if !isSelf && profile.followsYou}
+      <p class="mt-1 text-[13px] text-muted-foreground">Follows you</p>
     {/if}
+  </div>
 
-    <div class="flex items-center gap-6 text-sm">
-      <button type="button" class="text-center" disabled={locked} onclick={() => goto(`/social/${username}/followers`)}>
-        <span class="font-semibold tabular-nums">{profile.followerCount}</span>
-        <span class="text-xs text-muted-foreground block">{profile.followerCount === 1 ? "follower" : "followers"}</span>
-      </button>
-      <button type="button" class="text-center" disabled={locked} onclick={() => goto(`/social/${username}/following`)}>
-        <span class="font-semibold tabular-nums">{profile.followingCount}</span>
-        <span class="text-xs text-muted-foreground block">following</span>
-      </button>
-    </div>
-    {#if !isSelf && profile.followsYou}
-      <p class="-mt-1 text-xs text-muted-foreground">Follows you</p>
-    {/if}
+  {#if trainingFriend}
+    <button type="button" class="mx-4 mb-3 flex items-center gap-2.5 rounded-xl border border-border bg-card px-3 py-2.5 text-left" onclick={() => (trainingSheet = true)}>
+      <span class="size-2.5 shrink-0 rounded-full bg-success" aria-hidden="true"></span>
+      <span class="flex-1 text-sm tabular-nums">Training now{trainingFriend.what ? ` · ${trainingFriend.what}` : ""} · {minutesIn(trainingFriend, Date.now())} min in</span>
+      <span class="flex h-8 items-center rounded-lg bg-primary px-3 text-[13px] font-semibold text-primary-foreground">Cheer</span>
+    </button>
+  {/if}
 
+  <div class="grid grid-cols-2 gap-2 px-4 pb-3.5">
     {#if isSelf}
-      {#if headerActions}
-        {@render headerActions()}
+      <button type="button" class="h-10 rounded-lg bg-muted text-sm font-semibold" data-guide="profile-edit" onclick={() => goto("/profile/edit")}>Edit profile</button>
+      <button type="button" class="h-10 rounded-lg bg-muted text-sm font-semibold" onclick={() => (shareOpen = true)}>Share profile</button>
+    {:else}
+      {#if followStatus === "following"}
+        <button type="button" class="flex h-10 items-center justify-center gap-1 rounded-lg bg-muted text-sm font-semibold disabled:opacity-50" disabled={followLoading} onclick={openFollowMenu}>Following <ChevronDown class="size-4" /></button>
+      {:else if followStatus === "requested"}
+        <button type="button" class="h-10 rounded-lg bg-muted text-sm font-semibold disabled:opacity-50" disabled={followLoading} onclick={toggleFollow} aria-label="Requested. Tap to withdraw the request">Requested</button>
       {:else}
-        <button type="button" class="flex items-center gap-1.5 px-5 py-2 rounded-md border border-border text-sm font-medium hover:bg-muted/40" onclick={() => goto("/profile")}>
-          <Pencil class="h-3.5 w-3.5" /> Edit profile
+        <button type="button" class="h-10 rounded-lg bg-primary text-sm font-semibold text-primary-foreground disabled:opacity-50" disabled={followLoading} onclick={toggleFollow}>
+          {profile.followsYou ? "Follow back" : profile.isPrivate ? "Request to follow" : "Follow"}
         </button>
       {/if}
-    {:else}
-      <div class="flex items-center gap-2">
-        <button
-          type="button"
-          class="flex items-center gap-1.5 px-5 py-2 rounded-md text-sm font-medium transition-colors disabled:opacity-50
-            {followStatus !== 'none' ? 'border border-border bg-background hover:bg-muted/40' : 'bg-primary text-primary-foreground'}"
-          disabled={followLoading}
-          onclick={toggleFollow}
-        >
-          {#if followStatus === "following"}<UserCheck class="h-4 w-4" /> Following
-          {:else if followStatus === "requested"}<Clock class="h-4 w-4" /> Requested
-          {:else}<UserPlus class="h-4 w-4" /> {profile.isPrivate ? "Request to follow" : profile.followsYou ? "Follow back" : "Follow"}{/if}
-        </button>
-        <button type="button" class="px-5 py-2 rounded-md border border-border text-sm font-medium hover:bg-muted/40" onclick={() => goto(`/messages/chat?u=${encodeURIComponent(profile!.username)}`)}>
-          Message
-        </button>
-        <button type="button" class="p-2 rounded-md border border-border text-muted-foreground" aria-label="More" onclick={() => (menuOpen = true)}>
-          <MoreHorizontal class="h-4 w-4" />
-        </button>
-      </div>
+      <button type="button" class="h-10 rounded-lg bg-muted text-sm font-semibold" onclick={() => goto(`/messages/chat?u=${encodeURIComponent(profile!.username)}`)}>Message</button>
     {/if}
   </div>
 
   {#if locked}
-    <div class="flex flex-col items-center gap-2 px-8 py-14 text-center">
-      <span class="h-14 w-14 rounded-full border border-border flex items-center justify-center"><Lock class="h-5 w-5" /></span>
-      <p class="text-base font-semibold mt-1">This account is private</p>
+    <div class="flex flex-col items-center gap-2 border-t border-border px-8 py-10 text-center">
+      <span class="flex size-[60px] items-center justify-center rounded-full border-[1.5px] border-border"><Lock class="size-6" /></span>
+      <p class="mt-1 text-base font-semibold">This account is private</p>
       <p class="text-sm text-muted-foreground">
         {followStatus === "requested"
-          ? `Your request is waiting. You'll see ${profile.displayName}'s posts once they accept it.`
-          : `Follow ${profile.displayName} to see their posts and profile cards. They'll get your request.`}
+          ? `Your request is waiting. You'll see ${shownName}'s posts and training once they accept it.`
+          : `Follow ${shownName} to see their posts, forum posts and training. They'll get your request.`}
       </p>
     </div>
   {:else}
   <div role="tablist" aria-label="@{username}" class="flex border-b border-border">
-    {#each [["posts", "Posts"], ["forum", "Forum"], ...(stats.length > 0 ? [["training", "Training"]] : [])] as [v, label] (v)}
-      <button type="button" role="tab" aria-selected={view === v} class="h-11 flex-1 text-[14px] {view === v ? 'border-b-2 border-foreground font-semibold' : 'font-medium text-muted-foreground'}" onclick={() => (view = v as typeof view)}>{label}</button>
+    {#each [["posts", "Posts"], ["forum", "Forum"], ...(isSelf || cards.length > 0 ? [["training", "Training"]] : [])] as [v, label] (v)}
+      <button type="button" role="tab" aria-selected={view === v} data-guide={v === "training" ? trainingGuideMark : undefined} class="h-11 flex-1 text-[14px] {view === v ? 'border-b-2 border-foreground font-semibold' : 'font-medium text-muted-foreground'}" onclick={() => (view = v as typeof view)}>{label}</button>
     {/each}
   </div>
 
   {#if view === "forum"}
     <ForumList filter={{ user: username }} canPost={isSelf} sorts={["new", "top"]} empty={isSelf ? "Your forum posts show here." : "No forum posts yet."} />
-  {:else if view === "training" && stats.length > 0}
-    <div>
-      {#if publicData}
-        <div class="px-4 py-4 flex flex-col gap-3">
-          {#each stats as s (s.key)}
-            {#if s.render === "body" && publicData.bodyStats}
-              <div class="rounded-lg border border-border p-3">
-                <p class="text-xs font-semibold mb-1.5">Body</p>
-                <dl class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                  <dt class="text-muted-foreground">Height</dt><dd class="font-medium">{fmt(publicData.bodyStats.height, publicData.bodyStats.heightUnit)}</dd>
-                  <dt class="text-muted-foreground">Weight</dt><dd class="font-medium">{fmt(publicData.bodyStats.weight, publicData.bodyStats.weightUnit)}</dd>
-                </dl>
-              </div>
-            {:else if s.render === "split" && publicData.activeSplit}
-              <div class="rounded-lg border border-border p-3">
-                <p class="text-xs font-semibold mb-1.5">Active split</p>
-                <p class="text-sm font-medium">{publicData.activeSplit.name}</p>
-                <ul class="mt-1.5 flex flex-col gap-1">
-                  {#each publicData.activeSplit.days as day}
-                    <li class="flex items-center justify-between text-xs gap-2">
-                      <span class="text-muted-foreground shrink-0">{day.name}</span>
-                      <span class="text-right text-foreground/70 truncate">{day.exercises.slice(0, 3).join(", ")}{day.exercises.length > 3 ? "…" : ""}</span>
-                    </li>
-                  {/each}
-                </ul>
-              </div>
-            {:else if s.render === "prs" && publicData.personalRecords?.length}
-              <div class="rounded-lg border border-border p-3">
-                <p class="text-xs font-semibold mb-1.5">Personal records</p>
-                <ul class="flex flex-col divide-y divide-border">
-                  {#each publicData.personalRecords as pr (pr.exerciseName)}
-                    <li class="flex items-center justify-between py-1.5 text-sm gap-2">
-                      <span class="truncate text-foreground/90">{pr.exerciseName}</span>
-                      <span class="font-medium tabular-nums shrink-0">{pr.weight} kg × {pr.reps}</span>
-                    </li>
-                  {/each}
-                </ul>
-              </div>
-            {:else if s.render === "photo" && publicData.progressPhoto}
-              <div class="rounded-lg border border-border p-3">
-                <p class="text-xs font-semibold mb-1.5">Progress photo</p>
-                <img
-                  src={photoSrc(publicData.progressPhoto.dataUrl)}
-                  alt="{profile.displayName}'s current progress photo"
-                  class="w-full rounded-md object-cover aspect-square"
-                />
-              </div>
-            {:else if s.render === "weight" && publicData.weightTrend}
-              <WeightTrendWidget data={publicData.weightTrend} />
-            {:else if s.render === "streak" && publicData.streak}
-              <StreakWidget data={publicData.streak} />
-            {:else if s.render === "badges" && publicData.badges}
-              <MilestoneBadgesWidget data={publicData.badges} />
-            {/if}
-          {/each}
-        </div>
+  {:else if view === "training"}
+    {#if publicData && cards.length}
+      <ProfileCards data={publicData} name={shownName} />
+      {#if isSelf}
+        <p class="px-4 pb-6 text-[13px] leading-normal text-muted-foreground">This is what anyone who can see your profile sees, in the app and on the web. Others get new numbers when you finish a workout or log a weigh-in.</p>
       {/if}
-    </div>
+    {:else if isSelf}
+      <div class="flex flex-col items-center gap-3 px-8 py-12 text-center">
+        <p class="text-sm text-muted-foreground">Show your split, records or weight trend here. Pick the cards in Edit profile.</p>
+        <button type="button" class="h-11 rounded-lg border border-border px-4 text-sm font-medium" onclick={() => goto("/profile/edit")}>Choose cards</button>
+      </div>
+    {/if}
   {:else if postsLoading}
     <div class="flex justify-center py-12"><Loader2 class="h-4 w-4 animate-spin text-muted-foreground" /></div>
   {:else if posts.length === 0}
@@ -363,20 +383,12 @@
   {/if}
 {/if}
 
-<!-- Profile overflow menu -->
-{#if menuOpen}
-  <button type="button" class="fixed inset-0 bg-black/40 z-40" aria-label="Close" onclick={() => (menuOpen = false)}></button>
-  <div class="fixed bottom-0 left-0 right-0 z-50 bg-background rounded-t-xl border-t border-border pb-[env(safe-area-inset-bottom)]">
-    <div class="py-1">
-      <button type="button" class="w-full flex items-center gap-3 px-5 py-3.5 text-sm hover:bg-muted/50" onclick={() => { menuOpen = false; reportOpen = true; }}>
-        <Flag class="h-4 w-4 text-muted-foreground" /> Report @{username}
-      </button>
-      <button type="button" class="w-full flex items-center gap-3 px-5 py-3.5 text-sm text-destructive hover:bg-muted/50" onclick={() => { menuOpen = false; confirmBlock = true; }}>
-        <Ban class="h-4 w-4" /> Block @{username}
-      </button>
-    </div>
-  </div>
-{/if}
+<ActionSheet open={menuOpen} onOpenChange={(v) => (menuOpen = v)} title="@{username}" items={menuItems} />
+<ActionSheet open={avatarMenuOpen} onOpenChange={(v) => (avatarMenuOpen = v)} title={shownName} items={avatarItems} />
+{#if viewingPhoto && shownAvatar}<AvatarViewer src={shownAvatar} name={shownName} onclose={() => (viewingPhoto = false)} />{/if}
+<ActionSheet open={followMenuOpen} onOpenChange={(v) => (followMenuOpen = v)} title={shownName} items={followItems} />
+{#if shareOpen}<ShareProfileSheet {username} onclose={() => (shareOpen = false)} />{/if}
+{#if trainingSheet && trainingFriend}<TrainingNowSheet friend={trainingFriend} onclose={() => (trainingSheet = false)} />{/if}
 
 <ReportSheet
   open={reportOpen}

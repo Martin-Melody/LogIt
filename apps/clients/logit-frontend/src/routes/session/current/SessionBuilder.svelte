@@ -467,6 +467,8 @@
         } else offerInviteOnce();
       }
       void recentSessions.refresh(5);
+      // Records, streak and split on your profile, for the people who see it.
+      void import("$lib/features/profileWidgets/publicProfileSync").then((m) => m.syncOwnProfile());
 
       if (sessionSnapshot) {
         const now = Date.now();
