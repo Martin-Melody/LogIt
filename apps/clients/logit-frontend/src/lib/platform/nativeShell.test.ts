@@ -20,6 +20,14 @@ describe("links that open the app", () => {
     expect(routeForAppLink(`logit://g?c=${group}`)).toBe(route);
     expect(routeForAppLink(`https://getlogit.app/g#${group}`)).toBe(route);
   });
+  it("sends a profile or a post on the web to it in the app", () => {
+    const id = "baa269fe-6e39-4f88-b438-c544c5845748";
+    expect(routeForAppLink("https://getlogit.app/@Ava")).toBe("/social/ava");
+    expect(routeForAppLink("logit://u/ava")).toBe("/social/ava");
+    expect(routeForAppLink(`https://getlogit.app/@ava/p/${id}`)).toBe(`/social/post/${id}`);
+    expect(routeForAppLink(`logit://u/ava/p/${id}`)).toBe(`/social/post/${id}`);
+    expect(routeForAppLink("https://getlogit.app/@ava/other")).toBeNull();
+  });
   it("ignores anything else", () => {
     expect(routeForAppLink("logit://somewhere")).toBeNull();
   });

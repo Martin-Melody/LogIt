@@ -90,6 +90,20 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" android:host="getlogit.app" android:path="/g" />
             </intent-filter>
+            <!-- A profile or post on the web (canvas row 18): the website's "Open in LogIt"
+                 (logit://u/ava[/p/<id>]) and, once App Links are verified, getlogit.app/@ava. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="logit" android:host="u" />
+            </intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="getlogit.app" android:pathPrefix="/@" />
+            </intent-filter>
 
         </activity>
 

@@ -4,7 +4,7 @@
   import { backDismiss, sheetDrag } from "$lib/components/sheet/sheet";
   import {
     X, Dumbbell, Trophy, MessageSquare, CalendarDays,
-    Activity, Cpu, LayoutDashboard, Paperclip, Flame,
+    Activity, Cpu, LayoutDashboard, Paperclip, Flame, Globe
   } from "lucide-svelte";
   import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
   import { socialApi, type ApiPost, type PostType } from "@logit/core/api/socialApi";
@@ -327,6 +327,14 @@
     (attachmentType !== "habit" || selectedHabit !== null),
   );
 
+  // Public means public everywhere (canvas W5): your first few posts on a public account say so.
+  const WEB_NOTE = "logit:public-post-notes";
+  let publicNote = $state(false);
+  $effect(() => {
+    if (Number(localStorage.getItem(WEB_NOTE) ?? 0) >= 3) return;
+    socialApi.getSettings().then((s) => (publicNote = !s.isPrivate)).catch(() => {});
+  });
+
   async function submit() {
     if (!canSubmit) return;
     submitting = true;
@@ -337,6 +345,7 @@
         body.trim() || undefined,
         await buildPayload(),
       );
+      if (publicNote) localStorage.setItem(WEB_NOTE, String(Number(localStorage.getItem(WEB_NOTE) ?? 0) + 1));
       onposted?.(post);
       onclose();
     } catch (e) {
@@ -403,6 +412,11 @@
         class="w-full bg-transparent text-sm resize-none focus:outline-none placeholder:text-muted-foreground"
         bind:value={body}
       ></textarea>
+      {#if publicNote}
+        <p class="flex items-start gap-2 rounded-xl border border-border px-3 py-2 text-[12px] leading-snug text-muted-foreground">
+          <Globe class="mt-0.5 size-3.5 shrink-0" /><span>Your account is public, so anyone can see this, here and on the web. <a href="/settings/privacy" class="font-medium text-foreground underline" onclick={onclose}>Change</a></span>
+        </p>
+      {/if}
 
       <!-- Attachment: collapsed by default so a plain post is the norm -->
       {#if !prefillSession && !showAttach && attachmentType === "none"}
