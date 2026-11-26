@@ -32,16 +32,19 @@ public static class DirectMessageEndpoints
     }
 
     public record PersonDto(string Username, string DisplayName, string? AvatarUrl, Guid Id);
-    public record ThreadDto(Guid Id, PersonDto? Other, string LastBody, long LastAtMs, bool LastMine, bool Unread);
+    /// A group's chat in the list and its header (Other is null for those).
+    public record GroupRef(Guid Id, string Name, string? PhotoUrl, int Members);
+    /// LastBy: who sent the last message, in a group ("Conor: Saturday 9:00, who's in?").
+    public record ThreadDto(Guid Id, PersonDto? Other, string LastBody, long LastAtMs, bool LastMine, bool Unread, GroupRef? Group = null, string? LastBy = null);
     /// PhotoHidden: a photo in a request you haven't accepted (shown blurred, address withheld).
     public record MessageDto(Guid Id, string ClientId, string Body, long CreatedAtMs, bool Mine, string? CardType = null, string? CardJson = null,
         string? PhotoUrl = null, int PhotoWidth = 0, int PhotoHeight = 0, bool PhotoHidden = false,
         string? VoiceUrl = null, int VoiceMs = 0, string? VoicePeaks = null, bool VoiceHidden = false, bool Edited = false,
-        bool Deleted = false, bool RemovedByLogIt = false);
+        bool Deleted = false, bool RemovedByLogIt = false, PersonDto? From = null);
     /// Other is null for a deleted account. Accepted = it's in my chats (false = my request).
     /// SeenAtMs = when they last read the thread, only with read receipts on for both and once
     /// they've accepted. CanSend false comes with Why.
-    public record ChatDto(Guid? ThreadId, PersonDto? Other, bool Accepted, long? SeenAtMs, bool CanSend, string? Why, List<MessageDto> Messages);
+    public record ChatDto(Guid? ThreadId, PersonDto? Other, bool Accepted, long? SeenAtMs, bool CanSend, string? Why, List<MessageDto> Messages, GroupRef? Group = null);
     public record SendRequest(string? Username, Guid? ThreadId, string ClientId, string? Body, string? CardType = null, string? CardJson = null, Guid? PhotoId = null,
         Guid? VoiceId = null, string? VoicePeaks = null);
 
@@ -50,17 +53,20 @@ public static class DirectMessageEndpoints
     /// A reply to a story: the client sends {"storyId"}, the server stores the story's card and
     /// when it expires, so the quote disappears with the story.
     public const string StoryCard = "Story";
+    /// An invite to a group (canvas G16): the client sends {"groupId"}, the server checks you're a
+    /// member, records the invite and stores the group's name and look.
+    public const string GroupInviteCard = "GroupInvite";
     private const int MaxCardJson = 4000;
 
     /// `request`: the viewer hasn't accepted this thread, so a photo's address is withheld.
-    private static MessageDto Dto(DirectMessage x, Guid me, DateTime now, bool request = false)
+    private static MessageDto Dto(DirectMessage x, Guid me, DateTime now, bool request = false, User? from = null)
     {
         var locked = request && x.SenderId != me; // photos and voice wait for the request to be accepted
         return new(x.Id, x.ClientId, x.Body, Ms(x.CreatedAt), x.SenderId == me, x.CardType,
             x.CardType == StoryCard && QuoteExpired(x.CardJson, now) ? null : x.CardJson,
             x.PhotoId is { } p && !locked ? Photos.PhotoEndpoints.UrlOf(p) : null, x.PhotoWidth, x.PhotoHeight, locked && x.PhotoId is not null,
             x.VoiceId is { } v && !locked ? Voice.VoiceEndpoints.UrlOf(v) : null, x.VoiceMs, x.VoicePeaks, locked && x.VoiceId is not null, x.EditedAt is not null,
-            x.DeletedAt is not null, x.RemovedByLogIt);
+            x.DeletedAt is not null, x.RemovedByLogIt, Person(from));
     }
 
     /// The sweeper clears a quoted story within minutes of it expiring; this covers the minutes between.
@@ -80,7 +86,8 @@ public static class DirectMessageEndpoints
         x.RemovedByLogIt ? "Message removed by LogIt" : x.DeletedAt is not null ? "Unsent a message"
         : x.Body.Length > 0 ? x.Body : x.PhotoId is not null ? "Sent a photo"
         : x.VoiceId is not null ? $"Voice message · {x.VoiceMs / 60000}:{x.VoiceMs / 1000 % 60:00}"
-        : x.CardType == "PersonalRecord" ? "Shared a record" : x.CardType is null ? "" : "Shared a workout";
+        : x.CardType == "PersonalRecord" ? "Shared a record" : x.CardType == GroupInviteCard ? "Sent a group invite"
+            : x.CardType is null ? "" : "Shared a workout";
 
     private static long Ms(DateTime t) => new DateTimeOffset(DateTime.SpecifyKind(t, DateTimeKind.Utc)).ToUnixTimeMilliseconds();
     private static PersonDto? Person(User? u) => u is null ? null : new(u.Username, u.DisplayName, u.AvatarUrl, u.Id);
@@ -88,6 +95,8 @@ public static class DirectMessageEndpoints
 
     private static Task<bool> BlockedAsync(AppDbContext db, Guid a, Guid b) =>
         db.Blocks.AnyAsync(x => (x.BlockerId == a && x.BlockedId == b) || (x.BlockerId == b && x.BlockedId == a));
+
+    private static GroupRef GroupOf(Group g, int members) => new(g.Id, g.Name, g.PhotoId is { } p ? Photos.PhotoEndpoints.UrlOf(p) : null, members);
 
     private enum Route { Chats, Requests, Refused }
 
@@ -111,16 +120,28 @@ public static class DirectMessageEndpoints
                 m.ThreadId,
                 m.LastReadAt,
                 m.ClearedAt,
-                Other = m.Thread.Members.Where(o => o.UserId != me).Select(o => o.User).FirstOrDefault(),
-                Last = db.DirectMessages.Where(x => x.ThreadId == m.ThreadId).OrderByDescending(x => x.CreatedAt).FirstOrDefault(),
+                Other = m.Thread.Members.Where(o => o.UserId != me).Select(o => o.User).FirstOrDefault(), // ignored for a group
+                m.Thread.Group,
+                Count = db.GroupMembers.Count(g => g.GroupId == m.Thread.GroupId),
+                // A group's newest message from someone not blocked either way (hidden for you only).
+                Last = db.DirectMessages.Where(x => x.ThreadId == m.ThreadId
+                        && !db.Blocks.Any(b => (b.BlockerId == me && b.BlockedId == x.SenderId) || (b.BlockerId == x.SenderId && b.BlockedId == me)))
+                    .OrderByDescending(x => x.CreatedAt).FirstOrDefault(),
             })
-            .Where(r => r.Last != null && (r.ClearedAt == null || r.Last.CreatedAt > r.ClearedAt))
-            .Where(r => r.Other == null || !db.Blocks.Any(b => (b.BlockerId == me && b.BlockedId == r.Other.Id) || (b.BlockerId == r.Other.Id && b.BlockedId == me)))
+            // A new group shows before its first message; a chat only once there is one.
+            .Where(r => (r.Last != null || r.Group != null) && (r.Last == null || r.ClearedAt == null || r.Last.CreatedAt > r.ClearedAt))
+            .Where(r => r.Group != null || r.Other == null || !db.Blocks.Any(b => (b.BlockerId == me && b.BlockedId == r.Other.Id) || (b.BlockerId == r.Other.Id && b.BlockedId == me)))
             .ToListAsync();
+        var senderIds = rows.Where(r => r.Group != null && r.Last?.SenderId != null).Select(r => r.Last!.SenderId!.Value).Distinct().ToList();
+        var senders = await db.Users.Where(u => senderIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.DisplayName);
         return Results.Ok(rows
-            .OrderByDescending(r => r.Last!.CreatedAt)
-            .Select(r => new ThreadDto(r.ThreadId, Person(r.Other), Preview(r.Last!), Ms(r.Last!.CreatedAt), r.Last.SenderId == me,
-                r.Last.SenderId != me && (r.LastReadAt == null || r.LastReadAt < r.Last.CreatedAt))));
+            .OrderByDescending(r => r.Last?.CreatedAt ?? r.Group!.CreatedAt)
+            .Select(r => r.Last is null
+                ? new ThreadDto(r.ThreadId, null, "", Ms(r.Group!.CreatedAt), false, false, GroupOf(r.Group, r.Count))
+                : new ThreadDto(r.ThreadId, r.Group is null ? Person(r.Other) : null, Preview(r.Last), Ms(r.Last.CreatedAt), r.Last.SenderId == me,
+                    r.Last.SenderId != me && (r.LastReadAt == null || r.LastReadAt < r.Last.CreatedAt),
+                    r.Group is null ? null : GroupOf(r.Group, r.Count),
+                    r.Group is not null && r.Last.SenderId is { } by && by != me ? senders.GetValueOrDefault(by) : null)));
     }
 
     /// Chats with something unread, and how many requests are waiting (requests get no badge on
@@ -129,9 +150,11 @@ public static class DirectMessageEndpoints
     {
         var me = caller.GetUserId();
         var mine = db.DmMembers.Where(m => m.UserId == me && (m.ClearedAt == null || m.Thread.LastMessageAt > m.ClearedAt)
-            && !m.Thread.Members.Any(o => o.UserId != me && db.Blocks.Any(b => (b.BlockerId == me && b.BlockedId == o.UserId) || (b.BlockerId == o.UserId && b.BlockedId == me))));
+            && (m.Thread.GroupId != null
+                || !m.Thread.Members.Any(o => o.UserId != me && db.Blocks.Any(b => (b.BlockerId == me && b.BlockedId == o.UserId) || (b.BlockerId == o.UserId && b.BlockedId == me)))));
         var chats = await mine.CountAsync(m => m.Accepted && db.DirectMessages.Any(x => x.ThreadId == m.ThreadId && x.SenderId != me
-            && (m.LastReadAt == null || x.CreatedAt > m.LastReadAt) && (m.ClearedAt == null || x.CreatedAt > m.ClearedAt)));
+            && (m.LastReadAt == null || x.CreatedAt > m.LastReadAt) && (m.ClearedAt == null || x.CreatedAt > m.ClearedAt)
+            && !db.Blocks.Any(b => (b.BlockerId == me && b.BlockedId == x.SenderId) || (b.BlockerId == x.SenderId && b.BlockedId == me))));
         var requests = await mine.CountAsync(m => !m.Accepted);
         return Results.Ok(new { chats, requests });
     }
@@ -146,8 +169,9 @@ public static class DirectMessageEndpoints
         DmMember? mine = null;
         if (threadId is { } tid)
         {
-            mine = await db.DmMembers.Include(m => m.Thread).FirstOrDefaultAsync(m => m.ThreadId == tid && m.UserId == meId);
+            mine = await db.DmMembers.Include(m => m.Thread).ThenInclude(t => t.Group).FirstOrDefaultAsync(m => m.ThreadId == tid && m.UserId == meId);
             if (mine is null) return Results.NotFound();
+            if (mine.Thread.Group is { } group) return Results.Ok(await GroupChatAsync(db, mine, group, before, clock.GetUtcNow().UtcDateTime));
             other = await db.DmMembers.Where(m => m.ThreadId == tid && m.UserId != meId).Select(m => m.User).FirstOrDefaultAsync();
         }
         else
@@ -181,6 +205,21 @@ public static class DirectMessageEndpoints
         return Results.Ok(new ChatDto(mine?.ThreadId, Person(other), mine?.Accepted ?? true, seen, canSend, why, messages));
     }
 
+    /// A group's chat: everyone's messages with who sent them, except people you've blocked or
+    /// who blocked you (hidden for you only). No read receipts in groups.
+    private static async Task<ChatDto> GroupChatAsync(AppDbContext db, DmMember mine, Group group, long? before, DateTime now)
+    {
+        var me = mine.UserId;
+        var cutoff = before is { } b ? DateTimeOffset.FromUnixTimeMilliseconds(b).UtcDateTime : DateTime.MaxValue;
+        var rows = await db.DirectMessages.Include(x => x.Sender)
+            .Where(x => x.ThreadId == mine.ThreadId && x.CreatedAt < cutoff && (mine.ClearedAt == null || x.CreatedAt > mine.ClearedAt)
+                && !db.Blocks.Any(bl => (bl.BlockerId == me && bl.BlockedId == x.SenderId) || (bl.BlockerId == x.SenderId && bl.BlockedId == me)))
+            .OrderByDescending(x => x.CreatedAt).Take(Page).ToListAsync();
+        var count = await db.GroupMembers.CountAsync(m => m.GroupId == group.Id);
+        return new ChatDto(mine.ThreadId, null, true, null, true, null,
+            [.. rows.AsEnumerable().Reverse().Select(x => Dto(x, me, now, false, x.SenderId == me ? null : x.Sender))], GroupOf(group, count));
+    }
+
     private static async Task<bool> TheyAcceptedAsync(AppDbContext db, DmMember mine, Guid otherId) =>
         await db.DmMembers.AnyAsync(m => m.ThreadId == mine.ThreadId && m.UserId == otherId && m.Accepted);
 
@@ -192,7 +231,7 @@ public static class DirectMessageEndpoints
         {
             if (body.Length == 0) return Results.BadRequest(new { error = "Write something first." });
         }
-        else if (req.CardType is not null)
+        else if (req.CardType is not null && req.CardType != GroupInviteCard)
         {
             if (!CardTypes.Contains(req.CardType)) return Results.BadRequest(new { error = "That can't be shared in a message." });
             if (string.IsNullOrEmpty(req.CardJson) || req.CardJson.Length > MaxCardJson) return Results.BadRequest(new { error = "That's too big to share." });
@@ -207,13 +246,16 @@ public static class DirectMessageEndpoints
         if (dup is not null) return Results.Ok(Dto(dup, meId, clock.GetUtcNow().UtcDateTime));
 
         var me = await db.Users.FirstAsync(u => u.Id == meId);
-        User? other;
+        User? other = null;
         DmThread? thread = null;
+        var inGroup = false;
         if (req.ThreadId is { } tid)
         {
+            // A group's members are its thread's members, so this also checks you're still in it.
             thread = await db.DmThreads.Include(t => t.Members).FirstOrDefaultAsync(t => t.Id == tid && t.Members.Any(m => m.UserId == meId));
-            if (thread is null) return Results.NotFound();
-            var otherId = thread.Members.Where(m => m.UserId != meId).Select(m => (Guid?)m.UserId).FirstOrDefault();
+            if (thread is null) return Results.NotFound(new { error = "You're not in this chat any more." });
+            inGroup = thread.GroupId is not null;
+            var otherId = inGroup ? null : thread.Members.Where(m => m.UserId != meId).Select(m => (Guid?)m.UserId).FirstOrDefault();
             other = otherId is null ? null : await db.Users.FindAsync(otherId);
         }
         else
@@ -225,9 +267,16 @@ public static class DirectMessageEndpoints
                 thread = await db.DmThreads.Include(t => t.Members).FirstOrDefaultAsync(t => t.PairKey == key);
             }
         }
-        if (other is null) return Results.NotFound(new { error = "This account was deleted." });
-        if (other.Id == meId) return Results.BadRequest(new { error = "You can't message yourself." });
-        if (await BlockedAsync(db, meId, other.Id)) return Results.NotFound();
+        if (inGroup)
+        {
+            if (req.CardType is StoryCard or GroupInviteCard) return Results.BadRequest(new { error = "That can't be sent to a group." });
+        }
+        else
+        {
+            if (other is null) return Results.NotFound(new { error = "This account was deleted." });
+            if (other.Id == meId) return Results.BadRequest(new { error = "You can't message yourself." });
+            if (await BlockedAsync(db, meId, other.Id)) return Results.NotFound();
+        }
 
         var now = clock.GetUtcNow().UtcDateTime;
         Photo? photo = null;
@@ -249,9 +298,9 @@ public static class DirectMessageEndpoints
             {
                 return Results.BadRequest(new { error = "Missing story." });
             }
-            var story = await StoryEndpoints.Visible(db, meId, now).FirstOrDefaultAsync(s => s.Id == storyId && s.AuthorId == other.Id);
+            var story = await StoryEndpoints.Visible(db, meId, now).FirstOrDefaultAsync(s => s.Id == storyId && s.AuthorId == other!.Id);
             if (story is null) return Results.NotFound(new { error = "This story has gone." });
-            if (!await StoryEndpoints.MayReplyAsync(db, other, meId))
+            if (!await StoryEndpoints.MayReplyAsync(db, other!, meId))
                 return Results.Json(new { error = "They've turned replies off." }, statusCode: 403);
             cardJson = new JsonObject
             {
@@ -264,24 +313,41 @@ public static class DirectMessageEndpoints
                 ["expiresAtMs"] = Ms(story.ExpiresAt),
             }.ToJsonString();
         }
+        else if (req.CardType == GroupInviteCard)
+        {
+            Guid groupId;
+            try
+            {
+                using var doc = JsonDocument.Parse(req.CardJson ?? "");
+                groupId = doc.RootElement.GetProperty("groupId").GetGuid();
+            }
+            catch (Exception e) when (e is JsonException or InvalidOperationException or FormatException or KeyNotFoundException)
+            {
+                return Results.BadRequest(new { error = "Missing group." });
+            }
+            if (await db.GroupMembers.AnyAsync(m => m.GroupId == groupId && m.UserId == other!.Id))
+                return Results.BadRequest(new { error = "They're already in the group." });
+            cardJson = await GroupEndpoints.InviteCardAsync(db, groupId, meId, other!.Id, now);
+            if (cardJson is null) return Results.NotFound(new { error = "You're not in that group any more." });
+        }
 
         var mine = thread?.Members.FirstOrDefault(m => m.UserId == meId);
-        var theirs = thread?.Members.FirstOrDefault(m => m.UserId == other.Id);
-        if (theirs is not { Accepted: true })
+        var theirs = inGroup ? null : thread?.Members.FirstOrDefault(m => m.UserId == other!.Id);
+        if (!inGroup && theirs is not { Accepted: true })
         {
-            var route = mine is { Accepted: false } ? Route.Chats : await RouteAsync(db, me, other); // replying to their request
+            var route = mine is { Accepted: false } ? Route.Chats : await RouteAsync(db, me, other!); // replying to their request
             if (route == Route.Refused)
                 return Results.Json(new { error = "This account only gets messages from people it follows." }, statusCode: 403);
             if (thread is null)
             {
-                thread = new DmThread { PairKey = PairKey(meId, other.Id) };
+                thread = new DmThread { PairKey = PairKey(meId, other!.Id) };
                 db.DmThreads.Add(thread);
                 thread.Members.Add(mine = new DmMember { UserId = meId, Accepted = true });
-                thread.Members.Add(theirs = new DmMember { UserId = other.Id, Accepted = route == Route.Chats });
+                thread.Members.Add(theirs = new DmMember { UserId = other!.Id, Accepted = route == Route.Chats });
             }
             else
             {
-                if (theirs is null) thread.Members.Add(theirs = new DmMember { UserId = other.Id });
+                if (theirs is null) thread.Members.Add(theirs = new DmMember { UserId = other!.Id });
                 if (route == Route.Chats) theirs.Accepted = true;
             }
         }
@@ -305,7 +371,7 @@ public static class DirectMessageEndpoints
         {
             // Both started the thread at once (unique pair key): send again into the one that won.
             db.ChangeTracker.Clear();
-            var key = PairKey(meId, other.Id);
+            var key = PairKey(meId, other!.Id);
             var id = await db.DmThreads.Where(t => t.PairKey == key).Select(t => t.Id).FirstAsync();
             return await Send(req with { Username = null, ThreadId = id }, caller, db, clock);
         }

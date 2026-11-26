@@ -186,13 +186,13 @@ export interface BlockedUser {
   createdAt: string;
 }
 
-export type ReportTargetType = "Post" | "Comment" | "User" | "Message" | "Story";
+export type ReportTargetType = "Post" | "Comment" | "User" | "Message" | "Story" | "Group";
 export type ReportReason =
   | "Spam" | "Harassment" | "HateSpeech" | "Violence"
   | "SexualContent" | "SelfHarm" | "Misinformation" | "Other";
 
 export type NotificationKind =
-  | "Like" | "Comment" | "Follow" | "Mention" | "Repost" | "Quote" | "FollowRequest" | "FollowAccepted" | "Reply" | "CoachInvite" | "CoachProgram" | "CoachPaymentFailed" | "Cheer" | "StoryCheer";
+  | "Like" | "Comment" | "Follow" | "Mention" | "Repost" | "Quote" | "FollowRequest" | "FollowAccepted" | "Reply" | "CoachInvite" | "CoachProgram" | "CoachPaymentFailed" | "Cheer" | "StoryCheer" | "GroupNote" | "GroupRequest" | "GroupApproved";
 
 export interface SocialSettings {
   isPrivate: boolean;
@@ -273,6 +273,8 @@ export interface ApiNotification {
   postId: string | null;
   commentId: string | null;
   postBody: string | null;
+  /** GroupNote: which group. */
+  group?: { id: string; name: string } | null;
 }
 
 export interface NotificationPage {

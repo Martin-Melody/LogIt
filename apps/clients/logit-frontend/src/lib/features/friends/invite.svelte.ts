@@ -22,13 +22,19 @@ const HELD_KEY = "logit:friend-invite-held";
 
 /** An invite opened before signing up: kept through sign-up and onboarding, then reopened. */
 export function holdInvite(c: string): void {
-  localStorage.setItem(HELD_KEY, c);
+  holdRoute(`/social/invite?c=${encodeURIComponent(c)}`);
 }
 
-/** The held invite's page once the account is ready, or null. Clears it. */
+/** Any page to come back to once the account is ready (a friend's invite, a group's link). */
+export function holdRoute(route: string): void {
+  localStorage.setItem(HELD_KEY, route);
+}
+
+/** The held page once the account is ready, or null. Clears it. */
 export function takeHeldInvite(): string | null {
   const c = localStorage.getItem(HELD_KEY);
   if (!c) return null;
   localStorage.removeItem(HELD_KEY);
-  return `/social/invite?c=${encodeURIComponent(c)}`;
+  // Before group links this held a friend invite's code rather than a page.
+  return c.startsWith("/") ? c : `/social/invite?c=${encodeURIComponent(c)}`;
 }

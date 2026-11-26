@@ -19,6 +19,18 @@ export interface DmThread {
   lastAtMs: number;
   lastMine: boolean;
   unread: boolean;
+  /** A group's chat (other is null then). */
+  group?: DmGroup | null;
+  /** In a group: who sent the last message (not you). */
+  lastBy?: string | null;
+}
+
+/** A group's chat, as the list and the chat header show it. */
+export interface DmGroup {
+  id: string;
+  name: string;
+  photoUrl: string | null;
+  members: number;
 }
 
 export interface DmMessage {
@@ -47,6 +59,8 @@ export interface DmMessage {
   deleted: boolean;
   /** Removed by LogIt after a report. */
   removedByLogIt: boolean;
+  /** In a group: who sent it (null for your own). */
+  from?: (DmPerson & { id: string }) | null;
 }
 
 /** What's left of a message once it's unsent, for showing it before the next reload. */
@@ -66,6 +80,8 @@ export interface DmChat {
   canSend: boolean;
   why: string | null;
   messages: DmMessage[];
+  /** A group's chat. */
+  group?: DmGroup | null;
 }
 
 /** Who a message goes to: a username, or a thread (a deleted account has no username). */

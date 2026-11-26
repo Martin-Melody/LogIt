@@ -14,6 +14,12 @@ describe("links that open the app", () => {
     expect(routeForAppLink(`logit://f?c=${invite}`)).toBe(route);
     expect(routeForAppLink(`https://getlogit.app/f#${invite}`)).toBe(route);
   });
+  it("sends a group's link to the join screen", () => {
+    const group = "logit-gr1:abcd2345wxyz";
+    const route = `/groups/join?c=${encodeURIComponent(group)}`;
+    expect(routeForAppLink(`logit://g?c=${group}`)).toBe(route);
+    expect(routeForAppLink(`https://getlogit.app/g#${group}`)).toBe(route);
+  });
   it("ignores anything else", () => {
     expect(routeForAppLink("logit://somewhere")).toBeNull();
   });

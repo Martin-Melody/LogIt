@@ -41,6 +41,7 @@ public static class NotificationEndpoints
                 Actor = new { n.Actor.Id, n.Actor.Username, n.Actor.DisplayName, n.Actor.AvatarUrl, n.Actor.IsPrivate },
                 n.PostId,
                 n.CommentId,
+                Group = n.Group == null ? null : new { n.Group.Id, n.Group.Name },
             })
             .ToListAsync();
 
@@ -68,7 +69,7 @@ public static class NotificationEndpoints
 
         var notifications = rows.Select(r => new
         {
-            r.Id, r.Type, r.CreatedAt, r.ReadAt, r.PostId, r.CommentId,
+            r.Id, r.Type, r.CreatedAt, r.ReadAt, r.PostId, r.CommentId, r.Group,
             Actor = new
             {
                 r.Actor.Id, r.Actor.Username, r.Actor.DisplayName, r.Actor.AvatarUrl, r.Actor.IsPrivate,

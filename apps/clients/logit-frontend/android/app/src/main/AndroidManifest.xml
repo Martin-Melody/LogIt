@@ -76,6 +76,20 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" android:host="getlogit.app" android:path="/f" />
             </intent-filter>
+            <!-- A group's link (canvas G10): the website's "Open in LogIt" (logit://g?c=logit-gr1:…)
+                 and, once App Links are verified, https://getlogit.app/g#logit-gr1:…. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="logit" android:host="g" />
+            </intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="getlogit.app" android:path="/g" />
+            </intent-filter>
 
         </activity>
 

@@ -57,6 +57,17 @@ export function readStoryQuote(json: string | null | undefined): Card | null {
   }
 }
 
+/** A group invite in a chat, as the server stored it; null while it's still sending. */
+export function readGroupInvite(json: string | null | undefined): { groupId: string; name: string; kind: string; place: string | null; photoUrl: string | null; members: number } | null {
+  if (!json) return null;
+  try {
+    const g = JSON.parse(json);
+    return typeof g?.groupId === "string" && typeof g?.name === "string" ? { groupId: g.groupId, name: g.name, kind: g.kind ?? "", place: g.place ?? null, photoUrl: g.photoUrl ?? null, members: g.members ?? 0 } : null;
+  } catch {
+    return null;
+  }
+}
+
 /** A reply to a photo story: the quoted photo, or null (no photo, or the story has gone). */
 export function readStoryPhoto(json: string | null | undefined): { url: string; width: number; height: number } | null {
   if (!json) return null;

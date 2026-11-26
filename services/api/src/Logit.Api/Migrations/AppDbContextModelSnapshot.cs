@@ -1043,6 +1043,9 @@ namespace Logit.Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("GroupId")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("LastMessageAt")
                         .HasColumnType("TEXT");
 
@@ -1052,6 +1055,8 @@ namespace Logit.Api.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("GroupId");
 
                     b.HasIndex("PairKey")
                         .IsUnique();
@@ -1112,6 +1117,131 @@ namespace Logit.Api.Migrations
                     b.HasIndex("InviterId");
 
                     b.ToTable("FriendInvites");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.Group", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Access")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("InviteCode")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("NoteAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("NoteById")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("PhotoId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Place")
+                        .HasMaxLength(60)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Access");
+
+                    b.HasIndex("InviteCode")
+                        .IsUnique();
+
+                    b.ToTable("Groups");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.GroupInvite", b =>
+                {
+                    b.Property<Guid>("GroupId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("InviteeId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("InviterId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("GroupId", "InviteeId");
+
+                    b.HasIndex("InviteeId");
+
+                    b.HasIndex("InviterId");
+
+                    b.ToTable("GroupInvites");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.GroupJoinRequest", b =>
+                {
+                    b.Property<Guid>("GroupId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("OnBoard")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("GroupId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("GroupJoinRequests");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.GroupMember", b =>
+                {
+                    b.Property<Guid>("GroupId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("JoinedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Notify")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("OnBoard")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Role")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("GroupId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("GroupMembers");
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.HostedPlugin", b =>
@@ -1243,6 +1373,9 @@ namespace Logit.Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("GroupId")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid?>("PostId")
                         .HasColumnType("TEXT");
 
@@ -1261,6 +1394,8 @@ namespace Logit.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ActorId");
+
+                    b.HasIndex("GroupId");
 
                     b.HasIndex("PushedAt");
 
@@ -2985,6 +3120,16 @@ namespace Logit.Api.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.DmThread", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.Group", "Group")
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("Group");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.Follow", b =>
                 {
                     b.HasOne("Logit.Api.Data.Entities.User", "Followed")
@@ -3034,6 +3179,69 @@ namespace Logit.Api.Migrations
                     b.Navigation("Inviter");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.GroupInvite", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.Group", "Group")
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Logit.Api.Data.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("InviteeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Logit.Api.Data.Entities.User", "Inviter")
+                        .WithMany()
+                        .HasForeignKey("InviterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Group");
+
+                    b.Navigation("Inviter");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.GroupJoinRequest", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.Group", "Group")
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Logit.Api.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Group");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.GroupMember", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.Group", "Group")
+                        .WithMany("Members")
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Logit.Api.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Group");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.HostedPlugin", b =>
                 {
                     b.HasOne("Logit.Api.Data.Entities.User", "Owner")
@@ -3072,6 +3280,11 @@ namespace Logit.Api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Logit.Api.Data.Entities.Group", "Group")
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
                     b.HasOne("Logit.Api.Data.Entities.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
@@ -3079,6 +3292,8 @@ namespace Logit.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Actor");
+
+                    b.Navigation("Group");
 
                     b.Navigation("User");
                 });
@@ -3451,6 +3666,11 @@ namespace Logit.Api.Migrations
                 });
 
             modelBuilder.Entity("Logit.Api.Data.Entities.DmThread", b =>
+                {
+                    b.Navigation("Members");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.Group", b =>
                 {
                     b.Navigation("Members");
                 });

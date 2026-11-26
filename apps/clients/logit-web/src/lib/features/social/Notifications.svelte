@@ -93,6 +93,9 @@
       case "CoachPaymentFailed": return "couldn't take your coaching payment. Check your card in My coach";
       case "Cheer": return "cheered you on";
       case "StoryCheer": return "cheered your story";
+      case "GroupNote": return n.group ? `pinned a note in ${n.group.name}` : "pinned a note in a group";
+      case "GroupRequest": return n.group ? `asked to join ${n.group.name}` : "asked to join your group";
+      case "GroupApproved": return n.group ? `let you into ${n.group.name}` : "let you into the group";
       default: return "";
     }
   }

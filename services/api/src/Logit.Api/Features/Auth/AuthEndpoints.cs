@@ -241,7 +241,8 @@ public static class AuthEndpoints
     private static async Task<IResult> DeleteAccount(
         [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] DeleteAccountRequest? req,
         AppDbContext db,
-        ClaimsPrincipal caller)
+        ClaimsPrincipal caller,
+        Photos.IPhotoStore store)
     {
         var userId = caller.GetUserId();
         var user = await db.Users.FindAsync(userId);
@@ -260,6 +261,7 @@ public static class AuthEndpoints
 
         await Admin.AdminLog.ForgetAsync(db, user.Id);
         await Sandbox.SandboxEndpoints.RemoveAllAsync(db, user.Id);
+        await Social.GroupEndpoints.ForgetAsync(db, store, user.Id);
         db.Users.Remove(user);
         await db.SaveChangesAsync();
 

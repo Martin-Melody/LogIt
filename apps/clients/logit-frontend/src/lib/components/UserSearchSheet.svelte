@@ -1,3 +1,5 @@
+<!-- Social's search: People and Groups (design canvas G12). Groups lists findable groups by name or
+     place (invite-only ones never show); tapping one opens its join screen, or its page if you're in. -->
 <script lang="ts">
   import { photoSrc } from "@logit/core/api/photosApi";
   import { toast } from "svelte-sonner";
@@ -9,6 +11,9 @@
   import { openInvite } from "$lib/features/friends/invite.svelte";
   import { socialApi, type UserSearchResult } from "@logit/core/api/socialApi";
   import { openOverlay, closeOverlay } from "$lib/stores/overlay.store";
+  import { groupsApi, type GroupSearchResult } from "@logit/core/api/groupsApi";
+  import { segment, segmentTrack } from "$lib/components/ui/choice";
+  import GroupAvatar from "$lib/components/social/GroupAvatar.svelte";
 
   const { open, onclose } = $props<{
     open: boolean;
@@ -16,6 +21,8 @@
   }>();
 
   let query = $state("");
+  let tab = $state<"people" | "groups">("people");
+  let groups = $state<GroupSearchResult[]>([]);
   let results = $state<UserSearchResult[]>([]);
   let loading = $state(false);
   let searched = $state(false);
@@ -34,6 +41,8 @@
   $effect(() => {
     if (open) {
       query = "";
+      tab = "people";
+      groups = [];
       results = [];
       searched = false;
       followingIds = new Set();
@@ -47,6 +56,7 @@
     const q = query.trim();
     if (q.length < 2) {
       results = [];
+      groups = [];
       searched = false;
       return;
     }
@@ -57,8 +67,9 @@
     loading = true;
     searched = false;
     try {
-      const res = await socialApi.searchUsers(q);
+      const [res, found] = await Promise.all([socialApi.searchUsers(q), groupsApi.search(q).catch(() => [])]);
       results = res;
+      groups = found;
       // Seed local follow state from server response
       followingIds = new Set(res.filter((u) => u.isFollowing).map((u) => u.id));
       requestedIds = new Set(res.filter((u) => u.isRequested).map((u) => u.id));
@@ -104,6 +115,14 @@
     onclose();
     void goto(`/social/${username}`);
   }
+
+  function openGroup(g: GroupSearchResult) {
+    onclose();
+    void goto(g.state === "member" ? `/groups/${g.id}` : `/groups/join?id=${g.id}`);
+  }
+
+  const groupAction = (g: GroupSearchResult) =>
+    g.state === "member" ? "Open" : g.state === "requested" ? "Requested" : g.state === "invited" || g.access === "Open" ? "Join" : "Ask to join";
 </script>
 
 {#if open}
@@ -134,7 +153,7 @@
         bind:value={query}
         oninput={onInput}
         type="search"
-        placeholder="Search by username or name…"
+        placeholder={tab === "groups" ? "Search groups by name or place…" : "Search by username or name…"}
         class="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
       />
       {#if loading}
@@ -145,9 +164,38 @@
       </button>
     </div>
 
+    <div class="shrink-0 px-3 pt-2.5">
+      <div class={segmentTrack} role="tablist" aria-label="Search for">
+        <button type="button" role="tab" aria-selected={tab === "people"} class={segment(tab === "people")} onclick={() => (tab = "people")}>People</button>
+        <button type="button" role="tab" aria-selected={tab === "groups"} class={segment(tab === "groups")} onclick={() => (tab = "groups")}>Groups</button>
+      </div>
+    </div>
+
     <!-- Results -->
     <div class="overflow-y-auto flex-1">
-      {#if !searched && query.trim().length < 2}
+      {#if tab === "groups"}
+        {#if !searched || query.trim().length < 2}
+          <p class="px-6 py-10 text-center text-sm text-muted-foreground">Find a gym, club or team by its name or where it is. Groups that are invite only don't show here.</p>
+        {:else if groups.length === 0}
+          <p class="px-6 py-12 text-center text-sm text-muted-foreground">No groups found for "<span class="text-foreground">{query.trim()}</span>". A member can invite you, or start one from Messages.</p>
+        {:else}
+          <ul class="divide-y divide-border pb-8">
+            {#each groups as g (g.id)}
+              {@const action = groupAction(g)}
+              <li>
+                <button type="button" class="flex w-full items-center gap-3 px-4 py-3 text-left" onclick={() => openGroup(g)}>
+                  <GroupAvatar name={g.name} src={g.photoUrl} size={44} />
+                  <span class="flex min-w-0 flex-1 flex-col">
+                    <span class="truncate text-sm font-semibold">{g.name}</span>
+                    <span class="truncate text-xs text-muted-foreground">{[g.kind, g.place, `${g.members} ${g.members === 1 ? "member" : "members"}`, g.followed ? `${g.followed} is a member` : null].filter(Boolean).join(" · ")}</span>
+                  </span>
+                  <span class="shrink-0 rounded-md px-3 py-1.5 text-xs font-semibold {action === 'Open' || action === 'Requested' ? 'border border-border' : 'bg-primary text-primary-foreground'}">{action}</span>
+                </button>
+              </li>
+            {/each}
+          </ul>
+        {/if}
+      {:else if !searched && query.trim().length < 2}
         <div class="flex flex-col items-center gap-4 px-6 py-10 text-center">
           <p class="text-sm text-muted-foreground">Search for people by username or display name.</p>
           <button type="button" class="flex h-11 items-center gap-2 rounded-lg border border-border px-4 text-sm font-medium" onclick={() => { onclose(); openInvite(); }}>

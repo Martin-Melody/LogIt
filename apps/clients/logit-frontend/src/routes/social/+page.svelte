@@ -221,7 +221,7 @@
   <PageHeader>
     <h1 class="page-title">Feed</h1>
     {#if authStore.isAuthenticated}
-      <button type="button" class="p-2 text-muted-foreground" aria-label="Search people" onclick={() => (showSearch = true)}>
+      <button type="button" class="p-2 text-muted-foreground" aria-label="Search people and groups" onclick={() => (showSearch = true)}>
         <Search class="h-[1.15rem] w-[1.15rem]" />
       </button>
       <button type="button" class="p-2 text-muted-foreground" aria-label="Privacy" onclick={() => goto("/settings/privacy")}>

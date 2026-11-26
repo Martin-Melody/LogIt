@@ -1,12 +1,14 @@
 namespace Logit.Api.Data.Entities;
 
-/// A conversation between people (friends overhaul, design canvas M1–M3). One-to-one for now;
-/// group chats join later through the same members table. Coach threads stay CoachMessage.
+/// A conversation between people (friends overhaul, design canvas M1–M3): one-to-one, or a
+/// group's chat (GroupId set; its members are the group's). Coach threads stay CoachMessage.
 public class DmThread
 {
     public Guid Id { get; set; } = Guid.NewGuid();
-    /// Both user ids in order ("a:b", a &lt; b), so two people have one thread.
+    /// Both user ids in order ("a:b", a &lt; b), so two people have one thread; "g:{group id}" for a group.
     public string PairKey { get; set; } = "";
+    public Guid? GroupId { get; set; }
+    public Group? Group { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime LastMessageAt { get; set; } = DateTime.UtcNow;
     public ICollection<DmMember> Members { get; set; } = [];
