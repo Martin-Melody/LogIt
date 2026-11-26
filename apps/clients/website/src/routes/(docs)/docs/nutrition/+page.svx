@@ -19,6 +19,10 @@ your targets, theirs are shown. Tap a meal's name to fold it away. Drag a food b
 or onto another meal (folded ones too) if you logged it in the wrong place. Each meal's ··· menu copies
 a meal from another day, saves it as a meal to log again in one tap, or moves it to another meal.
 
+Each food has a time eaten, shown next to it in the diary. It starts at the time you log it; change it
+under the meal buttons if you ate earlier (breakfast at 19:02 is fine), or tap the food later to fix it.
+Food logged to an earlier day has no time unless you add one.
+
 Under the macros, the diary shows fibre, sugar, saturated fat and salt for the day. Tap All nutrients
 for those plus 16 vitamins and minerals as a share of the UK and EU daily reference amounts, and tap one
 to see which foods it came from. Plain foods (from the USDA and the French CIQUAL tables) carry vitamins
