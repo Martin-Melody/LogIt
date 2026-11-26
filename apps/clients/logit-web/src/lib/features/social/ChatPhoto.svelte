@@ -6,7 +6,8 @@
   import ImageOffIcon from "@lucide/svelte/icons/image-off";
   import { photoSrc } from "@logit/core/api/photosApi";
 
-  const { url, width, height, hidden = false, mine = false }: { url: string | null | undefined; width: number; height: number; hidden?: boolean; mine?: boolean } = $props();
+  // bare: inside a bubble with its caption, so the bubble draws the edge.
+  const { url, width, height, hidden = false, mine = false, bare = false }: { url: string | null | undefined; width: number; height: number; hidden?: boolean; mine?: boolean; bare?: boolean } = $props();
 
   let open = $state(false);
   let broken = $state(false);
@@ -25,7 +26,7 @@
   <div class="flex shrink-0 items-center gap-2 rounded-xl border border-border px-3 py-3 text-xs text-muted-foreground {mine ? 'self-end' : 'self-start'}"><ImageOffIcon class="size-4" />Photo unavailable</div>
 {:else}
   <button type="button" aria-label="Open photo" onclick={() => (open = true)}
-    class="shrink-0 overflow-hidden rounded-xl border border-border bg-muted {mine ? 'self-end' : 'self-start'}" style="width: {box.w}px; height: {box.h}px">
+    class="block shrink-0 overflow-hidden bg-muted {bare ? '' : `rounded-xl border border-border ${mine ? 'self-end' : 'self-start'}`}" style="width: {bare ? Math.max(box.w, 240) : box.w}px; height: {box.h}px">
     <img src={photoSrc(url)} alt="" loading="lazy" class="size-full object-cover" onerror={() => (broken = true)} />
   </button>
   <Dialog.Root bind:open>
