@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as Table from "$lib/components/ui/table/index.js";
   import * as Tabs from "$lib/components/ui/tabs/index.js";
   import { onMount } from "svelte";
   import * as Alert from "$lib/components/ui/alert";
@@ -100,26 +101,26 @@
     </div>
   {:else}
     <section class="overflow-x-auto rounded-[10px] border border-border bg-card px-2 py-1.5">
-      <table class="w-full min-w-[640px] border-collapse text-[13px]">
-        <thead>
-          <tr class="text-left text-[11px] text-muted-foreground">
-            <th class="w-[34%] px-2.5 py-2 font-medium">Item</th>
-            <th class="px-2.5 py-2 font-medium">Kind</th>
-            <th class="px-2.5 py-2 font-medium">Details</th>
-            <th class="px-2.5 py-2 font-medium">In programs</th>
-            <th class="px-2.5 py-2 text-right font-medium">Clients see it</th>
-          </tr>
-        </thead>
-        <tbody>
+      <Table.Root class="w-full min-w-[640px] border-collapse text-[13px]">
+        <Table.Header>
+          <Table.Row class="text-left text-[11px] text-muted-foreground">
+            <Table.Head class="w-[34%] px-2.5 py-2 font-medium">Item</Table.Head>
+            <Table.Head class="px-2.5 py-2 font-medium">Kind</Table.Head>
+            <Table.Head class="px-2.5 py-2 font-medium">Details</Table.Head>
+            <Table.Head class="px-2.5 py-2 font-medium">In programs</Table.Head>
+            <Table.Head class="px-2.5 py-2 text-right font-medium">Clients see it</Table.Head>
+          </Table.Row>
+        </Table.Header>
+        <Table.Body>
           {#each rows as e (e.item.id)}
             {@const via = viaProgram(e)}
             {@const on = via || isShared(e)}
-            <tr class="border-t border-border">
-              <td class="px-2.5 py-2.5 font-semibold"><a href="/library?{e.kind === 'strength' ? '' : `kind=${e.kind}&`}id={encodeURIComponent(e.item.id)}" class="hover:underline">{e.item.name}</a></td>
-              <td class="px-2.5 py-2.5"><span class="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">{KIND_LABEL[e.kind]}</span></td>
-              <td class="px-2.5 py-2.5 text-muted-foreground">{entryDetails(e)}</td>
-              <td class="px-2.5 py-2.5 text-muted-foreground">{e.kind === "mobility" ? "n/a" : inPrograms(e)}</td>
-              <td class="px-2.5 py-2.5 text-right">
+            <Table.Row class="border-t border-border">
+              <Table.Cell class="px-2.5 py-2.5 font-semibold"><a href="/library?{e.kind === 'strength' ? '' : `kind=${e.kind}&`}id={encodeURIComponent(e.item.id)}" class="hover:underline">{e.item.name}</a></Table.Cell>
+              <Table.Cell class="px-2.5 py-2.5"><span class="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">{KIND_LABEL[e.kind]}</span></Table.Cell>
+              <Table.Cell class="px-2.5 py-2.5 text-muted-foreground">{entryDetails(e)}</Table.Cell>
+              <Table.Cell class="px-2.5 py-2.5 text-muted-foreground">{e.kind === "mobility" ? "n/a" : inPrograms(e)}</Table.Cell>
+              <Table.Cell class="px-2.5 py-2.5 text-right">
                 {#if via}<span class="mr-2 text-xs text-muted-foreground">Via program</span>{/if}
                 <button type="button" role="switch" aria-checked={on} disabled={via || busy !== null}
                   aria-label={via ? `${e.item.name} goes to clients with an assigned program` : `Share ${e.item.name} with clients`}
@@ -127,13 +128,13 @@
                   class="relative inline-block h-5 w-9 rounded-full align-middle transition-colors {via ? 'opacity-55' : ''} {on ? 'bg-success' : 'bg-muted-foreground/30'}">
                   <span class="absolute top-0.5 size-4 rounded-full bg-background shadow transition-all {on ? 'right-0.5' : 'left-0.5'}"></span>
                 </button>
-              </td>
-            </tr>
+              </Table.Cell>
+            </Table.Row>
           {:else}
-            <tr><td colspan="5" class="px-2.5 py-4 text-muted-foreground">Nothing matches that.</td></tr>
+            <Table.Row><Table.Cell colspan={5} class="px-2.5 py-4 text-muted-foreground">Nothing matches that.</Table.Cell></Table.Row>
           {/each}
-        </tbody>
-      </table>
+        </Table.Body>
+      </Table.Root>
     </section>
 
     <div class="flex flex-wrap gap-4">

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as Table from "$lib/components/ui/table/index.js";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import * as Alert from "$lib/components/ui/alert";
@@ -164,36 +165,36 @@
           </div>
 
           <div class="overflow-x-auto">
-            <table class="w-full min-w-[540px] border-collapse text-[13px]">
-              <thead>
-                <tr class="text-left text-xs text-muted-foreground">
-                  <th class="px-2.5 py-2 font-medium">Exercise</th>
-                  <th class="px-2.5 py-2 font-medium">Sets</th>
-                  <th class="px-2.5 py-2 font-medium">Best set</th>
-                  <th class="px-2.5 py-2 font-medium">e1RM</th>
-                  <th class="px-2.5 py-2 font-medium">vs last time</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table.Root class="w-full min-w-[540px] border-collapse text-[13px]">
+              <Table.Header>
+                <Table.Row class="text-left text-xs text-muted-foreground">
+                  <Table.Head class="px-2.5 py-2 font-medium">Exercise</Table.Head>
+                  <Table.Head class="px-2.5 py-2 font-medium">Sets</Table.Head>
+                  <Table.Head class="px-2.5 py-2 font-medium">Best set</Table.Head>
+                  <Table.Head class="px-2.5 py-2 font-medium">e1RM</Table.Head>
+                  <Table.Head class="px-2.5 py-2 font-medium">vs last time</Table.Head>
+                </Table.Row>
+              </Table.Header>
+              <Table.Body>
                 {#each ordered(selected) as b (b.id)}
                   {@const best = b.type === "strength" ? bestWorkingSet((b.data as StrengthBlockData).sets) : null}
                   {@const change = changeText(selected.id, b.id)}
                   {@const isPr = sessionPrs.some((p) => p.blockId === b.id)}
-                  <tr class="border-t border-border align-top">
-                    <td class="px-2.5 py-2.5 font-medium">
+                  <Table.Row class="border-t border-border align-top">
+                    <Table.Cell class="px-2.5 py-2.5 font-medium">
                       {#if b.type === "strength" && (b.data as StrengthBlockData).exerciseId}
                         <a href="/exercises/{(b.data as StrengthBlockData).exerciseId}" class="hover:underline">{blockDisplayName(b)}</a>
                       {:else}{blockDisplayName(b)}{/if}
                       {#if isPr}<span class="ml-1.5 rounded-full bg-warning/12 px-2 py-0.5 text-[11px] font-semibold text-warning">PR</span>{/if}
-                    </td>
-                    <td class="px-2.5 py-2.5 text-muted-foreground">{b.type === "strength" ? setsText(b) : b.type === "cardio" ? "Cardio" : b.type === "mobility" ? "Mobility" : ((b.data as { summary?: string }).summary ?? "")}</td>
-                    <td class="px-2.5 py-2.5">{best ? (best.weight > 0 ? `${kg(best.weight)} kg × ${best.reps}` : `${best.reps} reps`) : "—"}</td>
-                    <td class="px-2.5 py-2.5">{best && best.weight > 0 ? `${kg(Math.round(estimated1RM(best.weight, best.reps) * 10) / 10)} kg` : "—"}</td>
-                    <td class="px-2.5 py-2.5 {change?.tone ?? ''}">{change?.text ?? ""}</td>
-                  </tr>
+                    </Table.Cell>
+                    <Table.Cell class="px-2.5 py-2.5 text-muted-foreground">{b.type === "strength" ? setsText(b) : b.type === "cardio" ? "Cardio" : b.type === "mobility" ? "Mobility" : ((b.data as { summary?: string }).summary ?? "")}</Table.Cell>
+                    <Table.Cell class="px-2.5 py-2.5">{best ? (best.weight > 0 ? `${kg(best.weight)} kg × ${best.reps}` : `${best.reps} reps`) : "—"}</Table.Cell>
+                    <Table.Cell class="px-2.5 py-2.5">{best && best.weight > 0 ? `${kg(Math.round(estimated1RM(best.weight, best.reps) * 10) / 10)} kg` : "—"}</Table.Cell>
+                    <Table.Cell class="px-2.5 py-2.5 {change?.tone ?? ''}">{change?.text ?? ""}</Table.Cell>
+                  </Table.Row>
                 {/each}
-              </tbody>
-            </table>
+              </Table.Body>
+            </Table.Root>
           </div>
 
           {#if selected.note?.trim()}

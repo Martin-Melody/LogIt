@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as Table from "$lib/components/ui/table/index.js";
   import { Skeleton } from "$lib/components/ui/skeleton";
   import ReasoningDialog from "$lib/components/Dialogs/ReasoningDialog.svelte";
   import ProgressStatusChip from "$lib/features/exercise/components/ProgressStatusChip.svelte";
@@ -207,21 +208,21 @@
         <p class="py-3 text-[13px] text-muted-foreground">No lifts trained in this range.</p>
       {:else}
         <div class="overflow-x-auto">
-          <table class="w-full min-w-[560px] border-collapse text-[13px]">
-            <thead><tr class="text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"><th class="pb-2 pr-3">Lift</th><th class="pb-2 pr-3">Trend</th><th class="pb-2 pr-3">Why</th><th class="pb-2 pr-3">Now</th>{#if detail.stories.some((s) => s.nextTarget)}<th class="pb-2 pr-3">Next</th>{/if}<th class="pb-2"></th></tr></thead>
-            <tbody>
+          <Table.Root class="w-full min-w-[560px] border-collapse text-[13px]">
+            <Table.Header><Table.Row class="text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"><Table.Head class="pb-2 pr-3">Lift</Table.Head><Table.Head class="pb-2 pr-3">Trend</Table.Head><Table.Head class="pb-2 pr-3">Why</Table.Head><Table.Head class="pb-2 pr-3">Now</Table.Head>{#if detail.stories.some((s) => s.nextTarget)}<Table.Head class="pb-2 pr-3">Next</Table.Head>{/if}<Table.Head class="pb-2"></Table.Head></Table.Row></Table.Header>
+            <Table.Body>
               {#each detail.stories as s (s.exerciseName)}
-                <tr class="border-t border-border">
-                  <td class="py-2.5 pr-3 font-medium">{s.exerciseName}</td>
-                  <td class="py-2.5 pr-3"><ProgressStatusChip status={s.status} /></td>
-                  <td class="py-2.5 pr-3 text-muted-foreground">{s.statusDetail}</td>
-                  <td class="py-2.5 pr-3 tabular-nums" title={s.headline.label}>{s.headline.value}</td>
-                  {#if detail.stories.some((x) => x.nextTarget)}<td class="py-2.5 pr-3 text-muted-foreground">{s.nextTarget ?? "–"}</td>{/if}
-                  <td class="py-2.5"><Sparkline values={s.spark} /></td>
-                </tr>
+                <Table.Row class="border-t border-border">
+                  <Table.Cell class="py-2.5 pr-3 font-medium">{s.exerciseName}</Table.Cell>
+                  <Table.Cell class="py-2.5 pr-3"><ProgressStatusChip status={s.status} /></Table.Cell>
+                  <Table.Cell class="py-2.5 pr-3 text-muted-foreground">{s.statusDetail}</Table.Cell>
+                  <Table.Cell class="py-2.5 pr-3 tabular-nums" title={s.headline.label}>{s.headline.value}</Table.Cell>
+                  {#if detail.stories.some((x) => x.nextTarget)}<Table.Cell class="py-2.5 pr-3 text-muted-foreground">{s.nextTarget ?? "–"}</Table.Cell>{/if}
+                  <Table.Cell class="py-2.5"><Sparkline values={s.spark} /></Table.Cell>
+                </Table.Row>
               {/each}
-            </tbody>
-          </table>
+            </Table.Body>
+          </Table.Root>
         </div>
         {#if !clientId}<p class="pt-2 text-xs text-muted-foreground">Charts for each lift are on <a href="/progress" class="underline">Progress</a>.</p>{/if}
       {/if}
@@ -237,13 +238,13 @@
           <p class="text-[13px] text-muted-foreground">{answer?.detail}</p>
         {:else}
           <div class="overflow-x-auto">
-            <table class="w-full min-w-[520px] border-collapse text-[13px]">
-              <thead><tr class="text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"><th class="pb-2 pr-3">Muscle</th><th class="w-[44%] pb-2 pr-3">Sets a week</th><th class="pb-2 pr-3">Days a week</th><th class="pb-2">Its lifts</th></tr></thead>
-              <tbody>
+            <Table.Root class="w-full min-w-[520px] border-collapse text-[13px]">
+              <Table.Header><Table.Row class="text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"><Table.Head class="pb-2 pr-3">Muscle</Table.Head><Table.Head class="w-[44%] pb-2 pr-3">Sets a week</Table.Head><Table.Head class="pb-2 pr-3">Days a week</Table.Head><Table.Head class="pb-2">Its lifts</Table.Head></Table.Row></Table.Header>
+              <Table.Body>
                 {#each detail.rows as r (r.muscleGroup)}
-                  <tr class="border-t border-border">
-                    <td class="py-2.5 pr-3">{r.label}</td>
-                    <td class="py-2.5 pr-3">
+                  <Table.Row class="border-t border-border">
+                    <Table.Cell class="py-2.5 pr-3">{r.label}</Table.Cell>
+                    <Table.Cell class="py-2.5 pr-3">
                       <span class="flex items-center gap-2.5">
                         <span class="relative h-3 min-w-[160px] flex-1 rounded-md bg-muted">
                           <span class="absolute inset-y-0 bg-chart-1/20" style="left: {(BAND_LO / barScale) * 100}%; width: {((BAND_HI - BAND_LO) / barScale) * 100}%"></span>
@@ -251,13 +252,13 @@
                         </span>
                         <span class="w-8 text-right tabular-nums">{fmtSets(r.setsPerWeek)}</span>
                       </span>
-                    </td>
-                    <td class="py-2.5 pr-3 tabular-nums">{fmtSets(r.daysPerWeek)}</td>
-                    <td class="py-2.5"><span class="flex items-center gap-2"><ProgressStatusChip status={r.status} /><span class="truncate text-xs text-muted-foreground">{liftsNote(r)}</span></span></td>
-                  </tr>
+                    </Table.Cell>
+                    <Table.Cell class="py-2.5 pr-3 tabular-nums">{fmtSets(r.daysPerWeek)}</Table.Cell>
+                    <Table.Cell class="py-2.5"><span class="flex items-center gap-2"><ProgressStatusChip status={r.status} /><span class="truncate text-xs text-muted-foreground">{liftsNote(r)}</span></span></Table.Cell>
+                  </Table.Row>
                 {/each}
-              </tbody>
-            </table>
+              </Table.Body>
+            </Table.Root>
           </div>
         {/if}
         <p class="text-xs leading-relaxed text-muted-foreground">

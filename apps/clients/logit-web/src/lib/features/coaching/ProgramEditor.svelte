@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as Table from "$lib/components/ui/table/index.js";
   import ConfirmDialog, { type Ask } from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import { DateField } from "$lib/components/ui/date-field/index.js";
   import { Checkbox } from "$lib/components/ui/checkbox/index.js";
@@ -297,12 +298,12 @@
           </span>
         </div>
         <div class="overflow-x-auto">
-          <table class="w-full min-w-[640px] border-collapse text-[13px]">
-            <thead><tr class="text-left text-[11px] text-muted-foreground"><th class="w-[30%] px-2 py-1.5 font-medium">Exercise / set</th><th class="px-2 py-1.5 font-medium">Reps</th><th class="px-2 py-1.5 font-medium">Load</th><th class="px-2 py-1.5 font-medium">RPE</th><th class="px-2 py-1.5 font-medium">Rest</th><th class="px-2 py-1.5 font-medium">Tempo</th><th class="px-2 py-1.5 font-medium">Type</th><th></th></tr></thead>
-            <tbody>
+          <Table.Root class="w-full min-w-[640px] border-collapse text-[13px]">
+            <Table.Header><Table.Row class="text-left text-[11px] text-muted-foreground"><Table.Head class="w-[30%] px-2 py-1.5 font-medium">Exercise / set</Table.Head><Table.Head class="px-2 py-1.5 font-medium">Reps</Table.Head><Table.Head class="px-2 py-1.5 font-medium">Load</Table.Head><Table.Head class="px-2 py-1.5 font-medium">RPE</Table.Head><Table.Head class="px-2 py-1.5 font-medium">Rest</Table.Head><Table.Head class="px-2 py-1.5 font-medium">Tempo</Table.Head><Table.Head class="px-2 py-1.5 font-medium">Type</Table.Head><Table.Head></Table.Head></Table.Row></Table.Header>
+            <Table.Body>
               {#each [...day.blocks].sort((a, b) => a.orderIndex - b.orderIndex) as block, bi (block.id)}
-                <tr class="border-t border-border">
-                  <td colspan="8" class="px-2 pb-1 pt-3">
+                <Table.Row class="border-t border-border">
+                  <Table.Cell colspan={8} class="px-2 pb-1 pt-3">
                     <span class="flex flex-wrap items-center gap-2">
                       {#if labels.get(block.id)}<span class="rounded-[5px] bg-muted-foreground px-1.5 text-[11px] font-bold text-background">{labels.get(block.id)}</span>{/if}
                       <span class="font-semibold">{block.type === "strength" ? block.exerciseName : block.activityName}</span>
@@ -346,36 +347,36 @@
                         </div>
                       {/if}
                     {/if}
-                  </td>
-                </tr>
+                  </Table.Cell>
+                </Table.Row>
                 {#if block.type === "strength"}
                   {#each block.sets as set, si (set.id)}
-                    <tr>
-                      <td class="px-2 py-1 text-muted-foreground">Set {si + 1}</td>
-                      <td class="px-2 py-1"><input aria-label="Reps, set {si + 1}" class="{input} w-[72px]" value={P.repsText(set)} onchange={(e) => setField(day, block, set, "reps", e.currentTarget.value, e.currentTarget)} /></td>
-                      <td class="px-2 py-1"><input aria-label="Load, set {si + 1}" class="{input} w-[76px]" value={P.loadText(set)} placeholder="–" onchange={(e) => setField(day, block, set, "load", e.currentTarget.value, e.currentTarget)} /></td>
-                      <td class="px-2 py-1"><input aria-label="RPE, set {si + 1}" class="{input} w-[52px]" value={set.rpe ?? ""} onchange={(e) => setField(day, block, set, "rpe", e.currentTarget.value, e.currentTarget)} /></td>
-                      <td class="px-2 py-1"><input aria-label="Rest, set {si + 1}" class="{input} w-[64px]" value={P.restText(set.restSec)} onchange={(e) => setField(day, block, set, "rest", e.currentTarget.value, e.currentTarget)} /></td>
-                      <td class="px-2 py-1"><input aria-label="Tempo, set {si + 1}" class="{input} w-[80px]" value={set.tempo ?? ""} onchange={(e) => setField(day, block, set, "tempo", e.currentTarget.value, e.currentTarget)} /></td>
-                      <td class="px-2 py-1">
+                    <Table.Row>
+                      <Table.Cell class="px-2 py-1 text-muted-foreground">Set {si + 1}</Table.Cell>
+                      <Table.Cell class="px-2 py-1"><input aria-label="Reps, set {si + 1}" class="{input} w-[72px]" value={P.repsText(set)} onchange={(e) => setField(day, block, set, "reps", e.currentTarget.value, e.currentTarget)} /></Table.Cell>
+                      <Table.Cell class="px-2 py-1"><input aria-label="Load, set {si + 1}" class="{input} w-[76px]" value={P.loadText(set)} placeholder="–" onchange={(e) => setField(day, block, set, "load", e.currentTarget.value, e.currentTarget)} /></Table.Cell>
+                      <Table.Cell class="px-2 py-1"><input aria-label="RPE, set {si + 1}" class="{input} w-[52px]" value={set.rpe ?? ""} onchange={(e) => setField(day, block, set, "rpe", e.currentTarget.value, e.currentTarget)} /></Table.Cell>
+                      <Table.Cell class="px-2 py-1"><input aria-label="Rest, set {si + 1}" class="{input} w-[64px]" value={P.restText(set.restSec)} onchange={(e) => setField(day, block, set, "rest", e.currentTarget.value, e.currentTarget)} /></Table.Cell>
+                      <Table.Cell class="px-2 py-1"><input aria-label="Tempo, set {si + 1}" class="{input} w-[80px]" value={set.tempo ?? ""} onchange={(e) => setField(day, block, set, "tempo", e.currentTarget.value, e.currentTarget)} /></Table.Cell>
+                      <Table.Cell class="px-2 py-1">
                         {#if set.setType === "amrap"}<span class="text-xs text-muted-foreground">AMRAP</span>{:else}
                           <NativeSelect.Root size="sm" aria-label="Set type, set {si + 1}" value={set.setType}
                             onchange={(e) => { const v = e.currentTarget.value as SetType; edit((p) => P.updateSet(p, week.id, day.id, block.id, set.id, { setType: v })); }}>
                             {#each setTypes as t (t.type)}<NativeSelect.Option value={t.type}>{t.label}</NativeSelect.Option>{/each}
                           </NativeSelect.Root>
                         {/if}
-                      </td>
-                      <td class="px-2 py-1"><button type="button" aria-label="Remove set {si + 1}" class="text-muted-foreground hover:text-destructive" onclick={() => edit((p) => P.removeSet(p, week.id, day.id, block.id, set.id))}>✕</button></td>
-                    </tr>
+                      </Table.Cell>
+                      <Table.Cell class="px-2 py-1"><button type="button" aria-label="Remove set {si + 1}" class="text-muted-foreground hover:text-destructive" onclick={() => edit((p) => P.removeSet(p, week.id, day.id, block.id, set.id))}>✕</button></Table.Cell>
+                    </Table.Row>
                   {/each}
-                  <tr><td colspan="8" class="px-2 pb-1"><button type="button" class="text-xs text-muted-foreground hover:text-foreground"
-                    onclick={() => addSetLike(day, block)}>+ Set</button></td></tr>
+                  <Table.Row><Table.Cell colspan={8} class="px-2 pb-1"><button type="button" class="text-xs text-muted-foreground hover:text-foreground"
+                    onclick={() => addSetLike(day, block)}>+ Set</button></Table.Cell></Table.Row>
                 {/if}
               {:else}
-                <tr><td colspan="8" class="px-2 py-3 text-xs text-muted-foreground">No exercises yet.</td></tr>
+                <Table.Row><Table.Cell colspan={8} class="px-2 py-3 text-xs text-muted-foreground">No exercises yet.</Table.Cell></Table.Row>
               {/each}
-            </tbody>
-          </table>
+            </Table.Body>
+          </Table.Root>
         </div>
         {#if adding === day.id}
           <div class="max-w-sm pt-1">

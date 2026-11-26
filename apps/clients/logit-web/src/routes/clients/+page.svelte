@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as Table from "$lib/components/ui/table/index.js";
   import { canCoach } from "$lib/workspace";
   import { guideSignal } from "$lib/features/guide/signal";
   import { onSampleActivity } from "$lib/features/guide/sandbox.svelte";
@@ -172,62 +173,62 @@
 
     <section data-guide="clients-list" class="rounded-[10px] border border-border bg-card px-1.5 py-2">
       <div class="overflow-x-auto">
-        <table class="w-full min-w-[760px] border-collapse text-[13px]">
-          <thead>
-            <tr class="text-left text-xs text-muted-foreground">
-              <th class="px-3 py-2 font-medium">Client</th>
-              <th class="px-3 py-2 font-medium">Last 7 days</th>
-              <th class="px-3 py-2 font-medium">Last workout</th>
-              <th class="px-3 py-2 font-medium">Check-in</th>
-              <th class="px-3 py-2 font-medium">Program</th>
-              <th class="px-3 py-2 font-medium">Messages</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table.Root class="w-full min-w-[760px] border-collapse text-[13px]">
+          <Table.Header>
+            <Table.Row class="text-left text-xs text-muted-foreground">
+              <Table.Head class="px-3 py-2 font-medium">Client</Table.Head>
+              <Table.Head class="px-3 py-2 font-medium">Last 7 days</Table.Head>
+              <Table.Head class="px-3 py-2 font-medium">Last workout</Table.Head>
+              <Table.Head class="px-3 py-2 font-medium">Check-in</Table.Head>
+              <Table.Head class="px-3 py-2 font-medium">Program</Table.Head>
+              <Table.Head class="px-3 py-2 font-medium">Messages</Table.Head>
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
             {#each shownClients as c (c.relationshipId)}
               {@const ck = checkinCell(c)}
-              <tr class="border-t border-border align-middle">
-                <td class="px-3 py-3">
+              <Table.Row class="border-t border-border align-middle">
+                <Table.Cell class="px-3 py-3">
                   <a href="/clients/{c.id}" class="flex items-center gap-2.5" onclick={() => guideSignal("client.opened")}>
                     <Avatar name={c.name} url={c.avatarUrl} size={30} />
                     <span><span class="block font-medium">{c.name}{#if c.isSample}<SampleBadge />{/if}</span><span class="text-xs text-muted-foreground">{c.isSample ? "Sample client" : `@${c.username}`}</span></span>
                   </a>
-                </td>
+                </Table.Cell>
                 {#if c.sharing.workouts}
-                  <td class="px-3 py-3">{c.sessions7d}{c.program?.state === "running" ? ` of ${c.program.daysPerWeek}` : ""}</td>
-                  <td class="px-3 py-3">{c.lastSessionAtMs ? when(c.lastSessionAtMs) : "None yet"}</td>
+                  <Table.Cell class="px-3 py-3">{c.sessions7d}{c.program?.state === "running" ? ` of ${c.program.daysPerWeek}` : ""}</Table.Cell>
+                  <Table.Cell class="px-3 py-3">{c.lastSessionAtMs ? when(c.lastSessionAtMs) : "None yet"}</Table.Cell>
                 {:else}
-                  <td class="px-3 py-3 text-muted-foreground" colspan="2">Workouts not shared</td>
+                  <Table.Cell class="px-3 py-3 text-muted-foreground" colspan={2}>Workouts not shared</Table.Cell>
                 {/if}
-                <td class="px-3 py-3">
+                <Table.Cell class="px-3 py-3">
                   {#if ck.tone}<span class="rounded-full px-2 py-0.5 text-[11px] font-semibold {tone[ck.tone]}">{ck.text}</span>{:else}<span class="text-muted-foreground">{ck.text}</span>{/if}
-                </td>
-                <td class="px-3 py-3">{programCell(c)}</td>
-                <td class="px-3 py-3">
+                </Table.Cell>
+                <Table.Cell class="px-3 py-3">{programCell(c)}</Table.Cell>
+                <Table.Cell class="px-3 py-3">
                   {#if c.unread}<a href="/messages?c={c.relationshipId}" class="rounded-full bg-primary px-2 py-0.5 text-[11px] font-semibold text-primary-foreground">{c.unread} new</a>{:else}<a href="/messages?c={c.relationshipId}" class="text-muted-foreground hover:text-foreground">Open</a>{/if}
-                </td>
-              </tr>
+                </Table.Cell>
+              </Table.Row>
             {/each}
             {#each overview.sent as s (s.relationshipId)}
-              <tr class="border-t border-border align-middle">
-                <td class="px-3 py-3">
+              <Table.Row class="border-t border-border align-middle">
+                <Table.Cell class="px-3 py-3">
                   <span class="flex items-center gap-2.5">
                     <Avatar name={s.client.displayName || s.client.username} url={s.client.avatarUrl} size={30} dim />
                     <span><span class="block font-medium">@{s.client.username}</span><span class="text-xs text-muted-foreground">Invite sent {ago(Date.parse(s.createdAt))}</span></span>
                   </span>
-                </td>
-                <td class="px-3 py-3 text-muted-foreground" colspan="4">Nothing is shared until they accept.</td>
-                <td class="px-3 py-3">
+                </Table.Cell>
+                <Table.Cell class="px-3 py-3 text-muted-foreground" colspan={4}>Nothing is shared until they accept.</Table.Cell>
+                <Table.Cell class="px-3 py-3">
                   <button type="button" disabled={busy === s.relationshipId} onclick={() => cancelInvite(s.relationshipId)}
                     class="h-[30px] rounded-lg border border-border px-2.5 text-xs hover:bg-muted disabled:opacity-50">Cancel invite</button>
-                </td>
-              </tr>
+                </Table.Cell>
+              </Table.Row>
             {/each}
             {#if overview.clients.length === 0 && overview.sent.length === 0}
-              <tr><td colspan="6" class="px-3 py-6 text-center text-muted-foreground">No clients yet. Invite someone by username, or <a href="/coaching/links" class="text-primary hover:underline">share an invite link</a>.</td></tr>
+              <Table.Row><Table.Cell colspan={6} class="px-3 py-6 text-center text-muted-foreground">No clients yet. Invite someone by username, or <a href="/coaching/links" class="text-primary hover:underline">share an invite link</a>.</Table.Cell></Table.Row>
             {/if}
-          </tbody>
-        </table>
+          </Table.Body>
+        </Table.Root>
       </div>
     </section>
   {/if}

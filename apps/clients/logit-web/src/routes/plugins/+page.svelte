@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as Table from "$lib/components/ui/table/index.js";
   import * as Tabs from "$lib/components/ui/tabs/index.js";
   import { guideSignal } from "$lib/features/guide/signal";
   import { onMount } from "svelte";
@@ -180,49 +181,49 @@
       </p>
     {:else}
       <section class="overflow-x-auto rounded-[10px] border border-border bg-card px-2 py-1.5">
-        <table class="w-full min-w-[720px] border-collapse text-[13px]">
-          <thead>
-            <tr class="text-left text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
-              <th scope="col" class="px-2.5 py-2">Plugin</th>
-              <th scope="col" class="px-2.5 py-2">Type</th>
-              <th scope="col" class="px-2.5 py-2">Version</th>
-              <th scope="col" class="px-2.5 py-2">Gets</th>
-              <th scope="col" class="px-2.5 py-2">On</th>
-              <th scope="col" class="px-2.5 py-2"><span class="sr-only">Actions</span></th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table.Root class="w-full min-w-[720px] border-collapse text-[13px]">
+          <Table.Header>
+            <Table.Row class="text-left text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+              <Table.Head scope="col" class="px-2.5 py-2">Plugin</Table.Head>
+              <Table.Head scope="col" class="px-2.5 py-2">Type</Table.Head>
+              <Table.Head scope="col" class="px-2.5 py-2">Version</Table.Head>
+              <Table.Head scope="col" class="px-2.5 py-2">Gets</Table.Head>
+              <Table.Head scope="col" class="px-2.5 py-2">On</Table.Head>
+              <Table.Head scope="col" class="px-2.5 py-2"><span class="sr-only">Actions</span></Table.Head>
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
             {#each plugins.installed as p (p.manifest.id)}
               {@const listed = catalogById.get(p.manifest.id)}
               {@const update = p.source === "registry" && listed?.version && versionAfter(listed.version, p.manifest.version)}
-              <tr class="border-t border-border/60">
-                <td class="px-2.5 py-3">
+              <Table.Row class="border-t border-border/60">
+                <Table.Cell class="px-2.5 py-3">
                   <span class="font-semibold">{p.manifest.name}</span>
                   {#if p.source === "draft"}<span class="ml-1.5 rounded-full bg-sky-500/15 px-2 py-0.5 text-[11px] font-semibold text-sky-700 dark:text-sky-200">Your draft</span>{/if}
                   {#if p.source === "link"}<span class="ml-1.5 rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">By link</span>{/if}
                   <br /><span class="text-xs text-muted-foreground">{p.manifest.author ?? ""}</span>
-                </td>
-                <td class="px-2.5 py-3 text-muted-foreground">{familyLabel(p.manifest.family)}</td>
-                <td class="px-2.5 py-3">
+                </Table.Cell>
+                <Table.Cell class="px-2.5 py-3 text-muted-foreground">{familyLabel(p.manifest.family)}</Table.Cell>
+                <Table.Cell class="px-2.5 py-3">
                   {p.manifest.version}
                   {#if update}<span class="ml-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-300">{listed!.version} ready</span>{/if}
-                </td>
-                <td class="px-2.5 py-3 text-muted-foreground">{getsSummary(p.manifest.family, p.manifest.needs as string[] | undefined)}</td>
-                <td class="px-2.5 py-3">
+                </Table.Cell>
+                <Table.Cell class="px-2.5 py-3 text-muted-foreground">{getsSummary(p.manifest.family, p.manifest.needs as string[] | undefined)}</Table.Cell>
+                <Table.Cell class="px-2.5 py-3">
                   <button type="button" role="switch" aria-checked={p.enabled} aria-label="{p.manifest.name} on" onclick={() => toggle(p.manifest.id, !p.enabled)}
                     class="relative h-[22px] w-[38px] rounded-full {p.enabled ? 'bg-emerald-500' : 'bg-muted-foreground/30'}">
                     <span class="absolute top-[3px] h-4 w-4 rounded-full bg-background transition-all {p.enabled ? 'left-[19px]' : 'left-[3px]'}"></span>
                   </button>
-                </td>
-                <td class="px-2.5 py-3 text-right whitespace-nowrap">
+                </Table.Cell>
+                <Table.Cell class="px-2.5 py-3 text-right whitespace-nowrap">
                   {#if update && listed}<button type="button" class={btnPri} onclick={() => openInstall(listed)}>Review update</button>{/if}
                   {#if p.source === "draft"}<a class={btn} href="/plugins/builder/{encodeURIComponent(p.manifest.id)}">Open</a>{/if}
                   <button type="button" class={btn} onclick={() => remove(p.manifest.id, p.manifest.name)}>Remove</button>
-                </td>
-              </tr>
+                </Table.Cell>
+              </Table.Row>
             {/each}
-          </tbody>
-        </table>
+          </Table.Body>
+        </Table.Root>
       </section>
       <p class="text-xs leading-normal text-muted-foreground">
         What you install, switch off or remove here changes on your phone at its next sync, and the other way round. Updates are

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as Table from "$lib/components/ui/table/index.js";
   import * as NativeSelect from "$lib/components/ui/native-select/index.js";
   import { onMount } from "svelte";
   import { flip } from "svelte/animate";
@@ -154,22 +155,22 @@
     <section aria-labelledby="all" class="rounded-[14px] border border-border bg-card px-1.5 py-2">
       <h2 id="all" class="px-3 pb-1 pt-2 text-[15px] font-semibold">All invites</h2>
       <div class="overflow-x-auto">
-        <table class="w-full min-w-[760px] border-collapse text-[13px] tabular-nums">
-          <thead><tr class="text-left text-xs text-muted-foreground"><th class="px-3 py-2 font-medium">Code</th><th class="px-3 py-2 font-medium">For</th><th class="px-3 py-2 font-medium">Used</th><th class="px-3 py-2 font-medium">Ends</th><th class="px-3 py-2 font-medium">Signed up</th><th></th></tr></thead>
-          <tbody>
+        <Table.Root class="w-full min-w-[760px] border-collapse text-[13px] tabular-nums">
+          <Table.Header><Table.Row class="text-left text-xs text-muted-foreground"><Table.Head class="px-3 py-2 font-medium">Code</Table.Head><Table.Head class="px-3 py-2 font-medium">For</Table.Head><Table.Head class="px-3 py-2 font-medium">Used</Table.Head><Table.Head class="px-3 py-2 font-medium">Ends</Table.Head><Table.Head class="px-3 py-2 font-medium">Signed up</Table.Head><Table.Head></Table.Head></Table.Row></Table.Header>
+          <Table.Body>
             {#each invites as i (i.id)}
               {@const live = isLive(i)}
               <tr animate:flip={{ duration: 160 }} class="border-t border-border {live ? '' : 'text-muted-foreground'}">
-                <td class="whitespace-nowrap px-3 py-3 font-mono text-xs tracking-wider">{i.code}</td>
-                <td class="px-3 py-3">{i.note ?? "—"}</td>
-                <td class="whitespace-nowrap px-3 py-3">{i.useCount} of {i.maxUses}</td>
-                <td class="whitespace-nowrap px-3 py-3">{stateText(i) || (i.expiresAt ? shortDate(at(i.expiresAt)) : "Never")}</td>
-                <td class="px-3 py-3">
+                <Table.Cell class="whitespace-nowrap px-3 py-3 font-mono text-xs tracking-wider">{i.code}</Table.Cell>
+                <Table.Cell class="px-3 py-3">{i.note ?? "—"}</Table.Cell>
+                <Table.Cell class="whitespace-nowrap px-3 py-3">{i.useCount} of {i.maxUses}</Table.Cell>
+                <Table.Cell class="whitespace-nowrap px-3 py-3">{stateText(i) || (i.expiresAt ? shortDate(at(i.expiresAt)) : "Never")}</Table.Cell>
+                <Table.Cell class="px-3 py-3">
                   {#if i.usedBy.length}
                     {#each i.usedBy.slice(0, 3) as u, n (u.id)}{n ? ", " : ""}<a href="/admin/people?id={u.id}" class="text-primary hover:underline">{u.username}</a>{/each}{i.usedBy.length > 3 ? `, +${i.usedBy.length - 3}` : ""}
                   {:else}<span class="text-muted-foreground">Nobody yet</span>{/if}
-                </td>
-                <td class="px-3 py-3 text-right">
+                </Table.Cell>
+                <Table.Cell class="px-3 py-3 text-right">
                   {#if live}
                     <span class="inline-flex flex-wrap justify-end gap-1.5">
                       <button type="button" class={btnSecondary} onclick={() => copy(message(i), "Message")}>Copy message</button>
@@ -177,13 +178,13 @@
                       <button type="button" class={btnSecondary} disabled={busy === i.id} onclick={() => act(i.id, () => adminApi.cancelInvite(i.id), "Invite cancelled", "Couldn't cancel the invite")}>Cancel invite</button>
                     </span>
                   {/if}
-                </td>
+                </Table.Cell>
               </tr>
             {:else}
-              <tr><td colspan="6" class="px-3 py-6 text-center text-muted-foreground">No invites yet. Make one above.</td></tr>
+              <Table.Row><Table.Cell colspan={6} class="px-3 py-6 text-center text-muted-foreground">No invites yet. Make one above.</Table.Cell></Table.Row>
             {/each}
-          </tbody>
-        </table>
+          </Table.Body>
+        </Table.Root>
       </div>
     </section>
   {/if}

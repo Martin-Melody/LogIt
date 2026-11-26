@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as Table from "$lib/components/ui/table/index.js";
   import { onMount } from "svelte";
   import * as Alert from "$lib/components/ui/alert";
   import { Skeleton } from "$lib/components/ui/skeleton";
@@ -76,23 +77,23 @@
         {/each}
       </div>
       <div class="overflow-x-auto">
-        <table class="w-full min-w-[720px] text-[13px]">
-          <thead><tr class="text-left text-xs text-muted-foreground"><th class="pb-2 font-medium">Person</th><th class="pb-2 font-medium">Plan</th><th class="pb-2 font-medium">Store</th><th class="pb-2 font-medium">State</th><th class="pb-2 font-medium">Renews or ends</th><th class="pb-2 font-medium">Since</th></tr></thead>
-          <tbody>
+        <Table.Root class="w-full min-w-[720px] text-[13px]">
+          <Table.Header><Table.Row class="text-left text-xs text-muted-foreground"><Table.Head class="pb-2 font-medium">Person</Table.Head><Table.Head class="pb-2 font-medium">Plan</Table.Head><Table.Head class="pb-2 font-medium">Store</Table.Head><Table.Head class="pb-2 font-medium">State</Table.Head><Table.Head class="pb-2 font-medium">Renews or ends</Table.Head><Table.Head class="pb-2 font-medium">Since</Table.Head></Table.Row></Table.Header>
+          <Table.Body>
             {#each rows as s (s.id)}
-              <tr class="border-t border-border">
-                <td class="py-2.5"><a href="/admin/people?id={s.user.id}" class="text-primary hover:underline">{s.user.username}</a></td>
-                <td class="py-2.5">{s.plan}</td>
-                <td class="py-2.5">{store[s.source]}</td>
-                <td class="py-2.5"><span class="rounded-full px-2 py-px text-xs font-semibold {tone(s.state)}">{stateText[s.state] ?? s.state}</span></td>
-                <td class="py-2.5">{when(s)}</td>
-                <td class="py-2.5 text-muted-foreground">{shortDate(at(s.createdAt))}</td>
-              </tr>
+              <Table.Row class="border-t border-border">
+                <Table.Cell class="py-2.5"><a href="/admin/people?id={s.user.id}" class="text-primary hover:underline">{s.user.username}</a></Table.Cell>
+                <Table.Cell class="py-2.5">{s.plan}</Table.Cell>
+                <Table.Cell class="py-2.5">{store[s.source]}</Table.Cell>
+                <Table.Cell class="py-2.5"><span class="rounded-full px-2 py-px text-xs font-semibold {tone(s.state)}">{stateText[s.state] ?? s.state}</span></Table.Cell>
+                <Table.Cell class="py-2.5">{when(s)}</Table.Cell>
+                <Table.Cell class="py-2.5 text-muted-foreground">{shortDate(at(s.createdAt))}</Table.Cell>
+              </Table.Row>
             {:else}
-              <tr><td colspan="6" class="py-6 text-center text-muted-foreground">None.</td></tr>
+              <Table.Row><Table.Cell colspan={6} class="py-6 text-center text-muted-foreground">None.</Table.Cell></Table.Row>
             {/each}
-          </tbody>
-        </table>
+          </Table.Body>
+        </Table.Root>
       </div>
       <p class="text-[13px] text-muted-foreground">Prices and income live in Google Play Console. LogIt only knows who has which plan, and until when.</p>
     </section>

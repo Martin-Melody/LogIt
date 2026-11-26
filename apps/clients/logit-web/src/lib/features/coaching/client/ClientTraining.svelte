@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as Table from "$lib/components/ui/table/index.js";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { Skeleton } from "$lib/components/ui/skeleton";
@@ -96,14 +97,14 @@
         <span class="text-xs text-muted-foreground">Last 4 weeks · {recent.length}</span>
       </div>
       <div class="overflow-x-auto">
-        <table class="w-full min-w-[520px] border-collapse text-[13px]">
-          <thead><tr class="text-left text-xs text-muted-foreground"><th class="px-3 py-2 font-medium">Date</th><th class="px-3 py-2 font-medium">Workout</th><th class="px-3 py-2 font-medium">Time</th><th class="px-3 py-2 font-medium">Volume</th><th></th></tr></thead>
-          <tbody>
+        <Table.Root class="w-full min-w-[520px] border-collapse text-[13px]">
+          <Table.Header><Table.Row class="text-left text-xs text-muted-foreground"><Table.Head class="px-3 py-2 font-medium">Date</Table.Head><Table.Head class="px-3 py-2 font-medium">Workout</Table.Head><Table.Head class="px-3 py-2 font-medium">Time</Table.Head><Table.Head class="px-3 py-2 font-medium">Volume</Table.Head><Table.Head></Table.Head></Table.Row></Table.Header>
+          <Table.Body>
             {#each recent as s (s.id)}
               {@const p = prs.get(s.id) ?? []}
-              <tr class="border-t border-border align-top {open === s.id ? 'bg-muted/60' : ''}">
-                <td class="whitespace-nowrap px-3 py-2.5">{weekdayDate(s.startedAtMs)}</td>
-                <td class="px-3 py-2.5">
+              <Table.Row class="border-t border-border align-top {open === s.id ? 'bg-muted/60' : ''}">
+                <Table.Cell class="whitespace-nowrap px-3 py-2.5">{weekdayDate(s.startedAtMs)}</Table.Cell>
+                <Table.Cell class="px-3 py-2.5">
                   <button type="button" class="text-left font-medium hover:underline" aria-expanded={open === s.id} onclick={() => (open = open === s.id ? null : s.id)}>{sessionTitle(s)}</button>
                   {#if open === s.id}
                     <div class="flex flex-col gap-1 pt-2 text-[12.5px]">
@@ -117,16 +118,16 @@
                       {#if s.note}<span class="italic text-muted-foreground">Note: "{s.note}"</span>{/if}
                     </div>
                   {/if}
-                </td>
-                <td class="whitespace-nowrap px-3 py-2.5 text-muted-foreground">{s.endedAtMs && s.endedAtMs > s.startedAtMs ? `${Math.round((s.endedAtMs - s.startedAtMs) / 60_000)} min` : ""}</td>
-                <td class="whitespace-nowrap px-3 py-2.5 text-muted-foreground">{(sessionVolumeKg(s) / 1000).toFixed(1)} t</td>
-                <td class="px-3 py-2.5">{#if p.length}<span class="rounded-full bg-warning/12 px-2 py-0.5 text-[11px] font-semibold text-warning">{p.length === 1 ? "PR" : `${p.length} PRs`}</span>{/if}</td>
-              </tr>
+                </Table.Cell>
+                <Table.Cell class="whitespace-nowrap px-3 py-2.5 text-muted-foreground">{s.endedAtMs && s.endedAtMs > s.startedAtMs ? `${Math.round((s.endedAtMs - s.startedAtMs) / 60_000)} min` : ""}</Table.Cell>
+                <Table.Cell class="whitespace-nowrap px-3 py-2.5 text-muted-foreground">{(sessionVolumeKg(s) / 1000).toFixed(1)} t</Table.Cell>
+                <Table.Cell class="px-3 py-2.5">{#if p.length}<span class="rounded-full bg-warning/12 px-2 py-0.5 text-[11px] font-semibold text-warning">{p.length === 1 ? "PR" : `${p.length} PRs`}</span>{/if}</Table.Cell>
+              </Table.Row>
             {:else}
-              <tr><td colspan="5" class="px-3 py-6 text-center text-muted-foreground">No workouts in the last 4 weeks.</td></tr>
+              <Table.Row><Table.Cell colspan={5} class="px-3 py-6 text-center text-muted-foreground">No workouts in the last 4 weeks.</Table.Cell></Table.Row>
             {/each}
-          </tbody>
-        </table>
+          </Table.Body>
+        </Table.Root>
       </div>
     </section>
 

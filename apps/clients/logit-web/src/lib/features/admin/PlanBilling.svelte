@@ -1,6 +1,7 @@
 <!-- getlogit.app only: a person's plan, where they bought it, its history, and a plan given by
      hand. LogIt never handles money here: refunds and cancellations happen in the store. -->
 <script lang="ts">
+  import * as Table from "$lib/components/ui/table/index.js";
   import * as NativeSelect from "$lib/components/ui/native-select/index.js";
   import { toast } from "$lib/components/ui/sonner";
   import { shortDate, when } from "$lib/features/coaching/format";
@@ -70,20 +71,20 @@
 
   {#if person.subscriptions.length}
     <div class="overflow-x-auto border-t border-border pt-3">
-      <table class="w-full min-w-[560px] text-[13px]">
-        <thead><tr class="text-left text-xs text-muted-foreground"><th class="pb-2 font-medium">Plan</th><th class="pb-2 font-medium">Store</th><th class="pb-2 font-medium">State</th><th class="pb-2 font-medium">Period ends</th><th class="pb-2 font-medium">Last checked</th></tr></thead>
-        <tbody>
+      <Table.Root class="w-full min-w-[560px] text-[13px]">
+        <Table.Header><Table.Row class="text-left text-xs text-muted-foreground"><Table.Head class="pb-2 font-medium">Plan</Table.Head><Table.Head class="pb-2 font-medium">Store</Table.Head><Table.Head class="pb-2 font-medium">State</Table.Head><Table.Head class="pb-2 font-medium">Period ends</Table.Head><Table.Head class="pb-2 font-medium">Last checked</Table.Head></Table.Row></Table.Header>
+        <Table.Body>
           {#each person.subscriptions as s, i (i)}
-            <tr class="border-t border-border">
-              <td class="py-2">{s.plan}</td>
-              <td class="py-2">{store(s)}{#if s.isTest}<span class="ml-1.5 rounded-full bg-warning/15 px-2 py-px text-[11px] font-semibold text-warning">Test</span>{/if}</td>
-              <td class="py-2"><span class="rounded-full px-2 py-px text-xs font-semibold {tone(s.state)}">{stateText[s.state] ?? s.state}</span></td>
-              <td class="py-2">{s.expiresAt ? shortDate(at(s.expiresAt)) : "—"}</td>
-              <td class="py-2 text-muted-foreground">{s.checkedAt ? when(at(s.checkedAt)) : "—"}</td>
-            </tr>
+            <Table.Row class="border-t border-border">
+              <Table.Cell class="py-2">{s.plan}</Table.Cell>
+              <Table.Cell class="py-2">{store(s)}{#if s.isTest}<span class="ml-1.5 rounded-full bg-warning/15 px-2 py-px text-[11px] font-semibold text-warning">Test</span>{/if}</Table.Cell>
+              <Table.Cell class="py-2"><span class="rounded-full px-2 py-px text-xs font-semibold {tone(s.state)}">{stateText[s.state] ?? s.state}</span></Table.Cell>
+              <Table.Cell class="py-2">{s.expiresAt ? shortDate(at(s.expiresAt)) : "—"}</Table.Cell>
+              <Table.Cell class="py-2 text-muted-foreground">{s.checkedAt ? when(at(s.checkedAt)) : "—"}</Table.Cell>
+            </Table.Row>
           {/each}
-        </tbody>
-      </table>
+        </Table.Body>
+      </Table.Root>
     </div>
   {/if}
 </section>

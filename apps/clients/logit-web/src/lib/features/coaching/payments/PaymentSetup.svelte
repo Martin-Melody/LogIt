@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as Table from "$lib/components/ui/table/index.js";
   import * as RadioGroup from "$lib/components/ui/radio-group";
   import { Checkbox } from "$lib/components/ui/checkbox/index.js";
   import * as NativeSelect from "$lib/components/ui/native-select/index.js";
@@ -194,28 +195,28 @@
         <button type="button" onclick={openNew} class="h-[30px] rounded-lg bg-primary px-2.5 text-xs font-semibold text-primary-foreground">New package</button>
       </div>
       <div class="overflow-x-auto">
-        <table class="w-full min-w-[640px] border-collapse text-[13px]">
-          <thead><tr class="text-left text-xs text-muted-foreground"><th class="px-3 py-2 font-medium">Package</th><th class="px-3 py-2 font-medium">Price</th><th class="px-3 py-2 font-medium">On invite links</th><th class="px-3 py-2 font-medium">Clients</th><th></th></tr></thead>
-          <tbody>
+        <Table.Root class="w-full min-w-[640px] border-collapse text-[13px]">
+          <Table.Header><Table.Row class="text-left text-xs text-muted-foreground"><Table.Head class="px-3 py-2 font-medium">Package</Table.Head><Table.Head class="px-3 py-2 font-medium">Price</Table.Head><Table.Head class="px-3 py-2 font-medium">On invite links</Table.Head><Table.Head class="px-3 py-2 font-medium">Clients</Table.Head><Table.Head></Table.Head></Table.Row></Table.Header>
+          <Table.Body>
             {#each data.packages as p (p.id)}
-              <tr class="border-t border-border">
-                <td class="px-3 py-3">
+              <Table.Row class="border-t border-border">
+                <Table.Cell class="px-3 py-3">
                   <span class="block font-medium {p.hidden ? 'text-muted-foreground' : ''}">{p.name}</span>
                   {#if p.description}<span class="line-clamp-1 text-xs text-muted-foreground">{p.description.split(/\n+/).join(" · ")}</span>{/if}
-                </td>
-                <td class="px-3 py-3 {p.hidden ? 'text-muted-foreground' : ''}">{priceText(p)}</td>
-                <td class="px-3 py-3 {p.links.length ? '' : 'text-muted-foreground'}">{p.links.length ? p.links.join(", ") : "None"}</td>
-                <td class="px-3 py-3">{p.clients}</td>
-                <td class="px-3 py-3 text-right">
+                </Table.Cell>
+                <Table.Cell class="px-3 py-3 {p.hidden ? 'text-muted-foreground' : ''}">{priceText(p)}</Table.Cell>
+                <Table.Cell class="px-3 py-3 {p.links.length ? '' : 'text-muted-foreground'}">{p.links.length ? p.links.join(", ") : "None"}</Table.Cell>
+                <Table.Cell class="px-3 py-3">{p.clients}</Table.Cell>
+                <Table.Cell class="px-3 py-3 text-right">
                   {#if p.hidden}<span class="mr-2 rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">Hidden</span>{/if}
                   <button type="button" onclick={() => openEdit(p)} class="h-[30px] rounded-lg border border-border px-2.5 text-xs hover:bg-muted">Edit</button>
-                </td>
-              </tr>
+                </Table.Cell>
+              </Table.Row>
             {:else}
-              <tr><td colspan="5" class="px-3 py-6 text-center text-muted-foreground">No packages yet. Make one, then put it on an invite link.</td></tr>
+              <Table.Row><Table.Cell colspan={5} class="px-3 py-6 text-center text-muted-foreground">No packages yet. Make one, then put it on an invite link.</Table.Cell></Table.Row>
             {/each}
-          </tbody>
-        </table>
+          </Table.Body>
+        </Table.Root>
       </div>
     </section>
 

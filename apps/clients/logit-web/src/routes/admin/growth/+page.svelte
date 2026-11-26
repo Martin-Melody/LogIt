@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as Table from "$lib/components/ui/table/index.js";
   import { onMount } from "svelte";
   import * as Alert from "$lib/components/ui/alert";
   import { Skeleton } from "$lib/components/ui/skeleton";
@@ -49,20 +50,20 @@
       <h2 id="cohorts" class="text-[15px] font-semibold">What each week's sign-ups went on to do</h2>
       <p class="text-[13px] text-muted-foreground">Habit, not just sign-up: the column that matters most is "back in week 2". Weeks too recent to know show a dash.</p>
       <div class="overflow-x-auto">
-        <table class="w-full min-w-[720px] text-[13px] tabular-nums">
-          <thead><tr class="text-left text-xs text-muted-foreground"><th class="pb-2 font-medium">Week of</th><th class="pb-2 font-medium">Signed up</th><th class="pb-2 font-medium">Logged a workout</th><th class="pb-2 font-medium">3+ workouts in week 1</th><th class="pb-2 font-medium">Back in week 2</th><th class="pb-2 font-medium">Paying now</th></tr></thead>
-          <tbody>
+        <Table.Root class="w-full min-w-[720px] text-[13px] tabular-nums">
+          <Table.Header><Table.Row class="text-left text-xs text-muted-foreground"><Table.Head class="pb-2 font-medium">Week of</Table.Head><Table.Head class="pb-2 font-medium">Signed up</Table.Head><Table.Head class="pb-2 font-medium">Logged a workout</Table.Head><Table.Head class="pb-2 font-medium">3+ workouts in week 1</Table.Head><Table.Head class="pb-2 font-medium">Back in week 2</Table.Head><Table.Head class="pb-2 font-medium">Paying now</Table.Head></Table.Row></Table.Header>
+          <Table.Body>
             {#each [...weeks].reverse() as w (w.weekOf)}
-              <tr class="border-t border-border">
-                <td class="py-2.5">{label(w.weekOf)}</td>
-                <td class="py-2.5">{w.signedUp}</td>
+              <Table.Row class="border-t border-border">
+                <Table.Cell class="py-2.5">{label(w.weekOf)}</Table.Cell>
+                <Table.Cell class="py-2.5">{w.signedUp}</Table.Cell>
                 {#each [w.loggedWorkout, w.threeInWeekOne, w.backInWeekTwo, w.payingNow] as n, i (i)}
-                  <td class="py-2.5">{#if n === null}<span class="text-muted-foreground">—</span>{:else}<b class="font-semibold">{n}</b> <span class="ml-1 text-muted-foreground">{pct(n, w.signedUp)}</span>{/if}</td>
+                  <Table.Cell class="py-2.5">{#if n === null}<span class="text-muted-foreground">—</span>{:else}<b class="font-semibold">{n}</b> <span class="ml-1 text-muted-foreground">{pct(n, w.signedUp)}</span>{/if}</Table.Cell>
                 {/each}
-              </tr>
+              </Table.Row>
             {/each}
-          </tbody>
-        </table>
+          </Table.Body>
+        </Table.Root>
       </div>
     </section>
 

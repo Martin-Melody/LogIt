@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as Table from "$lib/components/ui/table/index.js";
   import { DateField } from "$lib/components/ui/date-field/index.js";
   import * as RadioGroup from "$lib/components/ui/radio-group";
   import MoreHorizontalIcon from "@lucide/svelte/icons/more-horizontal";
@@ -178,23 +179,23 @@
 
 <section class="rounded-[10px] border border-border bg-card px-1.5 py-2">
   <div class="overflow-x-auto">
-    <table class="w-full min-w-[860px] border-collapse text-[13px]">
-      <thead><tr class="text-left text-xs text-muted-foreground"><th class="px-3 py-2 font-medium">Client</th><th class="px-3 py-2 font-medium">Package</th><th class="px-3 py-2 font-medium">Status</th><th class="px-3 py-2 font-medium">Next payment</th><th class="px-3 py-2 font-medium">If a payment fails</th><th></th></tr></thead>
-      <tbody>
+    <Table.Root class="w-full min-w-[860px] border-collapse text-[13px]">
+      <Table.Header><Table.Row class="text-left text-xs text-muted-foreground"><Table.Head class="px-3 py-2 font-medium">Client</Table.Head><Table.Head class="px-3 py-2 font-medium">Package</Table.Head><Table.Head class="px-3 py-2 font-medium">Status</Table.Head><Table.Head class="px-3 py-2 font-medium">Next payment</Table.Head><Table.Head class="px-3 py-2 font-medium">If a payment fails</Table.Head><Table.Head></Table.Head></Table.Row></Table.Header>
+      <Table.Body>
         {#each data.clients as c (c.relationshipId)}
           {@const chip = coachClientChip(c, now)}
-          <tr class="border-t border-border">
-            <td class="px-3 py-3">
+          <Table.Row class="border-t border-border">
+            <Table.Cell class="px-3 py-3">
               <a href="/clients/{c.client.id}" class="flex items-center gap-2.5">
                 <Avatar name={nameOf(c)} url={c.client.avatarUrl} size={30} />
                 <span><span class="block font-medium">{nameOf(c)}</span><span class="text-xs text-muted-foreground">@{c.client.username}</span></span>
               </a>
-            </td>
-            <td class="px-3 py-3 {c.mode === 'stripe' ? '' : 'text-muted-foreground'}">{packageText(c)}</td>
-            <td class="px-3 py-3"><span class="whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold {toneClass[chip.tone]}">{chip.label}</span></td>
-            <td class="px-3 py-3 {c.state === 'paid' && c.interval === 'month' && !c.stopsAtPeriodEnd ? '' : 'text-muted-foreground'}">{nextText(c)}</td>
-            <td class="px-3 py-3 {c.ownRule ? '' : 'text-muted-foreground'}">{ruleCell(c)}</td>
-            <td class="px-3 py-3 text-right">
+            </Table.Cell>
+            <Table.Cell class="px-3 py-3 {c.mode === 'stripe' ? '' : 'text-muted-foreground'}">{packageText(c)}</Table.Cell>
+            <Table.Cell class="px-3 py-3"><span class="whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold {toneClass[chip.tone]}">{chip.label}</span></Table.Cell>
+            <Table.Cell class="px-3 py-3 {c.state === 'paid' && c.interval === 'month' && !c.stopsAtPeriodEnd ? '' : 'text-muted-foreground'}">{nextText(c)}</Table.Cell>
+            <Table.Cell class="px-3 py-3 {c.ownRule ? '' : 'text-muted-foreground'}">{ruleCell(c)}</Table.Cell>
+            <Table.Cell class="px-3 py-3 text-right">
               <DropdownMenu.Root>
                 <DropdownMenu.Trigger>
                   {#snippet child({ props })}
@@ -220,13 +221,13 @@
                   <DropdownMenu.Item class="text-destructive" onclick={() => (endFor = c)}>Stop coaching {nameOf(c)}…</DropdownMenu.Item>
                 </DropdownMenu.Content>
               </DropdownMenu.Root>
-            </td>
-          </tr>
+            </Table.Cell>
+          </Table.Row>
         {:else}
-          <tr><td colspan="6" class="px-3 py-6 text-center text-muted-foreground">No clients yet. When someone pays through one of your invite links they show up here.</td></tr>
+          <Table.Row><Table.Cell colspan={6} class="px-3 py-6 text-center text-muted-foreground">No clients yet. When someone pays through one of your invite links they show up here.</Table.Cell></Table.Row>
         {/each}
-      </tbody>
-    </table>
+      </Table.Body>
+    </Table.Root>
   </div>
 </section>
 

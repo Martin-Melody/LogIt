@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as Table from "$lib/components/ui/table/index.js";
   import { DateField } from "$lib/components/ui/date-field/index.js";
   import * as RadioGroup from "$lib/components/ui/radio-group";
   import * as NativeSelect from "$lib/components/ui/native-select/index.js";
@@ -252,14 +253,14 @@
           <div class="flex items-baseline justify-between px-3 pb-1 pt-2"><h2 class="text-sm font-semibold">Swaps in their workouts</h2><span class="text-xs text-muted-foreground">Last 4 weeks · {swaps.length}</span></div>
           {#if swaps.length}
             <div class="overflow-x-auto">
-              <table class="w-full border-collapse text-[13px]">
-                <thead><tr class="text-left text-xs text-muted-foreground"><th class="px-3 py-2 font-medium">Date</th><th class="px-3 py-2 font-medium">Planned</th><th class="px-3 py-2 font-medium">Did instead</th><th class="px-3 py-2 font-medium">Why it was allowed</th></tr></thead>
-                <tbody>
+              <Table.Root class="w-full border-collapse text-[13px]">
+                <Table.Header><Table.Row class="text-left text-xs text-muted-foreground"><Table.Head class="px-3 py-2 font-medium">Date</Table.Head><Table.Head class="px-3 py-2 font-medium">Planned</Table.Head><Table.Head class="px-3 py-2 font-medium">Did instead</Table.Head><Table.Head class="px-3 py-2 font-medium">Why it was allowed</Table.Head></Table.Row></Table.Header>
+                <Table.Body>
                   {#each swaps as w, i (w.sessionId + i)}
-                    <tr class="border-t border-border align-top"><td class="px-3 py-2.5">{weekdayDate(w.startedAtMs)}</td><td class="px-3 py-2.5">{w.planned}</td><td class="px-3 py-2.5 font-semibold">{w.didInstead}</td><td class="px-3 py-2.5 text-muted-foreground">{SWAP_WHY_LABEL[w.why]}</td></tr>
+                    <Table.Row class="border-t border-border align-top"><Table.Cell class="px-3 py-2.5">{weekdayDate(w.startedAtMs)}</Table.Cell><Table.Cell class="px-3 py-2.5">{w.planned}</Table.Cell><Table.Cell class="px-3 py-2.5 font-semibold">{w.didInstead}</Table.Cell><Table.Cell class="px-3 py-2.5 text-muted-foreground">{SWAP_WHY_LABEL[w.why]}</Table.Cell></Table.Row>
                   {/each}
-                </tbody>
-              </table>
+                </Table.Body>
+              </Table.Root>
             </div>
           {:else}
             <p class="px-3 pb-2 text-[13px] text-muted-foreground">No swaps. {name} did every exercise as planned.</p>
