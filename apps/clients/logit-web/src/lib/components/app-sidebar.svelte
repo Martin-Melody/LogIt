@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { Switch } from "$lib/components/ui/switch";
+  import { practice, sandbox } from "$lib/features/guide/sandbox.svelte";
   import * as NativeSelect from "$lib/components/ui/native-select/index.js";
   import { photoSrc } from "@logit/core/api/photosApi";
   import { goto } from "$app/navigation";
@@ -163,6 +165,16 @@
   </Sidebar.Content>
 
   <Sidebar.Footer>
+    {#if coaching && sandbox.on}
+      <!-- Practice view (V1): show only the sample clients. Locked on while trying Studio. -->
+      <label class="flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 group-data-[collapsible=icon]:hidden">
+        <span class="flex flex-col">
+          <span class="text-[13px] font-medium">Practice view</span>
+          <span class="text-[11px] text-muted-foreground">{practice.locked ? "Studio, then real clients" : "Sample clients only"}</span>
+        </span>
+        <Switch checked={practice.on} disabled={practice.locked} onCheckedChange={(v) => practice.set(v)} aria-label="Practice view" />
+      </label>
+    {/if}
     <Sidebar.Menu>
       {#if admin}
         <Sidebar.MenuItem>

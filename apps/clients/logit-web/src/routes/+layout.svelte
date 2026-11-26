@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { inView } from "$lib/features/coaching/coachingData";
   import { canCoach, coachTrial } from "$lib/workspace";
   import "./layout.css";
   import { onMount } from "svelte";
@@ -22,7 +23,7 @@
   import SandboxBanner from "$lib/features/guide/SandboxBanner.svelte";
   import StudioNeeded from "$lib/features/onboarding/StudioNeeded.svelte";
   import { guide, walkthroughsFor } from "$lib/features/guide/guide.svelte";
-  import { sandbox } from "$lib/features/guide/sandbox.svelte";
+  import { onSampleActivity, sandbox } from "$lib/features/guide/sandbox.svelte";
   import { adminState } from "$lib/features/admin/adminState.svelte";
   import CommandLayer from "$lib/features/commands/CommandLayer.svelte";
 
@@ -158,12 +159,18 @@
     await guardRoute();
     if (apiClient.isAuthenticated() && (!isBlockedFreeTier || coachTrial())) {
       try {
-        viewingClient.setClients(await coachApi.listClients());
+        viewingClient.setClients(inView(await coachApi.listClients()));
       } catch {
         // Not fatal — the switcher just won't show. /clients surfaces the real error.
       }
     }
   });
+  // Practice view switched: the client picker lists the other set of clients.
+  onMount(() => onSampleActivity(() => {
+    if (apiClient.isAuthenticated() && canCoach()) {
+      coachApi.listClients().then((l) => viewingClient.setClients(inView(l))).catch(() => {});
+    }
+  }));
 
   $effect(() => {
     // Re-run on every navigation, not just once at mount — apiClient's auth state isn't

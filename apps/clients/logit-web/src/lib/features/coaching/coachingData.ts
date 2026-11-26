@@ -1,4 +1,5 @@
 import { coachTrial } from "$lib/workspace";
+import { practice } from "$lib/features/guide/sandbox.svelte";
 import {
   coachApi,
   SHARE_ALL,
@@ -115,8 +116,25 @@ export async function loadCoachingOverview(): Promise<CoachingOverview> {
     coachApi.listSentInvites().catch(() => [] as SentInvite[]),
   ]);
   const now = Date.now();
-  const clients = roster.map((r) => summarise(r, inbox, schedules, programs, now));
-  return { clients, inbox, schedules, programs, requests, sent };
+  // Practice view: the samples, or everyone else (never both). Programs and schedules
+  // nobody was given (templates) belong to both.
+  const shown = roster.filter((r) => practice.shows(r.client.isSample));
+  const ids = new Set(shown.map((r) => r.client.id));
+  const mine = <T extends { recipientUserId?: string | null }>(x: T) => !x.recipientUserId || ids.has(x.recipientUserId);
+  const clients = shown.map((r) => summarise(r, inbox, schedules, programs, now));
+  return {
+    clients,
+    inbox: inbox.filter((i) => ids.has(i.clientUserId)),
+    schedules: schedules.filter(mine),
+    programs: programs.filter(mine),
+    requests: requests.filter((r) => practice.shows(r.client.isSample)),
+    sent: practice.on ? [] : sent,
+  };
+}
+
+/** A list of the coach's clients (coachApi.listClients) as Practice view shows it. */
+export function inView<T extends { client: { isSample?: boolean } }>(list: T[]): T[] {
+  return list.filter((r) => practice.shows(r.client.isSample));
 }
 
 function summarise(

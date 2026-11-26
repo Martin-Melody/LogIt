@@ -6,6 +6,8 @@
   import LinkIcon from "@lucide/svelte/icons/link";
   import ArrowLeftRightIcon from "@lucide/svelte/icons/arrow-left-right";
   import KeyboardIcon from "@lucide/svelte/icons/keyboard";
+  import FlaskConicalIcon from "@lucide/svelte/icons/flask-conical";
+  import { practice, sandbox } from "$lib/features/guide/sandbox.svelte";
   import { page } from "$app/state";
   import { apiClient } from "@logit/core/api/client";
   import * as Command from "$lib/components/ui/command";
@@ -274,6 +276,12 @@
             <Command.Shortcut class="tracking-normal">{coachBadges.checkins ? `${coachBadges.checkins} waiting` : "None waiting"}</Command.Shortcut>
           </Command.Item>
           <Command.Item value="Invite a client invite link" onSelect={() => go("/coaching/links")}><LinkIcon class="text-muted-foreground" />Invite a client</Command.Item>
+          {#if sandbox.on && !practice.locked}
+            <Command.Item value="Practice view sample clients {practice.on ? 'turn off' : 'turn on'}"
+              onSelect={() => { commands.palette = false; practice.set(!practice.on); }}>
+              <FlaskConicalIcon class="text-muted-foreground" />{practice.on ? "Turn off Practice view" : "Turn on Practice view"}
+            </Command.Item>
+          {/if}
         </Command.Group>
       {/if}
       {#if ws === "me" && typed}

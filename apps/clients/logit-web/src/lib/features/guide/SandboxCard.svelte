@@ -2,12 +2,19 @@
 <script lang="ts">
   import * as AlertDialog from "$lib/components/ui/alert-dialog";
   import { Button } from "$lib/components/ui/button";
-  import { sandbox } from "./sandbox.svelte";
+  import { practice, sandbox } from "./sandbox.svelte";
 
   let confirmRemove = $state(false);
 </script>
 
-{#if sandbox.loaded}
+{#if sandbox.loaded && sandbox.on && !practice.on}
+  <!-- Practice view is off: the samples are out of sight, one switch away (V2). -->
+  <section class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3 text-sm"
+    aria-label="Sample clients" data-guide="clients-sandbox">
+    <span>Your {sandbox.clients.length} sample clients are in Practice view.</span>
+    <Button variant="outline" size="sm" onclick={() => practice.set(true)}>Open Practice view</Button>
+  </section>
+{:else if sandbox.loaded}
   <section class="flex flex-wrap items-center gap-4 rounded-xl border bg-card p-4 {sandbox.on ? 'border-info/30' : 'border-border'}"
     aria-labelledby="sandbox-title" data-guide="clients-sandbox">
     <div class="min-w-0 flex-[1_1_380px]">

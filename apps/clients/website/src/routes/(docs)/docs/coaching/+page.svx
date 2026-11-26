@@ -19,9 +19,16 @@ The first Studio chapter offers three sample clients: Niamh, who asks to join th
 invite link; Conor, already your client, who answers check-ins and messages; and Dara, who shares only
 her training. They act on their own a few seconds after you do something, and only you ever see them.
 
-Keep them as a sandbox to try programs and forms on. Manage them from Clients › Sandbox: Reset to fresh
-puts back their starting four weeks, Remove deletes them and everything they sent, and Add sample
-clients brings them back.
+They live in **Practice view**. With it on, a striped band runs across Coaching and every page about
+people (Today, Clients, Check-ins, Messages) shows only the sample clients; nothing you do there
+reaches a real person. With it off, they're out of sight everywhere, including counts and the client
+picker. Your programs, check-in forms, invite links and packages are the same in both. Switch it at
+the bottom of the sidebar, with Turn off on the band, or from ⌘K. Adding sample clients turns it on,
+and so does a walkthrough chapter you do with them.
+
+Keep them as a sandbox to try programs and forms on. Manage them in Practice view, on Clients: Reset
+to fresh puts back their starting four weeks, Remove deletes them and everything they sent, and Add
+sample clients brings them back.
 
 ## Your Today page
 
