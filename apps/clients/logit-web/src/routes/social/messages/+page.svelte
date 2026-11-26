@@ -58,8 +58,8 @@
 
 <svelte:head><title>Messages · LogIt</title></svelte:head>
 
-<div class="mx-auto flex h-[calc(100vh-7rem)] w-full max-w-[1100px] overflow-hidden rounded-[10px] border border-border bg-card">
-  <aside class="flex w-full flex-col border-r border-border md:w-[320px] {to ? 'hidden md:flex' : ''}">
+<div class="mx-auto flex h-[calc(100svh-6.25rem)] w-full min-w-0 max-w-[1100px] overflow-hidden rounded-[10px] border border-border bg-card md:h-[calc(100svh-3.5rem)]">
+  <aside class="flex w-full min-w-0 flex-col border-r border-border md:w-[clamp(220px,32%,320px)] md:shrink-0 {to ? 'hidden md:flex' : ''}">
     <Tabs.Root bind:value={box} class="border-b border-border p-2">
       <Tabs.List aria-label="Messages" class="h-auto w-auto gap-1 bg-transparent p-0">
         <Tabs.Trigger value="chats" class="h-8 flex-none rounded-[8px] after:hidden data-[state=active]:bg-muted data-[state=active]:shadow-none">Chats</Tabs.Trigger>

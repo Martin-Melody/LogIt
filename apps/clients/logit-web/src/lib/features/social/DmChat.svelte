@@ -319,7 +319,7 @@
   const time = (ms: number) => new Date(ms).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
 </script>
 
-<div class="flex min-h-0 flex-1 flex-col">
+<div class="flex min-h-0 min-w-0 flex-1 flex-col">
   {#if chat}
     <header class="flex items-center gap-3 border-b border-border px-4 py-3">
       {#if group}

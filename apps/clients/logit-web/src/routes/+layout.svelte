@@ -229,7 +229,7 @@
       tier={apiClient.getUser()?.tier ?? "Free"}
       onLogout={logout}
     />
-    <Sidebar.Inset class="min-h-svh">
+    <Sidebar.Inset class="min-h-svh min-w-0">
       <header class="flex h-11 shrink-0 items-center gap-2 border-b border-border px-3 md:hidden">
         <Sidebar.Trigger class="-ml-1" />
         <span class="text-sm font-medium">{pageTitle}</span>

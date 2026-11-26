@@ -513,7 +513,7 @@
           bind:value={draft}
           rows={1}
           maxlength={2000}
-          placeholder={staged.current ? "Add a caption…" : `Message ${name}…`}
+          placeholder={staged.current ? "Add a caption…" : group ? "Message the group…" : `Message ${name.split(" ")[0]}…`}
           aria-label="Message {name}"
           class="max-h-32 min-h-10 py-2.5 text-[15px]"
           onkeydown={(e: KeyboardEvent) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }}

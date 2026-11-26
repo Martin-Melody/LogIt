@@ -11,6 +11,6 @@
 </script>
 
 <span bind:this={el} class="whitespace-pre-wrap break-words {fold && !open ? 'line-clamp-6' : 'block'}">{text}</span>
-{#if long && !open}
-  <button type="button" class="-mx-1 mt-0.5 min-h-8 px-1 text-left font-semibold" onclick={(e) => { e.stopPropagation(); open = true; }}>Show more</button>
+{#if long}
+  <button type="button" class="-mx-1 mt-0.5 min-h-8 px-1 text-left font-semibold" onclick={(e) => { e.stopPropagation(); open = !open; }}>{open ? "Show less" : "Show more"}</button>
 {/if}

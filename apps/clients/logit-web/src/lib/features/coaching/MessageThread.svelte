@@ -192,7 +192,7 @@
 </script>
 
 <div class="flex min-h-0 flex-1 flex-col">
-  <div bind:this={listEl} role="log" aria-label="Messages" class="relative flex flex-1 flex-col gap-1.5 overflow-y-auto {compact ? 'max-h-72' : 'min-h-[360px] max-h-[60vh]'} py-1"
+  <div bind:this={listEl} role="log" aria-label="Messages" class="relative flex flex-1 flex-col gap-1.5 overflow-y-auto {compact ? 'max-h-72' : 'min-h-[320px] max-h-[max(360px,calc(100svh-20rem))]'} py-1"
     ondragover={(e) => { if (e.dataTransfer?.types.includes("Files")) { e.preventDefault(); dragging = true; } }}
     ondragleave={() => (dragging = false)}
     ondrop={(e) => { dragging = false; const f = imageFrom(e.dataTransfer); if (f) { e.preventDefault(); void staged.stage(f); } }}>

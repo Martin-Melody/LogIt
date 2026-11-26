@@ -10,7 +10,7 @@
 </script>
 
 <div class="flex flex-col gap-2 rounded-[10px] border border-border bg-card px-[18px] py-3.5">
-  <span class="flex items-center gap-1.5 text-xs text-muted-foreground"><MessageCircleIcon class="size-3.5" />Forum · {#if post.author}<ProfileHoverCard username={post.author.username} class="font-medium text-foreground hover:underline">{post.author.displayName || post.author.username}</ProfileHoverCard>{:else}Someone{/if} posted{post.group ? ` in ${post.group.name}` : ""}</span>
+  <p class="flex items-start gap-1.5 text-xs leading-5 text-muted-foreground"><MessageCircleIcon class="mt-[3px] size-3.5 shrink-0" /><span class="min-w-0">Forum · {#if post.author}<ProfileHoverCard username={post.author.username} class="font-medium text-foreground hover:underline">{post.author.displayName || post.author.username}</ProfileHoverCard>{:else}Someone{/if} posted{post.group ? ` in ${post.group.name}` : ""}</span></p>
   <a href="/social/forum/{post.id}" class="flex flex-col gap-1.5 rounded-lg border border-border px-3.5 py-3 hover:bg-muted/40">
     <span class="text-base font-semibold">{post.title}</span>
     {#if post.body}<span class="line-clamp-2 text-sm text-muted-foreground">{post.body}</span>{/if}

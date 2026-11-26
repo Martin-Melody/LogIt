@@ -9,11 +9,12 @@
 </script>
 
 <div class="flex flex-col gap-2 px-4 py-3">
-  <span class="flex items-center gap-1.5 text-[12px] text-muted-foreground">
-    <MessageCircle class="size-3.5" />Forum ·
-    {#if post.author}<a href="/social/{post.author.username}" class="flex min-h-8 items-center font-medium text-foreground no-underline">{post.author.displayName || post.author.username}</a>{:else}Someone{/if}
-    posted{post.group ? ` in ${post.group.name}` : ""} · {shortAgo(post.createdAtMs, Date.now())}
-  </span>
+  <!-- One line of text that wraps like a sentence (a flex row split it into columns). -->
+  <p class="flex items-start gap-1.5 text-[12px] leading-5 text-muted-foreground">
+    <MessageCircle class="mt-[3px] size-3.5 shrink-0" />
+    <span class="min-w-0">Forum · {#if post.author}<a href="/social/{post.author.username}" class="-my-2 inline-block py-2 font-medium text-foreground no-underline">{post.author.displayName || post.author.username}</a>{:else}Someone{/if}
+    posted{post.group ? ` in ${post.group.name}` : ""} · {shortAgo(post.createdAtMs, Date.now())}</span>
+  </p>
   <a href="/social/forum/{post.id}" class="flex flex-col gap-1.5 rounded-xl border border-border bg-card px-3.5 py-3 text-inherit no-underline active:bg-muted/50">
     <span class="text-[16px] font-semibold leading-snug">{post.title}</span>
     {#if post.body}<span class="line-clamp-2 text-[13px] leading-snug text-muted-foreground">{post.body}</span>{/if}

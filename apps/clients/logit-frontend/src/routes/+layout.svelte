@@ -78,6 +78,9 @@
 
   onNavigate((navigation) => {
     if (!document.startViewTransition) return;
+    // Same page, only the query changed (Feed's Following/Discover/Forum): no cross-fade,
+    // or the whole screen, header and avatars included, flickers on every tab tap.
+    if (navigation.from && navigation.to && navigation.from.url.pathname === navigation.to.url.pathname) return;
 
     // Between two bar pages the page slides the way the bar goes; anything else cross-fades.
     const dir =
