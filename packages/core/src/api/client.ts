@@ -514,10 +514,20 @@ class ApiClient {
     await this.fetch(`/auth/sessions/${id}`, { method: "DELETE" });
   }
 
-  async deleteAccount(password: string): Promise<void> {
+  /** What deleting this account would end: the people it coaches and its coaches. */
+  async getAccountClosing(): Promise<AccountClosing> {
+    return this.fetch<AccountClosing>("/auth/account/coaching");
+  }
+
+  /**
+   * Deletes the account. A coach with clients can say what to refund (default: the days
+   * paid for and not used) and leave a message for every client. Answers 409 when Stripe
+   * couldn't stop someone's plan: nothing is deleted then.
+   */
+  async deleteAccount(password: string, closing?: AccountClosingChoice): Promise<void> {
     await this.fetch("/auth/account", {
       method: "DELETE",
-      body: JSON.stringify({ password }),
+      body: JSON.stringify({ password, ...closing }),
     });
     this.tokens = null;
     this.clearUser();
@@ -746,4 +756,40 @@ export function withToken(token: string): ApiFetcher {
         headers: { ...(init.headers as Record<string, string>), Authorization: `Bearer ${token}` },
       }),
   };
+}
+
+/** One client of a coach who is deleting their account (see getAccountClosing). */
+export interface ClosingClient {
+  relationshipId: string;
+  name: string;
+  username: string;
+  /** paid | failed | unpaid | elsewhere | none */
+  state: string;
+  currency: string;
+  lastPaidCents: number;
+  lastPaidAtMs: number | null;
+  paidUntilMs: number | null;
+  /** The share of the last payment for the time not used yet. */
+  unusedCents: number;
+}
+
+export interface ClosingCoach {
+  relationshipId: string;
+  name: string;
+  username: string;
+  state: string;
+  paidUntilMs: number | null;
+}
+
+export interface AccountClosing {
+  nowMs: number;
+  clients: ClosingClient[];
+  coaches: ClosingCoach[];
+}
+
+export interface AccountClosingChoice {
+  refunds?: "unused" | "full" | "none";
+  /** Exact amounts per client, keyed by relationship id; overrides `refunds` for them. */
+  refundCents?: Record<string, number>;
+  message?: string;
 }

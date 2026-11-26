@@ -331,6 +331,8 @@ public class CoachPaymentTests : IAsyncLifetime
             Cancelled.Add(subscriptionId);
             return Task.CompletedTask;
         }
+        public Task<StripeRefund> RefundAsync(string accountId, string paymentRef, long amountCents, string idempotencyKey, CancellationToken ct) =>
+            Task.FromResult(new StripeRefund("re_1", "succeeded"));
     }
 
     private class FakeEmail : IEmailSender

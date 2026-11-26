@@ -358,7 +358,7 @@ public static class CoachEndpoints
     }
 
     private static async Task<IResult> RevokeRelationship(
-        Guid relationshipId, ClaimsPrincipal caller, AppDbContext db, CoachPaymentService payments, CancellationToken ct)
+        Guid relationshipId, ClaimsPrincipal caller, AppDbContext db, CoachingEnd coaching, CancellationToken ct)
     {
         var userId = caller.GetUserId();
         var relationship = await db.CoachClientRelationships.FirstOrDefaultAsync(r =>
@@ -380,11 +380,9 @@ public static class CoachEndpoints
             if (asker != userId) return Results.NotFound();
         }
 
-        relationship.Status = CoachClientStatus.Revoked;
-        relationship.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync(ct);
         // No more charges once coaching has ended, whoever ended it.
-        await payments.CoachingEndedAsync(relationship, DateTime.UtcNow, ct);
+        var reason = relationship.CoachId == userId ? EndReason.CoachEnded : EndReason.ClientStopped;
+        await coaching.EndAsync(relationship, reason, RefundRule.None, DateTime.UtcNow, ct);
 
         return Results.NoContent();
     }

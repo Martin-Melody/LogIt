@@ -12,7 +12,12 @@ public record LoginRequest(string UsernameOrEmail, string Password, bool AskBefo
 public record RefreshRequest(string RefreshToken);
 public record RevokeRequest(string RefreshToken);
 public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
-public record DeleteAccountRequest(string? Password);
+/// For a coach with clients (older apps send only the password, which means the defaults):
+/// Refunds = "unused" (the days paid for and not used, the default), "full" (each client's
+/// last payment) or "none"; RefundCents = an exact amount per client, keyed by relationship
+/// id, overriding Refunds for them; Message = a note that goes in the email to every client.
+public record DeleteAccountRequest(
+    string? Password, string? Refunds = null, Dictionary<Guid, long>? RefundCents = null, string? Message = null);
 public record ForgotPasswordRequest(string Email);
 public record ResetPasswordRequest(string Token, string NewPassword);
 

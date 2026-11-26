@@ -1,9 +1,7 @@
 <script lang="ts">
   import { DOCS_BASE } from "$lib/features/guide/docs";
-  import { goto } from "$app/navigation";
   import { apiClient, ApiError, type BillingStatus } from "@logit/core/api/client";
   import * as Card from "$lib/components/ui/card";
-  import * as AlertDialog from "$lib/components/ui/alert-dialog";
   import * as Alert from "$lib/components/ui/alert";
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
@@ -11,6 +9,7 @@
   import { toast } from "$lib/components/ui/sonner";
   import { planCardModel, type PlanAction } from "@logit/core/api/planCard";
   import SignedInSessions from "$lib/features/auth/SignedInSessions.svelte";
+  import DeleteAccountDialog from "$lib/features/auth/DeleteAccountDialog.svelte";
 
   const user = $derived(apiClient.getUser());
   const isSelfHosted = apiClient.isSelfHosted();
@@ -100,29 +99,6 @@
 
   // --- Delete account ---
   let deleteOpen = $state(false);
-  let deleting = $state(false);
-  let deletePassword = $state("");
-  let deleteError = $state<string | null>(null);
-
-  $effect(() => {
-    if (!deleteOpen) {
-      deletePassword = "";
-      deleteError = null;
-    }
-  });
-
-  async function deleteAccount() {
-    if (!deletePassword) return;
-    deleting = true;
-    deleteError = null;
-    try {
-      await apiClient.deleteAccount(deletePassword);
-      await goto("/login");
-    } catch (e) {
-      deleteError = e instanceof ApiError ? e.message : "Couldn't delete your account.";
-      deleting = false;
-    }
-  }
 </script>
 
 <div class="max-w-[760px] mx-auto flex flex-col gap-4">
@@ -198,20 +174,9 @@
       <Card.Title class="text-destructive">Danger zone</Card.Title>
     </Card.Header>
     <Card.Content class="pt-0 pb-3">
-      <AlertDialog.Root bind:open={deleteOpen}>
-        <AlertDialog.Trigger>
-          {#snippet child({ props })}
-            <Button {...props} variant="outline" size="sm">Delete account</Button>
-          {/snippet}
-        </AlertDialog.Trigger>
-        <AlertDialog.Content>
-          <AlertDialog.Header>
-            <AlertDialog.Title>Delete your account?</AlertDialog.Title>
-            <AlertDialog.Description>
-              This permanently deletes the account for @{user?.username} and all its synced data.
-              This can't be undone.
-            </AlertDialog.Description>
-          </AlertDialog.Header>
+      <Button variant="outline" size="sm" onclick={() => (deleteOpen = true)}>Delete account</Button>
+      <DeleteAccountDialog bind:open={deleteOpen} username={user?.username}>
+        {#snippet playWarning()}
           {#if paysThroughPlay}
             <Alert.Root class="border-warning/40 bg-warning/10">
               <Alert.Description class="text-foreground">
@@ -221,29 +186,8 @@
               </Alert.Description>
             </Alert.Root>
           {/if}
-          <Input
-            type="password"
-            placeholder="Confirm your password"
-            autocomplete="current-password"
-            bind:value={deletePassword}
-          />
-          {#if deleteError}
-            <Alert.Root variant="destructive">
-              <Alert.Description>{deleteError}</Alert.Description>
-            </Alert.Root>
-          {/if}
-          <AlertDialog.Footer>
-            <AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
-            <Button
-              variant="destructive"
-              disabled={deleting || !deletePassword}
-              onclick={() => void deleteAccount()}
-            >
-              {deleting ? "Deleting…" : "Yes, delete this account"}
-            </Button>
-          </AlertDialog.Footer>
-        </AlertDialog.Content>
-      </AlertDialog.Root>
+        {/snippet}
+      </DeleteAccountDialog>
     </Card.Content>
   </Card.Root>
 </div>

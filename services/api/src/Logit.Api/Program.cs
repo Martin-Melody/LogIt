@@ -107,6 +107,7 @@ builder.Services.AddHostedService<SubscriptionSweeper>();
 // Coach payments: coaches' own Stripe accounts (Connect), see Features/Coach/Payments.
 builder.Services.AddSingleton<Logit.Api.Features.Coach.Payments.ICoachStripe, Logit.Api.Features.Coach.Payments.CoachStripe>();
 builder.Services.AddScoped<Logit.Api.Features.Coach.Payments.CoachPaymentService>();
+builder.Services.AddScoped<Logit.Api.Features.Coach.CoachingEnd>();
 builder.Services.AddHostedService<Logit.Api.Features.Coach.Payments.CoachPaymentSweeper>();
 // Push notifications: Firebase with this server's own key, else (self-hosted) the relay through
 // getlogit.app, which an admin turns on in the console.

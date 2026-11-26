@@ -49,8 +49,25 @@ see [Move to another server](#move-to-another-server).
 
 ## Delete your account
 
-On the web, open Account (the card at the bottom of the sidebar) and choose Delete account. You'll be
-asked for your password. Everything stored on the server goes, including your posts and, for coaches,
-any sample clients. What's on your phone stays on your phone.
+On the web, open Account (the card at the bottom of the sidebar) and choose Delete account. In the app
+it's at the bottom of Settings › Account. You'll be asked for your password. Everything stored on the
+server goes, including your posts and, for coaches, any sample clients. What's on your phone stays on
+your phone.
+
+**If you're coached**, your plan with your coach stops first, so you aren't charged again, and your coach
+gets an email saying you closed your account. LogIt doesn't refund the time you've already paid for;
+if you'd like money back, ask your coach before you delete.
+
+**If you coach people**, their coaching ends first:
+
+- Every plan through LogIt stops, so no client is charged again. If Stripe can't be reached, nothing is
+  deleted and you can try again.
+- You choose the refunds: the days each client has paid for and won't get (the default), each client's
+  last payment in full, or an amount per client (on the web). Refunds come out of your Stripe balance. If
+  Stripe can't make one, for example because your balance is empty, nothing is deleted and you're told who.
+- You can add a message. It goes in the email that tells each client their coaching has ended. Their
+  programs, meal plans and history stay with them.
+
+Your Stripe account itself isn't deleted: it's yours, outside LogIt.
 
 <CanCant ids={["account"]} />

@@ -21,6 +21,9 @@ public interface ICoachStripe
     Task<string> CreateBillingPortalAsync(string accountId, string customerId, string returnUrl, CancellationToken ct);
     Task SetCancelAtPeriodEndAsync(string accountId, string subscriptionId, bool cancel, CancellationToken ct);
     Task CancelNowAsync(string accountId, string subscriptionId, CancellationToken ct);
+    /// Give back part of a payment. `paymentRef` is what a receipt stores: the invoice or the
+    /// checkout session the money came from. `idempotencyKey` makes a retry return the same refund.
+    Task<StripeRefund> RefundAsync(string accountId, string paymentRef, long amountCents, string idempotencyKey, CancellationToken ct);
 }
 
 public record ConnectAccountStatus(bool CardPaymentsActive, bool RequirementsDue, string? DisplayName, string? Currency);
@@ -48,6 +51,10 @@ public record CheckoutInfo(
     long AmountTotal,
     string Currency,
     IReadOnlyDictionary<string, string> Metadata);
+
+/// Status is Stripe's: "succeeded", "pending" (waiting for money in the coach's balance),
+/// "failed" or "canceled".
+public record StripeRefund(string Id, string Status);
 
 public record StripeSubscriptionInfo(string Id, string Status, bool CancelAtPeriodEnd, DateTime? PeriodEnd);
 
@@ -212,4 +219,34 @@ public class CoachStripe(IConfiguration config) : ICoachStripe
 
     public Task CancelNowAsync(string accountId, string subscriptionId, CancellationToken ct) =>
         Client.V1.Subscriptions.CancelAsync(subscriptionId, null, On(accountId), ct);
+
+    public async Task<StripeRefund> RefundAsync(
+        string accountId, string paymentRef, long amountCents, string idempotencyKey, CancellationToken ct)
+    {
+        var intent = await PaymentIntentForAsync(accountId, paymentRef, ct)
+            ?? throw new InvalidOperationException($"Stripe has no card payment for {paymentRef}.");
+        // A direct charge lives on the coach's account, so the refund is made there and comes
+        // out of the coach's Stripe balance (Stripe's docs: "Issue refunds" for direct charges).
+        var refund = await Client.V1.Refunds.CreateAsync(
+            new RefundCreateOptions { PaymentIntent = intent, Amount = amountCents },
+            new RequestOptions { StripeAccount = accountId, IdempotencyKey = idempotencyKey }, ct);
+        return new StripeRefund(refund.Id, refund.Status);
+    }
+
+    /// The payment behind a receipt: a one-off checkout has its own payment intent; a monthly
+    /// one is paid through an invoice, whose payments list holds it.
+    private async Task<string?> PaymentIntentForAsync(string accountId, string paymentRef, CancellationToken ct)
+    {
+        var invoiceId = paymentRef;
+        if (paymentRef.StartsWith("cs_", StringComparison.Ordinal))
+        {
+            var session = await Client.V1.Checkout.Sessions.GetAsync(paymentRef, null, On(accountId), ct);
+            if (session.PaymentIntentId is { Length: > 0 } direct) return direct;
+            if (session.InvoiceId is not { Length: > 0 } fromSession) return null;
+            invoiceId = fromSession;
+        }
+        var payments = await Client.V1.InvoicePayments.ListAsync(
+            new InvoicePaymentListOptions { Invoice = invoiceId }, On(accountId), ct);
+        return payments.Data.FirstOrDefault(p => p.Status == "paid")?.Payment?.PaymentIntentId;
+    }
 }

@@ -1,4 +1,4 @@
-import { apiClient, type AuthUser } from "@logit/core/api/client";
+import { apiClient, type AccountClosingChoice, type AuthUser } from "@logit/core/api/client";
 import { getServerMode } from "@logit/core/api/serverConfig";
 import { isNativePlatform } from "$lib/platform/isNative";
 import { getActiveOwnerId, setActiveOwnerId, loadActiveOwnerId, onActiveOwnerChange } from "$lib/data/activeOwner";
@@ -401,12 +401,13 @@ function createAuthStore() {
     await openNextAccount();
   }
 
-  async function deleteAccount(password = "") {
+  async function deleteAccount(password = "", closing?: AccountClosingChoice) {
     // 1. Delete from server if online. This now requires the account password — let a
-    // failure (wrong password, offline) propagate so we DON'T wipe local data while the
-    // server account is still alive. The caller surfaces the error.
+    // failure (wrong password, offline, Stripe couldn't stop a client's plan) propagate so
+    // we DON'T wipe local data while the server account is still alive. The caller surfaces
+    // the error.
     if (user) {
-      await apiClient.deleteAccount(password);
+      await apiClient.deleteAccount(password, closing);
     }
     user = null;
     stopBackgroundSync();

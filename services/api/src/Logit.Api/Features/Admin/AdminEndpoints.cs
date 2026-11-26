@@ -586,6 +586,10 @@ public static class AdminEndpoints
         if (await IsLastAdminAsync(db, user))
             return Results.Conflict(new { error = "This is the only admin. Make someone else an admin first." });
         var (to, username) = (user.Email, user.Username);
+        var stuck = await http.RequestServices.GetRequiredService<Coach.CoachingEnd>()
+            .EndAllForAccountAsync(user, Coach.AccountRefunds.Unused, null, DateTime.UtcNow, http.RequestAborted);
+        if (stuck.Count > 0)
+            return Results.Conflict(new { error = $"Stripe couldn't stop the payments for {string.Join(", ", stuck)}. Nothing was deleted; try again." });
         await AdminLog.ForgetAsync(db, user.Id);
         await Sandbox.SandboxEndpoints.RemoveAllAsync(db, user.Id);
         await Social.GroupEndpoints.ForgetAsync(db, http.RequestServices.GetRequiredService<Logit.Api.Features.Photos.IPhotoStore>(), user.Id);
