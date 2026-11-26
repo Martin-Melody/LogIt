@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as NativeSelect from "$lib/components/ui/native-select/index.js";
   import type { Equipment, Exercise, ExerciseType, MuscleGroup } from "@logit/core/domain/exercise";
   import { EQUIPMENT } from "@logit/core/domain/exercise";
   import type { CardioActivity, CardioMeasure } from "@logit/core/domain/cardioActivity";
@@ -149,10 +150,10 @@
       {#if entry.kind === "strength"}
         <div>
           <label class={label} for="li-eq">Equipment</label>
-          <select id="li-eq" class={input} bind:value={equipment}>
-            <option value="">Not set</option>
-            {#each EQUIPMENT as e (e)}<option value={e}>{capitalise(EQUIPMENT_LABEL[e])}</option>{/each}
-          </select>
+          <NativeSelect.Root id="li-eq" class="w-full" bind:value={equipment}>
+            <NativeSelect.Option value="">Not set</NativeSelect.Option>
+            {#each EQUIPMENT as e (e)}<NativeSelect.Option value={e}>{capitalise(EQUIPMENT_LABEL[e])}</NativeSelect.Option>{/each}
+          </NativeSelect.Root>
         </div>
         <!-- Its own row: three words don't fit a third of the panel ("Bodyweight" spilled out). -->
         <div class="col-span-full">
@@ -174,9 +175,9 @@
       {:else}
         <div>
           <label class={label} for="li-area">Body area</label>
-          <select id="li-area" class={input} bind:value={area}>
-            {#each MOBILITY_AREAS as a (a)}<option value={a}>{capitalise(MOBILITY_AREA_LABEL[a])}</option>{/each}
-          </select>
+          <NativeSelect.Root id="li-area" class="w-full" bind:value={area}>
+            {#each MOBILITY_AREAS as a (a)}<NativeSelect.Option value={a}>{capitalise(MOBILITY_AREA_LABEL[a])}</NativeSelect.Option>{/each}
+          </NativeSelect.Root>
         </div>
         <div>
           <span class={label}>Measured by</span>

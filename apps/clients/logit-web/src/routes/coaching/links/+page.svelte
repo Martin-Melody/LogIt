@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as NativeSelect from "$lib/components/ui/native-select/index.js";
   import SampleBadge from "$lib/features/guide/SampleBadge.svelte";
   import { guideSignal } from "$lib/features/guide/signal";
   import { onSampleActivity } from "$lib/features/guide/sandbox.svelte";
@@ -188,19 +189,19 @@
               <input bind:value={name} required maxlength="80" placeholder="Instagram bio" class="h-9 rounded-[9px] border border-input bg-background px-2.5 text-[13px] text-foreground" />
             </label>
             <label class="flex flex-[1_1_140px] flex-col gap-1.5 text-xs font-medium text-muted-foreground">Stops working
-              <select bind:value={expires} class="h-9 rounded-[9px] border border-input bg-background px-2 text-[13px] text-foreground">
-                <option value="">Never</option><option value="7">In 7 days</option><option value="30">In 30 days</option><option value="90">In 90 days</option>
-              </select>
+              <NativeSelect.Root bind:value={expires}>
+                <NativeSelect.Option value="">Never</NativeSelect.Option><NativeSelect.Option value="7">In 7 days</NativeSelect.Option><NativeSelect.Option value="30">In 30 days</NativeSelect.Option><NativeSelect.Option value="90">In 90 days</NativeSelect.Option>
+              </NativeSelect.Root>
             </label>
             <label class="flex flex-[1_1_120px] flex-col gap-1.5 text-xs font-medium text-muted-foreground">Max people
               <input bind:value={maxUses} inputmode="numeric" placeholder="No limit" class="h-9 rounded-[9px] border border-input bg-background px-2.5 text-[13px] text-foreground" />
             </label>
             {#if paymentsReady && packages.length}
               <label class="flex flex-[1_1_180px] flex-col gap-1.5 text-xs font-medium text-muted-foreground">They pay for
-                <select bind:value={packageId} class="h-9 rounded-[9px] border border-input bg-background px-2 text-[13px] text-foreground">
-                  <option value="">Nothing (free link)</option>
-                  {#each packages as p (p.id)}<option value={p.id}>{p.name} · {priceText(p)}</option>{/each}
-                </select>
+                <NativeSelect.Root bind:value={packageId}>
+                  <NativeSelect.Option value="">Nothing (free link)</NativeSelect.Option>
+                  {#each packages as p (p.id)}<NativeSelect.Option value={p.id}>{p.name} · {priceText(p)}</NativeSelect.Option>{/each}
+                </NativeSelect.Root>
               </label>
             {/if}
             <button type="submit" disabled={creating || !name.trim()} class="h-9 rounded-[9px] bg-primary px-3.5 text-[13px] font-semibold text-primary-foreground disabled:opacity-50">Create link</button>
@@ -229,11 +230,11 @@
                     <td class="whitespace-nowrap px-3 py-3 {live ? '' : 'text-muted-foreground'}">{peopleText(l)}</td>
                     <td class="px-3 py-3">
                       {#if live && paymentsReady && packages.length}
-                        <select value={l.packageId ?? ""} onchange={(e) => changePackage(l, e.currentTarget.value)} aria-label="What people pay for through {l.name}"
+                        <NativeSelect.Root value={l.packageId ?? ""} onchange={(e) => changePackage(l, e.currentTarget.value)} aria-label="What people pay for through {l.name}"
                           class="h-[30px] max-w-[200px] rounded-lg border border-input bg-background px-1.5 text-xs">
-                          <option value="">Free</option>
-                          {#each packages as p (p.id)}<option value={p.id}>{p.name}</option>{/each}
-                        </select>
+                          <NativeSelect.Option value="">Free</NativeSelect.Option>
+                          {#each packages as p (p.id)}<NativeSelect.Option value={p.id}>{p.name}</NativeSelect.Option>{/each}
+                        </NativeSelect.Root>
                       {:else}
                         <span class="text-muted-foreground">{l.packageName ?? "Free"}</span>
                       {/if}

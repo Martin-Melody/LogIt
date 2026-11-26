@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as NativeSelect from "$lib/components/ui/native-select/index.js";
   import { photoSrc } from "@logit/core/api/photosApi";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
@@ -259,14 +260,14 @@
         <Sidebar.GroupLabel class="uppercase tracking-wider text-[11px]">A client's training</Sidebar.GroupLabel>
         <Sidebar.GroupContent>
           <label for="client-training" class="sr-only">Open a client's training</label>
-          <select id="client-training"
-            class="h-9 w-full rounded-md border border-sidebar-border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+          <NativeSelect.Root size="sm" id="client-training"
+            class="w-full"
             value="" onchange={viewClientTraining}>
-            <option value="">Choose a client…</option>
+            <NativeSelect.Option value="">Choose a client…</NativeSelect.Option>
             {#each viewingClient.clients as c (c.relationshipId)}
-              <option value={c.client.id}>{c.client.displayName || c.client.username}</option>
+              <NativeSelect.Option value={c.client.id}>{c.client.displayName || c.client.username}</NativeSelect.Option>
             {/each}
-          </select>
+          </NativeSelect.Root>
         </Sidebar.GroupContent>
       </Sidebar.Group>
     {/if}

@@ -8,6 +8,17 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Newer shadcn-svelte components style states as data-open:, data-checked: and so on, but bits-ui
+   marks them as data-state="open" / data-orientation="horizontal". These map one onto the other,
+   so components added with the shadcn-svelte CLI work without rewriting their classes. */
+@custom-variant data-open (&:is([data-state="open"], [data-open]:not([data-open="false"])));
+@custom-variant data-closed (&:is([data-state="closed"], [data-closed]:not([data-closed="false"])));
+@custom-variant data-checked (&:is([data-state="checked"], [data-checked]:not([data-checked="false"])));
+@custom-variant data-unchecked (&:is([data-state="unchecked"], [data-unchecked]:not([data-unchecked="false"])));
+@custom-variant data-active (&:is([data-state="active"], [data-active]:not([data-active="false"])));
+@custom-variant data-horizontal (&:is([data-orientation="horizontal"], [data-horizontal]));
+@custom-variant data-vertical (&:is([data-orientation="vertical"], [data-vertical]));
+
 @font-face {
   font-family: "Inter";
   src: url("../fonts/Inter-VariableFont_opsz,wght.ttf") format("truetype");

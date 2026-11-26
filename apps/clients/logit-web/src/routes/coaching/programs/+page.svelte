@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as NativeSelect from "$lib/components/ui/native-select/index.js";
   import { guideSignal } from "$lib/features/guide/signal";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
@@ -220,9 +221,9 @@
       <Dialog.Description>The client gets their own copy. Percent loads use their own lifts.</Dialog.Description>
     </Dialog.Header>
     <label class="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground">Client
-      <select bind:value={assignTo} class="h-9 rounded-[9px] border border-input bg-background px-2 text-[13px] text-foreground">
-        {#each clients as c (c.client.id)}<option value={c.client.id}>{c.client.displayName || c.client.username}</option>{/each}
-      </select>
+      <NativeSelect.Root bind:value={assignTo}>
+        {#each clients as c (c.client.id)}<NativeSelect.Option value={c.client.id}>{c.client.displayName || c.client.username}</NativeSelect.Option>{/each}
+      </NativeSelect.Root>
     </label>
     <fieldset class="flex flex-col gap-1.5">
       <legend class="pb-1.5 text-xs font-medium text-muted-foreground">Starts</legend>

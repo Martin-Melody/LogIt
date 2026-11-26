@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as NativeSelect from "$lib/components/ui/native-select/index.js";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import * as Card from "$lib/components/ui/card";
@@ -240,9 +241,9 @@
         </div>
         <label class="flex flex-col gap-1">
           <span class="text-xs text-muted-foreground">Activity level</span>
-          <select class="h-8 rounded border border-border bg-background px-2 text-sm" bind:value={goal.activityLevel}>
-            {#each ACTIVITY as a (a.value)}<option value={a.value}>{a.label}</option>{/each}
-          </select>
+          <NativeSelect.Root size="sm" bind:value={goal.activityLevel}>
+            {#each ACTIVITY as a (a.value)}<NativeSelect.Option value={a.value}>{a.label}</NativeSelect.Option>{/each}
+          </NativeSelect.Root>
         </label>
       </Card.Content>
     </Card.Root>

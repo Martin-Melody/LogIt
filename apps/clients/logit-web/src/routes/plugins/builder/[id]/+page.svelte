@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as NativeSelect from "$lib/components/ui/native-select/index.js";
   import * as Tabs from "$lib/components/ui/tabs/index.js";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
@@ -284,9 +285,9 @@
       </div>
       <div class="flex flex-col gap-1.5">
         <label for="np-family" class="text-xs font-medium text-muted-foreground">Type</label>
-        <select id="np-family" bind:value={newFamily} class={input}>
-          {#each PLUGIN_FAMILIES as f (f)}<option value={f}>{FAMILY_LABELS[f]}</option>{/each}
-        </select>
+        <NativeSelect.Root id="np-family" bind:value={newFamily} class="w-full">
+          {#each PLUGIN_FAMILIES as f (f)}<NativeSelect.Option value={f}>{FAMILY_LABELS[f]}</NativeSelect.Option>{/each}
+        </NativeSelect.Root>
       </div>
       <div class="flex flex-col gap-1.5">
         <label for="np-id" class="text-xs font-medium text-muted-foreground">Id</label>

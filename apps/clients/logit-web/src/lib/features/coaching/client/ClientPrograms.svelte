@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as NativeSelect from "$lib/components/ui/native-select/index.js";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import * as Dialog from "$lib/components/ui/dialog";
@@ -269,11 +270,11 @@
     <section class="flex flex-col gap-2.5 rounded-[10px] border border-border bg-card px-[18px] py-4">
       <h2 class="text-sm font-semibold">Exercise swaps for {name}</h2>
       <label for="swap-rule" class="text-xs font-medium text-muted-foreground">During workouts from your programs</label>
-      <select id="swap-rule" disabled={savingRule} value={clientRule ?? ""} onchange={(e) => setRule(e.currentTarget.value)}
+      <NativeSelect.Root id="swap-rule" disabled={savingRule} value={clientRule ?? ""} onchange={(e) => setRule(e.currentTarget.value)}
         class="h-9 rounded-[9px] border border-input bg-background px-2 text-[13px]">
-        <option value="">Your default: {swapRuleLabel(defaultRule)}</option>
-        {#each SWAP_RULES as r (r.key)}<option value={r.key}>{r.label}</option>{/each}
-      </select>
+        <NativeSelect.Option value="">Your default: {swapRuleLabel(defaultRule)}</NativeSelect.Option>
+        {#each SWAP_RULES as r (r.key)}<NativeSelect.Option value={r.key}>{r.label}</NativeSelect.Option>{/each}
+      </NativeSelect.Root>
       <p class="text-xs leading-relaxed text-muted-foreground">{clientRule ? "Set differently from your default. " : ""}{RULE_NOTE[effectiveRule]}</p>
       {#if clientRule}<button type="button" disabled={savingRule} onclick={() => setRule("")} class="w-fit text-xs text-muted-foreground underline hover:text-foreground">Back to your default</button>{/if}
     </section>

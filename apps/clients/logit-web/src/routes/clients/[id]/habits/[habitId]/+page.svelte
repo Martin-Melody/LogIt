@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as NativeSelect from "$lib/components/ui/native-select/index.js";
   import { page } from "$app/state";
   import { goto } from "$app/navigation";
   import * as Card from "$lib/components/ui/card";
@@ -159,12 +160,12 @@
       <Card.Content class="pt-0 flex flex-col gap-3">
         <label class="text-sm flex items-center gap-2">
           <span class="text-muted-foreground">Cadence</span>
-          <select value={habit.cadence.kind} class="rounded border bg-background px-2 py-1 text-sm"
+          <NativeSelect.Root value={habit.cadence.kind}
             onchange={(e) => void setCadence(e.currentTarget.value as HabitCadence["kind"])}>
-            <option value="daily">Every day</option>
-            <option value="days">Specific days</option>
-            <option value="weekly">Times per week</option>
-          </select>
+            <NativeSelect.Option value="daily">Every day</NativeSelect.Option>
+            <NativeSelect.Option value="days">Specific days</NativeSelect.Option>
+            <NativeSelect.Option value="weekly">Times per week</NativeSelect.Option>
+          </NativeSelect.Root>
         </label>
 
         {#if habit.cadence.kind === "days"}

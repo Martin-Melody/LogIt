@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as NativeSelect from "$lib/components/ui/native-select/index.js";
   import GripVerticalIcon from "@lucide/svelte/icons/grip-vertical";
   import { flip } from "svelte/animate";
   import { createReorder, SLIDE_MS } from "$lib/reorder.svelte";
@@ -306,11 +307,11 @@
           {#if byWeekday}
             <div class="flex flex-col gap-1.5">
               <label for="day-weekday" class="text-xs text-muted-foreground">Day</label>
-              <select id="day-weekday" value={String(day.weekday ?? "")} onchange={(e) => setWeekday(e.currentTarget.value)}
+              <NativeSelect.Root id="day-weekday" value={String(day.weekday ?? "")} onchange={(e) => setWeekday(e.currentTarget.value)}
                 class="h-9 w-36 rounded-lg border border-input bg-background px-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-ring">
-                {#if day.weekday == null}<option value="" disabled>Pick a day</option>{/if}
-                {#each WEEKDAYS as w (w.n)}<option value={String(w.n)}>{w.label}</option>{/each}
-              </select>
+                {#if day.weekday == null}<NativeSelect.Option value="" disabled>Pick a day</NativeSelect.Option>{/if}
+                {#each WEEKDAYS as w (w.n)}<NativeSelect.Option value={String(w.n)}>{w.label}</NativeSelect.Option>{/each}
+              </NativeSelect.Root>
             </div>
           {:else if !isFirst}
             <label class="flex h-9 items-center gap-2 text-[13px]">
@@ -423,11 +424,11 @@
                             onchange={(e) => { const n = num(e.currentTarget.value); editDay((d) => setPlannedGroupSettings(d, g.id, { roundRestMs: n == null ? null : n * 1000 })); }} />
                           {#if run.members.length === 2}
                             <label for="kind-{g.id}" class="sr-only">Kind</label>
-                            <select id="kind-{g.id}" value={kind}
+                            <NativeSelect.Root id="kind-{g.id}" value={kind}
                               onchange={(e) => { const k = e.currentTarget.value as "superset" | "circuit"; editDay((d) => setPlannedGroupKind(d, g.id, k)); }}
                               class="h-7 rounded-md border border-input bg-background px-1.5 text-xs">
-                              <option value="superset">Superset</option><option value="circuit">Circuit</option>
-                            </select>
+                              <NativeSelect.Option value="superset">Superset</NativeSelect.Option><NativeSelect.Option value="circuit">Circuit</NativeSelect.Option>
+                            </NativeSelect.Root>
                           {/if}
                           <span class="flex-1"></span>
                           <button type="button" onclick={() => editDay((d) => ungroupPlanned(d, g.id))} class="h-7 rounded-lg border border-border px-2.5 text-xs hover:bg-muted">Ungroup</button>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as NativeSelect from "$lib/components/ui/native-select/index.js";
   import { guideSignal } from "$lib/features/guide/signal";
   import { onMount } from "svelte";
   import { beforeNavigate } from "$app/navigation";
@@ -225,11 +226,11 @@
   {#if mode === "copy"}
     <div class="flex flex-wrap items-center gap-2 text-[13px]">
       <label for="start-mode" class="text-muted-foreground">Starts</label>
-      <select id="start-mode" class={input} value={draft.startMode === "fixed-date" ? "fixed-date" : "manual"}
+      <NativeSelect.Root size="sm" id="start-mode" value={draft.startMode === "fixed-date" ? "fixed-date" : "manual"}
         onchange={(e) => { const m = e.currentTarget.value; edit((p) => m === "fixed-date" ? P.setProgramStart(p, { mode: "fixed-date", startDateMs: p.startDateMs ?? P.startOfLocalDayMs() }) : P.setProgramStart(p, { mode: "manual" })); }}>
-        <option value="manual">When they tap Start</option>
-        <option value="fixed-date">On a date</option>
-      </select>
+        <NativeSelect.Option value="manual">When they tap Start</NativeSelect.Option>
+        <NativeSelect.Option value="fixed-date">On a date</NativeSelect.Option>
+      </NativeSelect.Root>
       {#if draft.startMode === "fixed-date"}
         <input type="date" aria-label="Start date" class={input} value={draft.startDateMs != null ? P.toDateInputValue(draft.startDateMs) : ""}
           onchange={(e) => { const ms = P.fromDateInputValue(e.currentTarget.value); if (ms != null) edit((p) => P.setProgramStart(p, { mode: "fixed-date", startDateMs: ms })); }} />
@@ -248,11 +249,11 @@
     </div>
     <span class="flex flex-wrap items-center gap-2">
       <label for="copy-week" class="sr-only">Copy this week to</label>
-      <select id="copy-week" bind:value={copyTo} onchange={copyWeek} class="h-[30px] rounded-lg border border-border bg-background px-2 text-xs">
-        <option value="">Copy week {week?.weekNumber} to…</option>
-        {#each weeks.filter((w) => w.id !== week?.id) as w (w.id)}<option value={w.id}>Week {w.weekNumber} (replaces it)</option>{/each}
-        <option value="__new">A new week at the end</option>
-      </select>
+      <NativeSelect.Root size="sm" id="copy-week" bind:value={copyTo} onchange={copyWeek}>
+        <NativeSelect.Option value="">Copy week {week?.weekNumber} to…</NativeSelect.Option>
+        {#each weeks.filter((w) => w.id !== week?.id) as w (w.id)}<NativeSelect.Option value={w.id}>Week {w.weekNumber} (replaces it)</NativeSelect.Option>{/each}
+        <NativeSelect.Option value="__new">A new week at the end</NativeSelect.Option>
+      </NativeSelect.Root>
       <button type="button" onclick={addDay} class="h-[30px] rounded-lg border border-border px-2.5 text-xs hover:bg-muted">+ Day</button>
       {#if weeks.length > 1}<button type="button" onclick={removeWeek} class="h-[30px] rounded-lg border border-border px-2.5 text-xs text-destructive hover:bg-muted">Remove week</button>{/if}
     </span>
@@ -275,11 +276,11 @@
             <input id="dayname-{day.id}" value={day.name ?? `Day ${di + 1}`} class="h-8 w-44 rounded-[7px] border border-transparent bg-transparent px-1 text-sm font-semibold hover:border-input focus:border-input"
               oninput={(e) => { const v = e.currentTarget.value; edit((p) => P.updateDay(p, week.id, day.id, { name: v })); }} />
             <label class="sr-only" for="weekday-{day.id}">Weekday</label>
-            <select id="weekday-{day.id}" class="h-8 rounded-[7px] border border-input bg-background px-1.5 text-xs" value={day.weekday ?? ""}
+            <NativeSelect.Root size="sm" id="weekday-{day.id}" value={day.weekday ?? ""}
               onchange={(e) => { const v = e.currentTarget.value; edit((p) => P.updateDay(p, week.id, day.id, { weekday: v === "" ? undefined : Number(v) })); }}>
-              <option value="">Any day</option>
-              {#each WEEKDAYS as w, i (w)}<option value={i}>{w}</option>{/each}
-            </select>
+              <NativeSelect.Option value="">Any day</NativeSelect.Option>
+              {#each WEEKDAYS as w, i (w)}<NativeSelect.Option value={i}>{w}</NativeSelect.Option>{/each}
+            </NativeSelect.Root>
           </span>
           <span class="flex gap-3">
             <button type="button" class="text-xs text-destructive hover:underline" onclick={() => { if (!day.blocks.length || confirm(`Remove ${day.name ?? "this day"}?`)) edit((p) => P.removeDay(p, week.id, day.id)); }}>Remove day</button>
@@ -349,10 +350,10 @@
                       <td class="px-2 py-1"><input aria-label="Tempo, set {si + 1}" class="{input} w-[80px]" value={set.tempo ?? ""} onchange={(e) => setField(day, block, set, "tempo", e.currentTarget.value, e.currentTarget)} /></td>
                       <td class="px-2 py-1">
                         {#if set.setType === "amrap"}<span class="text-xs text-muted-foreground">AMRAP</span>{:else}
-                          <select aria-label="Set type, set {si + 1}" class="{input} px-1" value={set.setType}
+                          <NativeSelect.Root size="sm" aria-label="Set type, set {si + 1}" value={set.setType}
                             onchange={(e) => { const v = e.currentTarget.value as SetType; edit((p) => P.updateSet(p, week.id, day.id, block.id, set.id, { setType: v })); }}>
-                            {#each setTypes as t (t.type)}<option value={t.type}>{t.label}</option>{/each}
-                          </select>
+                            {#each setTypes as t (t.type)}<NativeSelect.Option value={t.type}>{t.label}</NativeSelect.Option>{/each}
+                          </NativeSelect.Root>
                         {/if}
                       </td>
                       <td class="px-2 py-1"><button type="button" aria-label="Remove set {si + 1}" class="text-muted-foreground hover:text-destructive" onclick={() => edit((p) => P.removeSet(p, week.id, day.id, block.id, set.id))}>✕</button></td>

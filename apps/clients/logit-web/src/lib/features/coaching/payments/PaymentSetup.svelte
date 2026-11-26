@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as NativeSelect from "$lib/components/ui/native-select/index.js";
   import { untrack } from "svelte";
   import { toast } from "$lib/components/ui/sonner";
   import { coachPaymentsApi, type PackageInput } from "@logit/core/api/coachPaymentsApi";
@@ -140,9 +141,9 @@
             <span class="flex flex-col gap-0.5"><span class="text-[15px] font-semibold">Connect Stripe</span><span class="text-[13px] leading-relaxed text-muted-foreground">The money goes straight to your bank. Stripe asks for your ID and bank details, about 10 minutes. Stripe charges its normal card fees; LogIt charges nothing.</span></span>
             <div class="flex flex-wrap items-end gap-2.5">
               <label class="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground">Where your business is
-                <select bind:value={country} class="h-[38px] min-w-[200px] rounded-[9px] border border-input bg-background px-2 text-[13px] text-foreground">
-                  {#each PAYMENT_COUNTRIES as c (c.code)}<option value={c.code}>{c.name}</option>{/each}
-                </select>
+                <NativeSelect.Root bind:value={country} class="min-w-[200px]">
+                  {#each PAYMENT_COUNTRIES as c (c.code)}<NativeSelect.Option value={c.code}>{c.name}</NativeSelect.Option>{/each}
+                </NativeSelect.Root>
               </label>
               <button type="button" disabled={connecting} onclick={connect} class="h-[38px] rounded-[9px] bg-primary px-4 text-[13px] font-semibold text-primary-foreground disabled:opacity-50">{connecting ? "Opening Stripe…" : "Connect Stripe ↗"}</button>
             </div>
@@ -228,10 +229,10 @@
               <input bind:value={form.price} required inputmode="decimal" placeholder="120" class="h-9 rounded-[9px] border border-input bg-background px-2.5 text-[13px] text-foreground" />
             </label>
             <label class="flex flex-[1_1_200px] flex-col gap-1.5 text-xs font-medium text-muted-foreground">How they pay
-              <select bind:value={form.interval} class="h-9 rounded-[9px] border border-input bg-background px-2 text-[13px] text-foreground">
-                <option value="month">Every month until cancelled</option>
-                <option value="once">Once, for a set number of weeks</option>
-              </select>
+              <NativeSelect.Root bind:value={form.interval}>
+                <NativeSelect.Option value="month">Every month until cancelled</NativeSelect.Option>
+                <NativeSelect.Option value="once">Once, for a set number of weeks</NativeSelect.Option>
+              </NativeSelect.Root>
             </label>
             {#if form.interval === "once"}
               <label class="flex flex-[0_1_100px] flex-col gap-1.5 text-xs font-medium text-muted-foreground">Weeks

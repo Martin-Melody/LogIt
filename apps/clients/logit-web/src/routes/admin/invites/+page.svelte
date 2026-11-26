@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as NativeSelect from "$lib/components/ui/native-select/index.js";
   import { onMount } from "svelte";
   import { flip } from "svelte/animate";
   import * as Alert from "$lib/components/ui/alert";
@@ -122,9 +123,9 @@
         <input bind:value={uses} inputmode="numeric" class={input} />
       </label>
       <label class="flex flex-[1_1_150px] flex-col gap-1.5 text-[13px] font-medium">Ends after
-        <select bind:value={ends} class={input}>
-          <option value="7">7 days</option><option value="30">30 days</option><option value="90">90 days</option><option value="">Never</option>
-        </select>
+        <NativeSelect.Root bind:value={ends}>
+          <NativeSelect.Option value="7">7 days</NativeSelect.Option><NativeSelect.Option value="30">30 days</NativeSelect.Option><NativeSelect.Option value="90">90 days</NativeSelect.Option><NativeSelect.Option value="">Never</NativeSelect.Option>
+        </NativeSelect.Root>
       </label>
       <button type="submit" disabled={creating} class="h-9 rounded-[9px] bg-primary px-3.5 text-[13px] font-semibold text-primary-foreground disabled:opacity-50">Create invite</button>
     </form>
