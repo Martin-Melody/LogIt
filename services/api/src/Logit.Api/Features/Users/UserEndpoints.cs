@@ -8,6 +8,10 @@ namespace Logit.Api.Features.Users;
 
 public static class UserEndpoints
 {
+    public const int MaxNameLength = 60;
+    // Generous: the editors stop at 160, older phones had no limit.
+    public const int MaxBioLength = 500;
+
     public static void MapUserEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/users").WithTags("Users");
@@ -37,6 +41,11 @@ public static class UserEndpoints
         IPhotoStore photos,
         CancellationToken ct)
     {
+        if (req.DisplayName is not null && req.DisplayName.Trim().Length is 0 or > MaxNameLength)
+            return Results.BadRequest(new { error = $"Your name needs 1 to {MaxNameLength} characters." });
+        if (req.Bio is not null && req.Bio.Trim().Length > MaxBioLength)
+            return Results.BadRequest(new { error = $"Your bio can be up to {MaxBioLength} characters." });
+
         var userId = caller.GetUserId();
         var user = await db.Users.FindAsync(userId);
         if (user is null) return Results.NotFound();
@@ -114,6 +123,8 @@ public static class UserEndpoints
         var isFollowing = false;
         var requested = false;
         var followsYou = false;
+        List<string> followedBy = [];
+        var followedByCount = 0;
 
         if (caller.Identity?.IsAuthenticated == true)
         {
@@ -128,10 +139,18 @@ public static class UserEndpoints
                 isFollowing = await db.Follows.AnyAsync(f => f.FollowerId == callerId && f.FollowedId == user.Id);
                 requested = !isFollowing && await db.FollowRequests.AnyAsync(r => r.RequesterId == callerId && r.TargetId == user.Id);
                 followsYou = await db.Follows.AnyAsync(f => f.FollowerId == user.Id && f.FollowedId == callerId);
+                // "Followed by cara and 2 others you follow" (design canvas PR6).
+                var mutual = db.Follows.Where(f => f.FollowedId == user.Id
+                    && db.Follows.Any(g => g.FollowerId == callerId && g.FollowedId == f.FollowerId));
+                followedByCount = await mutual.CountAsync();
+                if (followedByCount > 0)
+                    followedBy = await mutual.OrderByDescending(f => f.CreatedAt).Select(f => f.Follower.Username).Take(2).ToListAsync();
             }
         }
 
-        return Results.Ok(user.ToProfileDto(isSelf, followerCount, followingCount, isFollowing, requested, followsYou));
+        var postCount = await db.Posts.CountAsync(p => p.AuthorId == user.Id && p.DeletedAt == null);
+        return Results.Ok(user.ToProfileDto(isSelf, followerCount, followingCount, isFollowing, requested, followsYou)
+            with { PostCount = postCount, FollowedBy = followedBy, FollowedByCount = followedByCount });
     }
 }
 

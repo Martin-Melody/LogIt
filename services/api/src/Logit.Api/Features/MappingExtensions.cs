@@ -19,7 +19,10 @@ public record ProfileDto(
     // A sandbox sample client (Features/Sandbox). Only its own coach ever sees one.
     bool IsSample = false,
     // This account follows the caller ("Follows you", "Follow back").
-    bool FollowsYou = false);
+    bool FollowsYou = false,
+    // Set on GET /users/{username} only: posts (Instagram's count, shown even when private), and
+    // up to two people the caller follows who follow this account, plus how many in all.
+    int? PostCount = null, IReadOnlyList<string>? FollowedBy = null, int FollowedByCount = 0);
 
 public record PostDto(Guid Id, Guid AuthorId, string AuthorUsername, string AuthorDisplayName, string? AuthorAvatarUrl, string Type, string? Body, string? PayloadJson, DateTime CreatedAt, DateTime? EditedAt, int LikeCount, bool IsLikedByMe, int CommentCount, RepostSourceDto? RepostOf, bool AuthorIsPrivate = false);
 

@@ -547,11 +547,11 @@ export const PHONE_CHAPTERS: Chapter[] = [
     ],
   },
   {
-    id: "app.profile", walkthrough: "app", title: "Profile", blurb: "Your details, widgets and settings", minutes: 1, feature: "settings",
+    id: "app.profile", walkthrough: "app", title: "Profile", blurb: "Your profile, its training cards and settings", minutes: 1, feature: "settings",
     steps: [
-      ph("avatar", "/profile", "profile-avatar", "Your profile", "Your picture and name, as others see them if you use Social."),
-      ph("edit", "/profile", "profile-edit", "Edit profile", "Update your name, bio, height and bodyweight here."),
-      ph("widgets", "/profile", "profile-widgets", "Profile widgets", "Stats at a glance: measurements, your active split and personal records. Customise below to reorder or hide them."),
+      ph("avatar", "/profile", "profile-avatar", "Your profile", "This page is exactly what others see. Tap your picture to add to your story."),
+      ph("edit", "/profile", "profile-edit", "Edit profile", "Your photo, name and bio, which training cards show, and your height and bodyweight."),
+      ph("widgets", "/profile", "profile-training", "Training", "Your split, records and the other cards you picked, as others see them."),
       ph("settings", "/profile", "profile-settings", "Settings", "Progression, rest timers, backups, walkthroughs and more."),
     ],
   },

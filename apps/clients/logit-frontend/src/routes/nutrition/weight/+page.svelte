@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { syncOwnProfile } from "$lib/features/profileWidgets/publicProfileSync";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
@@ -49,6 +50,7 @@
     pushWeightEntry(entry);
     await syncGoalWeightSnapshot();
     await load();
+    void syncOwnProfile(); // the weight cards others see
   }
 
   async function remove(id: string) {

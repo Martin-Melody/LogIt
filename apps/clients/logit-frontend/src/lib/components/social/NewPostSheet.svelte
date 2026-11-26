@@ -17,8 +17,7 @@
   import { Input } from "$lib/components/ui/input";
   import { Textarea } from "$lib/components/ui/textarea";
   import ShareCardSheet from "./ShareCardSheet.svelte";
-  import { pickImageFile } from "$lib/platform/filePick";
-  import { resizeImageFile } from "$lib/platform/imageResize";
+  import { choosePhoto } from "$lib/features/photos/photoChooser.svelte";
 
   type PickedGroup = { id: string; name: string; access?: GroupAccess };
   const { group: preset = null, tags: presetTags = [], onclose, onposted }: {
@@ -73,12 +72,14 @@
     } else if (e.key === "Backspace" && !typed && tags.length) tags = tags.slice(0, -1);
   }
 
-  async function choosePhoto() {
-    try {
-      photo = await resizeImageFile(await pickImageFile(), 2048, 0.85);
-    } catch {
-      // cancelled
-    }
+  async function pickPhoto() {
+    const chosen = await choosePhoto({
+      title: "Photo",
+      crop: { aspect: null, aspects: [{ label: "Original", value: null }, { label: "4:5", value: 4 / 5 }, { label: "1:1", value: 1 }] },
+      maxPx: 2048,
+      canRemove: !!photo,
+    });
+    if (chosen) photo = "photo" in chosen ? chosen.photo : null;
   }
 
   async function post() {
@@ -153,7 +154,7 @@
       <span class="flex items-center justify-between gap-2 rounded-xl border border-border px-3 py-2 text-[14px]"><span class="truncate">{cardTitle(readCard(card.type, card.json)!)}</span><button type="button" aria-label="Remove the workout" class="flex size-9 items-center justify-center" onclick={() => (card = null)}><X class="size-4" /></button></span>
     {/if}
     <div class="grid grid-cols-2 gap-2">
-      <button type="button" class="flex h-11 items-center justify-center gap-2 rounded-lg border border-border text-[14px] font-medium" onclick={choosePhoto}><Camera class="size-4" />Photo</button>
+      <button type="button" class="flex h-11 items-center justify-center gap-2 rounded-lg border border-border text-[14px] font-medium" onclick={pickPhoto}><Camera class="size-4" />Photo</button>
       <button type="button" class="flex h-11 items-center justify-center gap-2 rounded-lg border border-border text-[14px] font-medium" onclick={() => (sharing = true)}><Dumbbell class="size-4" />Workout or record</button>
     </div>
     <p class="flex items-start gap-2.5 text-[13px] leading-snug text-muted-foreground">

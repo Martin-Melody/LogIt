@@ -11,10 +11,21 @@
       "svelte": "./src/Logo.svelte",
       "default": "./src/Logo.svelte"
     },
-    "./fonts/*": "./fonts/*"
+    "./fonts/*": "./fonts/*",
+    "./ImageCropper.svelte": {
+      "types": "./src/ImageCropper.svelte",
+      "svelte": "./src/ImageCropper.svelte",
+      "default": "./src/ImageCropper.svelte"
+    }
   },
-  "files": ["src", "fonts"],
+  "files": [
+    "src",
+    "fonts"
+  ],
   "peerDependencies": {
     "svelte": "^5.0.0"
+  },
+  "dependencies": {
+    "@logit/core": "*"
   }
 }

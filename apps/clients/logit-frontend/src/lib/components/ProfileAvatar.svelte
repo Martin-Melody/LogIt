@@ -4,9 +4,8 @@
   import { photoSrc } from "@logit/core/api/photosApi";
   import { Camera, User } from "lucide-svelte";
   import * as Avatar from "$lib/components/ui/avatar";
-  import { profile } from "$lib/stores/profile.store";
-  import { pickImageFile } from "$lib/platform/filePick";
-  import { resizeImageFile } from "$lib/platform/imageResize";
+  import { choosePhoto } from "$lib/features/photos/photoChooser.svelte";
+  import { saveProfile } from "$lib/features/profileWidgets/publicProfileSync";
 
   let {
     name = "",
@@ -35,9 +34,9 @@
     if (!editable || picking) return;
     picking = true;
     try {
-      const file = await pickImageFile();
-      const dataUrl = await resizeImageFile(file, 512);
-      profile.save({ avatarDataUrl: dataUrl });
+      const chosen = await choosePhoto({ title: "Profile photo", crop: { aspect: 1, round: true }, maxPx: 512, canRemove: !!avatarDataUrl });
+      // "" = no photo. Shows here at once; sent to your account (later, if offline).
+      if (chosen) await saveProfile({ avatar: "photo" in chosen ? chosen.photo : "" });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       if (!msg.toLowerCase().includes("cancel")) {

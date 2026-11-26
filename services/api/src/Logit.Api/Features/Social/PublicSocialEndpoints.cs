@@ -112,9 +112,15 @@ public static class PublicSocialEndpoints
     }
 
     /// For the website's sitemap: every group anyone can find, with its latest post's time.
-    private static async Task<IResult> GroupIndex(AppDbContext db)
+    /// For the website's sitemap: only groups with a forum post or an upcoming event, because a page
+    /// with nothing on it counts against the whole site in search results.
+    private static async Task<IResult> GroupIndex(AppDbContext db, TimeProvider clock)
     {
-        var rows = await Findable(db).OrderBy(g => g.CreatedAt).Take(5000)
+        var now = clock.GetUtcNow().UtcDateTime;
+        var rows = await Findable(db)
+            .Where(g => db.GroupPosts.Any(p => p.GroupId == g.Id && p.DeletedAt == null)
+                || db.GroupEvents.Any(e => e.GroupId == g.Id && e.CancelledAt == null && e.StartsAt >= now))
+            .OrderBy(g => g.CreatedAt).Take(5000)
             .Select(g => new { Group = g, Last = db.GroupPosts.Where(p => p.GroupId == g.Id && p.DeletedAt == null).Max(p => (DateTime?)p.LastActivityAt) }).ToListAsync();
         return Results.Ok(rows.Select(r => new { path = GroupWebPath(r.Group), lastModMs = Ms(r.Last ?? r.Group.CreatedAt) }));
     }

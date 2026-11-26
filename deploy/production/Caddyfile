@@ -22,6 +22,7 @@
 api.getlogit.app {
 	tls /certs/origin.pem /certs/origin.key
 	encode zstd gzip
+	header X-Robots-Tag "noindex"
 	reverse_proxy api:8080 {
 		import proxy_headers
 	}
@@ -30,6 +31,8 @@ api.getlogit.app {
 app.getlogit.app {
 	tls /certs/origin.pem /certs/origin.key
 	encode zstd gzip
+	# The dashboard is behind sign-in: keep it out of search so getlogit.app is what people find.
+	header X-Robots-Tag "noindex"
 	# The admin console's API calls, on the dashboard's own domain so Cloudflare Access (which
 	# guards app.getlogit.app/admin*) covers them; Cloudflare's signed header passes through and
 	# the API checks it (docs/admin-console.md).

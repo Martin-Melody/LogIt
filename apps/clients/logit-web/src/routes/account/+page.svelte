@@ -7,7 +7,6 @@
   import * as Alert from "$lib/components/ui/alert";
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
-  import { Label } from "$lib/components/ui/label";
   import { Skeleton } from "$lib/components/ui/skeleton";
   import { toast } from "$lib/components/ui/sonner";
   import { planCardModel, type PlanAction } from "@logit/core/api/planCard";
@@ -71,23 +70,6 @@
     }
   }
 
-  // --- Display name ---
-  let displayName = $state(apiClient.getUser()?.displayName ?? "");
-  let savingName = $state(false);
-
-  async function saveDisplayName() {
-    if (!displayName.trim()) return;
-    savingName = true;
-    try {
-      await apiClient.updateDisplayName(displayName.trim());
-      toast.success("Display name saved");
-    } catch (e) {
-      toast.error(e instanceof ApiError ? e.message : "Couldn't save your display name.");
-    } finally {
-      savingName = false;
-    }
-  }
-
   // --- Change password ---
   let currentPassword = $state("");
   let newPassword = $state("");
@@ -148,16 +130,11 @@
   <Card.Root>
     <Card.Header class="pb-2">
       <Card.Title>Profile</Card.Title>
-      <Card.Description>@{user?.username}</Card.Description>
+      <Card.Description>{user?.displayName} · @{user?.username}</Card.Description>
     </Card.Header>
     <Card.Content class="pt-0 pb-3 flex flex-col gap-2">
-      <div class="flex flex-col gap-1.5 max-w-xs">
-        <Label for="display-name">Display name</Label>
-        <Input id="display-name" type="text" bind:value={displayName} />
-      </div>
-      <Button size="sm" class="self-start" disabled={savingName || !displayName.trim()} onclick={() => void saveDisplayName()}>
-        {savingName ? "Saving…" : "Save"}
-      </Button>
+      <p class="text-sm text-muted-foreground">Your photo, name, bio and the training cards on your profile, the same as Edit profile in the app.</p>
+      <Button size="sm" class="self-start" href="/social/{user?.username}?edit=1">Edit profile</Button>
     </Card.Content>
   </Card.Root>
 

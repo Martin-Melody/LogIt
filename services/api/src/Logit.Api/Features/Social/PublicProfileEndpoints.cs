@@ -8,10 +8,10 @@ namespace Logit.Api.Features.Social;
 /// public everywhere (Martin, 25 Nov): a public account's profile and posts are readable at
 /// getlogit.app/@name, a private one's never are. A private account, a sample account and a name
 /// nobody has all get the same 404, so the page never says which. Only name, photo, bio, counts,
-/// posts and forum posts: never the profile card (gym, progress photo), stories, follow lists or anything else.
+/// posts, forum posts and the training cards they chose to show (design canvas PR5): never stories, follow lists or anything else.
 public static class PublicProfileEndpoints
 {
-    public record ProfileDto(string Username, string DisplayName, string? Bio, string? AvatarUrl, int Posts, int Followers, int Following);
+    public record ProfileDto(string Username, string DisplayName, string? Bio, string? AvatarUrl, int Posts, int Followers, int Following, string? PublicProfileJson = null);
     public record ProfilePageDto(ProfileDto Profile, List<PostDto> Posts, List<GroupPostEndpoints.PostDto> Forum);
     public record PostPageDto(ProfileDto Profile, PostDto Post, List<CommentDto> Comments, List<PostDto> More);
 
@@ -35,7 +35,8 @@ public static class PublicProfileEndpoints
 
     private static async Task<ProfileDto> ProfileOfAsync(AppDbContext db, User u) => new(u.Username, u.DisplayName, u.Bio, u.AvatarUrl,
         await db.Posts.CountAsync(p => p.AuthorId == u.Id && p.DeletedAt == null),
-        await db.Follows.CountAsync(f => f.FollowedId == u.Id), await db.Follows.CountAsync(f => f.FollowerId == u.Id));
+        await db.Follows.CountAsync(f => f.FollowedId == u.Id), await db.Follows.CountAsync(f => f.FollowerId == u.Id),
+        u.PublicProfileJson);
 
     /// Reposts of a private account's post come back Unavailable, as for anyone signed out.
     private static async Task<List<PostDto>> DtosAsync(AppDbContext db, List<Post> rows)

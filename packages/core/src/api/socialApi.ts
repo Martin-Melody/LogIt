@@ -111,6 +111,11 @@ export interface ApiProfile {
   canSeeContent?: boolean;
   /** They follow you ("Follows you", "Follow back"). */
   followsYou?: boolean;
+  /** Only on a profile page (GET /users/{username}); older servers don't send them. */
+  postCount?: number;
+  /** Up to two people you follow who follow them, and how many in all ("Followed by …"). */
+  followedBy?: string[];
+  followedByCount?: number;
 }
 
 export type FollowStatus = "none" | "requested" | "following";

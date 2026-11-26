@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { choosePhoto } from "$lib/features/photos/photoChooser.svelte";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import { chip, segment, segmentTrack } from "$lib/components/ui/choice";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
@@ -68,12 +69,11 @@
     }
   }
 
-  async function handlePhoto(q: CheckinQuestion, e: Event) {
-    const file = (e.target as HTMLInputElement).files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => update(q, { photoDataUrl: String(reader.result) });
-    reader.readAsDataURL(file);
+  // Resized like every other photo (it used to send the camera's full-size file); never cropped,
+  // the coach needs the whole picture.
+  async function handlePhoto(q: CheckinQuestion) {
+    const chosen = await choosePhoto({ title: "Check-in photo", maxPx: 2048, canRemove: !!answerFor(q.id)?.photoDataUrl });
+    if (chosen) update(q, { photoDataUrl: "photo" in chosen ? chosen.photo : undefined });
   }
 
   onMount(() => void load());
@@ -138,7 +138,7 @@
                 <img src={answerFor(q.id)?.photoDataUrl} alt="check-in" class="max-h-40 rounded-md border border-border" />
               {/if}
               {#if !alreadySubmitted}
-                <input type="file" accept="image/*" class="mt-1 text-xs" onchange={(e) => handlePhoto(q, e)} />
+                <Button variant="outline" size="sm" class="mt-1 self-start" onclick={() => void handlePhoto(q)}>{answerFor(q.id)?.photoDataUrl ? "Change photo" : "Add a photo"}</Button>
               {/if}
             {/if}
           </div>

@@ -1,5 +1,6 @@
 ---
 title: Mobility packs
+description: "Add stretching and mobility drills to LogIt with a mobility pack: plain JSON, no code."
 ---
 
 A mobility pack adds a list of **stretching / mobility drills** to the Mobility

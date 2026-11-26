@@ -1,5 +1,6 @@
 ---
 title: Widgets
+description: "Build a home-screen widget for LogIt: a pure function that returns the card to show."
 ---
 
 <script>

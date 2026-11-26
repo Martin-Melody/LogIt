@@ -3,6 +3,8 @@
 @import "driver.js/dist/driver.css";
 
 @import "@logit/ui/theme.css";
+/* Shared components in packages/ui use Tailwind classes too. */
+@source "../../../../../packages/ui/src";
 
 /* One page header everywhere: a 56px bar (fits the 44px back button), a 16px title. */
 @utility page-header {
