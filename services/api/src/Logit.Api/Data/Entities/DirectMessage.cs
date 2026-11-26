@@ -79,6 +79,8 @@ public class DmReaction
     public User User { get; set; } = null!;
     public string Emoji { get; set; } = "";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    /// When the push dispatcher dealt with it; a changed reaction is pushed again.
+    public DateTime? PushedAt { get; set; }
 }
 
 /// Stored as int: add at the end.

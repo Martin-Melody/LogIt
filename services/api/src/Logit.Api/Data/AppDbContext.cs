@@ -470,6 +470,7 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
             e.HasKey(r => new { r.MessageId, r.UserId });
             e.Property(r => r.Emoji).HasMaxLength(16);
             e.HasIndex(r => r.UserId);
+            e.HasIndex(r => r.PushedAt);
             e.HasOne(r => r.Message).WithMany().HasForeignKey(r => r.MessageId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(r => r.User).WithMany().HasForeignKey(r => r.UserId).OnDelete(DeleteBehavior.Cascade);
         });

@@ -543,6 +543,15 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<DateTime?>("PushedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("ReactedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Reaction")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("ReactionPushedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<long?>("ReadAtMs")
                         .HasColumnType("bigint");
 
@@ -1092,7 +1101,12 @@ namespace Logit.Api.Migrations.Postgres
                         .HasMaxLength(16)
                         .HasColumnType("character varying(16)");
 
+                    b.Property<DateTime?>("PushedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.HasKey("MessageId", "UserId");
+
+                    b.HasIndex("PushedAt");
 
                     b.HasIndex("UserId");
 

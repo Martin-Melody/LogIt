@@ -40,4 +40,11 @@ public class CoachMessage
 
     /// When the push dispatcher dealt with it (sent, or skipped).
     public DateTime? PushedAt { get; set; }
+
+    /// The other person's reaction to it (Instagram: one each; only the person it was sent to
+    /// reacts in a two-person thread). Changing it bumps SyncedAt so phones pull it.
+    public string? Reaction { get; set; }
+    public DateTime? ReactedAt { get; set; }
+    /// When the push dispatcher dealt with the reaction (null = not yet).
+    public DateTime? ReactionPushedAt { get; set; }
 }

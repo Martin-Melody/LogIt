@@ -495,7 +495,7 @@ public static class DirectMessageEndpoints
         var mine = await db.DmReactions.FirstOrDefaultAsync(r => r.MessageId == id && r.UserId == me);
         if (req.Emoji is null) { if (mine is not null) db.DmReactions.Remove(mine); }
         else if (mine is null) db.DmReactions.Add(new DmReaction { MessageId = id, UserId = me, Emoji = req.Emoji, CreatedAt = now });
-        else { mine.Emoji = req.Emoji; mine.CreatedAt = now; }
+        else { mine.Emoji = req.Emoji; mine.CreatedAt = now; mine.PushedAt = null; }
         await db.SaveChangesAsync();
 
         var all = (await ReactionsAsync(db, [id], me, msg.Thread.GroupId is not null)).GetValueOrDefault(id);

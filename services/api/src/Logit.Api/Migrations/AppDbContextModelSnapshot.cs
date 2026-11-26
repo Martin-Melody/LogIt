@@ -538,6 +538,15 @@ namespace Logit.Api.Migrations
                     b.Property<DateTime?>("PushedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("ReactedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Reaction")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ReactionPushedAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<long?>("ReadAtMs")
                         .HasColumnType("INTEGER");
 
@@ -1087,7 +1096,12 @@ namespace Logit.Api.Migrations
                         .HasMaxLength(16)
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("PushedAt")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("MessageId", "UserId");
+
+                    b.HasIndex("PushedAt");
 
                     b.HasIndex("UserId");
 

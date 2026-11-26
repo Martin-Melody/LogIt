@@ -55,6 +55,7 @@ public static class CoachEndpoints
         group.MapGet("/messages", GetMessages);
         group.MapGet("/messages/all", GetAllMessages);
         group.MapPost("/messages/read", MarkMessagesRead);
+        group.MapPut("/messages/reaction", ReactToMessage);
         group.MapGet("/messages/unread", GetUnreadCounts);
 
         CoachLinkEndpoints.Map(group);
@@ -991,7 +992,7 @@ public static class CoachEndpoints
             .Select(m => new MessageDto(
                 m.MessageId, m.Body, m.CreatedAtMs, m.ReadAtMs, m.SenderUserId == callerId, m.ContextDateIso,
                 m.PhotoId == null ? null : "/photos/" + m.PhotoId.Value.ToString("N"), m.PhotoWidth, m.PhotoHeight,
-                m.VoiceId == null ? null : "/voice/" + m.VoiceId.Value.ToString("N"), m.VoiceMs, m.VoicePeaks))
+                m.VoiceId == null ? null : "/voice/" + m.VoiceId.Value.ToString("N"), m.VoiceMs, m.VoicePeaks, m.Reaction))
             .ToListAsync();
 
         return Results.Ok(new { messages });
@@ -1016,10 +1017,30 @@ public static class CoachEndpoints
             .Select(m => new ThreadMessageDto(
                 m.RelationshipId, m.MessageId, m.Body, m.CreatedAtMs, m.ReadAtMs, m.SenderUserId == callerId, m.ContextDateIso,
                 m.PhotoId == null ? null : "/photos/" + m.PhotoId.Value.ToString("N"), m.PhotoWidth, m.PhotoHeight,
-                m.VoiceId == null ? null : "/voice/" + m.VoiceId.Value.ToString("N"), m.VoiceMs, m.VoicePeaks))
+                m.VoiceId == null ? null : "/voice/" + m.VoiceId.Value.ToString("N"), m.VoiceMs, m.VoicePeaks, m.Reaction))
             .ToListAsync();
 
         return Results.Ok(new { messages });
+    }
+
+    /// React to the other person's message, change it, or take it back (Emoji null). The same six
+    /// as chats between people; the sender gets a push (PushDispatcher).
+    private static async Task<IResult> ReactToMessage([FromBody] CoachReactRequest req, ClaimsPrincipal caller, AppDbContext db)
+    {
+        var callerId = caller.GetUserId();
+        if (req.Emoji is { } e && !Social.DirectMessageEndpoints.Reactions.Contains(e))
+            return Results.BadRequest(new { error = "That reaction isn't available." });
+        var relationship = await ParticipantRelationship(callerId, req.RelationshipId, db);
+        if (relationship is null) return Results.NotFound();
+        var message = await db.CoachMessages.FirstOrDefaultAsync(m => m.RelationshipId == req.RelationshipId && m.MessageId == req.MessageId);
+        if (message is null || message.SenderUserId == callerId) return Results.NotFound();
+        if (message.Reaction == req.Emoji) return Results.Ok(new { reaction = message.Reaction });
+        message.Reaction = req.Emoji;
+        message.ReactedAt = req.Emoji is null ? null : DateTime.UtcNow;
+        message.ReactionPushedAt = req.Emoji is null ? DateTime.UtcNow : null;
+        message.SyncedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+        return Results.Ok(new { reaction = message.Reaction });
     }
 
     private static async Task<IResult> MarkMessagesRead(
@@ -1070,10 +1091,13 @@ public record AcceptInviteRequest(SharingDto? Sharing);
 public record SendMessageRequest(Guid RelationshipId, string MessageId, string? Body, long CreatedAtMs, string? ContextDateIso = null, Guid? PhotoId = null,
     Guid? VoiceId = null, string? VoicePeaks = null);
 public record MarkReadRequest(Guid RelationshipId, long UpToMs);
+public record CoachReactRequest(Guid RelationshipId, string MessageId, string? Emoji);
 public record MessageDto(string MessageId, string Body, long CreatedAtMs, long? ReadAtMs, bool Mine, string? ContextDateIso = null,
-    string? PhotoUrl = null, int PhotoWidth = 0, int PhotoHeight = 0, string? VoiceUrl = null, int VoiceMs = 0, string? VoicePeaks = null);
+    string? PhotoUrl = null, int PhotoWidth = 0, int PhotoHeight = 0, string? VoiceUrl = null, int VoiceMs = 0, string? VoicePeaks = null,
+    string? Reaction = null);
 public record ThreadMessageDto(Guid RelationshipId, string MessageId, string Body, long CreatedAtMs, long? ReadAtMs, bool Mine, string? ContextDateIso = null,
-    string? PhotoUrl = null, int PhotoWidth = 0, int PhotoHeight = 0, string? VoiceUrl = null, int VoiceMs = 0, string? VoicePeaks = null);
+    string? PhotoUrl = null, int PhotoWidth = 0, int PhotoHeight = 0, string? VoiceUrl = null, int VoiceMs = 0, string? VoicePeaks = null,
+    string? Reaction = null);
 
 public record UpsertProgramRequest(
     string ProgramId,
