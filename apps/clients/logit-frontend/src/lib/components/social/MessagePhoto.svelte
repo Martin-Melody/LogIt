@@ -5,7 +5,7 @@
   import { photoSrc } from "@logit/core/api/photosApi";
   import PhotoViewer from "./PhotoViewer.svelte";
 
-  const { url, width, height, hidden = false, mine = false, dim = false }: {
+  const { url, width, height, hidden = false, mine = false, dim = false, bare = false }: {
     url: string | null;
     width: number;
     height: number;
@@ -13,6 +13,8 @@
     mine?: boolean;
     /** Still sending. */
     dim?: boolean;
+    /** Inside a bubble with its caption: the bubble draws the edge. */
+    bare?: boolean;
   } = $props();
 
   let broken = $state(false);
@@ -34,7 +36,7 @@
     <ImageOff class="size-5" />Photo unavailable
   </div>
 {:else}
-  <button type="button" aria-label="Open photo" class="shrink-0 overflow-hidden rounded-2xl border border-border bg-muted transition-opacity {dim ? 'opacity-60' : ''} {mine ? 'self-end' : ''}" style="width: {box.w}px; height: {box.h}px" onclick={() => (open = true)}>
+  <button type="button" aria-label="Open photo" class="block shrink-0 overflow-hidden bg-muted transition-opacity {bare ? '' : 'rounded-2xl border border-border'} {dim ? 'opacity-60' : ''} {mine ? 'self-end' : ''}" style="width: {bare ? Math.max(box.w, 220) : box.w}px; height: {box.h}px" onclick={() => (open = true)}>
     <img src={photoSrc(url)} alt="" loading="lazy" class="size-full object-cover" onerror={() => (broken = true)} />
   </button>
   {#if open}<PhotoViewer src={photoSrc(url)!} onclose={() => (open = false)} />{/if}

@@ -38,9 +38,15 @@
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import PersonAvatar from "$lib/components/social/PersonAvatar.svelte";
-  import { Textarea } from "$lib/components/ui/textarea";
+  import * as Message from "$lib/components/ui/message/index.js";
+  import * as Bubble from "$lib/components/ui/bubble/index.js";
+  import * as Attachment from "$lib/components/ui/attachment/index.js";
+  import * as InputGroup from "$lib/components/ui/input-group/index.js";
+  import ChatText from "$lib/components/social/ChatText.svelte";
+  import ChatReactions from "$lib/components/social/ChatReactions.svelte";
+  import { nextReaction, withMyReaction } from "@logit/core/domain/dmReactions";
   import { back } from "$lib/navigation";
-  import { dmApi, type DmChat, type DmMessage, type DmTo } from "@logit/core/api/dmApi";
+  import { DM_REACTIONS, dmApi, type DmChat, type DmMessage, type DmTo } from "@logit/core/api/dmApi";
   import { trainingApi, type TrainingFriend } from "@logit/core/api/trainingApi";
   import { dayTime } from "$lib/features/friends/dmTime";
   import { discardDm, outbox, queueDm, retryDm, sameChat } from "$lib/features/friends/dmOutbox.svelte";
@@ -63,7 +69,10 @@
   let now = $state(Date.now());
   let sharing = $state(false);
   let attachOpen = $state(false);
-  let uploading = $state(0);
+  // A picked photo waits above the box (Attachment) while it uploads, so a caption can go
+  // with it and one Send sends both (canvas board 18).
+  type Staged = { file: File; preview: string; state: "uploading" | "done" | "error"; photo?: Awaited<ReturnType<typeof uploadPhoto>> };
+  let staged = $state<Staged | null>(null);
   let recording = $state(false);
 
   // A voice message is uploaded by the recording bar; the message then waits in the outbox.
@@ -185,6 +194,24 @@
     ),
   );
   const lastMine = $derived(chat?.messages.findLast((m) => m.mine) ?? null);
+  // Runs of messages from one person (shadcn Message.Group): one avatar, one name, joined corners.
+  type Run = { key: string; mine: boolean; time: boolean; items: DmMessage[] };
+  const runs = $derived.by(() => {
+    const out: Run[] = [];
+    const list = chat?.messages ?? [];
+    list.forEach((m, i) => {
+      const time = gap(list, i);
+      const prev = out.at(-1);
+      if (prev && !time && prev.mine === m.mine && (m.mine || prev.items[0]!.from?.id === m.from?.id)) prev.items.push(m);
+      else out.push({ key: m.id, mine: m.mine, time, items: [m] });
+    });
+    return out;
+  });
+  // Stacked bubbles get tight corners on the side they join (theirs on the left, yours on the right).
+  const joined = (mine: boolean, first: boolean, last: boolean) =>
+    mine ? `${first ? "" : "rounded-tr-md!"} ${last ? "" : "rounded-br-md!"}` : `${first ? "" : "rounded-tl-md!"} ${last ? "" : "rounded-bl-md!"}`;
+  const joinedKids = (mine: boolean, first: boolean, last: boolean) =>
+    mine ? `${first ? "" : "*:rounded-tr-md!"} ${last ? "" : "*:rounded-br-md!"}` : `${first ? "" : "*:rounded-tl-md!"} ${last ? "" : "*:rounded-bl-md!"}`;
   const seen = $derived(!!chat?.seenAtMs && !!lastMine && chat.seenAtMs >= lastMine.createdAtMs && chat.messages.at(-1)?.mine);
 
   // Opening a chat lands on the newest message at once (a long history would mean a long
@@ -230,10 +257,12 @@
   async function send() {
     if (editing) return saveEdit();
     const body = draft.trim();
-    if (!body || !chat || !to) return;
+    const photo = staged?.state === "done" ? staged.photo : undefined;
+    if ((!body && !photo) || !chat || !to || (staged && !photo)) return;
     draft = "";
+    if (photo) dropStaged();
     const target: DmTo = chat.threadId ? { threadId: chat.threadId } : to;
-    const sending = queueDm(target, body);
+    const sending = queueDm(target, body, photo ? { photo } : {});
     await scrollDown();
     await sending;
     await load();
@@ -250,7 +279,7 @@
 
   // Photos are uploaded first, so they need a connection; the message itself then waits in the
   // outbox like any other.
-  async function sendPhoto(from: "photos" | "camera") {
+  async function pickPhoto(from: "photos" | "camera") {
     if (!chat || !to) return;
     let file: File;
     try {
@@ -258,17 +287,44 @@
     } catch {
       return; // cancelled
     }
-    uploading++;
-    await scrollDown();
+    dropStaged();
+    staged = { file, preview: URL.createObjectURL(file), state: "uploading" };
+    void uploadStaged();
+  }
+
+  async function uploadStaged() {
+    const s = staged;
+    if (!s) return;
+    staged = { ...s, state: "uploading" };
     try {
-      const photo = await uploadPhoto(await resizeImageFile(file, 2048, 0.85));
-      const sending = queueDm(chat.threadId ? { threadId: chat.threadId } : to, "", { photo });
-      await sending;
-      await load();
+      const photo = await uploadPhoto(await resizeImageFile(s.file, 2048, 0.85));
+      if (staged?.file === s.file) staged = { ...staged, state: "done", photo };
     } catch (e) {
+      if (staged?.file === s.file) staged = { ...staged, state: "error" };
       toast.error(e instanceof ApiError && e.status < 500 && e.message ? e.message : "Photos need a connection. Try again when you're online.");
-    } finally {
-      uploading--;
+    }
+  }
+
+  function dropStaged() {
+    if (staged) URL.revokeObjectURL(staged.preview);
+    staged = null;
+  }
+
+  // Double-tap a message for ❤️, or pick from the long-press sheet; your own again takes it back.
+  async function react(m: DmMessage, emoji: string) {
+    if (!chat || m.deleted || !chat.accepted) return;
+    const next = nextReaction(m.reactions, emoji);
+    const before = m.reactions ?? null;
+    const set = (reactions: DmMessage["reactions"]) => {
+      if (chat) chat = { ...chat, messages: chat.messages.map((x) => (x.id === m.id ? { ...x, reactions } : x)) };
+    };
+    set(withMyReaction(before, next));
+    try {
+      const after = await dmApi.react(m.id, next);
+      set(after.length ? after : null);
+    } catch (e) {
+      set(before);
+      toast.error(e instanceof ApiError && e.status < 500 && e.message ? e.message : "Couldn't react. Try again.");
     }
   }
 
@@ -314,22 +370,43 @@
   const gap = (list: DmMessage[], i: number) => i === 0 || list[i]!.createdAtMs - list[i - 1]!.createdAtMs > 3_600_000;
 </script>
 
-{#snippet content(m: DmMessage, inGroup: boolean)}
+{#snippet content(m: DmMessage, first: boolean, last: boolean)}
   {@const story = m.cardType === "Story"}
   {@const card = story ? readStoryQuote(m.cardJson) : readCard(m.cardType, m.cardJson)}
   {@const storyPhoto = story ? readStoryPhoto(m.cardJson) : null}
   {@const invite = m.cardType === "GroupInvite" ? readGroupInvite(m.cardJson) : null}
-  {#if invite}<GroupInviteCard {invite} mine={m.mine} />{/if}
-  {#if story}<span class="px-1 text-[12px] text-muted-foreground">{m.mine ? `Replied to ${name}'s story` : "Replied to your story"}{card || storyPhoto ? "" : " · no longer available"}</span>{/if}
-  {#if storyPhoto}
-    <div class="relative aspect-[9/16] w-28 shrink-0 overflow-hidden rounded-xl bg-black"><img src={photoSrc(storyPhoto.url)} alt="The story" loading="lazy" class="size-full object-cover" /></div>
-  {:else if card}<MessageCard {card} mine={m.mine} />{/if}
-  {#if m.photoUrl || m.photoHidden}<MessagePhoto url={m.photoUrl} width={m.photoWidth} height={m.photoHeight} hidden={m.photoHidden} mine={m.mine} />{/if}
-  {#if m.voiceUrl || m.voiceHidden}<VoiceMessage voice={m.voiceUrl ? { url: m.voiceUrl, ms: m.voiceMs, peaks: m.voicePeaks ?? "" } : null} hidden={m.voiceHidden} mine={m.mine} />{/if}
-  {#if m.body}<p class="{inGroup ? 'max-w-full' : 'max-w-[78%]'} whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-[15px] leading-snug {m.mine ? 'bg-primary text-primary-foreground' : 'bg-muted'}">{m.body}</p>{/if}
-  {#if m.deleted}
-    <p class="rounded-2xl border border-border px-3.5 py-2 text-[14px] italic text-muted-foreground">{m.removedByLogIt ? "Removed by LogIt" : m.removedByModerator ? "Removed by a moderator" : m.mine ? "You unsent a message" : `${senderName(m)} unsent a message`}</p>
-  {:else if m.edited}<span class="px-1 text-[11px] text-muted-foreground">Edited</span>{/if}
+  {@const kids = joinedKids(m.mine, first, last)}
+  {@const align = m.mine ? "end" : "start"}
+  <div class="relative flex w-full flex-col gap-1 {m.mine ? 'items-end' : 'items-start'} {m.reactions?.length && !m.deleted ? 'mb-4' : ''}">
+    {#if invite}<div class={kids}><GroupInviteCard {invite} mine={m.mine} /></div>{/if}
+    {#if story}<span class="px-1 text-[12px] text-muted-foreground">{m.mine ? `Replied to ${name}'s story` : "Replied to your story"}{card || storyPhoto ? "" : " · no longer available"}</span>{/if}
+    {#if storyPhoto}
+      <div class="relative aspect-[9/16] w-28 shrink-0 overflow-hidden rounded-xl bg-black"><img src={photoSrc(storyPhoto.url)} alt="The story" loading="lazy" class="size-full object-cover" /></div>
+    {:else if card}<div class={kids}><MessageCard {card} mine={m.mine} /></div>{/if}
+    {#if m.photoUrl && m.body}
+      <!-- A photo and its caption: one bubble (Attachment media inside Bubble). -->
+      <Bubble.Root variant={m.mine ? "default" : "muted"} {align} class="max-w-[78%]">
+        <Bubble.Content class="overflow-hidden rounded-[20px] p-0 text-[15px] leading-snug {joined(m.mine, first, last)}">
+          <MessagePhoto url={m.photoUrl} width={m.photoWidth} height={m.photoHeight} mine={m.mine} bare />
+          <div class="px-3.5 py-2"><ChatText text={m.body} /></div>
+        </Bubble.Content>
+      </Bubble.Root>
+    {:else}
+      {#if m.photoUrl || m.photoHidden}<div class={kids}><MessagePhoto url={m.photoUrl} width={m.photoWidth} height={m.photoHeight} hidden={m.photoHidden} mine={m.mine} /></div>{/if}
+      {#if m.voiceUrl || m.voiceHidden}<div class={kids}><VoiceMessage voice={m.voiceUrl ? { url: m.voiceUrl, ms: m.voiceMs, peaks: m.voicePeaks ?? "" } : null} hidden={m.voiceHidden} mine={m.mine} /></div>{/if}
+      {#if m.body}
+        <Bubble.Root variant={m.mine ? "default" : "muted"} {align} class="max-w-[78%]">
+          <Bubble.Content class="rounded-[20px] px-3.5 py-2 text-[15px] leading-snug {joined(m.mine, first, last)}"><ChatText text={m.body} /></Bubble.Content>
+        </Bubble.Root>
+      {/if}
+    {/if}
+    {#if m.deleted}
+      <Bubble.Root variant="outline" {align}>
+        <Bubble.Content class="rounded-[20px] border-dashed bg-transparent px-3.5 py-2 text-[14px] italic text-muted-foreground">{m.removedByLogIt ? "Removed by LogIt" : m.removedByModerator ? "Removed by a moderator" : m.mine ? "You unsent a message" : `${senderName(m)} unsent a message`}</Bubble.Content>
+      </Bubble.Root>
+    {:else if m.edited}<span class="px-1 text-[11px] text-muted-foreground">Edited</span>{/if}
+    {#if m.reactions?.length && !m.deleted}<ChatReactions reactions={m.reactions} {align} onpick={(e) => void react(m, e)} />{/if}
+  </div>
 {/snippet}
 
 <div class="flex h-full flex-col">
@@ -382,47 +459,56 @@
           <p class="max-w-[30ch] text-sm text-muted-foreground">{group ? "Nothing here yet. Say hello to the group." : chat.canSend ? "Say hello. Messages to people who don't follow you go to their requests." : chat.why}</p>
         </div>
       {/if}
-      {#each chat.messages as m, i (m.id)}
-        {#if gap(chat.messages, i)}<p class="py-2 text-center text-[12px] text-muted-foreground">{dayTime(m.createdAtMs, now)}</p>{/if}
-        {#if group && !m.mine}
-          <div in:fade={{ duration: 150 }} use:longpress={() => { if (!m.deleted) picked = m; }} class="flex shrink-0 select-none items-end gap-2 {sameRun(chat.messages, i, i - 1) ? '' : 'mt-1.5'}">
-            <span class="w-7 shrink-0">
-              {#if !sameRun(chat.messages, i, i + 1)}
-                {#if m.from}<a href="/social/{m.from.username}" aria-label={senderName(m)}><PersonAvatar name={senderName(m)} src={m.from.avatarUrl} size={28} /></a>{:else}<PersonAvatar name={null} size={28} />{/if}
-              {/if}
-            </span>
-            <div class="flex min-w-0 max-w-[80%] flex-col items-start gap-1">
-              {#if !sameRun(chat.messages, i, i - 1)}<span class="px-1 text-[12px] text-muted-foreground">{senderName(m)}</span>{/if}
-              {@render content(m, true)}
-            </div>
-          </div>
-        {:else}
-          <div in:fade={{ duration: 150 }} use:longpress={() => { if (!m.deleted) picked = m; }} class="flex shrink-0 select-none flex-col gap-1 {m.mine ? 'items-end' : 'items-start'} {editing?.id === m.id ? 'opacity-60' : ''}">
-            {@render content(m, false)}
-          </div>
-        {/if}
-      {/each}
-      {#if seen}<p transition:fade={{ duration: 150 }} class="pr-1 text-right text-[12px] text-muted-foreground">Seen</p>{/if}
-      {#each pending as p (p.clientId)}
-        <div in:fade={{ duration: 150 }} class="flex shrink-0 flex-col items-end gap-1">
-          {#if p.card?.type === "Story"}<span class="px-1 text-[12px] text-muted-foreground">Replying to {name}'s story</span>{/if}
-          {#if p.card && readCard(p.card.type, p.card.json)}<div class="opacity-60"><MessageCard card={readCard(p.card.type, p.card.json)!} mine /></div>{/if}
-          {#if p.photo}<MessagePhoto url={p.photo.url} width={p.photo.width} height={p.photo.height} mine dim />{/if}
-          {#if p.voice}<VoiceMessage voice={p.voice} mine dim />{/if}
-          {#if p.body}<p class="max-w-[78%] whitespace-pre-wrap break-words rounded-2xl bg-primary/60 px-3.5 py-2 text-[15px] leading-snug text-primary-foreground">{p.body}</p>{/if}
-          {#if p.error}
-            <span class="flex items-center gap-2 text-[12px] text-destructive">{p.error}
-              <button type="button" class="h-8 rounded-md border border-border px-2 text-foreground" onclick={() => discardDm(p.clientId)}>Remove</button>
-            </span>
-          {:else}
-            <span class="flex items-center gap-2 text-[12px] text-muted-foreground">Not sent yet
-              <button type="button" class="h-8 rounded-md border border-border px-2 text-foreground" onclick={() => void retryDm(p.clientId)}>Try now</button>
-            </span>
+      {#each runs as run, r (run.key)}
+        {@const lead = run.items[0]!}
+        {#if run.time}<p class="py-2 text-center text-[12px] text-muted-foreground">{dayTime(lead.createdAtMs, now)}</p>{/if}
+        <Message.Root align={run.mine ? "end" : "start"} class="shrink-0 gap-2 text-[15px] {r > 0 && !run.time ? 'mt-1.5' : ''}">
+          {#if !run.mine}
+            <Message.Avatar class="min-w-7 bg-transparent">
+              {#if group}
+                {#if lead.from}<a href="/social/{lead.from.username}" aria-label={senderName(lead)}><PersonAvatar name={senderName(lead)} src={lead.from.avatarUrl} size={28} /></a>{:else}<PersonAvatar name={null} size={28} />{/if}
+              {:else}<PersonAvatar name={name} src={chat.other?.avatarUrl} size={28} />{/if}
+            </Message.Avatar>
           {/if}
-        </div>
+          <Message.Content class="gap-1">
+            {#if group && !run.mine}<Message.Header class="px-1 text-[12px] font-normal">{senderName(lead)}</Message.Header>{/if}
+            {#each run.items as m, k (m.id)}
+              <div in:fade={{ duration: 150 }} use:longpress={() => { if (!m.deleted) picked = m; }} ondblclick={() => void react(m, "❤️")} role="presentation"
+                class="flex w-full select-none flex-col {run.mine ? 'items-end' : 'items-start'} {editing?.id === m.id ? 'opacity-60' : ''}">
+                {@render content(m, k === 0, k === run.items.length - 1)}
+              </div>
+            {/each}
+            {#if seen && r === runs.length - 1}<div transition:fade={{ duration: 150 }}><Message.Footer class="px-1 text-[12px] font-normal">Seen</Message.Footer></div>{/if}
+          </Message.Content>
+        </Message.Root>
       {/each}
-      {#if uploading > 0}
-        <div in:fade={{ duration: 150 }} class="flex h-40 w-40 items-center justify-center gap-2 self-end rounded-2xl bg-muted text-[13px] text-muted-foreground"><Spinner class="size-4" />Sending photo</div>
+      {#if pending.length}
+        <Message.Root align="end" class="mt-1.5 shrink-0 text-[15px]">
+          <Message.Content class="gap-1">
+            {#each pending as p (p.clientId)}
+              <div in:fade={{ duration: 150 }} class="flex w-full flex-col items-end gap-1">
+                {#if p.card?.type === "Story"}<span class="px-1 text-[12px] text-muted-foreground">Replying to {name}'s story</span>{/if}
+                {#if p.card && readCard(p.card.type, p.card.json)}<div class="opacity-60"><MessageCard card={readCard(p.card.type, p.card.json)!} mine /></div>{/if}
+                {#if p.photo}<MessagePhoto url={p.photo.url} width={p.photo.width} height={p.photo.height} mine dim />{/if}
+                {#if p.voice}<VoiceMessage voice={p.voice} mine dim />{/if}
+                {#if p.body}
+                  <Bubble.Root variant="default" align="end" class="max-w-[78%] opacity-60">
+                    <Bubble.Content class="rounded-[20px] px-3.5 py-2 text-[15px] leading-snug"><ChatText text={p.body} /></Bubble.Content>
+                  </Bubble.Root>
+                {/if}
+                <!-- Not sent: says why, with what to do (canvas board 18). -->
+                <Message.Footer class="flex-wrap gap-2 px-1 text-[12px] font-normal {p.error ? 'text-destructive' : ''}">
+                  {p.error ?? "Not sent yet"}
+                  {#if p.error}
+                    <button type="button" class="h-8 rounded-md border border-border px-2.5 text-foreground" onclick={() => discardDm(p.clientId)}>Remove</button>
+                  {:else}
+                    <button type="button" class="h-8 rounded-md border border-border px-2.5 text-foreground" onclick={() => void retryDm(p.clientId)}>Try now</button>
+                  {/if}
+                </Message.Footer>
+              </div>
+            {/each}
+          </Message.Content>
+        </Message.Root>
       {/if}
     {/if}
   </div>
@@ -450,20 +536,50 @@
         <button type="button" aria-label="Stop editing" class="flex size-9 items-center justify-center" onclick={() => { editing = null; draft = ""; }}><X class="size-4" /></button>
       </div>
     {/if}
-    <form class="flex shrink-0 items-end gap-2 {editing ? '' : 'border-t'} border-border px-3 py-2" onsubmit={(e) => { e.preventDefault(); void send(); }}>
-      <button type="button" aria-label="Send a photo, workout or record" class="flex size-11 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground" onclick={() => (attachOpen = true)}><Plus class="size-5" /></button>
-      <Textarea
-        bind:value={draft}
-        rows={1}
-        maxlength={2000}
-        placeholder="Message {name}…"
-        aria-label="Message {name}"
-        class="max-h-32 min-h-11 flex-1 resize-none rounded-2xl"
-        onkeydown={(e: KeyboardEvent) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }}
-      />
-      {#if draft.trim()}
-        <button type="submit" aria-label="Send" class="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-          <Send class="size-[18px]" />
+    {#if staged}
+      {@const st = staged}
+      <!-- The picked photo waits here (shadcn Attachment) until Send; a caption can go with it. -->
+      <div transition:fade={{ duration: 120 }} class="shrink-0 {editing ? '' : 'border-t'} border-border px-3 pt-2">
+        <Attachment.Root state={st.state === "done" ? "idle" : st.state} class="w-full rounded-2xl">
+          <Attachment.Media variant="image" class="w-14 rounded-xl">
+            <img src={st.preview} alt="" />
+            {#if st.state === "uploading"}<Spinner class="absolute size-5 text-white" />{/if}
+          </Attachment.Media>
+          <Attachment.Content>
+            <Attachment.Title class="text-[14px]">Photo</Attachment.Title>
+            <Attachment.Description class="text-[13px] text-muted-foreground">{st.state === "uploading" ? "Uploading…" : st.state === "error" ? "Couldn't upload it." : "Ready. Add a caption or just send it."}</Attachment.Description>
+          </Attachment.Content>
+          <Attachment.Actions class="gap-1">
+            {#if st.state === "error"}<button type="button" class="h-9 rounded-lg border border-border px-3 text-[13px] font-medium" onclick={() => void uploadStaged()}>Try again</button>{/if}
+            <button type="button" aria-label="Remove the photo" class="flex size-11 items-center justify-center rounded-full text-muted-foreground" onclick={dropStaged}><X class="size-5" /></button>
+          </Attachment.Actions>
+        </Attachment.Root>
+      </div>
+    {/if}
+    <form class="flex shrink-0 items-end gap-2 {editing || staged ? '' : 'border-t'} border-border px-3 py-2" onsubmit={(e) => { e.preventDefault(); void send(); }}>
+      <!-- One rounded box (shadcn Input Group): + and camera inside, mic or Send beside it. -->
+      <InputGroup.Root class="min-h-11 flex-1 rounded-[22px] dark:bg-transparent">
+        <InputGroup.Addon align="inline-start" class="self-end pb-0.5">
+          <button type="button" aria-label="Send a photo, workout or record" class="flex size-10 items-center justify-center rounded-full text-muted-foreground" onclick={() => (attachOpen = true)}><Plus class="size-5" /></button>
+        </InputGroup.Addon>
+        <InputGroup.Textarea
+          bind:value={draft}
+          rows={1}
+          maxlength={2000}
+          placeholder={staged ? "Add a caption…" : `Message ${name}…`}
+          aria-label="Message {name}"
+          class="max-h-32 min-h-10 py-2.5 text-[15px]"
+          onkeydown={(e: KeyboardEvent) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }}
+        />
+        {#if !staged && !editing}
+          <InputGroup.Addon align="inline-end" class="self-end pb-0.5">
+            <button type="button" aria-label="Take a photo" class="flex size-10 items-center justify-center rounded-full text-muted-foreground" onclick={() => void pickPhoto("camera")}><Camera class="size-5" /></button>
+          </InputGroup.Addon>
+        {/if}
+      </InputGroup.Root>
+      {#if draft.trim() || staged}
+        <button type="submit" aria-label="Send" disabled={!!staged && staged.state !== "done"} class="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-50">
+          {#if staged?.state === "uploading"}<Spinner class="size-[18px]" />{:else}<Send class="size-[18px]" />{/if}
         </button>
       {:else}
         <button type="button" aria-label="Record a voice message" class="flex size-11 shrink-0 items-center justify-center rounded-full bg-muted text-foreground" onclick={() => (recording = true)}>
@@ -480,8 +596,8 @@
   onOpenChange={(v) => (attachOpen = v)}
   title="Send"
   items={[
-    { icon: ImageIcon, label: "Photo", onSelect: () => void sendPhoto("photos") },
-    { icon: Camera, label: "Camera", onSelect: () => void sendPhoto("camera") },
+    { icon: ImageIcon, label: "Photo", onSelect: () => void pickPhoto("photos") },
+    { icon: Camera, label: "Camera", onSelect: () => void pickPhoto("camera") },
     { icon: Dumbbell, label: "Workout or record", onSelect: () => (sharing = true) },
   ]}
 />
@@ -507,7 +623,21 @@
   confirmLabel="Delete"
   onConfirm={deleteChat}
 />
-<ActionSheet open={!!picked} onOpenChange={(v) => { if (!v) picked = null; }} title={picked?.mine ? "Your message" : `${picked ? senderName(picked) : name}'s message`} items={messageActions} />
+<ActionSheet open={!!picked} onOpenChange={(v) => { if (!v) picked = null; }} title={picked?.mine ? "Your message" : `${picked ? senderName(picked) : name}'s message`} items={messageActions}>
+  {#snippet header()}
+    {#if picked && chat?.accepted}
+      {@const m = picked}
+      {@const mineNow = m.reactions?.find((r) => r.mine)?.emoji}
+      <div role="group" aria-label="React" class="mb-1 flex justify-between gap-1 rounded-2xl bg-muted/60 p-1.5">
+        {#each DM_REACTIONS as e (e)}
+          <button type="button" aria-label="React {e}" aria-pressed={mineNow === e}
+            class="flex size-11 items-center justify-center rounded-full text-[24px] transition-transform active:scale-90 {mineNow === e ? 'bg-primary/25' : ''}"
+            onclick={() => { const target = m; picked = null; void react(target, e); }}>{e}</button>
+        {/each}
+      </div>
+    {/if}
+  {/snippet}
+</ActionSheet>
 <ConfirmDialog
   open={!!confirmUnsend}
   onOpenChange={(v) => { if (!v) confirmUnsend = null; }}
