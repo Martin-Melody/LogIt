@@ -2,7 +2,7 @@
   import * as Table from "$lib/components/ui/table/index.js";
   import { DateField } from "$lib/components/ui/date-field/index.js";
   import * as RadioGroup from "$lib/components/ui/radio-group";
-  import * as NativeSelect from "$lib/components/ui/native-select/index.js";
+  import OptionSelect from "$lib/components/option-select.svelte";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import * as Dialog from "$lib/components/ui/dialog";
@@ -273,11 +273,8 @@
     <section class="flex flex-col gap-2.5 rounded-[10px] border border-border bg-card px-[18px] py-4">
       <h2 class="text-sm font-semibold">Exercise swaps for {name}</h2>
       <label for="swap-rule" class="text-xs font-medium text-muted-foreground">During workouts from your programs</label>
-      <NativeSelect.Root id="swap-rule" disabled={savingRule} value={clientRule ?? ""} onchange={(e) => setRule(e.currentTarget.value)}
-        >
-        <NativeSelect.Option value="">Your default: {swapRuleLabel(defaultRule)}</NativeSelect.Option>
-        {#each SWAP_RULES as r (r.key)}<NativeSelect.Option value={r.key}>{r.label}</NativeSelect.Option>{/each}
-      </NativeSelect.Root>
+      <OptionSelect id="swap-rule" disabled={savingRule} value={clientRule ?? ""} onValueChange={(v) => setRule(v)}
+        options={[{ value: "", label: `Your default: ${swapRuleLabel(defaultRule)}` }, ...SWAP_RULES.map((r) => ({ value: r.key, label: r.label }))]} />
       <p class="text-xs leading-relaxed text-muted-foreground">{clientRule ? "Set differently from your default. " : ""}{RULE_NOTE[effectiveRule]}</p>
       {#if clientRule}<button type="button" disabled={savingRule} onclick={() => setRule("")} class="w-fit text-xs text-muted-foreground underline hover:text-foreground">Back to your default</button>{/if}
     </section>

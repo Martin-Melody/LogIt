@@ -2,7 +2,7 @@
   import PageCrumbs from "$lib/components/PageCrumbs.svelte";
   import { clientName } from "$lib/features/coaching/clientName";
   import { Checkbox } from "$lib/components/ui/checkbox/index.js";
-  import * as NativeSelect from "$lib/components/ui/native-select/index.js";
+  import OptionSelect from "$lib/components/option-select.svelte";
   import { page } from "$app/state";
   import { goto } from "$app/navigation";
   import * as Card from "$lib/components/ui/card";
@@ -163,12 +163,8 @@
       <Card.Content class="pt-0 flex flex-col gap-3">
         <label class="text-sm flex items-center gap-2">
           <span class="text-muted-foreground">Cadence</span>
-          <NativeSelect.Root value={habit.cadence.kind}
-            onchange={(e) => void setCadence(e.currentTarget.value as HabitCadence["kind"])}>
-            <NativeSelect.Option value="daily">Every day</NativeSelect.Option>
-            <NativeSelect.Option value="days">Specific days</NativeSelect.Option>
-            <NativeSelect.Option value="weekly">Times per week</NativeSelect.Option>
-          </NativeSelect.Root>
+          <OptionSelect value={habit.cadence.kind} onValueChange={(v) => void setCadence(v as HabitCadence["kind"])}
+            options={[{ value: "daily", label: "Every day" }, { value: "days", label: "Specific days" }, { value: "weekly", label: "Times per week" }]} />
         </label>
 
         {#if habit.cadence.kind === "days"}

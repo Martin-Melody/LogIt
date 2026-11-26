@@ -1,7 +1,7 @@
 <script lang="ts">
   import { DateField } from "$lib/components/ui/date-field/index.js";
   import * as RadioGroup from "$lib/components/ui/radio-group";
-  import * as NativeSelect from "$lib/components/ui/native-select/index.js";
+  import OptionSelect from "$lib/components/option-select.svelte";
   import { guideSignal } from "$lib/features/guide/signal";
   import { onMount, untrack } from "svelte";
   import { goto } from "$app/navigation";
@@ -229,9 +229,8 @@
       <Dialog.Description>The client gets their own copy. Percent loads use their own lifts.</Dialog.Description>
     </Dialog.Header>
     <label class="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground">Client
-      <NativeSelect.Root bind:value={assignTo}>
-        {#each clients as c (c.client.id)}<NativeSelect.Option value={c.client.id}>{c.client.displayName || c.client.username}</NativeSelect.Option>{/each}
-      </NativeSelect.Root>
+      <OptionSelect bind:value={assignTo} aria-label="Client"
+        options={clients.map((c) => ({ value: c.client.id, label: c.client.displayName || c.client.username }))} />
     </label>
     <span id="lib-start" class="text-xs font-medium text-muted-foreground">Starts</span>
     <RadioGroup.Root bind:value={startMode} aria-labelledby="lib-start" class="flex flex-col gap-1.5">

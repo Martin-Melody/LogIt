@@ -2,7 +2,7 @@
   import PageCrumbs from "$lib/components/PageCrumbs.svelte";
   import { clientName } from "$lib/features/coaching/clientName";
   import { Checkbox } from "$lib/components/ui/checkbox/index.js";
-  import * as NativeSelect from "$lib/components/ui/native-select/index.js";
+  import OptionSelect from "$lib/components/option-select.svelte";
   import { page } from "$app/state";
   import { goto } from "$app/navigation";
   import * as Card from "$lib/components/ui/card";
@@ -151,10 +151,8 @@
       <Card.Content class="pt-0 flex flex-col gap-3">
         <label class="text-sm flex items-center gap-2">
           <span class="text-muted-foreground">Cadence</span>
-          <NativeSelect.Root value={schedule.cadence} class="capitalize"
-            onchange={(e) => void run((s) => C.setCadence(s, e.currentTarget.value as CheckinCadence))}>
-            {#each cadences as c}<NativeSelect.Option value={c}>{c}</NativeSelect.Option>{/each}
-          </NativeSelect.Root>
+          <OptionSelect value={schedule.cadence} onValueChange={(v) => void run((s) => C.setCadence(s, v as CheckinCadence))}
+            options={cadences.map((c) => ({ value: c, label: c.charAt(0).toUpperCase() + c.slice(1) }))} />
         </label>
 
         <div class="flex flex-col divide-y divide-border border-y border-border">
@@ -168,10 +166,9 @@
                   onclick={() => void run((s) => C.removeQuestion(s, q.id))}>Remove</button>
               </div>
               <div class="flex items-center gap-3 text-xs">
-                <NativeSelect.Root value={q.type}
-                  onchange={(e) => void run((s) => C.updateQuestion(s, q.id, { type: e.currentTarget.value as CheckinQuestionType }))}>
-                  {#each qTypes as t}<NativeSelect.Option value={t.v}>{t.l}</NativeSelect.Option>{/each}
-                </NativeSelect.Root>
+                <OptionSelect value={q.type} aria-label="Answer type"
+                  onValueChange={(v) => void run((s) => C.updateQuestion(s, q.id, { type: v as CheckinQuestionType }))}
+                  options={qTypes.map((t) => ({ value: t.v, label: t.l }))} />
                 <label class="flex items-center gap-1 text-muted-foreground">
                   <Checkbox checked={q.required ?? false}
                     onCheckedChange={(v) => void run((s) => C.updateQuestion(s, q.id, { required: v }))} />
