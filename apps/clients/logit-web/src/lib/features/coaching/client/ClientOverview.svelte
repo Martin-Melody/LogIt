@@ -64,8 +64,9 @@
     if (!plugins.installsLoaded) void plugins.loadInstalls().catch(() => {});
   });
 
-  const block = $derived(client.program?.state === "running" && client.program.startsAtMs
-    ? { startMs: client.program.startsAtMs, endMs: client.program.endsAtMs, label: `${client.program.program.name}, week ${client.program.week} of ${client.program.totalWeeks}` }
+  // A running program's start: its end less its weeks (programStatus only sets startsAtMs while scheduled).
+  const block = $derived(client.program?.state === "running" && client.program.endsAtMs
+    ? { startMs: client.program.endsAtMs - client.program.totalWeeks * 7 * 86_400_000, endMs: client.program.endsAtMs, label: `${client.program.program.name}, week ${client.program.week} of ${client.program.totalWeeks}` }
     : null);
   const period = $derived(cardPeriod(kind === "block" && !block ? "week" : kind, Date.now(), { monthsBack, block }));
   $effect(() => {
