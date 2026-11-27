@@ -62,3 +62,31 @@ describe("what the rules plan, week by week", () => {
     expect(parseCell("heavy")).toBeNull();
   });
 });
+
+describe("rules on the phone, and the coach's own rules", () => {
+  it("starting a day uses this week's planned numbers, with a lighter week's fewer sets", async () => {
+    const { programDaySession } = await import("./programDaySession");
+    const { planForWeek } = await import("./programPlan");
+    const { p, id } = program({ kind: "linear", stepKg: 2.5 }, 60);
+    const day = p.weeks.find((w) => w.weekNumber === 2)!.days[0]!;
+    const s2 = programDaySession(day, { plan: planForWeek(p, 2, {}) });
+    const sets2 = (s2.blocks[0]!.data as { sets: { weight: number; reps: number }[] }).sets;
+    expect(sets2.map((s) => `${s.weight}×${s.reps}`)).toEqual(["60×7", "60×7", "60×7", "60×7"]);
+    const lighter = p.weeks.find((w) => w.weekNumber === 4)!.days[0]!;
+    const s4 = programDaySession(lighter, { plan: planForWeek(p, 4, {}) });
+    expect((s4.blocks[0]!.data as { sets: unknown[] }).sets).toHaveLength(2);
+    expect(id).toBeTruthy();
+  });
+
+  it("an own rule plans like the built-in it's made from", () => {
+    const { p, id } = program({ kind: "own", ruleId: "r1", name: "Top set", recipe: { name: "Top set", weightFrom: "last", repRange: [5, 8], repsInReserve: 1, setLayout: "topBackoff", increment: 5, whenStalled: "deload", sets: { mode: "fixed", count: 3 }, food: "ignore" } }, 100);
+    expect(texts(p, id).slice(0, 5)).toEqual(["100 × 5 · 3 sets", "100 × 6 · 3 sets", "100 × 7 · 3 sets", "100 × 5 · 2 sets", "100 × 8 · 3 sets"]);
+  });
+
+  it("estimates come from the best recent set", async () => {
+    const { estimatesFrom } = await import("./programPlan");
+    const now = Date.now();
+    const m = estimatesFrom([{ startedAtMs: now - 86_400_000, blocks: [{ type: "strength", data: { exerciseName: "Bench Press", sets: [{ weight: 60, reps: 8 }, { weight: 70, reps: 3, setType: "warmup" }, { weight: 65, reps: 5, completed: false }] } }] }], now);
+    expect(Math.round(m.get("bench press")!)).toBe(76);
+  });
+});

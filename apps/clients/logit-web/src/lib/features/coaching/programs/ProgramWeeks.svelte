@@ -10,7 +10,7 @@
   import ActionMenu from "$lib/features/commands/ActionMenu.svelte";
   import type { RowAction } from "$lib/features/commands/commands.svelte";
   import { getWebDeps } from "$lib/deps";
-  import { getProgramProgress, getProgramStartMs, type CoachProgram, type ProgramStrength } from "@logit/core/domain/CoachProgram";
+  import { getProgramProgress, getProgramStartMs, ruleLabel, type CoachProgram, type ProgramStrength } from "@logit/core/domain/CoachProgram";
   import { cellText, parseCell, pinWeek, planExercise, unpinWeek, type PlanCell } from "@logit/core/domain/programPlan";
   import { bestWorkingSet } from "@logit/core/domain/sessionHistory";
   import { estimated1RM } from "@logit/core/domain/oneRepMax";
@@ -205,7 +205,7 @@
           <tr class="border-t border-border">
             <th scope="row" class="sticky left-0 bg-card px-3 py-2 text-left font-normal">
               <span class="block font-medium">{b.type === "strength" ? b.exerciseName : b.type === "cardio" ? b.activityName : b.type === "mobility" ? b.drillName : b.type === "plugin" ? b.name : "Circuit"}</span>
-              {#if b.type === "strength"}<span class="text-xs text-muted-foreground">{usual(b)} sets · {(b.rule ?? program.rule)?.kind === "adaptive" ? "Adaptive" : (b.rule ?? program.rule)?.kind === "linear" ? "Linear" : (b.rule ?? program.rule)?.kind === "wave" ? "Wave" : "Fixed"}</span>{/if}
+              {#if b.type === "strength"}<span class="text-xs text-muted-foreground">{usual(b)} sets · {ruleLabel(b.rule ?? program.rule)}</span>{/if}
             </th>
             {#each weeks as w (w.id)}
               {#if b.type === "strength"}

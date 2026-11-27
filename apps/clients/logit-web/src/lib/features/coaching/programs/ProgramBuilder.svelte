@@ -18,6 +18,7 @@
   import Redo2Icon from "@lucide/svelte/icons/redo-2";
   import ActionMenu from "$lib/features/commands/ActionMenu.svelte";
   import ProgramWeeks from "./ProgramWeeks.svelte";
+  import RulePickerDialog from "./RulePickerDialog.svelte";
   import type { RowAction } from "$lib/features/commands/commands.svelte";
   import NamePicker from "$lib/features/plan/NamePicker.svelte";
   import { loadExerciseIndex, type ExerciseIndex } from "$lib/features/plan/exerciseIndex";
@@ -64,12 +65,6 @@
 
   const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0];
-  const RULES: { value: string; label: string; rule: ProgramRule }[] = [
-    { value: "adaptive", label: "LogIt Adaptive", rule: { kind: "adaptive" } },
-    { value: "linear", label: "Linear, +2.5 kg", rule: { kind: "linear", stepKg: 2.5 } },
-    { value: "wave", label: "4-week wave", rule: { kind: "wave" } },
-    { value: "fixed", label: "Same every time (Fixed)", rule: { kind: "fixed" } },
-  ];
   const setTypes = SET_TYPE_META.filter((m) => m.type !== "amrap");
 
   // ── The program, history and saving ──
@@ -398,7 +393,21 @@
   }
 
   // ── Program settings ──
-  const ruleValue = $derived(prog.rule?.kind && RULES.some((r) => r.value === prog.rule?.kind) ? prog.rule.kind : "fixed");
+  // Canvas PG4: one rule picker, for the program or one exercise.
+  let picking = $state(false);
+  let pickingFor = $state<ProgramStrength | null>(null);
+  function pickRule(rule: ProgramRule | null, scope: "exercise" | "program") {
+    const b = pickingFor;
+    if (!b || scope === "program") {
+      edit((p) => {
+        const withRule = { ...p, rule: rule ?? { kind: "fixed" as const } };
+        // "The whole program" from an exercise: it follows the program again.
+        return b ? mapTemplateDay(withRule, day!.id, (d) => ({ ...d, blocks: d.blocks.map((x) => { if (x.id !== b.id || x.type !== "strength") return x; const { rule: _r, ...rest } = x; return rest; }) })) : withRule;
+      });
+    } else {
+      patchBlock(b.id, (x) => { if (x.type !== "strength") return x; const { rule: _r, ...rest } = x; return rule ? { ...rest, rule } : rest; });
+    }
+  }
   const lighter = $derived(new Set(prog.weeks.filter((w) => w.lighter).map((w) => w.weekNumber)));
   function toggleLighter(n: number) {
     const next = new Set(lighter);
@@ -474,12 +483,11 @@
 
   <!-- Rule, length, lighter weeks, start -->
   <section class="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-[10px] bg-muted/60 px-4 py-3 text-[13px]">
-    <label class="flex items-center gap-2">
+    <span class="flex items-center gap-2">
       <span class="text-muted-foreground">Rule for every exercise</span>
-      <OptionSelect size="sm" value={ruleValue} aria-label="Rule for every exercise" class="w-56"
-        options={RULES.map((r) => ({ value: r.value, label: r.label }))}
-        onValueChange={(v) => { const r = RULES.find((x) => x.value === v)?.rule; if (r) edit((p) => ({ ...p, rule: r })); }} />
-    </label>
+      <b class="font-semibold">{P.ruleLabel(prog.rule)}</b>
+      <Button variant="outline" size="sm" onclick={() => { pickingFor = null; picking = true; }}>Change</Button>
+    </span>
     <span class="flex items-center gap-2">
       <span class="text-muted-foreground">Length</span>
       <Button variant="outline" size="icon" class="size-7" aria-label="One week fewer" disabled={prog.weeks.length <= 1} onclick={() => edit((p) => setLength(p, p.weeks.length - 1))}>−</Button>
@@ -641,11 +649,9 @@
                 </tbody>
               </table>
             </details>
-            <div class="flex flex-col gap-1.5">
-              <Label>Rule</Label>
-              <OptionSelect size="sm" value={b.rule?.kind ?? ""} aria-label="Rule for {b.exerciseName}"
-                options={[{ value: "", label: `The program's (${P.ruleLabel(prog.rule)})` }, ...RULES.map((r) => ({ value: r.value, label: r.label }))]}
-                onValueChange={(v) => patchBlock(b.id, (x) => { if (x.type !== "strength") return x; const { rule: _r, ...rest } = x; const r = RULES.find((y) => y.value === v)?.rule; return r ? { ...rest, rule: r } : rest; })} />
+            <div class="flex items-center justify-between gap-2">
+              <span class="flex flex-col"><Label>Rule</Label><span class="text-[13px]">{b.rule ? P.ruleLabel(b.rule) : `The program's · ${P.ruleLabel(prog.rule)}`}</span></span>
+              <Button variant="outline" size="sm" onclick={() => { pickingFor = b; picking = true; }}>Change</Button>
             </div>
             <div class="flex flex-col gap-1.5">
               <Label>Swaps they can use</Label>
@@ -746,3 +752,5 @@
     </ul>
   </Dialog.Content>
 </Dialog.Root>
+
+<RulePickerDialog bind:open={picking} current={pickingFor ? (pickingFor.rule ?? null) : (prog.rule ?? null)} exercise={pickingFor?.exerciseName ?? null} onpick={pickRule} />

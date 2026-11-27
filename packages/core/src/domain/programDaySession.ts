@@ -9,6 +9,7 @@
 // part" (unrunnableBlocks); the rest of the day works.
 
 import { canRunBlock, type ProgramBlock, type ProgramDay } from "./CoachProgram";
+import type { PlanCell } from "./programPlan";
 import { addPluginBlock, setBlockFieldValue, updatePluginBlock, type BlockDeclaration } from "./blockPlugin";
 import {
   type WorkoutSession,
@@ -37,6 +38,9 @@ function targetReps(set: Extract<ProgramBlock, { type: "strength" }>["sets"][num
 export type ProgramDayOptions = {
   /** This app's version ("1.1.0"); blocks needing a newer one are left out. */
   appVersion?: string | null;
+  /** What the rule plans this week for an exercise (programPlan.planForWeek): its weight,
+   * reps and number of sets replace the typed ones. */
+  plan?: (blockId: string) => PlanCell | null;
   /** The plugin's block declaration, when it's installed and allowed (canvas PG8). */
   pluginBlock?: (pluginId: string) => BlockDeclaration | null;
 };
@@ -77,11 +81,20 @@ export function programDaySession(day: ProgramDay, opts: ProgramDayOptions = {})
         exerciseId: block.exerciseId,
       });
       const entryId = getExercises(session).at(-1)?.id;
+      // The rule's numbers for this week, when it planned some (lighter weeks have fewer sets).
+      const cell = opts.plan?.(block.id) ?? null;
+      const planned = cell && (cell.source === "rule" || cell.source === "pinned") ? cell : null;
+      const ordered = sortByOrderIndex(block.sets);
+      const working = ordered.filter((s) => s.setType !== "warmup");
+      const keep = planned?.sets ? new Set(working.slice(0, planned.sets).map((s) => s.id)) : null;
+      const plannedReps = planned?.reps ? Number.parseInt(planned.reps, 10) : NaN;
       if (entryId) {
-        for (const set of sortByOrderIndex(block.sets)) {
+        for (const set of ordered) {
+          if (keep && set.setType !== "warmup" && !keep.has(set.id)) continue;
+          const usePlan = planned && set.setType !== "warmup";
           session = addSet(session, entryId, {
-            reps: targetReps(set),
-            weight: set.weight ?? 0,
+            reps: usePlan && Number.isFinite(plannedReps) ? plannedReps : targetReps(set),
+            weight: usePlan && planned!.weight != null ? planned!.weight : (set.weight ?? 0),
             setType: set.setType,
           });
         }

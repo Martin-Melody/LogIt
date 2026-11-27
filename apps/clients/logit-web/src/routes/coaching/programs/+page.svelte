@@ -16,7 +16,7 @@
   import type { MyCoachProgram } from "@logit/core/data/coachProgramRepo";
   import { getWebCoachProgramRepo } from "$lib/deps";
   import ProgramEditor from "$lib/features/coaching/ProgramEditor.svelte";
-  import SwapDefaultCard from "$lib/features/coaching/SwapDefaultCard.svelte";
+  import RulesTab from "$lib/features/coaching/programs/RulesTab.svelte";
   import AssignProgramDialog from "$lib/features/coaching/programs/AssignProgramDialog.svelte";
   import StartFromProgramDialog from "$lib/features/coaching/programs/StartFromProgramDialog.svelte";
   import { communityPacks, logitPrograms } from "$lib/features/coaching/programs/programSources";
@@ -42,6 +42,9 @@
   let assignOpen = $state(false);
   let assignFor = $state<CoachProgram | null>(null);
   type Source = "yours" | "logit" | "community";
+  // Canvas PG1/PG10: Programs and Rules (Exercises joins them in 2.6).
+  const pageTab = $derived(page.url.searchParams.get("tab") === "rules" ? "rules" : "programs");
+  const setPageTab = (v: string) => void goto(v === "rules" ? "/coaching/programs?tab=rules" : "/coaching/programs", { replaceState: true, noScroll: true, keepFocus: true });
   let source = $state<Source>("yours");
   let startOpen = $state(false);
   let startTab = $state<Source>("logit");
@@ -254,8 +257,12 @@
         <p class="mt-1 text-[13px] text-muted-foreground">Build once, assign to anyone. Each client gets their own copy.</p>
       </div>
       <span class="flex flex-wrap gap-2">
-        <Button variant="outline" onclick={() => { startTab = source === "community" ? "community" : "logit"; startOpen = true; }}>Start from a program</Button>
-        <Button data-guide="programs-new" disabled={busy} onclick={() => void create()}>New program</Button>
+        {#if pageTab === "rules"}
+          <Button href="/coaching/programs/rules/new">New rule</Button>
+        {:else}
+          <Button variant="outline" onclick={() => { startTab = source === "community" ? "community" : "logit"; startOpen = true; }}>Start from a program</Button>
+          <Button data-guide="programs-new" disabled={busy} onclick={() => void create()}>New program</Button>
+        {/if}
       </span>
     </header>
 
@@ -264,13 +271,21 @@
     {:else if loading}
       <Skeleton class="h-72" />
     {:else}
-      <Tabs.Root bind:value={source}>
-        <Tabs.List variant="line" aria-label="Programs">
-          <Tabs.Trigger value="yours">Yours <span class="ml-1 opacity-60">{active.length}</span></Tabs.Trigger>
-          <Tabs.Trigger value="logit">LogIt <span class="ml-1 opacity-60">{logit.length}</span></Tabs.Trigger>
-          <Tabs.Trigger value="community">Community{#if packs.length}<span class="ml-1 opacity-60">{packs.length}</span>{/if}</Tabs.Trigger>
+      <Tabs.Root value={pageTab} onValueChange={setPageTab}>
+        <Tabs.List variant="line" aria-label="Programs and rules">
+          <Tabs.Trigger value="programs">Programs</Tabs.Trigger>
+          <Tabs.Trigger value="rules">Rules</Tabs.Trigger>
         </Tabs.List>
       </Tabs.Root>
+      {#if pageTab === "rules"}
+        <RulesTab programs={library} {clients} bind:swapRule />
+      {:else}
+      <div class="inline-flex w-fit gap-0.5 rounded-[10px] bg-muted p-[3px] text-[13px]" role="radiogroup" aria-label="Whose programs">
+        {#each [["yours", "Yours", active.length], ["logit", "LogIt", logit.length], ["community", "Community", packs.length]] as [v, l, n] (v)}
+          <button type="button" role="radio" aria-checked={source === v} onclick={() => (source = v as Source)}
+            class="h-8 rounded-[8px] px-3 transition-colors {source === v ? 'bg-background font-semibold shadow-sm' : 'text-muted-foreground hover:text-foreground'}">{l}{#if n}<span class="ml-1.5 opacity-60">{n}</span>{/if}</button>
+        {/each}
+      </div>
 
       {#if source === "yours"}
         <section data-guide="programs-library" class="flex flex-col rounded-[12px] border border-border bg-card" aria-label="Your programs">
@@ -305,7 +320,6 @@
             </section>
           {/if}
         {/if}
-        <SwapDefaultCard bind:rule={swapRule} {clients} />
       {:else}
         <section class="flex flex-col rounded-[12px] border border-border bg-card" aria-label="{source === 'logit' ? 'LogIt' : 'Community'} programs">
           {#if source === "logit"}
@@ -327,6 +341,7 @@
           {/if}
         </section>
         <p class="text-xs text-muted-foreground">Read-only until you copy one. Copying makes it yours; a pack update never changes your copy or your clients'.</p>
+      {/if}
       {/if}
     {/if}
   {/if}

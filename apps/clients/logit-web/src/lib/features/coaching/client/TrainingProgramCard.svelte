@@ -7,13 +7,14 @@
   import { Button } from "$lib/components/ui/button";
   import { toast } from "$lib/components/ui/sonner";
   import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
-  import { archiveCoachProgram, getProgramStartMs, ruleLabel, type CoachProgram } from "@logit/core/domain/CoachProgram";
+  import { archiveCoachProgram, getProgramStartMs, ruleLabel, type CoachProgram, type ProgramRule } from "@logit/core/domain/CoachProgram";
   import type { StrengthBlockData, WorkoutSession } from "@logit/core/domain/workout";
   import { SWAP_WHY_LABEL, type ProgramSwap } from "@logit/core/domain/swaps";
   import { getWebCoachProgramRepo } from "$lib/deps";
   import type { ProgramStatus } from "../coachingData";
   import { weekdayDate } from "../format";
   import AssignProgramDialog from "../programs/AssignProgramDialog.svelte";
+  import RulePickerDialog from "../programs/RulePickerDialog.svelte";
 
   let { status, clientId, username, name, sessions, swaps, shared, onchange }: {
     status: ProgramStatus | null;
@@ -31,6 +32,18 @@
   const first = $derived(name.split(" ")[0]);
   let assigning = $state(false);
   let stopping = $state(false);
+  // Their copy can follow its own rule (canvas PG4 per-client override).
+  let pickingRule = $state(false);
+  async function setRule(rule: ProgramRule | null) {
+    if (!p) return;
+    try {
+      await getWebCoachProgramRepo().saveProgram({ ...p, rule: rule ?? { kind: "fixed" }, updatedAtMs: Date.now() }, username);
+      toast.success(`${first}'s copy follows ${ruleLabel(rule ?? { kind: "fixed" })} now`);
+      await onchange();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't change it");
+    }
+  }
 
   const p = $derived(status?.program ?? null);
   const start = $derived(p ? getProgramStartMs(p) : null);
@@ -83,6 +96,7 @@
           </DropdownMenu.Trigger>
           <DropdownMenu.Content align="end" class="w-52">
             <DropdownMenu.Item onSelect={() => (assigning = true)}>Change program…</DropdownMenu.Item>
+            <DropdownMenu.Item onSelect={() => (pickingRule = true)}>Change {first}'s rule…</DropdownMenu.Item>
             <DropdownMenu.Separator />
             <DropdownMenu.Item class="text-destructive" onSelect={() => (stopping = true)}>Stop the program…</DropdownMenu.Item>
           </DropdownMenu.Content>
@@ -117,6 +131,7 @@
 </section>
 
 <AssignProgramDialog bind:open={assigning} clientIds={[clientId]} onassigned={onchange} />
+<RulePickerDialog bind:open={pickingRule} current={p?.rule ?? null} onpick={(rule) => void setRule(rule)} />
 
 <AlertDialog.Root bind:open={stopping}>
   <AlertDialog.Content>

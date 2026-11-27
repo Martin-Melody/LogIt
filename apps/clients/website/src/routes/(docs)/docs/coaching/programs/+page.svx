@@ -27,6 +27,21 @@ device, changes to different things come across by themselves with a note; only 
 the same exercise does LogIt ask which to keep. Programs made before the builder whose weeks have
 different exercises are still edited week by week.
 
+## Rules
+
+A rule decides how the numbers move from week to week. Pick one for the whole program at the
+top of the builder, and a different one for any exercise from its settings. LogIt Adaptive,
+Linear, the 4-week wave and Fixed are built in. Programs › Rules is where you make your own,
+with the same builder lifters have on the phone: where the weight comes from (strength estimate,
+last session or a wave), the rep range, reps left, the set layout, the step, what happens on a
+stall, the number of sets and whether to hold in a calorie deficit. "What it would do" shows the
+numbers on a client's lift, and "In words" is what clients see under "Why this weight?". Your
+programs follow changes to a rule; clients' copies follow when you update them.
+
+A client's copy can follow its own rule: ⋯ › Change their rule… on their Training tab. Clients'
+phones work out each week's numbers from their own lifts when they start the day. Programs ›
+Rules also has what clients can swap to.
+
 ## Every week
 
 See every week shows what the rule plans for each exercise, week by week. On a client's copy the

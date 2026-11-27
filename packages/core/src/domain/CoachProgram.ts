@@ -1,5 +1,6 @@
 import type { MobilityMetric, SetType } from "./workout";
 import type { BlockValue } from "./blockPlugin";
+import type { SharedRecipe } from "./progressionRecipe";
 import { createId } from "./ids";
 import { nowMs } from "./time";
 
@@ -80,7 +81,9 @@ export type ProgramRule =
   | { kind: "adaptive"; repsInReserve?: number }
   | { kind: "linear"; stepKg?: number }
   | { kind: "wave" }
-  | { kind: "own"; ruleId: string; name: string }
+  /** The coach's own rule (built in Programs › Rules): its blocks travel with the program so
+   * the client's phone can run it. */
+  | { kind: "own"; ruleId: string; name: string; recipe?: SharedRecipe }
   | { kind: "plugin"; pluginId: string; name: string };
 
 export type ProgramBlock = ProgramStrength | ProgramCardio | ProgramCircuit | ProgramMobility | ProgramPluginBlock;

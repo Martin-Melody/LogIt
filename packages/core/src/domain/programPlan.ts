@@ -90,14 +90,16 @@ function planWeek(program: CoachProgram, week: ProgramWeek, block: ProgramStreng
   if (pinned) return { source: "pinned", weight: pinned.weight, reps: repsText(pinned), sets: count };
   if (!first) return { source: "words", sets: 0, words: "No working sets" };
 
-  const r = range(first);
+  const rule = ruleFor(program, block);
+  // A rule built from blocks can set its own rep range; it wins over the exercise's.
+  const r = (rule.kind === "own" && rule.recipe?.repRange) || range(first);
   if (week.lighter) {
     const lighterSets = Math.max(1, Math.round(count / 2));
     return lastWeight != null
       ? { source: "rule", weight: lastWeight, reps: String(r?.[0] ?? repsText(first) ?? ""), sets: lighterSets }
       : { source: "words", sets: lighterSets, words: `${lighterSets} ${lighterSets === 1 ? "set" : "sets"}, lighter week` };
   }
-  return planByRule(ruleFor(program, block), block, first, r, k, ctx, count);
+  return planByRule(rule, block, first, r, k, ctx, count);
 }
 
 function planByRule(rule: ProgramRule, block: ProgramStrength, first: ProgramSet, r: [number, number] | null, k: number, ctx: PlanContext, count: number): PlanCell {
@@ -125,7 +127,16 @@ function planByRule(rule: ProgramRule, block: ProgramStrength, first: ProgramSet
       if (!est) return { source: "words", sets: count, words: `${wv.reps}s at up to ${wv.pct}% of their training max` };
       return { source: "rule", weight: round(est * 0.9 * (wv.pct / 100)), reps: wv.reps, sets: count };
     }
-    case "own":
+    case "own": {
+      // A rule built from blocks plans like the built-in it's made from.
+      const rc = rule.recipe;
+      if (!rc) return { source: "words", sets: count, words: `Worked out on their phone (${rule.name})` };
+      const rr = rc.repRange ?? r;
+      const first2 = rr ? { ...first, reps: undefined, repsMin: rr[0], repsMax: rr[1] } : first;
+      const asBuiltIn: ProgramRule = rc.weightFrom === "estimate" ? { kind: "adaptive", repsInReserve: rc.repsInReserve }
+        : rc.weightFrom === "last" ? { kind: "linear", stepKg: rc.increment } : { kind: "wave" };
+      return planByRule(asBuiltIn, block, first2, rr, k, ctx, rc.sets.mode === "fixed" ? rc.sets.count : count);
+    }
     case "plugin":
       return { source: "words", sets: count, words: `Worked out on their phone (${rule.name})` };
     default:
@@ -187,5 +198,37 @@ export function unpinWeek(program: CoachProgram, weekNumber: number, blockId: st
       ...w,
       days: w.days.map((d) => ({ ...d, blocks: d.blocks.map((b) => (b.id === blockId && tb ? { ...tb, orderIndex: b.orderIndex } : b)) })),
     })),
+  };
+}
+
+
+/** Their best estimate per exercise (lower-case name) over the last 12 weeks of sessions. */
+export function estimatesFrom(sessions: { startedAtMs: number; blocks: { type: string; data: unknown }[] }[], nowMs = Date.now()): Map<string, number> {
+  const since = nowMs - 84 * 86_400_000;
+  const m = new Map<string, number>();
+  for (const s of sessions) {
+    if (s.startedAtMs < since) continue;
+    for (const b of s.blocks) {
+      if (b.type !== "strength") continue;
+      const d = b.data as { exerciseName: string; sets: { weight?: number; reps?: number; setType?: string; completed?: boolean }[] };
+      for (const set of d.sets ?? []) {
+        if (set.setType === "warmup" || set.completed === false || !(set.weight! > 0) || !(set.reps! > 0)) continue;
+        const e = set.reps === 1 ? set.weight! : set.weight! * (1 + set.reps! / 30);
+        const key = d.exerciseName.trim().toLowerCase();
+        if (e > (m.get(key) ?? 0)) m.set(key, e);
+      }
+    }
+  }
+  return m;
+}
+
+/** What the rule plans this week for each exercise of a day, for starting it (the phone). */
+export function planForWeek(program: CoachProgram, weekNumber: number, ctx: PlanContext): (blockId: string) => PlanCell | null {
+  const index = [...program.weeks].sort((a, b) => a.weekNumber - b.weekNumber).findIndex((w) => w.weekNumber === weekNumber);
+  const cache = new Map<string, PlanCell | null>();
+  return (blockId) => {
+    if (index < 0) return null;
+    if (!cache.has(blockId)) cache.set(blockId, planExercise(program, blockId, { e1rm: ctx.e1rm })[index] ?? null);
+    return cache.get(blockId)!;
   };
 }
