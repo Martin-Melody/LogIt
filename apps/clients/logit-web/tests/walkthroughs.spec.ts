@@ -22,7 +22,9 @@ const PREPARE: Record<string, (page: Page) => Promise<void>> = {
   // An exercise's swap list shows once a program is open and an exercise picked (adding one to an empty day).
   "swap.added": async (p) => {
     if (!/[?&]id=/.test(p.url())) {
-      await p.locator('[data-guide="programs-library"] a, [data-guide="programs-assign"]').first().click();
+      // The step before is on another tab: go to the list, then open the first program.
+      await p.goto("/coaching/programs");
+      await p.locator('[data-guide="programs-assign"]').first().click();
       await p.waitForURL(/[?&]id=/);
     }
     const editor = p.locator('[data-guide="program-editor"]');
