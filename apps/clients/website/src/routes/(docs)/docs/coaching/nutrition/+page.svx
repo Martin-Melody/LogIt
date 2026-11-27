@@ -1,0 +1,41 @@
+---
+title: Meal plans and recipes
+description: "Meal plans from just targets to full meals, your recipes, and how targets are set, under Nutrition."
+---
+
+<script>
+  import FeatureFacts from "$lib/docs/using/FeatureFacts.svelte";
+</script>
+
+<FeatureFacts id="coach-nutrition" />
+
+Nutrition in the sidebar has three tabs.
+
+## Meal plans
+
+Your meal plans, each with a line saying what it is ("Training day 2,100 kcal · rest day 1,850 ·
+5 meals · Adaptive targets") and how many clients have it. A meal plan can be just targets
+(calories and protein, say) or full meals: the same thing, more filled in. If you don't coach food,
+you never need this page; clients log against their own targets.
+
+A plan's targets: calories you set, or **Adaptive targets** that follow each client's own goal pace;
+protein, carbs and fat (leave one empty and they keep their own); and more targets, at least, at
+most or about: fibre, salt, sugar, saturated fat, and vitamins and minerals. Many foods don't list
+vitamins, so a vitamin target is only as good as the labels. Tick what the plan is good for
+(dairy-free, vegetarian…). Changes save as you go.
+
+## Recipes
+
+Your recipes are the same ones as in your own diary. Each has its ingredients for the whole recipe,
+how many servings it makes, how long it takes, a method, a photo, and what it's good for; one
+serving is worked out from the ingredients. The list shows where each is used in your meal plans.
+Adding a recipe to a meal plan copies it, so changing the recipe later doesn't change plans
+you've given.
+
+## Rules
+
+How targets are set: the built-in Adaptive targets (a standard formula first, then corrected from
+their weight and food trend after about two weeks), with your trend window for new plans, and any
+nutrition plugins you've added. Food swaps: only your swaps, or your swaps then foods close to the
+plan (the same kind of food, within 15% of the calories and protein). Logging anything else is
+always allowed; it shows as off plan.

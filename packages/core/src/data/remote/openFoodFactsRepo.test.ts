@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createOpenFoodFactsRepo } from "./openFoodFactsRepo";
+import { brandName, createOpenFoodFactsRepo } from "./openFoodFactsRepo";
 
 const hit = {
   code: "5000000000001",
@@ -52,5 +52,14 @@ describe("open food facts nutrients", async () => {
     // 5 g of iron per 100 g is a unit typed wrong (mg entered as g).
     expect(offNutrients({ iron_100g: 5, fiber_100g: 400 })).toBeUndefined();
     expect(offNutrients({})).toBeUndefined();
+  });
+});
+
+describe("brand names", () => {
+  it("brand tags read as names; names stay as they are", () => {
+    expect(brandName("xx:kirkland")).toBe("Kirkland");
+    expect(brandName("en:tesco-finest")).toBe("Tesco Finest");
+    expect(brandName("Arla")).toBe("Arla");
+    expect(brandName(" ")).toBeUndefined();
   });
 });

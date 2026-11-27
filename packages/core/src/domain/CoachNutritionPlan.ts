@@ -8,6 +8,7 @@ import {
   type MacroTotals,
   type MealSlot,
   type Recipe,
+  type DietTag,
 } from "./nutrition";
 import type { NutrientId, Nutrients } from "./nutrients";
 
@@ -100,6 +101,13 @@ export type CoachNutritionPlan = {
   kcalMode?: "fixed" | "adaptive";
   /** On a rest day, "before/after training" meals are at this time (default 16:30). */
   restDayClock?: string;
+  /** Adaptive calories: the built-in rule's settings for this plan (canvas Q3, copied from the
+   * coach's defaults when the plan is made). */
+  adaptivePrefs?: { windowDays?: number };
+  /** What the plan is (canvas MP2 "This plan is marked dairy-free"). */
+  tags?: DietTag[];
+  /** A client's plan: the meal plan in your library it was given from (canvas MP1 "3 clients"). */
+  sourcePlanId?: string;
   /** A client's plan: the first day it applies (YYYY-MM-DD, their local date). Unset on older
    * plans: from when it was made. */
   fromIso?: string;
@@ -325,4 +333,38 @@ export function plannedFoodFromRecipe(recipe: Recipe, servings = 1): Omit<Planne
     recipe: { id: recipe.id, name: recipe.name, servings: recipe.servings, ingredients: recipe.ingredients, perServing: recipe.perServing, ...(recipe.notes ? { notes: recipe.notes } : {}) },
     servingsUsed: n,
   };
+}
+
+// ── Nutrition › Meal plans (canvas MP1) ──
+
+const kcalText = (n: number) => Math.round(n).toLocaleString("en-GB");
+
+/** One line for a meal plan in a list: "Training day 2,100 kcal · rest day 1,850 · 5 meals ·
+ * Adaptive targets", or "Calories and protein, no meals · you set the targets". */
+export function mealPlanSummary(plan: CoachNutritionPlan): string {
+  const types = plan.mode && plan.mode !== "same" ? (plan.dayTypes ?? []) : [];
+  const meals = types.length ? Math.max(...types.map((d) => d.meals.length)) : (plan.meals ?? []).length;
+  const set = [plan.proteinG && "protein", plan.carbsG && "carbs", plan.fatG && "fat"].filter(Boolean) as string[];
+  const first = types.length
+    ? types.map((d, i) => `${i === 0 ? d.name : d.name.toLowerCase()} ${kcalText(d.kcalTarget)}${i === 0 ? " kcal" : ""}`).join(" · ")
+    : meals ? `One day type · ${kcalText(plan.kcalTarget)} kcal` : `Calories${set.length ? ` and ${set.join(", ")}` : ""}, no meals`;
+  const mealsText = meals ? `${meals} ${meals === 1 ? "meal" : "meals"}` : null;
+  const how = plan.kcalMode === "adaptive" ? "Adaptive targets" : "you set the targets";
+  return [first, mealsText, how].filter(Boolean).join(" · ");
+}
+
+/** Every meal of a plan, across its day types. */
+export function allMeals(plan: CoachNutritionPlan): PlannedMeal[] {
+  return plan.mode && plan.mode !== "same" && plan.dayTypes?.length ? plan.dayTypes.flatMap((d) => d.meals) : (plan.meals ?? []);
+}
+
+/** How a recipe is used across plans (canvas MP3): "in 2 plans", or only as a swap. */
+export function recipeUse(recipeId: string, plans: CoachNutritionPlan[]): { plans: number; swapOnly: boolean } {
+  let inPlans = 0, asSwap = 0;
+  for (const p of plans) {
+    const foods = allMeals(p).flatMap((m) => m.foods);
+    if (foods.some((f) => f.recipe?.id === recipeId)) inPlans++;
+    else if (foods.some((f) => f.swaps?.some((s) => s.recipe?.id === recipeId))) asSwap++;
+  }
+  return { plans: inPlans + asSwap, swapOnly: inPlans === 0 && asSwap > 0 };
 }

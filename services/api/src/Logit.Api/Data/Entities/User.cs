@@ -35,6 +35,12 @@ public class User
     public string? StripeCustomerId { get; set; }
     /// As a coach: the swap rule for every client without their own (see SwapRules). Null = "any".
     public string? CoachSwapRule { get; set; }
+    /// Canvas Q3: which food swaps a client may make in this coach's meal plans ("mine", the
+    /// default, or "close": theirs plus foods close to the plan).
+    public string? CoachFoodSwapRule { get; set; }
+    /// Canvas Q3: the coach's defaults for the built-in Adaptive targets ({ "windowDays": 14 }),
+    /// copied into each new meal plan.
+    public string? CoachNutritionPrefsJson { get; set; }
     /// The Coaching section of this coach's profile (CoachProfileEndpoints.CoachProfile as JSON):
     /// headline, where they coach, About (Markdown), who they're a good fit for. Shown publicly
     /// once they coach for real (Studio, or any account on a self-hosted server).

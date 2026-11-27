@@ -40,6 +40,7 @@
     "/plan": "Plan",
     "/library": "Library",
     "/coaching/library": "Exercises",
+    "/coaching/nutrition": "Nutrition",
     "/habits": "Habits & goals",
     "/social": "Social",
     "/social/messages": "Messages",

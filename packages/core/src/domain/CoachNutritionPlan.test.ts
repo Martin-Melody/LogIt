@@ -12,7 +12,7 @@ import {
   updateMeal,
   type PlannedFood,
 } from "./CoachNutritionPlan";
-import { plannedFoodFromRecipe } from "./CoachNutritionPlan";
+import { plannedFoodFromRecipe, mealPlanSummary, recipeUse } from "./CoachNutritionPlan";
 import { createRecipe as createRecipeV2 } from "./nutrition";
 import { mealClock, mealTimeLabel, planDay, withPlanFallback, createCoachNutritionPlan as createPlanV2, type PlannedMeal as PlannedMealV2 } from "./CoachNutritionPlan";
 
@@ -95,5 +95,20 @@ describe("coach recipes in a meal plan (canvas MP2)", () => {
     expect(f.grams).toBe(190);
     expect(f.recipe?.ingredients).toHaveLength(2);
     expect(plannedFoodFromRecipe(r, 2).computed.proteinG).toBe(19);
+  });
+});
+
+describe("Nutrition › Meal plans and Recipes (canvas MP1, MP3)", () => {
+  it("one line per plan, and where a recipe is used", () => {
+    const targetsOnly = { ...createPlanV2("Targets only"), kcalTarget: 2200, proteinG: 150, kcalMode: "adaptive" as const };
+    expect(mealPlanSummary(targetsOnly)).toBe("Calories and protein, no meals · Adaptive targets");
+    const oats = { id: "r1", name: "Oats", servings: 1, ingredients: [], perServing: { kcal: 430, proteinG: 28, carbsG: 50, fatG: 10 } };
+    const meal = { id: "m", name: "Breakfast", foods: [{ id: "f", name: "Oats", grams: 300, computed: oats.perServing, recipe: oats }] };
+    const tr = { ...createPlanV2("Fat loss"), mode: "training-rest" as const, kcalMode: "adaptive" as const, dayTypes: [
+      { id: "t", name: "Training day", role: "training" as const, kcalTarget: 2100, meals: [meal, { ...meal, id: "m2" }] },
+      { id: "r", name: "Rest day", role: "rest" as const, kcalTarget: 1850, meals: [meal] },
+    ] };
+    expect(mealPlanSummary(tr)).toBe("Training day 2,100 kcal · rest day 1,850 · 2 meals · Adaptive targets");
+    expect(recipeUse("r1", [tr, targetsOnly])).toEqual({ plans: 1, swapOnly: false });
   });
 });

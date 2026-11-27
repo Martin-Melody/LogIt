@@ -420,6 +420,13 @@
     "orSampleCoach": true
   },
   {
+    "method": "PUT",
+    "route": "/coach/settings/nutrition",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": true
+  },
+  {
     "method": "GET",
     "route": "/plugins/mine/",
     "plan": "Pro",

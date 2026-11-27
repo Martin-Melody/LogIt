@@ -535,6 +535,18 @@ export const FEATURES: Feature[] = [
     server: ["/coach/habits", "/coach/nutrition-plans"],
   },
   {
+    id: "coach-nutrition",
+    title: "Meal plans and recipes",
+    section: "Coaching",
+    plan: "Studio",
+    freeWithSamples: true,
+    summary: "Meal plans from targets to full meals, your recipes, and how targets are set.",
+    web: ["/coaching/nutrition", "/coaching/nutrition/plans/[id]", "/coaching/nutrition/recipes/[id]"],
+    whereWeb: "Nutrition",
+    docs: "/docs/coaching/nutrition",
+    server: ["/coach/settings/nutrition"],
+  },
+  {
     id: "coach-swaps",
     title: "Exercise swaps",
     section: "Coaching",

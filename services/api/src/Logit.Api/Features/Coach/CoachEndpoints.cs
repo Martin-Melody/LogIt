@@ -348,6 +348,7 @@ public static class CoachEndpoints
             since = r.UpdatedAt,
             // The swap rule that applies to me in this coach's programs.
             swapRule = SwapRules.Effective(r, r.Coach),
+            foodSwapRule = r.Coach.CoachFoodSwapRule ?? FoodSwapRules.Mine,
             pluginConsent = CoachPluginConsent.Read(r.PluginConsentJson),
             status = r.Status == CoachClientStatus.Paused ? "paused" : "active",
             payment = CoachPaymentEndpoints.ClientPaymentDto(r.Payment, accounts.GetValueOrDefault(r.CoachId)),

@@ -16,7 +16,7 @@ description: "How to use LogIt: logging workouts, splits and programs, food, hab
 
 - **[New to LogIt](/docs/workouts)**: log your first workout, set up a [split](/docs/splits), track [food](/docs/nutrition) and [habits](/docs/habits-and-goals).
 - **[Got Pro](/docs/web-dashboard)**: [sync](/docs/sync), the web dashboard, [your own charts](/docs/insights#your-charts), [building plugins](/docs/add-plugins#build-your-own).
-- **[Coaching](/docs/coaching)** (Studio): [invite clients](/docs/coaching/invite-links), [programs](/docs/coaching/programs), [check-ins](/docs/coaching/checkins), [messages](/docs/coaching/messages), [getting paid](/docs/coaching/payments).
+- **[Coaching](/docs/coaching)** (Studio): [invite clients](/docs/coaching/invite-links), [programs](/docs/coaching/programs), [meal plans](/docs/coaching/nutrition), [check-ins](/docs/coaching/checkins), [messages](/docs/coaching/messages), [getting paid](/docs/coaching/payments).
 - **[Have a coach](/docs/having-a-coach)**: join with their link, choose what they see, send check-ins.
 
 ## What each plan can do

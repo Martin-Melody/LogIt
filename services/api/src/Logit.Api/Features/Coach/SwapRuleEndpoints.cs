@@ -34,14 +34,39 @@ public static class SwapRuleEndpoints
     {
         group.MapGet("/settings", GetSettings).RequireCoaching();
         group.MapPut("/settings", PutSettings).RequireCoaching();
+        group.MapPut("/settings/nutrition", PutNutritionSettings).RequireCoaching();
         group.MapPut("/clients/{relationshipId:guid}/swap-rule", PutClientRule).RequireCoaching();
     }
 
     private static async Task<IResult> GetSettings(ClaimsPrincipal caller, AppDbContext db)
     {
         var me = caller.GetUserId();
-        var rule = await db.Users.Where(u => u.Id == me).Select(u => u.CoachSwapRule).FirstOrDefaultAsync();
-        return Results.Ok(new CoachSettingsDto(rule ?? SwapRules.Any));
+        var u = await db.Users.Where(x => x.Id == me).Select(x => new { x.CoachSwapRule, x.CoachFoodSwapRule, x.CoachNutritionPrefsJson }).FirstOrDefaultAsync();
+        return Results.Ok(new CoachSettingsDto(u?.CoachSwapRule ?? SwapRules.Any, u?.CoachFoodSwapRule ?? FoodSwapRules.Mine, NutritionPrefs(u?.CoachNutritionPrefsJson)));
+    }
+
+    private static NutritionPrefsDto NutritionPrefs(string? json)
+    {
+        if (string.IsNullOrEmpty(json)) return new NutritionPrefsDto(null);
+        try { return System.Text.Json.JsonSerializer.Deserialize<NutritionPrefsDto>(json, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web)) ?? new NutritionPrefsDto(null); }
+        catch (System.Text.Json.JsonException) { return new NutritionPrefsDto(null); }
+    }
+
+    /// Canvas Q3: Nutrition › Rules.
+    private static async Task<IResult> PutNutritionSettings([FromBody] NutritionSettingsBody body, ClaimsPrincipal caller, AppDbContext db)
+    {
+        if (body.FoodSwapRule is not null && !FoodSwapRules.All.Contains(body.FoodSwapRule))
+            return Results.BadRequest(new { error = "foodSwapRule must be mine or close." });
+        if (body.WindowDays is { } w && (w < 7 || w > 56))
+            return Results.BadRequest(new { error = "The trend window is 7 to 56 days." });
+        var me = caller.GetUserId();
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == me);
+        if (user is null) return Results.NotFound();
+        if (body.FoodSwapRule is not null) user.CoachFoodSwapRule = body.FoodSwapRule == FoodSwapRules.Mine ? null : body.FoodSwapRule;
+        user.CoachNutritionPrefsJson = body.WindowDays is { } days ? $"{{\"windowDays\":{days}}}" : user.CoachNutritionPrefsJson;
+        user.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+        return Results.Ok(new CoachSettingsDto(user.CoachSwapRule ?? SwapRules.Any, user.CoachFoodSwapRule ?? FoodSwapRules.Mine, NutritionPrefs(user.CoachNutritionPrefsJson)));
     }
 
     private static async Task<IResult> PutSettings(
@@ -56,7 +81,7 @@ public static class SwapRuleEndpoints
         user.CoachSwapRule = body.SwapRule == SwapRules.Any ? null : body.SwapRule;
         user.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
-        return Results.Ok(new CoachSettingsDto(user.CoachSwapRule ?? SwapRules.Any));
+        return Results.Ok(new CoachSettingsDto(user.CoachSwapRule ?? SwapRules.Any, user.CoachFoodSwapRule ?? FoodSwapRules.Mine, NutritionPrefs(user.CoachNutritionPrefsJson)));
     }
 
     /// Set one client differently from the coach's default; `swapRule: null` goes back to it.
@@ -76,6 +101,17 @@ public static class SwapRuleEndpoints
     }
 }
 
-public record CoachSettingsDto(string SwapRule);
+public record CoachSettingsDto(string SwapRule, string? FoodSwapRule = null, NutritionPrefsDto? Nutrition = null);
+public record NutritionPrefsDto(int? WindowDays);
+public record NutritionSettingsBody(string? FoodSwapRule, int? WindowDays);
+
+/// Canvas Q3 / SW2: which food swaps a client may make in this coach's meal plans. Logging
+/// anything else is always allowed; it shows as "off plan".
+public static class FoodSwapRules
+{
+    public const string Mine = "mine";
+    public const string Close = "close";
+    public static readonly string[] All = [Mine, Close];
+}
 
 public record ClientSwapRuleDto(string? SwapRule);

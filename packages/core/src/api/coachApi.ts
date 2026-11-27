@@ -47,6 +47,10 @@ export interface ClientRelationship {
   swapRule?: SwapRule | null;
 }
 
+/** Canvas Q3 / SW2: "mine" — only the coach's swaps; "close" — theirs, then foods close to the plan. */
+export type FoodSwapRule = "mine" | "close";
+export type CoachSettings = { swapRule: SwapRule; foodSwapRule?: FoodSwapRule; nutrition?: { windowDays?: number | null } | null };
+
 /** Canvas PG8: a client's answer per plugin a coach's program uses ("removed": it's gone from their phone). */
 export type PluginConsent = Record<string, { state: "allowed" | "declined" | "removed"; name: string; atMs: number }>;
 
@@ -57,6 +61,8 @@ export interface CoachRelationship {
   since?: string;
   /** The swap rule that applies to me in this coach's programs (missing on older servers = any). */
   swapRule?: SwapRule;
+  /** Canvas SW2: the food swaps I may make in this coach's meal plans (missing = mine). */
+  foodSwapRule?: FoodSwapRule;
   /** Canvas PG8: what I said about each plugin this coach's programs use. */
   pluginConsent?: PluginConsent;
   /** "paused" = coaching stopped until it's paid (missing on older servers = active). */
@@ -594,9 +600,14 @@ export function coachApiFor(api: ApiFetcher) {
       return api.fetch("/coach/profile", { method: "PUT", body: JSON.stringify({ profile, packagesOnProfile }) });
     },
 
-    /** Coach: my default swap rule for every client. */
-    async getCoachSettings(): Promise<{ swapRule: SwapRule }> {
+    /** Coach: my default swap rule for every client, and Nutrition › Rules (canvas Q3). */
+    async getCoachSettings(): Promise<CoachSettings> {
       return api.fetch("/coach/settings");
+    },
+
+    /** Canvas Q3: the food swap rule and the built-in Adaptive targets' trend window. */
+    async setNutritionSettings(patch: { foodSwapRule?: FoodSwapRule; windowDays?: number }): Promise<CoachSettings> {
+      return api.fetch("/coach/settings/nutrition", { method: "PUT", body: JSON.stringify(patch) });
     },
 
     async setDefaultSwapRule(swapRule: SwapRule): Promise<{ swapRule: SwapRule }> {

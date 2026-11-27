@@ -125,7 +125,7 @@ export async function getNutritionTargets(
     if (coachPlan.kcalMode === "adaptive" && goal) {
       // Calories from their own Adaptive targets (their goal pace); a day type's difference
       // from the plan's calories stays (a training day still gets its extra).
-      const own = await ownTargets(goal);
+      const own = await ownTargets(goal, coachPlan.adaptivePrefs);
       if (own.targets) kcal = Math.round(own.targets.kcal + (day.kcalTarget - coachPlan.kcalTarget));
     }
     const filled = goal ? macrosFromGoal(kcal, currentWeightKg ?? 0, goal) : { kcal, proteinG: 0, carbsG: 0, fatG: 0 };
@@ -162,7 +162,7 @@ export async function getNutritionTargets(
   return { ...base, ...(await ownTargets(goal)) };
 
   /** The client's own targets: their manual calories, else their nutrition algorithm. */
-  async function ownTargets(goal: NutritionGoal): Promise<Pick<NutritionState, "algorithm" | "targets" | "targetsHint">> {
+  async function ownTargets(goal: NutritionGoal, coachPrefs?: Record<string, unknown>): Promise<Pick<NutritionState, "algorithm" | "targets" | "targetsHint">> {
     const algorithmId = resolveAlgorithmId(goal);
     const algorithm = await registry.get(algorithmId);
     const algorithmMeta: NutritionAlgorithmMeta | null = algorithm
@@ -202,6 +202,8 @@ export async function getNutritionTargets(
     const userPreferences = {
       ...((algorithm.defaultPreferences as Record<string, unknown>) ?? {}),
       ...algorithmPrefsFor(goal, algorithmId),
+      // A coach's plan can set the built-in rule's settings (canvas Q3).
+      ...(coachPrefs && algorithmId === "standard-adaptive" ? coachPrefs : {}),
     };
 
     const out = await algorithm.computeTargets({

@@ -1,3 +1,4 @@
+import UtensilsIcon from "@lucide/svelte/icons/utensils";
 import AppleIcon from "@lucide/svelte/icons/apple";
 import CalendarDaysIcon from "@lucide/svelte/icons/calendar-days";
 import CircleCheckIcon from "@lucide/svelte/icons/circle-check";
@@ -78,6 +79,7 @@ export const coachGroups: NavGroup[] = [
       // Next to Clients: ordered by how often coaches use them (canvas N).
       { label: "Messages", href: "/messages", icon: MessageSquareIcon, key: "M", badge: () => coachBadges.messages },
       { label: "Programs", href: "/coaching/programs", icon: ClipboardListIcon, key: "P" },
+      { label: "Nutrition", href: "/coaching/nutrition", icon: UtensilsIcon, key: "N" },
       { label: "Check-ins", href: "/coaching/checkins", icon: ClipboardCheckIcon, key: "K", badge: () => coachBadges.checkins },
     ],
   },

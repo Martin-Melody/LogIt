@@ -188,6 +188,23 @@ public class CoachEndingTests
     }
 
     [Fact]
+    public async Task Nutrition_rules_are_the_coachs_and_clients_get_the_food_swap_rule()
+    {
+        await using var w = await CoachedAsync("nrules", paying: false);
+        var s = await Json(await w.Coach.GetAsync("/coach/settings"));
+        Assert.Equal("mine", s.GetProperty("foodSwapRule").GetString());
+        Assert.Equal(HttpStatusCode.BadRequest, (await w.Coach.PutAsJsonAsync("/coach/settings/nutrition", new { foodSwapRule = "anything" })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await w.Coach.PutAsJsonAsync("/coach/settings/nutrition", new { windowDays = 3 })).StatusCode);
+        var saved = await Json(await w.Coach.PutAsJsonAsync("/coach/settings/nutrition", new { foodSwapRule = "close", windowDays = 14 }));
+        Assert.Equal("close", saved.GetProperty("foodSwapRule").GetString());
+        Assert.Equal(14, saved.GetProperty("nutrition").GetProperty("windowDays").GetInt32());
+        // The exercise swap rule is left alone.
+        Assert.Equal("any", saved.GetProperty("swapRule").GetString());
+        var mine = (await Json(await w.Client.GetAsync("/coach/coaches")))[0];
+        Assert.Equal("close", mine.GetProperty("foodSwapRule").GetString());
+    }
+
+    [Fact]
     public async Task After_a_week_with_no_reply_the_client_can_stop_with_a_refund()
     {
         await using var w = await CoachedAsync("quiet");
