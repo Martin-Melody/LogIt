@@ -216,7 +216,8 @@
         : sets.map((s) => `${formatLoad(s.weight, unit, bodyweight, { withUnit: false })} × ${s.reps}`).join(" · ");
       const mId = sets.find((s) => s.machineId)?.machineId;
       const at = mId ? machineById.get(mId) : undefined;
-      return { id: h.sessionId, when: h.performedAtMs, text, where: at ? `${at.place.name} · ${at.machine.name}` : "" };
+      // Sets a plugin block logged (Phase 6.1) say which block: "Weight finder".
+      return { id: h.sessionId, when: h.performedAtMs, text, where: at ? `${at.place.name} · ${at.machine.name}` : h.from ?? "" };
     }),
   );
   const date = (ms: number) => new Date(ms).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });

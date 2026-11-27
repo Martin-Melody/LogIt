@@ -1,4 +1,4 @@
-import { getExercises, findExerciseIndexInSession } from "../../domain/workout";
+import { loggedExercises } from "../../domain/loggedSets";
 import type { ExerciseHistoryEntry } from "../../domain/progression";
 import type { Exercise } from "../../domain/exercise";
 import type { ProgressionDeps } from "./deps";
@@ -27,19 +27,24 @@ export async function getExerciseHistory(
   const history: ExerciseHistoryEntry[] = sessions
     .filter((session) => (opts.includeExcluded || !session.excludeFromProgression) && session.id !== opts.excludeSessionId)
     .flatMap((session) => {
-      const sessionPosition = findExerciseIndexInSession(session, exercise);
-      if (sessionPosition === -1) return [];
-      const match = getExercises(session)[sessionPosition]!;
+      // Every set of this lift that session, whichever block logged it (Phase 6.1): a normal
+      // exercise, or a plugin block whose entries count as sets.
+      const all = loggedExercises(session);
+      const lower = exercise.name.toLowerCase();
+      const matches = all.map((e, i) => ({ e, i })).filter(({ e }) => (exercise.id && e.exerciseId === exercise.id) || e.exerciseName.toLowerCase() === lower);
+      if (matches.length === 0) return [];
+      const sessionPosition = matches[0]!.i;
       // A set that was planned but never done (no reps, not ticked) isn't history,
       // and an exercise with nothing done that session (skipped) isn't either —
       // otherwise skipping it once wiped its plan back to 0kg.
-      const done = match.sets.filter((s) => s.completed || s.reps > 0);
+      const done = matches.flatMap(({ e }) => e.sets).filter((s) => s.completed || s.reps > 0);
       if (done.length === 0) return [];
       return [{
         sessionId: session.id,
         performedAtMs: session.endedAtMs ?? session.startedAtMs,
         sets: done,
         sessionPosition,
+        ...(matches.some(({ e }) => e.from) ? { from: matches.find(({ e }) => e.from)!.e.from } : {}),
       } satisfies ExerciseHistoryEntry];
     })
     .sort((a, b) => a.performedAtMs - b.performedAtMs); // oldest first

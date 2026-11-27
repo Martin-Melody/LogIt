@@ -28,6 +28,8 @@ export type ExerciseHistoryEntry = {
   /** The lifter's bodyweight (kg) around that session, when known — for the
    * volume of bodyweight and assisted exercises. */
   bodyweightKg?: number;
+  /** A plugin block that logged these sets ("Weight finder"), shown as a tag in history. */
+  from?: string;
 };
 
 export type PrecedingExercise = {

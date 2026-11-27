@@ -1,4 +1,4 @@
-import { getExercises } from "../../domain/workout";
+import { loggedExercises } from "../../domain/loggedSets";
 import type { WorkoutSession, SetEntry } from "../../domain/workout";
 import { getExerciseStats } from "./getExerciseStats";
 import type { ProgressionDeps } from "./deps";
@@ -31,7 +31,7 @@ export async function getSessionPRs(
 ): Promise<SessionPR[]> {
   const prs: SessionPR[] = [];
 
-  for (const ex of getExercises(session)) {
+  for (const ex of loggedExercises(session)) {
     const best = bestWorkingSet(ex.sets);
     if (!best) continue;
 

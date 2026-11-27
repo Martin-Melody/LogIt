@@ -40,7 +40,7 @@ The file is the declaration itself, and its `id` is the plugin's id.
   whole block (gi or no-gi, which board). Coaches fill in the block fields in a program.
 - Field types: `number`, `weight`, `distance`, `duration` (seconds), `counter`, `scale`
   (with `min`/`max`), `choice` and `tags` (with `options`, or `"list:<id>"` for one of your
-  `lists`), `toggle`, `text`.
+  `lists`), `toggle`, `text`, and `exercise` (one of the person's exercises, by name).
 - Field options: `optional`, `default`, `unit`, `step`, `min`, `max`, `remember` (prefill from
   the last block), `suggestions: "previous"`, `column` (show it in the entries table), and
   `timer: "work"` on the duration the timer runs.
@@ -50,5 +50,31 @@ The file is the declaration itself, and its `id` is the plugin's id.
   `{ "grades": { "label": "Font grades", "items": ["5", "6A"], "ordered": true } }`.
 - At most 20 fields. Keys are stable: a later version can add fields and rename labels, and
   rename a key with `"was": "oldKey"`, but never change a key's type.
+
+## Entries that are sets of an exercise
+
+A block can log a lift its own way (a weight finder, a test set) and still have those entries
+count as sets of that exercise everywhere LogIt reads training: history, records, estimates,
+weekly sets, insights, and a coach's view. Add an `exercise` field (on each entry, or once in
+`blockFields`) and say which fields are what:
+
+```json
+"countsAs": {
+  "sets": {
+    "exercise": "lift",
+    "weight": "kg",
+    "reps": "reps",
+    "rir": "left"
+  }
+}
+```
+
+- `exercise` (required) names an `exercise` field; `weight` a `weight` or `number` field; `reps`
+  a `number` or `counter` field.
+- Effort: `rpe` (6–10) or `rir` (reps left in reserve; 2 left is RPE 8), from a `number`,
+  `scale`, `counter` or `choice` field. A choice uses its leading number ("4+" is 4), or a map:
+  `"rpe": { "from": "how", "map": { "Easy": 6, "Hard": 9 } }`.
+- Only entries with reps count. The mapping is saved with the block's data, so history still
+  reads it after the plugin is uninstalled, and the sets show which block logged them.
 
 LogIt's own blocks, Rounds and Hangboard, are good ones to copy.

@@ -1,4 +1,4 @@
-import { getExercises } from "../../domain/workout";
+import { loggedExercises } from "../../domain/loggedSets";
 import { getExerciseProgressStory, type ExerciseProgressStory } from "./getExerciseProgressStory";
 import type { ProgressionDeps } from "./deps";
 
@@ -22,7 +22,7 @@ export async function getAllExerciseProgressStories(
   // newest first, so the id kept is the one used most recently.
   const seen = new Map<string, { id?: string; name: string }>();
   for (const session of sessions) {
-    for (const ex of getExercises(session)) {
+    for (const ex of loggedExercises(session)) {
       const key = ex.exerciseName.toLowerCase().trim();
       if (!seen.has(key)) seen.set(key, { id: ex.exerciseId, name: ex.exerciseName });
     }

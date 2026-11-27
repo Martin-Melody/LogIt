@@ -1,5 +1,5 @@
+import { loggedExercises } from "./loggedSets";
 import type { WorkoutSession } from "./workout";
-import { getExercises } from "./workout";
 import { estimated1RM } from "./oneRepMax";
 import type { DiaryDay } from "./nutrition";
 import { dayTotals, localDateIso } from "./nutrition";
@@ -283,7 +283,7 @@ function sameLift(a: ChartLift, b: { exerciseId?: string; exerciseName: string }
   return a.exerciseName.trim().toLowerCase() === b.exerciseName.trim().toLowerCase();
 }
 
-function workingSets(ex: ReturnType<typeof getExercises>[number]) {
+function workingSets(ex: ReturnType<typeof loggedExercises>[number]) {
   return ex.sets.filter((s) => (s.setType === "normal" || !s.setType) && s.completed !== false && s.reps > 0);
 }
 
@@ -343,7 +343,7 @@ function metricLines(
       return chart.lifts.slice(0, MAX_CHART_LINES).map((lift) => {
         const samples: ChartPoint[] = [];
         for (const s of sessions()) {
-          for (const ex of getExercises(s)) {
+          for (const ex of loggedExercises(s)) {
             if (!sameLift(lift, ex)) continue;
             const v = liftValue(metric, workingSets(ex));
             if (v != null) samples.push({ tMs: bucketStart(s.startedAtMs, bucket), value: v });
@@ -356,7 +356,7 @@ function metricLines(
       const samples: ChartPoint[] = [];
       for (const s of sessions()) {
         let n = 0;
-        for (const ex of getExercises(s)) {
+        for (const ex of loggedExercises(s)) {
           const m = data.musclesOf?.({ exerciseId: ex.exerciseId, exerciseName: ex.exerciseName });
           if (!m) continue;
           const sets = workingSets(ex).length;

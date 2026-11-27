@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { loggedExercises } from "@logit/core/domain/loggedSets";
   import type { PluginConsent } from "@logit/core/api/coachApi";
   import * as Table from "$lib/components/ui/table/index.js";
   import { onMount } from "svelte";
@@ -65,11 +66,11 @@
     const by = new Map<string, { t: number; e1rm: number }[]>();
     for (const s of sessions) {
       if (s.startedAtMs < since) continue;
-      for (const b of s.blocks) {
-        if (b.type !== "strength") continue;
-        const best = bestWorkingSet((b.data as StrengthBlockData).sets);
+      // Every block's sets count (Phase 6.1): plugin blocks that log sets too.
+      for (const ex of loggedExercises(s)) {
+        const best = bestWorkingSet(ex.sets);
         if (!best || best.weight <= 0) continue;
-        const key = blockDisplayName(b);
+        const key = ex.exerciseName;
         const list = by.get(key) ?? [];
         list.push({ t: s.startedAtMs, e1rm: estimated1RM(best.weight, best.reps) });
         by.set(key, list);
@@ -94,9 +95,9 @@
     let best: { weight: number; reps: number } | null = null;
     for (const s of sessions) {
       if (s.startedAtMs < since) continue;
-      for (const b of s.blocks) {
-        if (b.type !== "strength" || blockDisplayName(b) !== lift) continue;
-        const set = bestWorkingSet((b.data as StrengthBlockData).sets);
+      for (const ex of loggedExercises(s)) {
+        if (ex.exerciseName !== lift) continue;
+        const set = bestWorkingSet(ex.sets);
         if (set && (!best || estimated1RM(set.weight, set.reps) > estimated1RM(best.weight, best.reps))) best = set;
       }
     }
