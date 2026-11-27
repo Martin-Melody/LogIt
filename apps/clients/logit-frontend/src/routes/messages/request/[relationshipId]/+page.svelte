@@ -1,7 +1,8 @@
-<!-- A request you sent, in the app (canvas A1–A3, A5, R4): the conversation with the coach before
-     coaching starts. A pinned card says where it stands with what you can do; each step (an
-     offer, the waiting list…) is a card in the messages. Online only, like asking: nothing here
-     is kept for offline. Taking a spot happens on the web, where paying is (decided 2026-11-14). -->
+<!-- A coaching request as a conversation, in the app, from either side. The person who asked
+     (canvas A1–A3, A5, R4): a pinned card with where it stands and what they can do; taking a
+     spot happens on the web, where paying is (decided 2026-11-14). The coach (Z8): their answers
+     with Offer a spot, Waiting list and Not a fit as sheets. Each step (an offer, the waiting
+     list…) is a card in the messages. Online only: nothing here is kept for offline. -->
 <script lang="ts">
   import { onDestroy, onMount, tick } from "svelte";
   import { page } from "$app/state";
@@ -12,18 +13,19 @@
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import AskSheet from "$lib/components/coaching/AskSheet.svelte";
+  import RequestAnswerSheet from "$lib/components/coaching/RequestAnswerSheet.svelte";
   import * as Message from "$lib/components/ui/message/index.js";
   import * as Bubble from "$lib/components/ui/bubble/index.js";
   import { Button } from "$lib/components/ui/button/index.js";
   import { Skeleton } from "$lib/components/ui/skeleton/index.js";
   import ChatText from "$lib/components/social/ChatText.svelte";
   import { back } from "$lib/navigation";
-  import { coachApi, type MyCoachingRequest } from "@logit/core/api/coachApi";
+  import { coachApi, type ClosedRequest, type CoachingRequest, type MyCoachingRequest } from "@logit/core/api/coachApi";
   import { messagesApi, type RemoteMessage } from "@logit/core/api/messagesApi";
   import { createId } from "@logit/core/domain/ids";
   import { formatMoney } from "@logit/core/domain/coachPayments";
   import {
-    ASK_AGAIN_TEXT, clientCan, eventLine, firstName, offerStateNow, readerOf, sentLine,
+    ASK_AGAIN_TEXT, clientCan, coachCan, eventLine, firstName, offerStateNow, readerOf, requestLine, sentLine,
     type OfferCard, type RequestEvent,
   } from "@logit/core/domain/coachRequest";
 
@@ -32,6 +34,10 @@
   const id = $derived(props.params.relationshipId);
 
   let request = $state<MyCoachingRequest | null>(null);
+  // The coach's side: an open request (with its offer) or a closed one.
+  let asked = $state<CoachingRequest | ClosedRequest | null>(null);
+  let answering = $state<"offer" | "waitlist" | "notafit" | null>(null);
+  let confirmWithdrawOffer = $state(false);
   let messages = $state<RemoteMessage[]>([]);
   let loading = $state(true);
   let gone = $state(false);
@@ -43,17 +49,31 @@
   let listEl = $state<HTMLDivElement | null>(null);
   let poll: ReturnType<typeof setInterval> | undefined;
 
-  const name = $derived(request ? request.coach.displayName || request.coach.username : page.url.searchParams.get("name") ?? "Coach");
+  const isCoach = $derived(!request && !!asked);
+  const name = $derived(
+    request ? request.coach.displayName || request.coach.username
+      : asked ? asked.client.displayName || asked.client.username
+      : page.url.searchParams.get("name") ?? "Conversation",
+  );
   const c = $derived(firstName(name));
-  const stage = $derived(request?.stage ?? "asked");
+  const askedOpen = $derived(asked && "requestedAt" in asked ? asked : null);
+  const askedClosed = $derived(!!asked && !("requestedAt" in asked));
+  const coachOffer = $derived(askedOpen?.offer ?? null);
+  const stage = $derived(request?.stage ?? (asked ? (asked.stage ?? "asked") : "asked"));
   const can = $derived(clientCan(stage, request?.offer ?? null, Date.now()));
-  const answers = $derived(request?.answers ?? []);
+  const coachMay = $derived(coachCan(stage, coachOffer, Date.now()));
+  const answers = $derived(request?.answers ?? asked?.answers ?? []);
+  const closed = $derived(request ? !!request.closed : askedClosed);
 
   async function load(scroll = false) {
     try {
       const [mine, list] = await Promise.all([coachApi.listMyRequests(true), messagesApi.list(id, 0)]);
       request = mine.find((r) => r.relationshipId === id) ?? null;
-      gone = !request;
+      if (!request) {
+        const [open, shut] = await Promise.all([coachApi.listRequests().catch(() => []), coachApi.listClosedRequests().catch(() => [])]);
+        asked = open.find((r) => r.relationshipId === id) ?? shut.find((r) => r.relationshipId === id) ?? null;
+      }
+      gone = !request && !asked;
       messages = list.sort((a, b) => a.createdAtMs - b.createdAtMs || a.messageId.localeCompare(b.messageId));
       const lastTheirs = messages.filter((m) => !m.mine && m.readAtMs == null).at(-1)?.createdAtMs;
       if (lastTheirs) await messagesApi.markRead(id, lastTheirs).catch(() => {});
@@ -63,7 +83,7 @@
       }
     } catch {
       // A request that became coaching (or was deleted) isn't listed: My coach has it now.
-      if (!request) gone = true;
+      if (!request && !asked) gone = true;
     } finally {
       loading = false;
     }
@@ -114,11 +134,38 @@
       return null;
     }
   };
-  const stateOf = (o: OfferCard) =>
-    request?.offer && request.offer.card.offerId === o.offerId ? offerStateNow(request.offer, Date.now()) : "replaced";
+  const stateOf = (o: OfferCard) => {
+    const latest = request?.offer ?? coachOffer;
+    return latest && latest.card.offerId === o.offerId ? offerStateNow(latest, Date.now()) : "replaced";
+  };
+
+  async function withdrawOffer() {
+    confirmWithdrawOffer = false;
+    try {
+      await coachApi.withdrawOffer(id);
+      toast.success(`Offer withdrawn. ${c} sees it here.`);
+      await load(true);
+    } catch {
+      toast.error("Couldn't withdraw it. Try again.");
+    }
+  }
+
+  async function reopen() {
+    try {
+      await coachApi.reopenRequest(id);
+      toast.success(`${c}'s request is open again`);
+      await load(true);
+    } catch {
+      toast.error("Couldn't reopen it. Try again.");
+    }
+  }
   const day = (ms: number) => new Date(ms).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
 
-  const status = $derived(request?.closed ? "Request closed" : request ? sentLine(request, Date.now()) : "");
+  const status = $derived(
+    closed ? "Request closed"
+      : request ? sentLine(request, Date.now())
+      : askedOpen ? (stage === "waiting" ? "Waiting list" : `Asked you · ${requestLine(stage, coachOffer, Date.now())}`) : "",
+  );
   const confirmText = $derived(
     confirm === "delete"
       ? { title: "Delete this request?", body: `Your answers go, and ${c} no longer sees this request.`, action: "Delete" }
@@ -143,7 +190,38 @@
     {:else if gone}
       <p class="px-2 py-10 text-center text-sm text-muted-foreground">This request isn't open any more. If {c} is your coach now, it's in My coach.</p>
       <Button variant="outline" class="self-center" onclick={() => goto("/clients")}>Open My coach</Button>
-    {:else if request}
+    {:else if asked}
+      <!-- The coach's card (Z8, C1): their answers and the answers that fit now. -->
+      <section class="flex flex-col gap-3 rounded-xl border border-border bg-muted/40 p-3.5">
+        <p class="text-sm text-muted-foreground">
+          {askedClosed ? (stage === "withdrawn" ? `${c} withdrew this request` : "You closed this request") : stage === "waiting" ? `${c} is on your waiting list` : `${c} asked you to coach them`}{asked.linkName ? ` · via "${asked.linkName}"` : ""}
+        </p>
+        {#if answers.length}
+          <dl class="flex flex-col gap-1.5 text-sm">
+            {#each showAll ? answers : answers.slice(0, 3) as a (a.questionId)}
+              <div><dt class="text-muted-foreground">{a.question}</dt><dd class="whitespace-pre-wrap">{a.value}</dd></div>
+            {/each}
+          </dl>
+          {#if answers.length > 3}
+            <button type="button" class="min-h-11 self-start text-sm font-medium" aria-expanded={showAll} onclick={() => (showAll = !showAll)}>{showAll ? "Show fewer" : `All ${answers.length} answers`}</button>
+          {/if}
+        {:else}
+          <p class="text-sm text-muted-foreground">No answers: {c} asked from an older version of LogIt.</p>
+        {/if}
+        <div class="flex flex-wrap gap-2">
+          {#if askedClosed}
+            <Button size="sm" variant="outline" onclick={() => void reopen()}>Reopen</Button>
+          {:else}
+            {#if coachMay.editOffer}<Button size="sm" onclick={() => (answering = "offer")}>Edit offer</Button>
+            {:else if coachMay.offer}<Button size="sm" onclick={() => (answering = "offer")}>{coachMay.offerAgain ? "Offer again" : "Offer a spot"}</Button>{/if}
+            {#if coachMay.withdrawOffer}<Button size="sm" variant="outline" onclick={() => (confirmWithdrawOffer = true)}>Withdraw offer</Button>{/if}
+            {#if coachMay.waitlist}<Button size="sm" variant="outline" onclick={() => (answering = "waitlist")}>Waiting list</Button>{/if}
+            {#if coachMay.notAFit}<Button size="sm" variant="ghost" onclick={() => (answering = "notafit")}>{stage === "waiting" ? "Remove" : "Not a fit"}</Button>{/if}
+          {/if}
+        </div>
+      </section>
+    {/if}
+    {#if request}
       <!-- The pinned card (A1, A2, A3). -->
       <section class="flex flex-col gap-3 rounded-xl border border-border bg-muted/40 p-3.5">
         {#if stage === "waiting" && !request.closed}
@@ -172,34 +250,39 @@
           {#if can.delete}<Button size="sm" variant="outline" onclick={() => (confirm = "delete")}>Delete this request</Button>{/if}
         </div>
       </section>
-
+    {/if}
+    {#if !loading && !gone}
       {#each messages as m (m.messageId)}
         {@const offer = offerOf(m)}
         {#if offer}
           {@const st = stateOf(offer)}
           <article class="flex flex-col gap-2.5 rounded-xl border bg-card p-3.5 {st === 'open' ? 'border-primary/40' : 'border-border opacity-80'}">
             <span class="flex items-center justify-between text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
-              {eventLine(m.kind as RequestEvent, "client", name, "")}
+              {eventLine(m.kind as RequestEvent, isCoach ? "coach" : "client", isCoach ? "" : name, isCoach ? name : "")}
               {#if st !== "open"}<span class="rounded-full bg-muted px-2 py-0.5 normal-case tracking-normal">{st === "replaced" ? "Replaced" : st === "withdrawn" ? "Withdrawn" : st === "taken" ? "Taken" : "Ran out"}</span>{/if}
             </span>
             <span class="flex items-start justify-between gap-3">
               <span class="text-base font-semibold {st === 'replaced' ? 'line-through' : ''}">{offer.packageName}</span>
               <span class="text-right text-base font-bold tabular-nums">{offer.pays ? formatMoney(offer.amountCents, offer.currency) : ""}<span class="block text-xs font-normal text-muted-foreground">{offer.pays ? (offer.interval === "month" ? "a month" : "once") : "No payment through LogIt"}</span></span>
             </span>
-            {#if st === "open"}
+            {#if st === "open" && isCoach}
+              <span class="text-[13px] text-muted-foreground">Held for {c} until {day(offer.holdUntilMs)}.{offer.startsOnMs ? ` Starts ${day(offer.startsOnMs)}.` : ""}</span>
+            {:else if st === "open"}
               <span class="text-[13px] text-muted-foreground">{c} is holding this spot until {day(offer.holdUntilMs)}.{offer.startsOnMs ? ` Starts ${day(offer.startsOnMs)}.` : ""}</span>
               <a href="{WEB_URL}/take/{offer.offerId}" target="_blank" rel="noopener"
                 class="flex h-12 items-center justify-center rounded-[10px] bg-primary text-[15px] font-semibold text-primary-foreground">
                 {offer.pays ? `Take the spot and pay ${formatMoney(offer.amountCents, offer.currency)}` : "Take the spot"}
               </a>
               {#if offer.pays}<span class="text-xs text-muted-foreground">Paying happens on the web; then everything comes to this app.</span>{/if}
+            {:else if st === "expired" && isCoach}
+              <span class="text-[13px] text-muted-foreground">This offer ran out on {day(offer.holdUntilMs)}. Offer it again if {c} still wants it.</span>
             {:else if st === "expired"}
               <span class="text-[13px] text-muted-foreground">This offer ran out on {day(offer.holdUntilMs)}. Ask {c} if it's still free.</span>
               <Button variant="outline" disabled={sending} onclick={() => void send(ASK_AGAIN_TEXT)}>Ask {c} to offer it again</Button>
             {/if}
           </article>
         {:else if m.kind}
-          <p class="px-6 py-1 text-center text-[13px] leading-snug text-muted-foreground">{eventLine(m.kind as RequestEvent, readerOf(m.kind as RequestEvent, m.mine), name, "") || m.body}</p>
+          <p class="px-6 py-1 text-center text-[13px] leading-snug text-muted-foreground">{eventLine(m.kind as RequestEvent, readerOf(m.kind as RequestEvent, m.mine), name, name) || m.body}</p>
         {:else}
           <Message.Root align={m.mine ? "end" : "start"} class="shrink-0 text-[15px]">
             <Message.Content>
@@ -213,10 +296,11 @@
     {/if}
   </div>
 
-  {#if request && !gone}
-    {#if request.closed}
+  {#if (request || asked) && !gone}
+    {#if closed}
       <p class="border-t border-border px-4 py-3 text-center text-sm text-muted-foreground">
-        {stage === "withdrawn" ? "You withdrew this request, so it can't be replied to." : `${c} closed this request, so you can't reply here.`}
+        {isCoach ? (stage === "withdrawn" ? `${c} withdrew this request. Reopen it to talk again.` : "You closed this request. Reopen it to talk again.")
+          : stage === "withdrawn" ? "You withdrew this request, so it can't be replied to." : `${c} closed this request, so you can't reply here.`}
       </p>
     {:else}
       <form class="flex items-end gap-2 border-t border-border px-3 py-2" onsubmit={(e) => { e.preventDefault(); void send(); }}>
@@ -227,10 +311,18 @@
           class="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-50"><Send class="size-5" /></button>
       </form>
     {/if}
+    {#if askedOpen}
+      <RequestAnswerSheet kind={answering} relationshipId={id} {name} interestedPackageId={askedOpen.interestedPackageId ?? null}
+        current={coachMay.editOffer ? coachOffer : null} waiting={stage === "waiting"} onclose={() => (answering = null)} ondone={() => load(true)} />
+    {/if}
+    {#if request}
     <AskSheet open={editing} username={request.coach.username} initial={Object.fromEntries(answers.map((a) => [a.questionId, a.value]))}
       onclose={() => (editing = false)} onsent={() => { toast.success(`Your answers are updated for ${c}`); void load(); }} />
+    {/if}
   {/if}
 </div>
 
+<ConfirmDialog open={confirmWithdrawOffer} onOpenChange={(o) => (confirmWithdrawOffer = o)} title="Withdraw the offer to {c}?"
+  description="{c} sees that you withdrew it. The request stays open and the spot is free again." confirmLabel="Withdraw" onConfirm={withdrawOffer} />
 <ConfirmDialog open={!!confirm} onOpenChange={(o) => { if (!o) confirm = null; }} title={confirmText.title} description={confirmText.body}
   confirmLabel={confirmText.action} onConfirm={act} />

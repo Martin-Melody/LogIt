@@ -22,7 +22,7 @@
   import { Button } from "$lib/components/ui/button";
   import LockCard from "$lib/components/billing/LockCard.svelte";
   import { authStore } from "$lib/api/authStore.svelte";
-  import { sentLine } from "@logit/core/domain/coachRequest";
+  import { requestLine, sentLine } from "@logit/core/domain/coachRequest";
   import { coachPaymentsApi } from "@logit/core/api/coachPaymentsApi";
   import { clientPaymentNote } from "@logit/core/domain/coachPayments";
 
@@ -288,14 +288,13 @@
         {#if clientRequests.length > 0}
           <ul class="divide-y divide-border border-b border-border">
             {#each clientRequests as q (q.relationshipId)}
-              <li class="flex items-center justify-between gap-2 px-3 py-2.5 text-sm">
-                <span class="min-w-0"><span class="font-medium">{q.client.displayName || q.client.username}</span><span class="block text-xs text-muted-foreground">Wants you as their coach{q.linkName ? ` · ${q.linkName}` : ""}</span></span>
-                <span class="flex shrink-0 gap-2">
-                  <Button size="sm" variant="outline" disabled={ui.busyId === q.relationshipId}
-                    onclick={() => act(q.relationshipId, () => coachApi.declineRequest(q.relationshipId))}>Decline</Button>
-                  <Button size="sm" disabled={ui.busyId === q.relationshipId}
-                    onclick={() => act(q.relationshipId, () => coachApi.acceptRequest(q.relationshipId))}>Accept</Button>
-                </span>
+              {@const who = q.client.displayName || q.client.username}
+              <!-- Z8: a request opens as a conversation with their answers and Offer / Waiting list / Not a fit. -->
+              <li>
+                <a href="/messages/request/{q.relationshipId}?name={encodeURIComponent(who)}" class="flex min-h-14 items-center justify-between gap-2 px-3 py-2.5 text-sm text-inherit no-underline hover:bg-muted/40">
+                  <span class="min-w-0"><span class="font-medium">{who}</span><span class="block text-xs text-muted-foreground">{q.stage === "waiting" ? "On your waiting list" : `Asked you to coach them · ${requestLine(q.stage ?? "asked", q.offer ?? null, Date.now())}`}{q.linkName ? ` · ${q.linkName}` : ""}</span></span>
+                  <span class="text-muted-foreground">›</span>
+                </a>
               </li>
             {/each}
           </ul>

@@ -62,6 +62,9 @@ describe("what a sample client does", () => {
     expect(planSampleActions(state({ key: "niamh", status: "None", activeLinkCodes: ["K7Q2-MX9A"] }), NOW))
       .toEqual([{ kind: "request", code: "K7Q2-MX9A" }]);
     expect(planSampleActions(state({ key: "niamh", status: "None" }), NOW)).toEqual([]);
+    // Asked: she waits for the coach, then takes the offer.
+    expect(planSampleActions(state({ key: "niamh", status: "Pending" }), NOW)).toEqual([]);
+    expect(planSampleActions(state({ key: "niamh", status: "Pending", openOfferId: "o1" }), NOW)).toEqual([{ kind: "take", offerId: "o1" }]);
     expect(planSampleActions(state({ key: "niamh", status: "Pending", activeLinkCodes: ["X"] }), NOW)).toEqual([]);
     // Conor is never the one who asks.
     expect(planSampleActions(state({ key: "conor", status: "None", activeLinkCodes: ["X"] }), NOW)).toEqual([]);
@@ -108,5 +111,17 @@ describe("what a sample client does", () => {
     expect(planSampleActions(state({ thread: [coachMsg(NOW - 60_000), mine(NOW - 50_000), coachMsg(NOW - 40_000)] }), NOW))
       .toEqual([{ kind: "reply", body: sampleSpec("conor")!.replies[1] }]);
     expect(planSampleActions(state({ thread: [coachMsg(NOW - 60_000), mine(NOW - 50_000)] }), NOW)).toEqual([]);
+  });
+});
+
+describe("sampleAnswers", () => {
+  it("answers every question the coach asks", async () => {
+    const { sampleAnswers } = await import("./sandbox");
+    const a = sampleAnswers([
+      { id: "goal", label: "What do you want?", kind: "text", options: null },
+      { id: "days", label: "Days", kind: "choice", options: ["2", "3", "4"] },
+      { id: "health", label: "Injuries", kind: "text", options: null },
+    ]);
+    expect(a).toEqual({ goal: expect.any(String), days: "3", health: "Nothing to mention." });
   });
 });

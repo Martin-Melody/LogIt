@@ -1,6 +1,7 @@
 import type { ClientSummary } from "$lib/features/coaching/coachingData";
 import type { PersonRow } from "$lib/features/admin/adminApi";
 import { toast } from "$lib/components/ui/sonner";
+import { coachCan, type RequestOffer, type RequestStage } from "@logit/core/domain/coachRequest";
 
 /** Open state of ⌘K and the shortcuts list, so the sidebar button and the keys share it. */
 export const commands = $state({ palette: false, shortcuts: false });
@@ -33,6 +34,41 @@ export function clientActions(c: ClientSummary): RowAction[] {
       disabled: review ? undefined : !c.sharing.checkins ? "Not shared" : c.scheduleCount ? "Nothing to review" : "No check-in form",
     },
   ];
+}
+
+/** What the coach's request dialogs open with (Clients › Requests). */
+export type RequestRunners = {
+  offer: () => void;
+  waitlist: () => void;
+  notAFit: () => void;
+  withdrawOffer: () => void;
+  reopen: () => void;
+};
+
+/**
+ * Everything a coach can do with a request (canvas C1, C4, C6, X2): an open request, one with an
+ * offer out, a waiting-list entry or a closed one. What fits the moment comes from coachCan.
+ */
+export function requestActions(
+  r: { relationshipId: string; name: string; stage: RequestStage; offer: RequestOffer | null },
+  run: RequestRunners,
+  nowMs = Date.now(),
+): RowAction[] {
+  const can = coachCan(r.stage, r.offer, nowMs);
+  const closed = r.stage === "notafit" || r.stage === "withdrawn";
+  const list: RowAction[] = [
+    { id: "open", label: `Open ${r.name}'s request`, href: `/clients?tab=${r.stage === "waiting" ? "waiting" : "requests"}${closed ? "&view=closed" : ""}&r=${r.relationshipId}` },
+  ];
+  if (closed) {
+    list.push({ id: "reopen", label: "Reopen the request", run: run.reopen, separatorBefore: true });
+    return list;
+  }
+  if (can.editOffer) list.push({ id: "edit-offer", label: "Edit the offer…", run: run.offer, separatorBefore: true });
+  else list.push({ id: "offer", label: can.offerAgain ? "Offer the spot again…" : "Offer a spot…", run: run.offer, separatorBefore: true });
+  if (can.withdrawOffer) list.push({ id: "withdraw-offer", label: "Withdraw the offer", run: run.withdrawOffer });
+  if (can.waitlist) list.push({ id: "waitlist", label: "Put on the waiting list…", run: run.waitlist });
+  list.push({ id: "not-a-fit", label: r.stage === "waiting" ? "Remove from the waiting list…" : "Not a fit…", run: run.notAFit, danger: true, separatorBefore: true });
+  return list;
 }
 
 /** ⌘ on Apple keyboards, Ctrl elsewhere. */

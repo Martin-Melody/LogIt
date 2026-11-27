@@ -427,6 +427,10 @@ export const FEATURES: Feature[] = [
     wherePhone: "Settings › Account › Coaching",
     docs: "/docs/coaching/clients",
     server: ["/coach/roster", "/coach/clients/{clientId}/charts", "/coach/clients/{clientId}/charts/{chartId}"],
+    can: [
+      "Answer requests: offer a spot, keep a waiting list, or say it's not a fit, on the web or the phone",
+      "Set a client limit; open offers hold a spot",
+    ],
     cant: ["See what a client has turned off; it shows as Not shared"],
   },
   {

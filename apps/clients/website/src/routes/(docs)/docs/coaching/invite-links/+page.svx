@@ -12,7 +12,9 @@ title: Invite links
 
 <HowTo id="studio.invite" />
 
-You can also invite someone by username from Clients. A link with a package attached takes payment
-first; see [Getting paid](/docs/coaching/payments).
+People who open a free link answer your questions and wait in Clients › Requests; see
+[Requests and your waiting list](/docs/coaching/clients#requests-and-your-waiting-list). You can also
+invite someone by username from Clients. A link with a package attached takes payment first; see
+[Getting paid](/docs/coaching/payments).
 
 <CanCant ids={["invite-links"]} />

@@ -128,6 +128,15 @@ public class CoachRequestTests : IClassFixture<ApiFactory>
             db.CoachPackages.Add(k);
             await db.SaveChangesAsync();
         });
+        // Not before payments can take her money.
+        var notReady = await coach.PostAsJsonAsync($"/coach/requests/{relId}/offer", new { packageId });
+        Assert.Equal(HttpStatusCode.BadRequest, notReady.StatusCode);
+        Assert.Contains("payments_not_ready", await notReady.Content.ReadAsStringAsync());
+        await _api.WithDbAsync(async db =>
+        {
+            db.CoachPaymentAccounts.Add(new CoachPaymentAccount { CoachId = coachId, StripeAccountId = "acct_expire", CardPaymentsActive = true, Country = "IE" });
+            await db.SaveChangesAsync();
+        });
         var paid = (await Json(await coach.PostAsJsonAsync($"/coach/requests/{relId}/offer", new { packageId }))).GetProperty("offerId").GetGuid();
         Assert.Equal(HttpStatusCode.PaymentRequired, (await client.PostAsJsonAsync($"/coach/offers/{paid}/take", new { })).StatusCode);
     }

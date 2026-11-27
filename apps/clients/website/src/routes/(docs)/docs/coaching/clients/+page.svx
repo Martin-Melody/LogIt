@@ -12,6 +12,24 @@ title: Clients and sharing
 
 <HowTo id="studio.clients" />
 
+## Requests and your waiting list
+
+People ask to be coached from your profile or an invite link, answering your questions. Their request
+waits in Clients › Requests with their answers and a conversation. You see their answers and
+nothing else until they're your client. Answer with:
+
+- **Offer a spot.** Pick a package (or no payment through LogIt), how long to hold the spot, when they
+  start and, for someone already paid up elsewhere, a later first charge. An offer holds one of your
+  spots. You can change or withdraw it; if it runs out, Offer again.
+- **Waiting list.** They're told in your conversation and can leave any time. Offer them a spot from
+  Clients › Waiting list when one opens; nobody is offered one automatically.
+- **Not a fit.** The request closes with your message. Tick Block for spam or abuse. Closed requests
+  can be reopened from Closed.
+
+Set your **client limit** at the top of Clients: clients and open offers each take a spot. When you're
+full, your profile says "Join the waiting list", or "Not taking new clients" if you stop requests.
+On the phone, requests are in Messages with the same three answers.
+
 ## Sharing
 
 Each client chooses what you see: workouts, nutrition diary, bodyweight, habits and check-ins. They can

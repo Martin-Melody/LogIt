@@ -27,8 +27,44 @@
   } from "$lib/features/coaching/coachingData";
   import { ago, daysBetween, when } from "$lib/features/coaching/format";
 
-  // Your clients in one table (this replaced the old Roster page). Invites you sent wait at
-  // the bottom; people asking through a link wait on Today and Invite links.
+  // Your clients (canvas C1, C4): the table, then Requests, the Waiting list and Invites you
+  // sent as tabs, under how many of your spots are taken.
+  import { page } from "$app/state";
+  import * as Tabs from "$lib/components/ui/tabs";
+  import { Button } from "$lib/components/ui/button";
+  import type { ClosedRequest } from "@logit/core/api/coachApi";
+  import type { CoachIntake } from "@logit/core/domain/coachRequest";
+  import RequestsBoard from "$lib/features/coaching/requests/RequestsBoard.svelte";
+  import IntakeDialog from "$lib/features/coaching/requests/IntakeDialog.svelte";
+  import { coachTrial } from "$lib/workspace";
+
+  type Tab = "clients" | "requests" | "waiting" | "invites";
+  let tab = $state<Tab>((["requests", "waiting", "invites"].includes(page.url.searchParams.get("tab") ?? "") ? page.url.searchParams.get("tab") : "clients") as Tab);
+  let closed = $state<ClosedRequest[]>([]);
+  let intake = $state<CoachIntake | null>(null);
+  let packages = $state<Record<string, string>>({});
+  let editingIntake = $state(false);
+
+  function setTab(t: Tab) {
+    tab = t;
+    const u = new URL(page.url);
+    u.searchParams.set("tab", t);
+    u.searchParams.delete("r");
+    u.searchParams.delete("view");
+    void goto(u, { replaceState: true, keepFocus: true, noScroll: true });
+  }
+
+  async function loadRequests() {
+    if (coachTrial()) return;
+    const [c, i, profile] = await Promise.all([
+      coachApi.listClosedRequests().catch(() => []),
+      coachApi.getIntake().catch(() => null),
+      coachApi.getCoachProfile().catch(() => null),
+    ]);
+    closed = c.filter((r) => practice.shows(r.client.isSample));
+    intake = i;
+    packages = Object.fromEntries((profile?.packages ?? []).map((k) => [k.id, k.name]));
+  }
 
   let overview = $state<CoachingOverview | null>(null);
   let error = $state<string | null>(null);
@@ -42,6 +78,7 @@
       overview = await loadCoachingOverview();
       coachBadges.fromOverview(overview);
       viewingClient.setClients(inView(await coachApi.listClients()));
+      await loadRequests();
       error = null;
     } catch (e) {
       error = e instanceof Error ? e.message : "Couldn't load your clients";
@@ -117,9 +154,19 @@
     <div>
       <h1 class="text-[26px] font-bold tracking-tight">Clients</h1>
       {#if overview}
-        <p class="mt-1 text-[13px] text-muted-foreground">
-          {overview.clients.length} active{#if overview.sent.length}{` · ${overview.sent.length} invite${overview.sent.length === 1 ? "" : "s"} waiting`}{/if}{#if waiting.length}{` · ${waiting.length} need${waiting.length === 1 ? "s" : ""} you`}{/if}
+        <p class="mt-1 flex flex-wrap items-center gap-x-2 text-[13px] text-muted-foreground">
+          {#if intake?.spots}
+            <span><b class="font-semibold text-foreground">{intake.taken} of your {intake.spots} {intake.spots === 1 ? "spot" : "spots"}</b> taken{intake.full ? ` · full, ${intake.whenFull === "stop" ? "not taking requests" : "new requests join the waiting list"}` : ""}</span>
+          {:else}
+            <span>{overview.clients.length} active{#if waiting.length}{` · ${waiting.length} need${waiting.length === 1 ? "s" : ""} you`}{/if}</span>
+          {/if}
+          {#if intake}<Button variant="ghost" size="sm" class="h-7 px-2" onclick={() => (editingIntake = true)}>{intake.spots ? "Change" : "Set a client limit"}</Button>{/if}
         </p>
+        {#if intake?.spots}
+          <div class="mt-1.5 h-1.5 w-56 overflow-hidden rounded-full bg-muted" role="meter" aria-label="Spots taken" aria-valuemin={0} aria-valuemax={intake.spots} aria-valuenow={intake.taken}>
+            <div class="h-full rounded-full bg-primary transition-[width] duration-500" style="width: {Math.min(100, (intake.taken / intake.spots) * 100)}%"></div>
+          </div>
+        {/if}
       {/if}
     </div>
     <form class="flex flex-col gap-1" onsubmit={invite}>
@@ -141,6 +188,35 @@
     <Skeleton class="h-24" />
     <Skeleton class="h-72" />
   {:else}
+    {@const openRequests = overview.requests.filter((r) => r.stage !== "waiting")}
+    {@const waitingList = overview.requests.filter((r) => r.stage === "waiting")}
+    <Tabs.Root value={tab} onValueChange={(v) => setTab(v as Tab)}>
+      <Tabs.List aria-label="Clients">
+        <Tabs.Trigger value="clients">Clients <span class="opacity-60">{overview.clients.length}</span></Tabs.Trigger>
+        <Tabs.Trigger value="requests">Requests{#if openRequests.length} <span class="opacity-60">{openRequests.length}</span>{/if}</Tabs.Trigger>
+        <Tabs.Trigger value="waiting">Waiting list{#if waitingList.length} <span class="opacity-60">{waitingList.length}</span>{/if}</Tabs.Trigger>
+        <Tabs.Trigger value="invites">Invites you sent{#if overview.sent.length} <span class="opacity-60">{overview.sent.length}</span>{/if}</Tabs.Trigger>
+      </Tabs.List>
+    </Tabs.Root>
+
+    {#if tab === "requests" || tab === "waiting"}
+      {#key tab}
+        <RequestsBoard mode={tab} requests={overview.requests} {closed} {packages} expectSpots={intake?.expectSpots ?? null}
+          onchange={load} onEditIntake={() => (editingIntake = true)} />
+      {/key}
+    {:else if tab === "invites"}
+      <section class="rounded-[10px] border border-border bg-card px-1.5 py-2">
+        {#each overview.sent as s (s.relationshipId)}
+          <div class="flex items-center gap-3 border-b border-border px-3 py-3 last:border-0">
+            <Avatar name={s.client.displayName || s.client.username} url={s.client.avatarUrl} size={30} dim />
+            <span class="flex min-w-0 flex-1 flex-col"><span class="text-[13px] font-medium">@{s.client.username}</span><span class="text-xs text-muted-foreground">Invite sent {ago(Date.parse(s.createdAt))} · nothing is shared until they accept</span></span>
+            <Button variant="outline" size="sm" disabled={busy === s.relationshipId} onclick={() => cancelInvite(s.relationshipId)}>Cancel invite</Button>
+          </div>
+        {:else}
+          <p class="px-3 py-6 text-center text-[13px] text-muted-foreground">No invites waiting. Invite someone by username above.</p>
+        {/each}
+      </section>
+    {:else}
     {#if waiting.length}
       <section class="flex flex-col gap-2.5 rounded-[10px] border border-warning/30 bg-card px-[18px] py-4">
         <h2 class="text-sm font-semibold">Needs you</h2>
@@ -210,28 +286,17 @@
               {/snippet}
               </ActionMenu>
             {/each}
-            {#each overview.sent as s (s.relationshipId)}
-              <Table.Row class="border-t border-border align-middle">
-                <Table.Cell class="px-3 py-3">
-                  <span class="flex items-center gap-2.5">
-                    <Avatar name={s.client.displayName || s.client.username} url={s.client.avatarUrl} size={30} dim />
-                    <span><span class="block font-medium">@{s.client.username}</span><span class="text-xs text-muted-foreground">Invite sent {ago(Date.parse(s.createdAt))}</span></span>
-                  </span>
-                </Table.Cell>
-                <Table.Cell class="px-3 py-3 text-muted-foreground" colspan={4}>Nothing is shared until they accept.</Table.Cell>
-                <Table.Cell class="px-3 py-3">
-                  <button type="button" disabled={busy === s.relationshipId} onclick={() => cancelInvite(s.relationshipId)}
-                    class="h-[30px] rounded-lg border border-border px-2.5 text-xs hover:bg-muted disabled:opacity-50">Cancel invite</button>
-                </Table.Cell>
-                <Table.Cell></Table.Cell>
-              </Table.Row>
-            {/each}
-            {#if overview.clients.length === 0 && overview.sent.length === 0}
+            {#if overview.clients.length === 0}
               <Table.Row><Table.Cell colspan={7} class="px-3 py-6 text-center text-muted-foreground">No clients yet. Invite someone by username, or <a href="/coaching/links" class="text-primary hover:underline">share an invite link</a>.</Table.Cell></Table.Row>
             {/if}
           </Table.Body>
         </Table.Root>
       </div>
     </section>
+    {/if}
   {/if}
 </div>
+
+{#if intake}
+  <IntakeDialog bind:open={editingIntake} {intake} onsaved={(i) => (intake = i)} />
+{/if}

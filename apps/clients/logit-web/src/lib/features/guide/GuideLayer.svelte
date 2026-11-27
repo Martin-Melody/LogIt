@@ -12,7 +12,7 @@
   const step = $derived(guide.paused ? null : guide.step);
   const chapter = $derived(guide.chapter);
   const kind = $derived(guide.stepKind);
-  const onPage = $derived(step ? routeMatches(step.route, page.url.pathname) : false);
+  const onPage = $derived(step ? routeMatches(step.route, page.url.pathname, page.url.search) : false);
 
   let rect = $state<DOMRect | null>(null);
   let empty = $state(false);

@@ -5,7 +5,7 @@ import { coachPaymentsApi } from "@logit/core/api/coachPaymentsApi";
 import { loadCoachingOverview, needsYou, type CoachingOverview } from "./coachingData";
 
 /** The counts on the sidebar: what's waiting for you as a coach, and from your own coach. */
-const counts = $state({ today: 0, checkins: 0, messages: 0, links: 0, myCoach: 0, payments: 0 });
+const counts = $state({ today: 0, checkins: 0, messages: 0, requests: 0, myCoach: 0, payments: 0 });
 
 let lastLoad = 0;
 let studio = false;
@@ -14,7 +14,8 @@ export const coachBadges = {
   get today() { return counts.today; },
   get checkins() { return counts.checkins; },
   get messages() { return counts.messages; },
-  get links() { return counts.links; },
+  /** Requests waiting for an answer (asked, or the offer ran out): Clients › Requests. */
+  get requests() { return counts.requests; },
   get myCoach() { return counts.myCoach; },
   get payments() { return counts.payments; },
 
@@ -28,7 +29,7 @@ export const coachBadges = {
     counts.today = needsYou(o).length;
     counts.checkins = o.clients.reduce((n, c) => n + c.toReview.length, 0);
     counts.messages = o.clients.reduce((n, c) => n + c.unread, 0);
-    counts.links = o.requests.length;
+    counts.requests = needsYou(o).filter((i) => i.kind === "request").length;
   },
 
   /** Re-count, at most every 30 s unless forced. Never throws: badges are a nicety. */

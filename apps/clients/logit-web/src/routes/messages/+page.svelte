@@ -9,7 +9,8 @@
   import * as Alert from "$lib/components/ui/alert";
   import { Skeleton } from "$lib/components/ui/skeleton";
   import { apiClient } from "@logit/core/api/client";
-  import { coachApi } from "@logit/core/api/coachApi";
+  import { coachApi, type CoachingRequest } from "@logit/core/api/coachApi";
+  import { requestLine } from "@logit/core/domain/coachRequest";
   import { messagesApi } from "@logit/core/api/messagesApi";
   import Avatar from "$lib/features/coaching/Avatar.svelte";
   import MessageThread from "$lib/features/coaching/MessageThread.svelte";
@@ -29,6 +30,8 @@
   };
 
   let threads = $state<Thread[]>([]);
+  // People asking to be coached: their conversations live with the request in Clients › Requests.
+  let asking = $state<CoachingRequest[]>([]);
   let loading = $state(true);
   let error = $state<string | null>(null);
   let search = $state("");
@@ -42,11 +45,13 @@
 
   async function load() {
     try {
-      const [clients, counts, all] = await Promise.all([
+      const [clients, counts, all, reqs] = await Promise.all([
         coachApi.listClients(),
         messagesApi.unreadCounts().catch(() => []),
         messagesApi.listAll(0).catch(() => []),
+        coachApi.listRequests().catch(() => [] as CoachingRequest[]),
       ]);
+      asking = inView(reqs);
       threads = inView(clients)
         .map((c) => {
           const last = all.filter((m) => m.relationshipId === c.relationshipId).sort((a, b) => b.createdAtMs - a.createdAtMs)[0];
@@ -100,7 +105,7 @@
     <Alert.Root variant="destructive"><Alert.Description>{error}</Alert.Description></Alert.Root>
   {:else if loading}
     <div class="flex flex-wrap gap-4"><Skeleton class="h-80 flex-[1_1_280px]" /><Skeleton class="h-[480px] flex-[999_1_560px]" /></div>
-  {:else if threads.length === 0}
+  {:else if threads.length === 0 && asking.length === 0}
     <p class="text-[13px] text-muted-foreground">No clients yet, so no conversations. <a href="/clients" class="text-primary hover:underline">Invite someone</a>.</p>
   {:else}
     <div class="flex flex-wrap items-stretch gap-4">
@@ -108,6 +113,21 @@
         <label for="find-client" class="sr-only">Find a client</label>
         <input id="find-client" bind:value={search} placeholder="Find a client"
           class="mx-0.5 mb-1.5 mt-0.5 h-[34px] rounded-lg border border-input bg-background px-2.5 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring" />
+        {#if asking.length}
+          <p class="px-3 pt-1 pb-0.5 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">Requests</p>
+          {#each asking as r (r.relationshipId)}
+            {@const n = r.client.displayName || r.client.username}
+            <a href="/clients?tab={r.stage === 'waiting' ? 'waiting' : 'requests'}&r={r.relationshipId}" class="flex items-center gap-2.5 rounded-lg px-3 py-2.5 hover:bg-muted/50">
+              <Avatar name={n} url={r.client.avatarUrl} />
+              <span class="flex min-w-0 flex-1 flex-col gap-0.5">
+                <span class="text-[13px] font-semibold">{n}</span>
+                <span class="truncate text-xs text-muted-foreground">{requestLine(r.stage ?? "asked", r.offer ?? null, Date.now())}</span>
+              </span>
+              <span class="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium">{r.stage === "waiting" ? "Waiting list" : "Request"}</span>
+            </a>
+          {/each}
+          <p class="px-3 pt-2 pb-0.5 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">Clients</p>
+        {/if}
         {#each shown as t (t.relationshipId)}
           <button type="button" onclick={() => open(t.relationshipId)} aria-current={t.relationshipId === activeId ? "true" : undefined}
             class="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-left {t.relationshipId === activeId ? 'bg-muted ring-1 ring-border' : 'hover:bg-muted/50'}">

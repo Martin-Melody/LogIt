@@ -16,6 +16,8 @@ import type { CoachProgram } from "../domain/CoachProgram";
 import { createId } from "../domain/ids";
 import type { WorkoutSession } from "../domain/workout";
 import { SAMPLE_CLIENTS, planSampleActions, sampleHistory, sampleSpec, type SampleKey, type SampleAction } from "./sandbox";
+import { offerStateNow } from "../domain/coachRequest";
+import { sampleAnswers } from "./sandbox";
 
 const TOKEN_TTL_MS = 10 * 60_000;
 const tokens = new Map<string, { token: string; at: number }>();
@@ -92,9 +94,14 @@ async function runOnce(now: number): Promise<number> {
       key: spec.key, status: c.status, activeLinkCodes,
       programs: [] as (CoachProgram & { startedAtMs?: number | null })[],
       sessions: [] as WorkoutSession[], schedules: [] as CheckinSchedule[], submissions: [] as CheckinSubmission[],
-      thread: [] as Awaited<ReturnType<typeof api.messages.list>>, coachId: "",
+      thread: [] as Awaited<ReturnType<typeof api.messages.list>>, coachId: "", openOfferId: null as string | null,
     };
     let relationshipId: string | null = null;
+    if (c.status === "Pending") {
+      const mine = await api.coach.listMyRequests().catch(() => []);
+      const offer = mine.map((r) => r.offer).find((o) => o && offerStateNow(o, now) === "open");
+      state = { ...state, openOfferId: offer?.card.offerId ?? null };
+    }
     if (c.status === "Active") {
       const [programs, sessions, schedules, submissions, coaches] = await Promise.all([
         api.programs.pullAssigned(0),
@@ -131,10 +138,17 @@ async function perform(
   sharing: Parameters<typeof api.coach.requestCoaching>[1], relationshipId: string | null, now: number,
 ) {
   switch (action.kind) {
-    case "request": await api.coach.requestCoaching(action.code, sharing); break;
+    case "request": {
+      // She answers whatever the coach asks, as a real person would.
+      const coach = apiClient.getUser()?.username;
+      const questions = coach ? (await api.coach.askInfo(coach).catch(() => null))?.questions : null;
+      await api.coach.requestCoaching(action.code, sharing, questions ? sampleAnswers(questions) : undefined);
+      break;
+    }
     case "start": await api.programs.startAssigned(action.programId, action.startedAtMs); break;
     case "log": await api.sync.pushSessions([sessionDto(action.session)]); break;
     case "submit": await api.sync.pushCheckinSubmissions([checkinSubmissionDto(action.submission)]); break;
+    case "take": await api.coach.takeOffer(action.offerId); break;
     case "reply":
       if (relationshipId) await api.messages.send({ relationshipId, messageId: createId("msg"), body: action.body, createdAtMs: now });
       break;

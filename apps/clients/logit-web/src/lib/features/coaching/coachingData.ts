@@ -18,6 +18,7 @@ import { missedCheckin, type CheckinSchedule, type CheckinSubmission } from "@lo
 import type { MyCoachProgram } from "@logit/core/data/coachProgramRepo";
 import type { MyCheckinSchedule } from "@logit/core/data/checkinRepo";
 import { getWebCheckinRepo, getWebCoachProgramRepo } from "$lib/deps";
+import { offerStateNow } from "@logit/core/domain/coachRequest";
 
 const DAY = 86_400_000;
 
@@ -197,7 +198,13 @@ export function needsYou(o: CoachingOverview, now = Date.now()): NeedsYou[] {
       out.push({ kind: "ending", at: p.endsAtMs - 7 * DAY, client: c, program: p });
     }
   }
-  for (const r of o.requests) out.push({ kind: "request", at: Date.parse(r.requestedAt), request: r });
+  // A request needs you while it's unanswered or its offer ran out; not while an offer is out or
+  // they're on the waiting list (canvas C1, C4).
+  for (const r of o.requests) {
+    const stage = r.stage ?? "asked";
+    const ranOut = stage === "offered" && r.offer && offerStateNow(r.offer, now) === "expired";
+    if (stage === "asked" || ranOut) out.push({ kind: "request", at: Date.parse(r.requestedAt), request: r });
+  }
   return out.sort((a, b) => b.at - a.at);
 }
 

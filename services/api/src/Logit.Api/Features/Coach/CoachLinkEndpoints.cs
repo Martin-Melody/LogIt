@@ -283,6 +283,8 @@ public static class CoachLinkEndpoints
         card = CoachIntake.CardOf(o),
         state = CoachIntake.StateOf(o, now),
         createdAt = o.CreatedAt,
+        packageId = o.PackageId, // editing the offer (canvas C6) starts from its package
+        holdDays = (int)Math.Max(1, Math.Round((o.HoldUntil - o.CreatedAt).TotalDays)),
     };
 
     private static async Task<IResult> AcceptRequest(Guid relationshipId, ClaimsPrincipal caller, AppDbContext db)

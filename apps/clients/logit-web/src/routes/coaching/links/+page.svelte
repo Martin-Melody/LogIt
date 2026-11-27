@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Button } from "$lib/components/ui/button";
   import { inView } from "$lib/features/coaching/coachingData";
   import * as Table from "$lib/components/ui/table/index.js";
   import OptionSelect from "$lib/components/option-select.svelte";
@@ -13,7 +14,6 @@
   import { apiClient, ApiError } from "@logit/core/api/client";
   import { coachApi, SHARE_AREAS, type CoachingRequest, type InviteLink } from "@logit/core/api/coachApi";
   import Avatar from "$lib/features/coaching/Avatar.svelte";
-  import { coachBadges } from "$lib/features/coaching/badges.svelte";
   import { ago, shortDate } from "$lib/features/coaching/format";
   import { coachPaymentsApi } from "@logit/core/api/coachPaymentsApi";
   import { priceText, type CoachPackage } from "@logit/core/domain/coachPayments";
@@ -22,7 +22,6 @@
   let requests = $state<CoachingRequest[]>([]);
   let loading = $state(true);
   let error = $state<string | null>(null);
-  let busy = $state<string | null>(null);
   let turningOff = $state<InviteLink | null>(null);
 
   let name = $state("");
@@ -45,7 +44,8 @@
         coachPaymentsApi.overview().catch(() => null),
       ]);
       links = l;
-      requests = inView(r);
+      // Only the ones waiting for an answer; offers out and the waiting list live in Clients.
+      requests = inView(r).filter((x) => (x.stage ?? "asked") === "asked");
       packages = payments?.packages.filter((p) => !p.hidden) ?? [];
       paymentsReady = payments?.account.ready ?? false;
       error = null;
@@ -111,22 +111,6 @@
     }
   }
 
-  async function answer(r: CoachingRequest, accept: boolean) {
-    busy = r.relationshipId;
-    try {
-      if (accept) await coachApi.acceptRequest(r.relationshipId);
-      else await coachApi.declineRequest(r.relationshipId);
-      if (accept) guideSignal("request.accepted");
-      toast.success(accept ? `${r.client.displayName || r.client.username} is now your client` : "Request declined");
-      await load();
-      void coachBadges.refresh(true, true);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't save");
-    } finally {
-      busy = null;
-    }
-  }
-
   async function changePackage(link: InviteLink, id: string) {
     try {
       await coachPaymentsApi.setLinkPackage(link.id, id || null);
@@ -136,11 +120,6 @@
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Couldn't change the package");
     }
-  }
-
-  function shares(r: CoachingRequest): string {
-    const on = SHARE_AREAS.filter((a) => r.sharing[a.key]).map((a) => a.label.toLowerCase());
-    return on.length ? `will share ${on.join(", ")}` : "shares nothing yet";
   }
 
   function peopleText(l: InviteLink): string {
@@ -165,7 +144,8 @@
     <div class="flex flex-wrap items-start gap-4">
       <div class="flex min-w-0 flex-[999_1_560px] flex-col gap-4">
         {#if requests.length}
-          <section data-guide="links-requests" class="flex flex-col gap-2.5 rounded-[10px] border border-warning/30 bg-card px-[18px] py-4">
+          <!-- Answering happens in Clients › Requests (canvas C1): read their answers, then offer a spot. -->
+          <section class="flex flex-col gap-2.5 rounded-[10px] border border-warning/30 bg-card px-[18px] py-4">
             <div class="flex items-baseline justify-between"><h2 class="text-sm font-semibold">Requests waiting</h2><span class="text-xs text-muted-foreground">{requests.length}</span></div>
             {#each requests as r (r.relationshipId)}
               {@const who = r.client.displayName || r.client.username}
@@ -173,12 +153,9 @@
                 <Avatar name={who} url={r.client.avatarUrl} />
                 <span class="flex min-w-0 flex-[1_1_220px] flex-col gap-0.5">
                   <span class="text-[13px] font-medium">{#if r.client.isSample}{who}<SampleBadge />{:else}{who} · @{r.client.username}{/if}</span>
-                  <span class="text-xs text-muted-foreground">Via {r.linkName ? `"${r.linkName}"` : "a link"} · {ago(Date.parse(r.requestedAt))} · {shares(r)}</span>
+                  <span class="text-xs text-muted-foreground">Via {r.linkName ? `"${r.linkName}"` : "your profile"} · {ago(Date.parse(r.requestedAt))}</span>
                 </span>
-                <span class="flex gap-2">
-                  <button type="button" disabled={busy === r.relationshipId} onclick={() => answer(r, false)} class="h-[30px] rounded-lg border border-border px-2.5 text-xs hover:bg-background disabled:opacity-50">Decline</button>
-                  <button type="button" disabled={busy === r.relationshipId} onclick={() => answer(r, true)} class="h-[30px] rounded-lg bg-primary px-2.5 text-xs font-semibold text-primary-foreground disabled:opacity-50">Accept</button>
-                </span>
+                <Button size="sm" href="/clients?tab=requests&r={r.relationshipId}">Answer</Button>
               </div>
             {/each}
           </section>

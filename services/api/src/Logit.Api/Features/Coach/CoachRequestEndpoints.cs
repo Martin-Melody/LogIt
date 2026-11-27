@@ -108,6 +108,9 @@ public static class CoachRequestEndpoints
         {
             package = await db.CoachPackages.FirstOrDefaultAsync(k => k.Id == pid && k.CoachId == coachId && !k.Hidden);
             if (package is null) return Results.BadRequest(new { error = "That package isn't available." });
+            // She'd be sent to a checkout that can't take her money (canvas Z4).
+            if (!await db.CoachPaymentAccounts.AnyAsync(a => a.CoachId == coachId && a.CardPaymentsActive))
+                return Results.BadRequest(new { error = "Paid packages need payments set up first. Offer it with no payment through LogIt, or set up payments.", code = "payments_not_ready" });
         }
 
         var replaced = await CloseOpenOffer(db, rel.Id, OfferStates.Replaced, now);
@@ -406,7 +409,8 @@ public static class CoachRequestEndpoints
             case not OfferStates.Open:
                 return Results.Json(new { error = "This offer isn't open any more.", code = "closed" }, statusCode: StatusCodes.Status410Gone);
         }
-        if (offer.PackageId is not null)
+        // A sandbox sample client never pays (as on a paid link).
+        if (offer.PackageId is not null && !rel.Client.IsSample)
             return Results.Json(new { error = "This offer is paid: pay to start coaching.", code = "payment_required" }, statusCode: StatusCodes.Status402PaymentRequired);
 
         offer.State = OfferStates.Taken;

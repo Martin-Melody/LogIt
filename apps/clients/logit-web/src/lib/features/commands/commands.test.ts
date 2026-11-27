@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
 import type { ClientSummary } from "$lib/features/coaching/coachingData";
 import type { PersonRow } from "$lib/features/admin/adminApi";
-import { actionListProblems, clientActions, isMenuKey, personActions, type RowAction } from "./commands.svelte";
+import { actionListProblems, clientActions, isMenuKey, personActions, requestActions, type RowAction } from "./commands.svelte";
+import type { RequestOffer } from "@logit/core/domain/coachRequest";
+
+const noop = { offer: () => {}, waitlist: () => {}, notAFit: () => {}, withdrawOffer: () => {}, reopen: () => {} };
+const req = (stage: "asked" | "waiting" | "offered" | "notafit" | "withdrawn", offer: RequestOffer | null = null) =>
+  requestActions({ relationshipId: "r1", name: "Aoife", stage, offer }, noop, Date.UTC(2026, 11, 1));
+const anOffer = (holdUntilMs: number): RequestOffer => ({ state: "open", createdAt: "2026-11-30T00:00:00Z", card: {
+  offerId: "o1", packageName: "Monthly", packageDescription: "", amountCents: 8000, currency: "eur", interval: "month",
+  weeks: null, pays: true, holdUntilMs, startsOnMs: null, firstChargeOnMs: null } });
 
 const allShared = { workouts: true, nutrition: true, bodyweight: true, habits: true, checkins: true };
 
@@ -26,6 +34,11 @@ describe("every action list follows the menu rules (canvas X4)", () => {
     ["person", personActions(person(), "me")],
     ["admin person", personActions(person({ isAdmin: true }), "me")],
     ["myself as admin", personActions(person({ id: "me", isAdmin: true }), "me")],
+    ["new request", req("asked")],
+    ["request with an offer out", req("offered", anOffer(Date.UTC(2026, 11, 5)))],
+    ["request whose offer ran out", req("offered", anOffer(Date.UTC(2026, 10, 20)))],
+    ["waiting-list entry", req("waiting")],
+    ["closed request", req("notafit")],
   ];
   it.each(lists)("%s", (_, list) => expect(actionListProblems(list)).toEqual([]));
 });
@@ -58,5 +71,16 @@ describe("menu keys", () => {
     expect(isMenuKey(key("ContextMenu"))).toBe(true);
     expect(isMenuKey(key(".", { ctrlKey: true }))).toBe(false);
     expect(isMenuKey(key("F10"))).toBe(false);
+  });
+});
+
+describe("request actions", () => {
+  it("fit the moment", () => {
+    const ids = (l: RowAction[]) => l.map((a) => a.id);
+    expect(ids(req("asked"))).toEqual(["open", "offer", "waitlist", "not-a-fit"]);
+    expect(ids(req("offered", anOffer(Date.UTC(2026, 11, 5))))).toEqual(["open", "edit-offer", "withdraw-offer", "waitlist", "not-a-fit"]);
+    expect(req("offered", anOffer(Date.UTC(2026, 10, 20))).find((a) => a.id === "offer")?.label).toBe("Offer the spot again…");
+    expect(req("waiting").at(-1)?.label).toBe("Remove from the waiting list…");
+    expect(ids(req("withdrawn"))).toEqual(["open", "reopen"]);
   });
 });

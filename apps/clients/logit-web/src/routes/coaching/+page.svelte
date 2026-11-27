@@ -21,7 +21,6 @@
 
   let overview = $state<CoachingOverview | null>(null);
   let error = $state<string | null>(null);
-  let busy = $state<string | null>(null);
 
   async function load() {
     try {
@@ -58,19 +57,6 @@
     };
   });
 
-  async function accept(relationshipId: string, name: string) {
-    busy = relationshipId;
-    try {
-      await coachApi.acceptRequest(relationshipId);
-      toast.success(`${name} is now your client`);
-      await load();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't accept");
-    } finally {
-      busy = null;
-    }
-  }
-
   const NUDGE = "Hi! Just a reminder your check-in is waiting. Fill it in when you get a minute.";
 
   function title(i: NeedsYou): string {
@@ -82,7 +68,10 @@
         return `${i.client.name}'s check-in is ${late <= 0 ? "due" : `${late} day${late === 1 ? "" : "s"} late`}`;
       }
       case "ending": return `${i.client.name}'s program ends ${when(i.program.endsAtMs!) === "today" ? "today" : `on ${weekdayDate(i.program.endsAtMs!)}`}`;
-      case "request": return `${i.request.client.displayName || i.request.client.username} wants you to coach them`;
+      case "request": {
+        const n = i.request.client.displayName || i.request.client.username;
+        return i.request.stage === "offered" ? `${n}'s offer ran out` : `${n} asked you to coach them`;
+      }
     }
   }
 
@@ -92,7 +81,7 @@
       case "message": return `${i.client.unread} unread`;
       case "missed": return `${i.client.sessions7d} session${i.client.sessions7d === 1 ? "" : "s"} in the last 7 days`;
       case "ending": return `${i.program.program.name}, week ${i.program.week} of ${i.program.totalWeeks}`;
-      case "request": return `Via ${i.request.linkName ? `"${i.request.linkName}"` : "an invite link"} · ${ago(Date.parse(i.request.requestedAt))}`;
+      case "request": return `${i.request.linkName ? `Via "${i.request.linkName}"` : "From your profile"} · ${ago(Date.parse(i.request.requestedAt))}`;
     }
   }
 </script>
@@ -162,8 +151,7 @@
             {:else if i.kind === "ending"}
               <a href="/clients/{i.client.id}?tab=programs" class="h-8 rounded-[9px] border border-border px-3 text-xs font-medium leading-8 hover:bg-muted">Plan next block</a>
             {:else}
-              <button type="button" disabled={busy === i.request.relationshipId} onclick={() => accept(i.request.relationshipId, who)}
-                class="h-8 rounded-[9px] bg-primary px-3 text-xs font-semibold text-primary-foreground disabled:opacity-50">Accept</button>
+              <a href="/clients?tab=requests&r={i.request.relationshipId}" class="h-8 rounded-[9px] bg-primary px-3 text-xs font-semibold leading-8 text-primary-foreground">{i.request.stage === "offered" ? "Offer again" : "Answer"}</a>
             {/if}
           </div>
         {/each}

@@ -243,9 +243,9 @@ export const STUDIO_CHAPTERS: Chapter[] = [
         body: "Open Coaching › Invite links. Give the link a name only you see, like \"Instagram bio\", choose when it stops working and how many people can use it, then Create link. It's copied, ready to paste anywhere.",
       },
       {
-        id: "request", on: "web", route: "/coaching/links", target: "links-requests", kind: "do", signal: "request.accepted",
-        title: "Someone asks to join",
-        body: "People who open your link and ask wait here. You see nothing of theirs until you accept, and the line under their name says what they chose to share. Accept them.",
+        id: "request", on: "web", route: "/clients?tab=requests", target: "requests-pane", kind: "do", signal: "request.offered",
+        title: "Someone asks to be coached",
+        body: "People who open your link answer your questions and wait in Clients › Requests. You see their answers and nothing else. Talk it over in the conversation, then Offer a spot: pick a package, or no payment through LogIt. Niamh takes it straight away.",
         arrives: "Waiting for Niamh, a sample client, to use your link. It takes a few seconds.",
       },
       {

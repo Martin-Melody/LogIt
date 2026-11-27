@@ -42,6 +42,9 @@ export interface RequestOffer {
   /** As the server saw it; `offerStateNow` re-checks the hold against the clock. */
   state: OfferState;
   createdAt: string;
+  /** The package it offers (null: no payment through LogIt); missing from older servers. */
+  packageId?: string | null;
+  holdDays?: number;
 }
 
 /** The kinds of request steps recorded as cards in the conversation (CoachMessage.kind). */

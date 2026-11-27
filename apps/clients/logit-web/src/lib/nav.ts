@@ -74,7 +74,7 @@ export const coachGroups: NavGroup[] = [
     label: null,
     items: [
       { label: "Today", href: "/coaching", icon: SunriseIcon, key: "T", badge: () => coachBadges.today },
-      { label: "Clients", href: "/clients", icon: ContactIcon, key: "C" },
+      { label: "Clients", href: "/clients", icon: ContactIcon, key: "C", badge: () => coachBadges.requests },
       // Next to Clients: ordered by how often coaches use them (canvas N).
       { label: "Messages", href: "/messages", icon: MessageSquareIcon, key: "M", badge: () => coachBadges.messages },
       { label: "Programs", href: "/coaching/programs", icon: ClipboardListIcon, key: "P" },
@@ -87,7 +87,7 @@ export const coachGroups: NavGroup[] = [
     label: "Your coaching",
     items: [
       { label: "Profile", href: "/coaching/profile", icon: IdCardIcon },
-      { label: "Invite links", href: "/coaching/links", icon: LinkIcon, badge: () => coachBadges.links },
+      { label: "Invite links", href: "/coaching/links", icon: LinkIcon },
       { label: "Payments", href: "/coaching/payments", icon: WalletIcon, badge: () => coachBadges.payments },
     ],
   },

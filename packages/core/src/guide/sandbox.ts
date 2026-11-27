@@ -196,6 +196,8 @@ export type SampleState = {
   submissions: CheckinSubmission[];
   /** Their thread with the coach, oldest first; `mine` = sent by the sample. */
   thread: RemoteMessage[];
+  /** While asking: the coach's offer they can take now (a sample never pays). */
+  openOfferId?: string | null;
   coachId: string;
 };
 
@@ -204,7 +206,21 @@ export type SampleAction =
   | { kind: "start"; programId: string; startedAtMs: number }
   | { kind: "log"; session: WorkoutSession }
   | { kind: "submit"; submission: CheckinSubmission }
-  | { kind: "reply"; body: string };
+  | { kind: "reply"; body: string }
+  | { kind: "take"; offerId: string };
+
+/**
+ * A sample's answers to the coach's questions when asking (canvas P2): her goal for written
+ * questions, a sensible pick for choices. Whatever questions the coach wrote, she answers them all.
+ */
+export function sampleAnswers(questions: { id: string; label: string; kind: "text" | "choice"; options: string[] | null }[]): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const q of questions) {
+    if (q.kind === "choice" && q.options?.length) out[q.id] = q.options[Math.min(1, q.options.length - 1)]!;
+    else out[q.id] = /injur|health|condition/i.test(q.label) ? "Nothing to mention." : "Get stronger and build a habit of training three times a week.";
+  }
+  return out;
+}
 
 /** How long after the coach acts a sample answers: soon enough to watch, not instant. */
 export const REPLY_AFTER_MS = 4_000;
@@ -216,6 +232,11 @@ export function planSampleActions(state: SampleState, now: number): SampleAction
 
   if (state.status === "None") {
     if (spec.key === "niamh" && state.activeLinkCodes.length > 0) actions.push({ kind: "request", code: state.activeLinkCodes[0] });
+    return actions;
+  }
+  // Asked: the coach answers with an offer, which a sample takes at once (canvas C2 in practice).
+  if (state.status === "Pending") {
+    if (state.openOfferId) actions.push({ kind: "take", offerId: state.openOfferId });
     return actions;
   }
   if (state.status !== "Active") return actions;

@@ -41,6 +41,7 @@ class Sandbox {
   }
 
   private async doRefresh() {
+    const before = practice.on;
     try {
       this.clients = await sandboxApi.list();
     } catch {
@@ -48,6 +49,9 @@ class Sandbox {
     }
     this.loaded = true;
     this.loop();
+    // Pages often load before this answers: if Practice view turned out different from what
+    // they assumed, they load again (otherwise real people show in Practice view, or samples outside it).
+    if (practice.on !== before) this.notify();
   }
 
   private async run<T>(work: () => Promise<T>) {

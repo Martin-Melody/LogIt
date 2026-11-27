@@ -156,7 +156,7 @@ class Guide {
   private goToStepPage() {
     const s = this.step;
     if (!s || /\[/.test(s.route)) return;
-    if (!routeMatches(s.route, location.pathname)) void goto(s.route);
+    if (!routeMatches(s.route, location.pathname, location.search)) void goto(s.route);
   }
 
   next() {

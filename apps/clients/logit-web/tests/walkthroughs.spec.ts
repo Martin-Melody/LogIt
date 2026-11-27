@@ -43,7 +43,10 @@ const ACTIONS: Record<string, (page: Page) => Promise<void>> = {
     await p.getByPlaceholder("Instagram bio").fill("Instagram bio");
     await p.getByRole("button", { name: "Create link" }).click();
   },
-  "request.accepted": (p) => p.locator('[data-guide="links-requests"]').getByRole("button", { name: "Accept" }).first().click(),
+  "request.offered": async (p) => {
+    await p.locator('[data-guide="requests-pane"]').getByRole("button", { name: "Offer a spot" }).click();
+    await p.getByRole("dialog").getByRole("button", { name: "Send offer" }).click();
+  },
   "client.opened": async (p) => {
     const list = p.locator('[data-guide="clients-list"]');
     const conor = list.getByRole("link", { name: /Conor/ });
