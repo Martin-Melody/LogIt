@@ -243,6 +243,22 @@ public class CoachEndingTests
     }
 
     [Fact]
+    public async Task Overview_cards_save_for_everyone_a_package_or_a_client()
+    {
+        await using var w = await CoachedAsync("cards", paying: false);
+        var empty = await Json(await w.Coach.GetAsync("/coach/cards"));
+        Assert.Equal(JsonValueKind.Null, empty.GetProperty("all").ValueKind);
+        var client = Guid.NewGuid().ToString();
+        var layout = new { all = new[] { "checkin", "training" }, clients = new Dictionary<string, string[]> { [client] = new[] { "food", "plugin:app.example.hangboard" } } };
+        var saved = await Json(await w.Coach.PutAsJsonAsync("/coach/cards", layout));
+        Assert.Equal("food", saved.GetProperty("clients").GetProperty(client)[0].GetString());
+        var twice = new { all = new[] { "food", "food" } };
+        Assert.Equal(HttpStatusCode.BadRequest, (await w.Coach.PutAsJsonAsync("/coach/cards", twice)).StatusCode);
+        var badKey = new { clients = new Dictionary<string, string[]> { ["dara"] = new[] { "food" } } };
+        Assert.Equal(HttpStatusCode.BadRequest, (await w.Coach.PutAsJsonAsync("/coach/cards", badKey)).StatusCode);
+    }
+
+    [Fact]
     public async Task Saved_replies_are_the_coachs_own_and_checked()
     {
         await using var w = await CoachedAsync("replies", paying: false);

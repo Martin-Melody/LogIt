@@ -36,6 +36,20 @@
   },
   {
     "method": "GET",
+    "route": "/coach/cards/",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": true
+  },
+  {
+    "method": "PUT",
+    "route": "/coach/cards/",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": true
+  },
+  {
+    "method": "GET",
     "route": "/coach/checkins",
     "plan": "Studio",
     "orActivelyCoached": false,

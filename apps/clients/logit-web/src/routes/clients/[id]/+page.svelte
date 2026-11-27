@@ -1,8 +1,4 @@
 <script lang="ts">
-  import SwapInProgramDialog from "$lib/features/coaching/programs/SwapInProgramDialog.svelte";
-  // Canvas W6: swapping an exercise in their program, from a message.
-  let swapping = $state(false);
-  let swapHint = $state("");
   import PageCrumbs from "$lib/components/PageCrumbs.svelte";
   import { clientName } from "$lib/features/coaching/clientName";
   import * as Tabs from "$lib/components/ui/tabs/index.js";
@@ -17,7 +13,12 @@
   import { SHARE_AREAS } from "@logit/core/api/coachApi";
   import Avatar from "$lib/features/coaching/Avatar.svelte";
   import CheckinAnswers from "$lib/features/coaching/CheckinAnswers.svelte";
-  import MessageThread from "$lib/features/coaching/MessageThread.svelte";
+  import ClientOverview from "$lib/features/coaching/client/ClientOverview.svelte";
+  import ChangePackageDialog from "$lib/features/coaching/payments/ChangePackageDialog.svelte";
+  import * as Dialog from "$lib/components/ui/dialog";
+  import { coachPaymentsApi } from "@logit/core/api/coachPaymentsApi";
+  import type { CoachPackage, PaymentClient } from "@logit/core/domain/coachPayments";
+  import { healthYeses } from "@logit/core/domain/coachCards";
   import ClientTraining from "$lib/features/coaching/client/ClientTraining.svelte";
   import ClientNutrition from "$lib/features/coaching/client/ClientNutrition.svelte";
   import ClientHabits from "$lib/features/coaching/client/ClientHabits.svelte";
@@ -40,20 +41,26 @@
   } from "$lib/features/coaching/coachingData";
   import { sinceLabel, when } from "$lib/features/coaching/format";
 
-  type Tab = "overview" | "training" | "insights" | "nutrition" | "habits" | "checkins" | "programs" | "messages";
-  const TABS: { id: Tab; label: string; area?: "workouts" | "nutrition" | "habits" | "checkins" }[] = [
+  // Canvas K3: five tabs. Programs and Insights are parts of Training (old ?tab= links land
+  // there, scrolled to them); the conversation lives in Messages.
+  type Tab = "overview" | "training" | "nutrition" | "habits" | "checkins";
+  const TABS: { id: Tab; label: string; area?: "nutrition" | "habits" | "checkins" }[] = [
     { id: "overview", label: "Overview" },
-    { id: "training", label: "Training", area: "workouts" },
-    { id: "insights", label: "Insights" },
+    { id: "training", label: "Training" },
     { id: "nutrition", label: "Nutrition", area: "nutrition" },
     { id: "habits", label: "Habits", area: "habits" },
     { id: "checkins", label: "Check-ins", area: "checkins" },
-    { id: "programs", label: "Programs" },
-    { id: "messages", label: "Messages" },
   ];
 
   const clientId = $derived(page.params.id!);
-  const tab = $derived((page.url.searchParams.get("tab") as Tab | null) ?? "overview");
+  const rawTab = $derived(page.url.searchParams.get("tab"));
+  const tab = $derived<Tab>(rawTab === "programs" || rawTab === "insights" ? "training" : TABS.some((t) => t.id === rawTab) ? (rawTab as Tab) : "overview");
+  // ?tab=programs / insights: Training, scrolled to that part. ?tab=messages: their conversation.
+  $effect(() => {
+    const part = rawTab;
+    if (part === "messages" && c) void goto(`/messages?c=${c.relationshipId}`, { replaceState: true });
+    if ((part === "programs" || part === "insights") && c) setTimeout(() => document.getElementById(`client-${part}`)?.scrollIntoView({ behavior: "smooth", block: "start" }), 300);
+  });
 
   let overview = $state<CoachingOverview | null>(null);
   let error = $state<string | null>(null);
@@ -95,7 +102,7 @@
   const latest = $derived(c ? (c.toReview[0] ?? overview?.inbox.find((i) => i.clientUserId === c.id) ?? null) : null);
 
   function setTab(t: Tab) {
-    if (t !== "programs") assignOnOpen = false;
+    if (t !== "training") assignOnOpen = false;
     const u = new URL(page.url);
     u.searchParams.delete("q");
     if (t === "overview") u.searchParams.delete("tab");
@@ -105,11 +112,11 @@
   }
 
   function assign() {
-    if (tab === "programs") {
-      programsTab?.openAssignDialog();
+    if (tab === "training" && programsTab) {
+      programsTab.openAssignDialog();
     } else {
       assignOnOpen = true;
-      setTab("programs");
+      setTab("training");
     }
   }
 
@@ -121,10 +128,54 @@
       programsTab?.openAssignDialog();
       const u = new URL(page.url);
       u.searchParams.delete("assign");
-      u.searchParams.set("tab", "programs");
+      u.searchParams.set("tab", "training");
       void goto(u, { replaceState: true, noScroll: true, keepFocus: true });
     });
   });
+
+  const firstOf = (n: string) => n.split(" ")[0] || n;
+  let endStart = $state<"pause" | "end">("pause");
+  let showAnswers = $state(false);
+
+  // Canvas K3: a Yes to a health question on a form not yet reviewed.
+  const healthFlag = $derived.by(() => {
+    if (!c || !overview || !c.sharing.checkins) return null;
+    for (const i of overview.inbox.filter((x) => x.clientUserId === c.id && x.reviewedAtMs == null)) {
+      const submission = parseSubmission(i);
+      if (!submission) continue;
+      const schedule = overview.schedules.find((s) => s.schedule.id === i.scheduleId)?.schedule ?? null;
+      const yes = healthYeses({ id: i.id, clientId: c.id, submission, schedule, reviewed: false });
+      if (yes.length) return { id: i.id, yes, form: schedule?.name ?? "Check-in" };
+    }
+    return null;
+  });
+  async function markHealthRead() {
+    if (!c || !healthFlag) return;
+    try {
+      await coachApi.setCheckinReviewed(c.id, healthFlag.id, true);
+      toast.success("Marked read");
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't save");
+    }
+  }
+
+  // Change package… (canvas K3), the same dialog as Payments › Clients.
+  let changeFor = $state<PaymentClient | null>(null);
+  let packages = $state<CoachPackage[]>([]);
+  async function openChangePackage() {
+    if (!c) return;
+    try {
+      const o = await coachPaymentsApi.overview();
+      const p = o.clients.find((x) => x.relationshipId === c.relationshipId) ?? null;
+      if (!o.packages.some((k) => !k.hidden)) return void toast("Make a package in Payments first.", { action: { label: "Payments", onClick: () => void goto("/coaching/payments?tab=packages") } });
+      if (!p) return void toast.error("Couldn't find their payments");
+      packages = o.packages;
+      changeFor = p;
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't load payments");
+    }
+  }
 
   function programLine(x: ClientSummary): string {
     const p = x.program;
@@ -159,7 +210,7 @@
         </div>
       </div>
       <div class="flex items-center gap-2" data-guide="client-actions">
-        <button type="button" onclick={() => setTab("messages")} class="h-[34px] rounded-[9px] border border-border px-3 text-[13px] font-medium hover:bg-muted">Message</button>
+        <Button variant="outline" class="h-[34px]" href="/messages?c={c.relationshipId}">Message</Button>
         <button type="button" onclick={assign} class="h-[34px] rounded-[9px] bg-primary px-3 text-[13px] font-semibold text-primary-foreground">Assign program</button>
         {#if c.isSample}
           <Button variant="outline" size="sm" class="h-[34px]" onclick={() => (answering = true)}>Answer as {c.name.split(" ")[0]}</Button>
@@ -168,14 +219,33 @@
             <DropdownMenu.Trigger>
               {#snippet child({ props })}<Button {...props} variant="ghost" size="icon" aria-label="More for {c.name}"><EllipsisIcon class="size-4" /></Button>{/snippet}
             </DropdownMenu.Trigger>
-            <DropdownMenu.Content align="end" class="w-56">
-              {#if c.pausedUntil}<DropdownMenu.Item onSelect={() => void resume(c.relationshipId)}>Resume coaching now</DropdownMenu.Item>{/if}
-              <DropdownMenu.Item class="text-destructive" onSelect={() => (ending = true)}>Pause or end coaching…</DropdownMenu.Item>
+            <DropdownMenu.Content align="end" class="w-60">
+              <!-- Canvas K3. -->
+              <DropdownMenu.Item onSelect={() => void goto(`/messages?c=${c.relationshipId}`)}>Message</DropdownMenu.Item>
+              <DropdownMenu.Item onSelect={() => void openChangePackage()}>Change package…</DropdownMenu.Item>
+              <DropdownMenu.Item disabled={!c.sharing.checkins} onSelect={() => void goto(`/clients/${c.id}?tab=checkins&send=1`)}>Send a form…</DropdownMenu.Item>
+              <DropdownMenu.Item disabled={!c.answers.length} onSelect={() => (showAnswers = true)}>{c.answers.length ? `${firstOf(c.name)}'s answers when they asked` : "No answers from when they asked"}</DropdownMenu.Item>
+              <DropdownMenu.Separator />
+              {#if c.pausedUntil}<DropdownMenu.Item onSelect={() => void resume(c.relationshipId)}>Resume coaching now</DropdownMenu.Item>
+              {:else}<DropdownMenu.Item onSelect={() => { endStart = "pause"; ending = true; }}>Pause coaching…</DropdownMenu.Item>{/if}
+              <DropdownMenu.Item class="text-destructive" onSelect={() => { endStart = "end"; ending = true; }}>End coaching…</DropdownMenu.Item>
             </DropdownMenu.Content>
           </DropdownMenu.Root>
         {/if}
       </div>
     </header>
+
+    {#if healthFlag}
+      <!-- Canvas K3: a Yes to a health question, in amber until you mark the form read. -->
+      <div role="alert" class="flex flex-wrap items-center gap-3 rounded-[10px] border border-warning/40 bg-warning/8 px-4 py-3 text-[13px]">
+        <span class="flex min-w-0 flex-1 flex-col">
+          <span class="font-semibold">{firstOf(c.name)} answered Yes to {healthFlag.yes.length === 1 ? "a health question" : `${healthFlag.yes.length} health questions`}</span>
+          <span class="text-muted-foreground">{healthFlag.yes.join(" · ")} ({healthFlag.form})</span>
+        </span>
+        <Button variant="outline" size="sm" href="/coaching/checkins?id={encodeURIComponent(healthFlag.id)}&client={c.id}">Open the form</Button>
+        <Button size="sm" onclick={() => void markHealthRead()}>Mark read</Button>
+      </div>
+    {/if}
 
     <Tabs.Root value={tab} onValueChange={(v) => setTab(v as Tab)}>
     <Tabs.List variant="line" aria-label="Client" data-guide="client-tabs" class="flex-wrap gap-0.5">
@@ -184,7 +254,6 @@
         <Tabs.Trigger value={t.id} class="px-3.5 {locked ? 'opacity-70' : ''}">
           {#if locked}<LockIcon class="size-3" aria-label="not shared" />{/if}{t.label}
           {#if t.id === "checkins" && c.toReview.length}<span class="rounded-full bg-warning/12 px-1.5 text-[11px] font-semibold text-warning">{c.toReview.length}</span>{/if}
-          {#if t.id === "messages" && c.unread}<span class="rounded-full bg-primary px-1.5 text-[11px] font-semibold text-primary-foreground">{c.unread}</span>{/if}
         </Tabs.Trigger>
       {/each}
     </Tabs.List>
@@ -192,85 +261,25 @@
 
     {#key clientId}
       {#if tab === "overview"}
-        <div class="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-3">
-          <div class="rounded-[10px] border border-border bg-card px-[18px] py-4">
-            <div class="text-xs text-muted-foreground">Sessions, last 7 days</div>
-            <div class="mt-1 text-[22px] font-bold">{c.sharing.workouts ? c.sessions7d : "–"}{#if c.sharing.workouts && c.program?.state === "running"}<span class="text-[13px] font-normal text-muted-foreground">{` of ${c.program.daysPerWeek}`}</span>{/if}</div>
-          </div>
-          <div class="rounded-[10px] border border-border bg-card px-[18px] py-4">
-            <div class="text-xs text-muted-foreground">Last workout</div>
-            <div class="mt-1 text-[22px] font-bold">{!c.sharing.workouts ? "Not shared" : c.lastSessionAtMs ? when(c.lastSessionAtMs) : "None yet"}</div>
-          </div>
-          <div class="rounded-[10px] border border-border bg-card px-[18px] py-4">
-            <div class="text-xs text-muted-foreground">Last check-in</div>
-            <div class="mt-1 text-[22px] font-bold">{!c.sharing.checkins ? "Not shared" : c.lastCheckinAtMs ? when(c.lastCheckinAtMs) : c.missed ? "Missed" : "None yet"}</div>
-          </div>
-          <div class="rounded-[10px] border border-border bg-card px-[18px] py-4">
-            <div class="text-xs text-muted-foreground">Program</div>
-            <div class="mt-1 truncate text-[22px] font-bold">{c.program?.state === "running" ? `Week ${c.program.week} of ${c.program.totalWeeks}` : c.program ? "Not started" : "Own plan"}</div>
-          </div>
-        </div>
-
-        <div class="flex flex-wrap items-start gap-4">
-          <section class="flex min-w-0 flex-[2_1_480px] flex-col gap-1 rounded-[10px] border bg-card px-[18px] py-4 {latest && latest.reviewedAtMs == null ? 'border-warning/30' : 'border-border'}">
-            {#if !c.sharing.checkins}
-              <h2 class="text-sm font-semibold">Check-ins</h2>
-              <p class="text-[13px] text-muted-foreground">{c.name} doesn't share check-ins with you.</p>
-            {:else if latest}
-              {@const sub = parseSubmission(latest)}
-              {@const form = overview.schedules.find((s) => s.schedule.id === latest.scheduleId)?.schedule ?? null}
-              <div class="flex items-baseline justify-between gap-2">
-                <h2 class="text-sm font-semibold">{form?.name ?? "Check-in"} · {when(latest.submittedAtMs)}</h2>
-                {#if latest.reviewedAtMs == null}
-                  <a href="/coaching/checkins?id={encodeURIComponent(latest.id)}&client={c.id}" class="h-[30px] rounded-lg bg-primary px-2.5 text-xs font-semibold leading-[30px] text-primary-foreground">Review and reply</a>
-                {:else}
-                  <span class="text-xs text-muted-foreground">Reviewed {when(latest.reviewedAtMs)}</span>
-                {/if}
-              </div>
-              {#if sub}<CheckinAnswers schedule={form} submission={sub} />{/if}
-            {:else}
-              <h2 class="text-sm font-semibold">Check-ins</h2>
-              <p class="text-[13px] text-muted-foreground">{c.scheduleCount ? "Nothing sent yet." : "No check-in form yet."} <button type="button" class="text-primary hover:underline" onclick={() => setTab("checkins")}>{c.scheduleCount ? "See forms" : "Add one"}</button></p>
-            {/if}
-          </section>
-
-          <div class="flex min-w-0 flex-[1_1_320px] flex-col gap-4">
-            <section class="flex flex-col rounded-[10px] border border-border bg-card px-[18px] py-4">
-              <div class="flex items-baseline justify-between pb-1.5"><h2 class="text-sm font-semibold">Messages</h2><button type="button" class="text-xs text-muted-foreground hover:text-foreground" onclick={() => setTab("messages")}>All ›</button></div>
-              <MessageThread relationshipId={c.relationshipId} otherName={c.name} compact onRead={() => (c.unread = 0)} />
-            </section>
-            <section class="flex flex-col gap-2 rounded-[10px] border border-border bg-card px-[18px] py-4">
-              <div class="flex items-baseline justify-between"><h2 class="text-sm font-semibold">What {c.name} shares with you</h2></div>
-              <p class="text-[13px] leading-relaxed text-muted-foreground">
-                {#if SHARE_AREAS.every((a) => c.sharing[a.key])}
-                  Everything: workouts, nutrition diary, body weight, habits and check-ins.
-                {:else}
-                  Shares {SHARE_AREAS.filter((a) => c.sharing[a.key]).map((a) => a.label.toLowerCase()).join(", ") || "nothing yet"}.
-                  Not {SHARE_AREAS.filter((a) => !c.sharing[a.key]).map((a) => a.label.toLowerCase()).join(", ")}.
-                {/if}
-                Never their social posts or other messages. They can change this any time.
-              </p>
-            </section>
-          </div>
-        </div>
+        <ClientOverview client={c} {overview} />
       {:else if tab === "training"}
-        <ClientTraining clientId={c.id} relationshipId={c.relationshipId} username={c.username} name={c.name} sharing={c.sharing} pluginConsent={c.pluginConsent} />
-      {:else if tab === "insights"}
-        <ClientInsights clientId={c.id} name={c.name} sharing={c.sharing} />
+        <div class="flex flex-col gap-8">
+          <ClientTraining clientId={c.id} relationshipId={c.relationshipId} username={c.username} name={c.name} sharing={c.sharing} pluginConsent={c.pluginConsent} />
+          <section id="client-programs" aria-label="Programs" class="flex scroll-mt-4 flex-col gap-3">
+            <h2 class="text-base font-semibold">Programs</h2>
+            <ClientPrograms bind:this={programsTab} openAssign={assignOnOpen} clientId={c.id} relationshipId={c.relationshipId} username={c.username} name={c.name} sharing={c.sharing} />
+          </section>
+          <section id="client-insights" aria-label="Insights" class="flex scroll-mt-4 flex-col gap-3">
+            <h2 class="text-base font-semibold">Insights</h2>
+            <ClientInsights clientId={c.id} name={c.name} sharing={c.sharing} />
+          </section>
+        </div>
       {:else if tab === "nutrition"}
         <ClientNutrition clientId={c.id} username={c.username} name={c.name} relationshipId={c.relationshipId} sharing={c.sharing} />
       {:else if tab === "habits"}
         <ClientHabits clientId={c.id} username={c.username} name={c.name} sharing={c.sharing} />
       {:else if tab === "checkins"}
         <ClientCheckins clientId={c.id} username={c.username} name={c.name} sharing={c.sharing} />
-      {:else if tab === "programs"}
-        <ClientPrograms bind:this={programsTab} openAssign={assignOnOpen} clientId={c.id} relationshipId={c.relationshipId} username={c.username} name={c.name} sharing={c.sharing} />
-      {:else if tab === "messages"}
-        <section class="flex flex-col rounded-[10px] border border-border bg-card px-[18px] pb-4 pt-2">
-          <MessageThread relationshipId={c.relationshipId} otherName={c.name} onRead={() => (c.unread = 0)}
-            messageActions={(m) => [{ label: "Swap an exercise in their program…", run: () => { swapHint = m.body; swapping = true; } }]} />
-          <SwapInProgramDialog bind:open={swapping} relationshipId={c.relationshipId} hint={swapHint} />
-        </section>
       {/if}
     {/key}
   {/if}
@@ -280,10 +289,28 @@
   <AnswerAsDialog bind:open={answering} userId={c.id} relationshipId={c.relationshipId} name={c.name} />
 {/if}
 {#if c && !c.isSample}
-  <EndCoachingDialog bind:open={ending} relationshipId={c.relationshipId} name={c.name} ondone={async () => {
+  <EndCoachingDialog bind:open={ending} start={endStart} relationshipId={c.relationshipId} name={c.name} ondone={async () => {
     const rid = c?.relationshipId;
     await load();
     // Ended: they're no longer a client, so back to the list.
     if (!overview?.clients.some((x) => x.relationshipId === rid)) await goto("/clients");
   }} />
+{/if}
+{#if c}
+  <ChangePackageDialog bind:open={() => !!changeFor, (v) => { if (!v) changeFor = null; }} client={changeFor} {packages} ondone={load} />
+  <!-- Canvas K3: what they answered when they asked to be coached. -->
+  <Dialog.Root bind:open={showAnswers}>
+    <Dialog.Content class="max-h-[85svh] overflow-y-auto sm:max-w-lg">
+      <Dialog.Header>
+        <Dialog.Title>{firstOf(c.name)}'s answers when they asked</Dialog.Title>
+        <Dialog.Description>From the questions on your profile when they asked you to coach them.</Dialog.Description>
+      </Dialog.Header>
+      <dl class="flex flex-col">
+        {#each c.answers as a (a.questionId)}
+          <dt class="border-t border-border pt-2.5 text-xs text-muted-foreground">{a.question}</dt>
+          <dd class="pb-2.5 text-[13px] whitespace-pre-wrap">{a.value || "–"}</dd>
+        {/each}
+      </dl>
+    </Dialog.Content>
+  </Dialog.Root>
 {/if}

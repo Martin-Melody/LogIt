@@ -2,6 +2,7 @@
      version made with "Change for Aoife only"), Send a form, and their check-ins with a column per
      number question, so a coach who asks about sleep sees a sleep column. -->
 <script lang="ts">
+  import { page } from "$app/state";
   import { awayExcuse } from "@logit/core/api/coachApi";
   import { coachAway } from "$lib/features/coaching/away.svelte";
   import { guideSignal } from "$lib/features/guide/signal";
@@ -31,7 +32,8 @@
   let items = $state<CheckinInboxItem[]>([]);
   let loading = $state(true);
   let error = $state<string | null>(null);
-  let sendOpen = $state(false);
+  // ?send=1 (the client page's ⋯ › Send a form…) opens it.
+  let sendOpen = $state(page.url.searchParams.get("send") === "1");
   let busy = $state(false);
 
   async function load() {

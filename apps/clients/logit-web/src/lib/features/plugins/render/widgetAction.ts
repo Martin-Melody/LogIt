@@ -1,4 +1,5 @@
 import { goto } from "$app/navigation";
+import { getContext, setContext } from "svelte";
 import { toast } from "$lib/components/ui/sonner";
 import type { WidgetAction } from "@logit/core/plugins/widgetView";
 
@@ -33,6 +34,16 @@ let handler: (action: WidgetAction) => void = defaultHandler;
 
 export function runWidgetAction(action: WidgetAction): void {
   handler(action);
+}
+
+const KEY = Symbol("widget-actions");
+/** A page that draws widgets for something else (a client's cards) says what their taps do. */
+export function provideWidgetActions(h: (action: WidgetAction) => void): void {
+  setContext(KEY, h);
+}
+/** Call while a component starts: the nearest page's handler, or the dashboard's. */
+export function widgetActions(): (action: WidgetAction) => void {
+  return getContext<((action: WidgetAction) => void) | undefined>(KEY) ?? runWidgetAction;
 }
 
 /** Preview mode: say what the tap would do instead of doing it. Returns the undo. */

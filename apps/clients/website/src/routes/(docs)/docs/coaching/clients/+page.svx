@@ -50,11 +50,30 @@ coached see when you're back, and the seven-day clock starts again from your bac
 carry on; to stop charging one client while you're away, pause coaching on their page. No automatic
 replies are sent: the pinned note does that job.
 
+## A client's page
+
+A client's page has five tabs: **Overview**, **Training** (with their programs and insights),
+**Nutrition**, **Habits** and **Check-ins**. Your conversation with them is in Messages.
+
+<FeatureFacts id="coach-cards" />
+
+**Overview** is a set of cards over **This week**, **This month** (the arrows step back through
+months) or **This block** (the program they're on): their latest check-in, training (sessions
+against the plan, estimated maxes, records), body (weight trend, measurements, progress photos),
+food against their targets, habits and check-ins, and their start-up form. They're the same
+kind of cards as the phone's home screen, so your widget plugins can be cards too: they only get
+the data the plugin asks for and the client shares. **+ Card** turns cards on and off and orders
+them, for this client, everyone on their package, or all clients.
+
+If a client answers Yes to a health question (a heart condition, chest pain or dizziness), their
+page says so in amber until you mark that form read. ⋯ has Message, Change package, Send a form,
+their answers from when they asked to be coached, and Pause or End coaching.
+
 ## Sharing
 
 Each client chooses what you see: workouts, nutrition diary, bodyweight, habits and check-ins. They can
 change it any time; if they turn something off, that tab shows Not shared. Charts a client chooses to
-show you appear on their Insights tab, and you can build charts for them too.
+show you appear under Insights on their Training tab, and you can build charts for them too.
 
 ## On the phone
 

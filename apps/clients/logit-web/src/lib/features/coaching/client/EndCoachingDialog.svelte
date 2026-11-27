@@ -14,7 +14,11 @@
   import { DateField } from "$lib/components/ui/date-field";
   import { toast } from "$lib/components/ui/sonner";
 
-  let { open = $bindable(false), relationshipId, name, ondone }: { open?: boolean; relationshipId: string; name: string; ondone: () => Promise<void> | void } = $props();
+  let { open = $bindable(false), relationshipId, name, ondone, start = "pause" }: {
+    open?: boolean; relationshipId: string; name: string; ondone: () => Promise<void> | void;
+    /** Which choice it opens on (canvas K3: Pause coaching… and End coaching… in the ⋯ menu). */
+    start?: "pause" | "end";
+  } = $props();
 
   const p = $derived(firstName(name));
   let what = $state<"pause" | "end">("pause");
@@ -30,7 +34,7 @@
 
   $effect(() => {
     if (!open) return;
-    what = "pause";
+    what = start;
     until = undefined;
     refund = "unused";
     part = "";

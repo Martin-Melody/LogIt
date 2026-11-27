@@ -49,6 +49,8 @@ export type ClientSummary = {
   sharing: Sharing;
   since: string | null;
   sessions7d: number;
+  /** Canvas K3: their answers when they asked to be coached. */
+  answers: import("@logit/core/domain/coachRequest").RequestAnswer[];
   /** Canvas W1: days of the last 7 with food logged (null: not shared). */
   foodDays7d: number | null;
   lastSessionAtMs: number | null;
@@ -187,6 +189,7 @@ function summarise(
     since: r.since ?? null,
     sessions7d: r.sessions7d,
     foodDays7d: r.foodDays7d ?? null,
+    answers: r.answers ?? [],
     lastSessionAtMs: r.lastSessionAtMs,
     unread: r.unreadFromClient,
     lastingSwap: !!r.lastingSwap,

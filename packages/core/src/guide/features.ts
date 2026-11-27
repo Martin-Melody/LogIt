@@ -523,6 +523,17 @@ export const FEATURES: Feature[] = [
     cant: ["Edit or delete a sent message"],
   },
   {
+    id: "coach-cards",
+    title: "Overview cards",
+    section: "Coaching",
+    plan: "Studio",
+    freeWithSamples: true,
+    summary: "Choose the cards on a client's Overview, for one client, a package or everyone.",
+    whereWeb: "Coaching › Clients › a client › Overview › + Card",
+    docs: "/docs/coaching/clients",
+    server: ["/coach/cards"],
+  },
+  {
     id: "coach-saved-replies",
     title: "Saved replies",
     section: "Coaching",

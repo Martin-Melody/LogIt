@@ -331,6 +331,8 @@ public static class CoachEndpoints
                 pluginConsent = CoachPluginConsent.Read(r.PluginConsentJson),
                 pausedUntil = r.PausedUntil,
                 endsAt = r.EndsAt,
+                // Canvas K3: their answers when they asked to be coached.
+                answers = CoachIntake.AnswersOf(r),
             };
         });
 

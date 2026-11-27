@@ -103,6 +103,8 @@ export interface RosterEntry {
   lastSessionAtMs: number | null;
   sessions7d: number;
   sessions28d: number;
+  /** Canvas K3: what they answered when they asked to be coached. */
+  answers?: RequestAnswer[];
   /** Days of the last 7 with any food logged; null when they don't share food. */
   foodDays7d?: number | null;
   programCount: number;
@@ -607,6 +609,13 @@ export function coachApiFor(api: ApiFetcher) {
       return api.fetch("/coach/settings");
     },
 
+    /** Canvas W11: which cards show on a client's Overview. */
+    async getCards(): Promise<import("../domain/coachCards").CardLayout> {
+      return api.fetch("/coach/cards");
+    },
+    async saveCards(layout: import("../domain/coachCards").CardLayout): Promise<import("../domain/coachCards").CardLayout> {
+      return api.fetch("/coach/cards", { method: "PUT", body: JSON.stringify(layout) });
+    },
     /** Canvas W10: my saved replies. */
     async getSavedReplies(): Promise<import("../domain/savedReplies").SavedReply[]> {
       return (await api.fetch<{ replies: import("../domain/savedReplies").SavedReply[] }>("/coach/saved-replies")).replies;

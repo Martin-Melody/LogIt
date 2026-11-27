@@ -8,7 +8,7 @@ const share = { workouts: true, checkins: true, nutrition: true, bodyweight: tru
 const client = (id: string, over: Partial<ClientSummary> = {}): ClientSummary => ({
   relationshipId: `r-${id}`, id, username: id, name: `${id} Surname`, avatarUrl: null, isSample: false, sharing: share as ClientSummary["sharing"],
   since: null, sessions7d: 0, foodDays7d: null, lastSessionAtMs: null, unread: 0, program: null, toReview: [], lastCheckinAtMs: null,
-  missed: null, scheduleCount: 0, waitingSinceMs: null, pausedUntil: null, endsAt: null, lastingSwap: false, pluginConsent: {}, ...over,
+  missed: null, scheduleCount: 0, waitingSinceMs: null, pausedUntil: null, endsAt: null, lastingSwap: false, pluginConsent: {}, answers: [], ...over,
 });
 const running = (daysPerWeek: number, endsAtMs: number | null = null) => ({ state: "running", daysPerWeek, endsAtMs, week: 8, totalWeeks: 8, program: { name: "Block" } }) as unknown as ClientSummary["program"];
 const overview = (clients: ClientSummary[], schedules: CoachingOverview["schedules"] = []): CoachingOverview => ({ clients, inbox: [], schedules, programs: [], requests: [], sent: [] });

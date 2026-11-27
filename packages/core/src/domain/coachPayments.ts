@@ -75,6 +75,8 @@ export interface PaymentClient {
   since: string;
   /** "none" = not paying through LogIt and not marked as paid elsewhere. */
   mode: PaymentMode | "none";
+  /** The package they pay for (canvas W11: cards for everyone on a package). */
+  packageId?: string | null;
   packageName: string | null;
   amountCents: number | null;
   currency: string | null;

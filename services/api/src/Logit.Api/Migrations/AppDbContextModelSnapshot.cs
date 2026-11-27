@@ -3122,6 +3122,9 @@ namespace Logit.Api.Migrations
                     b.Property<string>("CoachAskQuestionsJson")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("CoachCardsJson")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("CoachExpectSpots")
                         .HasColumnType("TEXT");
 

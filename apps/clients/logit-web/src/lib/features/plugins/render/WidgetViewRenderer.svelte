@@ -4,7 +4,8 @@
   import ChevronLeft from "@lucide/svelte/icons/chevron-left";
   import ChevronRight from "@lucide/svelte/icons/chevron-right";
   import Moon from "@lucide/svelte/icons/moon";
-  import { runWidgetAction } from "./widgetAction";
+  import { widgetActions } from "./widgetAction";
+  const runWidgetAction = widgetActions();
   import TextNode from "./nodes/TextNode.svelte";
   import StatGridNode from "./nodes/StatGridNode.svelte";
   import MuscleMapNode from "./nodes/MuscleMapNode.svelte";

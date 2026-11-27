@@ -1,7 +1,8 @@
 <script lang="ts">
   import Check from "@lucide/svelte/icons/check";
   import type { WidgetChecklistNode } from "@logit/core/plugins/widgetView";
-  import { runWidgetAction } from "../widgetAction";
+  import { widgetActions } from "../widgetAction";
+  const runWidgetAction = widgetActions();
   const { node }: { node: WidgetChecklistNode } = $props();
 </script>
 

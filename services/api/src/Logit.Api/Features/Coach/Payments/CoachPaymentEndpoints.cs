@@ -152,6 +152,7 @@ public static class CoachPaymentEndpoints
                 status = r.Status == CoachClientStatus.Paused ? "paused" : "active",
                 since = r.UpdatedAt,
                 mode = p?.Mode ?? "none",
+                packageId = p?.PackageId,
                 packageName = p?.PackageName,
                 amountCents = p?.AmountCents,
                 currency = p?.Currency,

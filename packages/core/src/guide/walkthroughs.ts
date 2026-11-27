@@ -287,12 +287,17 @@ export const STUDIO_CHAPTERS: Chapter[] = [
       {
         id: "tabs", on: "web", route: "/clients/[id]", target: "client-tabs", kind: "look",
         title: "Only what they share",
-        body: "Training, Insights, Nutrition, Habits, Check-ins, Programs and Messages each have a tab. A lock means the client hasn't shared it, and you see nothing there. Clients change this themselves, any time.",
+        body: "Overview, Training (with their programs and insights), Nutrition, Habits and Check-ins each have a tab. A lock means the client hasn't shared it, and you see nothing there. Clients change this themselves, any time.",
+      },
+      {
+        id: "cards", on: "web", route: "/clients/[id]", target: "client-cards", kind: "look",
+        title: "Their week, month or block",
+        body: "Overview is a set of cards: latest check-in, training, body, food, habits. Switch between this week, this month and the current block. + Card chooses the cards and their order, for this client, everyone on a package, or all clients.",
       },
       {
         id: "actions", on: "web", route: "/clients/[id]", target: "client-actions", kind: "look",
         title: "Message, give a program, or pause",
-        body: "Message them or give them a program from the top of their page. ⋯ has Pause or end coaching: away, ill or injured, or ending with a refund and another coach to suggest.",
+        body: "Message them or give them a program from the top of their page. ⋯ has Change package, Send a form, their answers from when they asked, and Pause or End coaching: away, ill or injured, or ending with a refund and another coach to suggest.",
       },
     ],
   },
