@@ -1,5 +1,6 @@
 import { parseMealPlanPack, parseRecipePack } from "./nutritionPacks";
 import { cardPackCards } from "./cardPack";
+import { parseQuestionPack } from "./questionPack";
 import { parseProgramPack } from "./programPack";
 import { parseBlockDeclaration } from "../domain/blockPlugin";
 import { parseExercisePack } from "./exercisePack";
@@ -193,10 +194,12 @@ function checkPack(family: string, pluginId: string, source: string): CheckResul
           ? parseProgramPack(raw, pluginId).programs.length
           : family === "meal-plan-pack"
             ? parseMealPlanPack(raw, pluginId).plans.length
+            : family === "question-pack"
+              ? parseQuestionPack(raw, pluginId).questions.length
             : family === "recipe-pack"
               ? parseRecipePack(raw, pluginId).recipes.length
               : parseExercisePack(raw, pluginId).exercises.length;
-    const what = family === "mobility-pack" ? "drills" : family === "program-pack" ? "programs" : family === "meal-plan-pack" ? "meal plans" : family === "recipe-pack" ? "recipes" : "exercises";
+    const what = family === "mobility-pack" ? "drills" : family === "program-pack" ? "programs" : family === "meal-plan-pack" ? "meal plans" : family === "recipe-pack" ? "recipes" : family === "question-pack" ? "questions" : "exercises";
     checks.push({ id: "pack", label: `${count} ${what}, all readable`, ok: true });
   } catch (e) {
     checks.push({ id: "pack", label: "Every entry is readable", ok: false, detail: message(e) });

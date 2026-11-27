@@ -20,6 +20,7 @@ export const PLUGIN_FAMILIES = [
   "meal-plan-pack",
   "recipe-pack",
   "card-pack",
+  "question-pack",
 ] as const;
 export type BuildablePluginFamily = (typeof PLUGIN_FAMILIES)[number];
 
@@ -51,6 +52,7 @@ export const FAMILY_LABELS: Record<string, string> = {
   "meal-plan-pack": "Meal plan pack",
   "recipe-pack": "Recipe pack",
   "card-pack": "Card pack",
+  "question-pack": "Question pack",
   "muscle-group-insight": "Muscle insight",
 };
 
@@ -164,6 +166,8 @@ export function pluginCan(family: string): string[] {
       return ["Offer recipes coaches can copy into their own"];
     case "card-pack":
       return ["Show cards on your coaching Today and Your month"];
+    case "question-pack":
+      return ["Add questions coaches can put in check-in forms"];
     default:
       return [];
   }

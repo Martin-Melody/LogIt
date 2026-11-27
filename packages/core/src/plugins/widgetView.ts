@@ -37,11 +37,22 @@ export type WidgetWorkoutExercise = {
   sets: WidgetWorkoutSet[];
 };
 
+/** A plugin's block in a workout (a boulder session, rounds…): its entries' values. */
+export type WidgetWorkoutBlock = {
+  pluginId: string;
+  name: string;
+  /** The block's own fields (a board, a gym). */
+  fields: Record<string, number | string | boolean | string[] | null>;
+  entries: Record<string, number | string | boolean | string[] | null>[];
+};
+
 export type WidgetWorkout = {
   id: string;
   startedAtMs: number;
   endedAtMs?: number;
   exercises: WidgetWorkoutExercise[];
+  /** Plugin blocks (canvas W9: a climbing card reads grades and sends from these). */
+  blocks?: WidgetWorkoutBlock[];
 };
 
 export type WidgetExercise = {

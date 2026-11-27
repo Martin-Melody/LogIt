@@ -24,6 +24,8 @@ public static partial class PluginRules
         "nutrition-algorithm", "nutrition-analytics", "exercise-pack", "mobility-pack", "program-pack", "workout-block",
         // Canvas Q1/W13: content coaches copy (meal plans, recipes) and cards for Today and Your month.
         "meal-plan-pack", "recipe-pack", "card-pack",
+        // Canvas W8/W9: check-in questions a sport plugin brings.
+        "question-pack",
     ];
 
     public static readonly HashSet<string> CodeFamilies =
@@ -125,6 +127,7 @@ public static partial class PluginRules
         "meal-plan-pack" => new JsonObject { ["family"] = family, ["mealPlanPackId"] = pluginId },
         "recipe-pack" => new JsonObject { ["family"] = family, ["recipePackId"] = pluginId },
         "card-pack" => new JsonObject { ["family"] = family, ["cardPackId"] = pluginId, ["slot"] = "coaching" },
+        "question-pack" => new JsonObject { ["family"] = family, ["questionPackId"] = pluginId },
         _ => new JsonObject { ["family"] = family, ["algorithmId"] = pluginId },
     };
 

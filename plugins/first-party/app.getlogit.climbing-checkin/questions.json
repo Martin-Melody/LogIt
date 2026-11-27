@@ -1,0 +1,9 @@
+{
+  "formatVersion": 1,
+  "pluginId": "app.getlogit.climbing-checkin",
+  "questions": [
+    { "prompt": "Finger pain", "type": "scale", "scaleMin": 1, "scaleMax": 10, "help": "1 = none, 10 = stop climbing" },
+    { "prompt": "Skin", "type": "choice", "options": ["Fine", "Thin", "Split"] },
+    { "prompt": "Highpoint on your project", "type": "text", "help": "Which move you got to" }
+  ]
+}

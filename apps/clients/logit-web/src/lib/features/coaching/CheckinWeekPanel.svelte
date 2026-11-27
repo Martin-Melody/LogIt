@@ -2,6 +2,10 @@
      they sent it, with the week before where it helps. Only what they share; a row they don't
      share says "Not shared". -->
 <script lang="ts">
+  import { coachApi } from "@logit/core/api/coachApi";
+  import { cardsFor } from "@logit/core/domain/coachCards";
+  import { plugins } from "$lib/features/plugins/pluginData.svelte";
+  import ClientPluginCard from "./client/ClientPluginCard.svelte";
   import { Button } from "$lib/components/ui/button";
   import { Skeleton } from "$lib/components/ui/skeleton";
   import { getWebCoachHabitRepo, getWebDeps, getWebNutritionDeps } from "$lib/deps";
@@ -69,6 +73,16 @@
       };
     })();
   });
+  // Canvas W9: the plugin cards you chose for them (+ Card on their Overview) show here too,
+  // over the same week.
+  let pluginIds = $state<string[]>([]);
+  $effect(() => {
+    const c = client;
+    void coachApi.getCards().then((l) => {
+      pluginIds = cardsFor(l, c.id, null).cards.filter((id) => id.startsWith("plugin:") && id.split(":").length === 2).map((id) => id.slice(7));
+    }).catch(() => (pluginIds = []));
+    if (!plugins.installsLoaded) void plugins.loadInstalls().catch(() => {});
+  });
   const k = (n: number) => n.toLocaleString("en-GB");
   const set = (w: number, r: number) => `${k(w)} × ${r}`;
 </script>
@@ -102,5 +116,9 @@
       {/each}
     </dl>
   {/if}
+  {#each pluginIds as pid (pid)}
+    {@const p = plugins.get(pid)}
+    {#if p?.enabled}<ClientPluginCard plugin={p} {client} {untilMs} />{/if}
+  {/each}
   <Button variant="outline" size="sm" href="/clients/{client.id}" class="self-start">Open {first}'s page</Button>
 </aside>

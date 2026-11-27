@@ -1,0 +1,17 @@
+{
+  "id": "app.getlogit.boulder",
+  "name": "Bouldering",
+  "description": "Problems by grade: flashed, sent or still a project, and how many tries.",
+  "icon": "mountain",
+  "entry": { "one": "Problem", "many": "Problems" },
+  "blockFields": [
+    { "key": "wall", "type": "choice", "label": "Where", "options": ["Gym", "Board", "Outdoors"], "remember": true }
+  ],
+  "fields": [
+    { "key": "grade", "type": "choice", "label": "Grade", "options": ["V0", "V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8", "V9", "V10", "V11", "V12"], "remember": true, "column": true },
+    { "key": "result", "type": "choice", "label": "Result", "options": ["Flash", "Sent", "Project"], "column": true },
+    { "key": "tries", "type": "number", "label": "Tries", "default": 1, "step": 1, "min": 1, "max": 100, "column": true },
+    { "key": "note", "type": "text", "label": "Note", "optional": true }
+  ],
+  "summary": "{count} problems"
+}

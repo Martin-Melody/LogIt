@@ -2,6 +2,8 @@
      questions people answer when they ask to be coached. Questions on the left, each opening to
      edit in place; what the client sees on the right. Saves as you go. -->
 <script lang="ts">
+  import { parseQuestionPack, type PackQuestion } from "@logit/core/plugins/questionPack";
+  import { plugins, fetchSource } from "$lib/features/plugins/pluginData.svelte";
   import type { CheckinAnswer, CheckinQuestion, CheckinSchedule, Measurement } from "@logit/core/domain/Checkin";
   import { MEASUREMENTS, addQuestion, readyMadeForm, removeQuestion, touchCheckinSchedule, updateQuestion } from "@logit/core/domain/Checkin";
   import { createId } from "@logit/core/domain/ids";
@@ -76,6 +78,25 @@
 
   function add(kind: Kind) {
     const next = addQuestion(form, kind.make());
+    save(next);
+    open = next.questions.at(-1)!.id;
+  }
+
+  // Canvas W8/W9: questions from your installed question packs (a climbing plugin's "Finger pain").
+  let packQuestions = $state<{ pack: string; questions: PackQuestion[] }[]>([]);
+  $effect(() => {
+    if (mode !== "form") return;
+    void (async () => {
+      if (!plugins.installsLoaded) await plugins.loadInstalls().catch(() => {});
+      const packs = plugins.installed.filter((p) => p.enabled && p.manifest.family === "question-pack");
+      packQuestions = (await Promise.all(packs.map(async (p) => {
+        try { return { pack: p.manifest.name, questions: parseQuestionPack(JSON.parse(await fetchSource(p.manifest as never)), p.manifest.id).questions }; }
+        catch { return null; }
+      }))).filter((x): x is NonNullable<typeof x> => !!x);
+    })();
+  });
+  function addFromPack(q: PackQuestion) {
+    const next = addQuestion(form, { ...q });
     save(next);
     open = next.questions.at(-1)!.id;
   }
@@ -217,6 +238,11 @@
           <DropdownMenu.Separator />
           <DropdownMenu.Label>Ready-made</DropdownMenu.Label>
           <DropdownMenu.Item onSelect={addHealth}>Health questions (4)</DropdownMenu.Item>
+          {#each packQuestions as p (p.pack)}
+            <DropdownMenu.Separator />
+            <DropdownMenu.Label>From {p.pack}</DropdownMenu.Label>
+            {#each p.questions as q, i (i)}<DropdownMenu.Item onSelect={() => addFromPack(q)}>{q.prompt}</DropdownMenu.Item>{/each}
+          {/each}
         {/if}
       </DropdownMenu.Content>
     </DropdownMenu.Root>

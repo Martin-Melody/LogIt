@@ -252,6 +252,19 @@ export const cards = {
   },
 };
 `;
+    case "question-pack":
+      return JSON.stringify(
+        {
+          formatVersion: 1,
+          pluginId,
+          questions: [
+            { prompt: "Finger pain", type: "scale", scaleMin: 1, scaleMax: 10, help: "1 = none, 10 = stop climbing" },
+            { prompt: "Skin", type: "choice", options: ["Fine", "Thin", "Split"] },
+          ],
+        },
+        null,
+        2,
+      ) + "\n";
     case "meal-plan-pack":
       return JSON.stringify(
         {
@@ -320,7 +333,7 @@ export const cards = {
 
 /** File name the builder shows for the source. */
 export function sourceFileName(family: string): string {
-  return isCodeFamily(family) ? "bundle.js" : family === "mobility-pack" ? "drills.json" : family === "program-pack" ? "programs.json" : family === "meal-plan-pack" ? "meal-plans.json" : family === "recipe-pack" ? "recipes.json" : family === "workout-block" ? "block.json" : "exercises.json";
+  return isCodeFamily(family) ? "bundle.js" : family === "mobility-pack" ? "drills.json" : family === "program-pack" ? "programs.json" : family === "meal-plan-pack" ? "meal-plans.json" : family === "question-pack" ? "questions.json" : family === "recipe-pack" ? "recipes.json" : family === "workout-block" ? "block.json" : "exercises.json";
 }
 
 /** Turn a name into the last part of an id: "Weekly swings" -> "weekly-swings". */

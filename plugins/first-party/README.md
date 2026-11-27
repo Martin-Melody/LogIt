@@ -8,6 +8,13 @@ accounts can publish under, so apps can show them as LogIt's.
 | --- | --- | --- |
 | `app.getlogit.rounds` | workout-block | Timed rounds with rest and notes, for BJJ, wrestling, boxing and bag work |
 | `app.getlogit.hangboard` | workout-block | Hangs with edge size, grip, added weight and time |
+| `app.getlogit.boulder` | workout-block | Bouldering problems by grade: flashed, sent or a project, and tries |
+| `app.getlogit.climbing-week` | widget | "Climbing this week": sessions, hardest send and flash, tries on projects (reads Bouldering blocks) |
+| `app.getlogit.climbing-checkin` | question-pack | Check-in questions for climbers: finger pain, skin, project highpoint |
+
+Together the last three are the coaching test case (canvas W9): a block clients log, a card a coach
+puts on a client's Overview (+ Card) that only reads workouts the client shares, and questions for
+their check-in form.
 
 To publish one: sign in to the web app as an admin, Plugins › Build › New, pick its family,
 use the folder name as the id, paste the file, then Publish. A listed release still goes

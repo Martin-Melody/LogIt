@@ -541,7 +541,7 @@ export const FEATURES: Feature[] = [
     section: "Coaching",
     plan: "Studio",
     freeWithSamples: true,
-    summary: "Plugins you use with clients: progression rules, workout blocks, and program, meal plan, recipe and card packs.",
+    summary: "Plugins you use with clients: progression rules, workout blocks, and program, meal plan, recipe, question and card packs.",
     web: ["/coaching/plugins"],
     whereWeb: "Coaching › Plugins",
     docs: "/docs/add-plugins",

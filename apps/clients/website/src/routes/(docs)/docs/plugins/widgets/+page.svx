@@ -75,7 +75,7 @@ the sandbox. Ask for the minimum.
 
 | Need | You get |
 |---|---|
-| `workouts` | recent sessions (capped ~200 days / 150), each with exercises + sets |
+| `workouts` | recent sessions (capped ~200 days / 150), each with exercises + sets, and plugin blocks as `blocks: [{ pluginId, name, fields, entries }]` |
 | `exercises` | the exercise catalogue with muscle groups |
 | `session` | `{ active, hasPlan, plannedDayLabel? }` |
 | `todaysPlan` | `{ splitId?, dayLabel?, scheduled, dayIndex?, dayCount?, exercises: string[] }` |

@@ -22,7 +22,9 @@
 
   const KINDS: [string, string][] = [
     ["all", "All"], ["progression-algorithm", "Progression rules"], ["nutrition-algorithm", "Nutrition targets"], ["workout-block", "Workout blocks"],
-    ["exercise-pack", "Exercise packs"], ["program-pack", "Program packs"], ["meal-plan-pack", "Meal plan packs"], ["recipe-pack", "Recipe packs"], ["card-pack", "Card packs"],
+    ["exercise-pack", "Exercise packs"], ["program-pack", "Program packs"], ["meal-plan-pack", "Meal plan packs"], ["recipe-pack", "Recipe packs"], ["card-pack", "Card packs"], ["question-pack", "Question packs"],
+    // Canvas W9/W11: a widget can be a card on a client's page (+ Card), over their data.
+    ["widget", "Client cards"],
   ];
   const COACH = new Set(KINDS.slice(1).map(([k]) => k));
   // Packs used straight from the directory: where a coach copies from.
@@ -98,7 +100,7 @@
   <header class="flex flex-wrap items-end justify-between gap-3">
     <div>
       <h1 class="text-[26px] font-bold tracking-tight">Plugins</h1>
-      <p class="mt-1 text-[13px] text-muted-foreground">The kinds you use with clients. Widgets and analytics are in Me › Plugins.</p>
+      <p class="mt-1 text-[13px] text-muted-foreground">The kinds you use with clients. A widget here can be a card on a client's page too; analytics are in Me › Plugins.</p>
     </div>
     <Tabs.Root value={tab} onValueChange={setTab}>
       <Tabs.List aria-label="Which plugins">
@@ -146,7 +148,7 @@
             <dt class="text-muted-foreground">Kind</dt><dd>{familyLabel(selected.family)}{isCodeFamily(selected.family) ? " · runs code" : " · data"}</dd>
             <dt class="text-muted-foreground">Reviewed by LogIt</dt><dd>{selected.reviewedAt ? `Yes, ${new Date(selected.reviewedAt).toLocaleDateString(undefined, { day: "numeric", month: "short" })}` : selected.installed && tab === "installed" ? "Installed from a link" : "Yes"}</dd>
             <dt class="text-muted-foreground">It is given</dt><dd>{getsSummary(selected.family, null)}</dd>
-            <dt class="text-muted-foreground">It can</dt><dd>{pluginCan(selected.family).join("; ") || "–"}</dd>
+            <dt class="text-muted-foreground">It can</dt><dd>{selected.family === "widget" ? "Be a card on a client's page (+ Card on their Overview), given only their data it asks for and they share; and a card on your own home" : pluginCan(selected.family).join("; ") || "–"}</dd>
             {#if isCodeFamily(selected.family)}<dt class="text-muted-foreground">It can't</dt><dd>Go online or keep data</dd>{/if}
             {#if selected.family === "workout-block" || selected.family === "progression-algorithm"}
               <dt class="text-muted-foreground">Used in</dt><dd>{uses.length ? uses.join("; ") : "None of your programs"}</dd>

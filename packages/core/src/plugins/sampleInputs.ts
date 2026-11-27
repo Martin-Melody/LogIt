@@ -34,7 +34,18 @@ function sampleWorkouts(now: number): WidgetWorkout[] {
 export function sampleWidgetInput(needs: readonly string[], now: number, empty = false): WidgetInput {
   const want = new Set(needs as WidgetDataNeed[]);
   const input: WidgetInput = { now, timeZone: "Europe/Dublin", prefs: { weightUnit: "kg" } };
-  if (want.has("workouts")) input.workouts = empty ? [] : sampleWorkouts(now);
+  if (want.has("workouts")) {
+    input.workouts = empty ? [] : sampleWorkouts(now);
+    // A plugin block (canvas W9), so sport widgets have something to read.
+    if (!empty && input.workouts[0]) {
+      input.workouts[0] = {
+        ...input.workouts[0],
+        blocks: [{ pluginId: "app.getlogit.boulder", name: "Bouldering", fields: { wall: "Board" }, entries: [
+          { grade: "V4", result: "Flash", tries: 1 }, { grade: "V5", result: "Sent", tries: 4 }, { grade: "V6", result: "Project", tries: 6 },
+        ] }],
+      };
+    }
+  }
   if (want.has("exercises")) {
     input.exercises = empty
       ? []
