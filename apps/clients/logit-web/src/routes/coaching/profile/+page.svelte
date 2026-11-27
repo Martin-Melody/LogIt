@@ -24,7 +24,7 @@
   import { Switch } from "$lib/components/ui/switch";
   import { toast } from "$lib/components/ui/sonner";
   import { coachTrial } from "$lib/workspace";
-  import { goto } from "$app/navigation";
+  import { beforeNavigate, goto } from "$app/navigation";
   import { getWebCheckinRepo } from "$lib/deps";
   import { readyMadeForm, touchCheckinSchedule, type CheckinSchedule } from "@logit/core/domain/Checkin";
 
@@ -108,8 +108,30 @@
     onProfile = next;
   }
 
-  async function save(e: Event) {
-    e.preventDefault();
+  // Saves as you go (like the program builder): leaving for Payments or Stripe used to drop
+  // everything typed since the last Save.
+  const valid = $derived(!!form.headline.trim() && form.about.length <= COACH_LIMITS.about);
+  const snapshot = $derived(JSON.stringify([form, [...onProfile], agreement]));
+  let lastSaved = "";
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let savedOnce = $state(false);
+  $effect(() => {
+    const snap = snapshot;
+    if (!loaded || loadError) return;
+    if (!lastSaved) { lastSaved = snap; return; } // what was loaded
+    if (snap === lastSaved || !valid) return;
+    clearTimeout(timer);
+    timer = setTimeout(() => void save(), 800);
+  });
+  beforeNavigate(() => {
+    if (timer && snapshot !== lastSaved && valid) { clearTimeout(timer); void save(); }
+  });
+
+  async function save(e?: Event) {
+    e?.preventDefault();
+    clearTimeout(timer);
+    timer = undefined;
+    const snap = snapshot;
     saving = true;
     error = null;
     try {
@@ -121,7 +143,8 @@
         savedAgreement = a.text ?? "";
         agreementChanged = a.changedAt;
       }
-      toast.success("Profile saved");
+      lastSaved = snap;
+      savedOnce = true;
     } catch (err) {
       error = err instanceof ApiError ? err.message : "Couldn't save it. Try again.";
     } finally {
@@ -266,7 +289,14 @@
         </section>
 
         {#if error}<Alert.Root variant="destructive"><Alert.Description>{error}</Alert.Description></Alert.Root>{/if}
-        <div><Button type="submit" disabled={saving || !form.headline.trim() || form.about.length > COACH_LIMITS.about}>{saving ? "Saving…" : "Save"}</Button></div>
+        <p class="text-[13px] text-muted-foreground" aria-live="polite">
+          {#if !form.headline.trim()}Add a headline and your profile saves as you go.
+          {:else if form.about.length > COACH_LIMITS.about}About is too long to save.
+          {:else if saving}Saving…
+          {:else if error}Not saved yet.
+          {:else if savedOnce}Saved. Changes save as you go.
+          {:else}Changes save as you go.{/if}
+        </p>
       </form>
 
       <aside class="sticky top-6 flex w-full max-w-[360px] flex-[1_1_300px] flex-col gap-2" aria-label="Preview">

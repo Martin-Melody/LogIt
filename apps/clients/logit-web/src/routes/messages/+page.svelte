@@ -29,6 +29,7 @@
   import { smoothWeightSeries } from "@logit/core/nutrition/trend";
   import Avatar from "$lib/features/coaching/Avatar.svelte";
   import MessageThread from "$lib/features/coaching/MessageThread.svelte";
+  import RequestEventCard from "$lib/features/coaching/requests/RequestEventCard.svelte";
   import DmChat from "$lib/features/social/DmChat.svelte";
   import { when, weekdayDate } from "$lib/features/coaching/format";
 
@@ -156,7 +157,7 @@
     <p class="text-[13px] text-muted-foreground">No conversations yet. <a href="/clients" class="text-primary hover:underline">Invite someone</a>.</p>
   {:else}
     <div class="grid items-start gap-4 lg:grid-cols-[280px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)_240px]">
-      <section aria-label="Conversations" data-guide="messages-list" class="flex flex-col gap-0.5 rounded-[10px] border border-border bg-card p-2">
+      <section aria-label="Conversations" data-guide="messages-list" class="flex max-h-[max(480px,calc(100svh-11rem))] flex-col gap-0.5 overflow-y-auto rounded-[10px] border border-border bg-card p-2">
         <Tabs.Root value={filter} onValueChange={(v) => (filter = v as typeof filter)} class="mx-0.5 mb-1">
           <Tabs.List aria-label="Which conversations" class="w-full">
             <Tabs.Trigger value="all">All</Tabs.Trigger>
@@ -202,7 +203,10 @@
             {#key c.relationshipId}
               <MessageThread relationshipId={c.relationshipId} otherName={c.name} initialDraft={draft} onRead={markOpenRead} onSent={sentInOpen}
                 fill={{ firstName: firstOf(c.name), exercise, coachName: me }}
-                messageActions={(m) => [{ label: "Swap an exercise in their program…", run: () => { swapHint = m.body; swapping = true; } }]} />
+                messageActions={(m) => [{ label: "Swap an exercise in their program…", run: () => { swapHint = m.body; swapping = true; } }]}>
+                <!-- Offers, "took the spot" and the like are cards here too, not chat bubbles. -->
+                {#snippet card(m)}<RequestEventCard message={m} reader="coach" coach={me ?? "You"} client={c.name} stateOf={() => "taken"} />{/snippet}
+              </MessageThread>
               <SwapInProgramDialog bind:open={swapping} relationshipId={c.relationshipId} hint={swapHint} />
             {/key}
           </div>
@@ -223,7 +227,7 @@
           </span>
         </aside>
       {:else if active?.kind === "dm"}
-        <section aria-label="Conversation with {active.name}" class="flex min-h-[480px] min-w-0 flex-col rounded-[10px] xl:col-span-2 border border-border bg-card">
+        <section aria-label="Conversation with {active.name}" class="flex h-[max(480px,calc(100svh-11rem))] min-w-0 flex-col overflow-hidden rounded-[10px] xl:col-span-2 border border-border bg-card">
           {#key active.thread.id}
             <DmChat to={{ threadId: active.thread.id }} onchange={() => void load()} ondelete={() => { void goto("/messages"); void load(); }} />
           {/key}

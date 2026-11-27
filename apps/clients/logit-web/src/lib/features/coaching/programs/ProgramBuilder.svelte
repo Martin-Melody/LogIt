@@ -6,6 +6,7 @@
   import { onDestroy, onMount } from "svelte";
   import { beforeNavigate } from "$app/navigation";
   import * as Dialog from "$lib/components/ui/dialog";
+  import { TimeField } from "$lib/components/ui/time-field/index.js";
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
   import { Label } from "$lib/components/ui/label";
@@ -609,8 +610,18 @@
           {#key day.id}
             <input aria-label="Day name" value={day.name ?? ""} onchange={(e) => { const v = e.currentTarget.value.trim() || undefined; const id = day.id; edit((p, w) => P.updateDay(p, w, id, { name: v })); }}
               class="h-9 min-w-0 flex-1 rounded-[8px] border border-transparent bg-transparent px-1.5 text-[17px] font-bold hover:border-input focus:border-input" />
-            <input aria-label="Session time" placeholder="Time, e.g. 07:30" value={day.sessionTime ?? ""} class="{fieldCls} w-36"
-              onchange={(e) => { const v = e.currentTarget.value.trim(); const ok = v === "" || /^([01]?\d|2[0-3]):[0-5]\d$/.test(v); e.currentTarget.setCustomValidity(ok ? "" : "Use a time like 07:30"); if (!ok) return void e.currentTarget.reportValidity(); const id = day.id; edit((p) => mapTemplateDay(p, id, (d) => ({ ...d, sessionTime: v ? v.padStart(5, "0") : undefined }))); }} />
+          {/key}
+        </div>
+        <!-- What the time is for: the client's meal plan times meals around it. It sends nothing. -->
+        <div class="flex flex-wrap items-center gap-2 text-[13px]">
+          {#key day.id}
+            <span class="text-muted-foreground">Training time</span>
+            <TimeField aria-label="Training time" value={day.sessionTime}
+              onchange={(v) => { const id = day.id; edit((p) => mapTemplateDay(p, id, (d) => ({ ...d, sessionTime: v || undefined }))); }} />
+            {#if day.sessionTime}
+              <Button variant="ghost" size="sm" onclick={() => { const id = day.id; edit((p) => mapTemplateDay(p, id, (d) => ({ ...d, sessionTime: undefined }))); }}>Clear</Button>
+            {/if}
+            <span class="text-xs text-muted-foreground">Optional. Meal plans time meals around it ("2 hours before training"). No reminder is sent.</span>
           {/key}
         </div>
         <div class="flex flex-wrap gap-1" role="radiogroup" aria-label="Which day">
