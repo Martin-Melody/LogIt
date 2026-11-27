@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { blockLine, canRunBlock, PROGRAM_BLOCKS_THIS_APP_RUNS, UPDATE_LINE } from "@logit/core/domain/CoachProgram";
   import { authStore } from "$lib/api/authStore.svelte";
   import StreakLine from "$lib/features/goals/StreakLine.svelte";
   // Home's Today card (decision D1, design canvas "LogIt decisions D1–D3, D5, D11"): the week
@@ -120,7 +121,7 @@
   }
   function programLines(day: ProgramDay): Line[] {
     return [...day.blocks].sort((a, b) => a.orderIndex - b.orderIndex).slice(0, SHOWN)
-      .map((b) => ({ name: b.type === "strength" ? b.exerciseName : (b as { activityName?: string }).activityName ?? "Cardio", target: b.type === "strength" ? programTarget(b) : null }));
+      .map((b) => ({ name: canRunBlock(b, PROGRAM_BLOCKS_THIS_APP_RUNS) ? blockLine(b) : UPDATE_LINE, target: b.type === "strength" ? programTarget(b) : null }));
   }
 
   async function startProgramDay(day: ProgramDay) {

@@ -1256,7 +1256,7 @@ export function swapExercise(
 
 // ── Supersets / circuits ─────────────────────────────────────────────────────
 
-function blockSuperset(b: SessionBlock): SupersetInfo | undefined {
+export function blockSuperset(b: SessionBlock): SupersetInfo | undefined {
   return (b.data as { superset?: SupersetInfo } | undefined)?.superset;
 }
 

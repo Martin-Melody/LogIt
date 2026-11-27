@@ -12,7 +12,7 @@ import { sandboxApi, type SandboxClient } from "../api/sandboxApi";
 import { syncApiFor } from "../api/syncApi";
 import { checkinSubmissionDto, nutritionRowDto, sessionDto } from "../api/syncDtos";
 import type { CheckinSchedule, CheckinSubmission } from "../domain/Checkin";
-import type { CoachProgram } from "../domain/CoachProgram";
+import { parseProgram, type CoachProgram } from "../domain/CoachProgram";
 import { createId } from "../domain/ids";
 import type { WorkoutSession } from "../domain/workout";
 import { SAMPLE_CLIENTS, planSampleActions, sampleHistory, sampleSpec, type SampleKey, type SampleAction } from "./sandbox";
@@ -140,7 +140,7 @@ async function runOnce(now: number): Promise<number> {
         ...state,
         coachId: coach?.coach.id ?? "",
         programs: programs.filter((p) => p.dataJson && !p.deletedAtMs)
-          .map((p) => ({ ...(JSON.parse(p.dataJson!) as CoachProgram), startedAtMs: p.startedAtMs })),
+          .map((p) => ({ ...parseProgram(p.dataJson!), startedAtMs: p.startedAtMs })),
         sessions: parse<WorkoutSession>(sessions.sessions),
         schedules: parse<CheckinSchedule>(schedules),
         submissions: parse<CheckinSubmission>(submissions.submissions),

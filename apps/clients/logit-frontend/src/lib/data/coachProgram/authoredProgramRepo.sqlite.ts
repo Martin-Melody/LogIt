@@ -2,7 +2,7 @@ import type {
   ListMyProgramsOptions,
   MyCoachProgram,
 } from "@logit/core/data/coachProgramRepo";
-import type { CoachProgram } from "@logit/core/domain/CoachProgram";
+import { parseProgram, type CoachProgram } from "@logit/core/domain/CoachProgram";
 import { getDb } from "$lib/data/db/sqlite";
 import { getActiveOwnerId } from "$lib/data/activeOwner";
 
@@ -33,7 +33,7 @@ type Row = {
 function parseRow(row: Row): MyCoachProgram | null {
   try {
     return {
-      program: JSON.parse(row.data_json) as CoachProgram,
+      program: parseProgram(row.data_json),
       recipientUserId: row.recipient_user_id,
     };
   } catch {

@@ -1,12 +1,12 @@
 import type { AssignedProgramRepo } from "@logit/core/data/coachProgramRepo";
-import type { CoachProgram } from "@logit/core/domain/CoachProgram";
+import { parseProgram, type CoachProgram } from "@logit/core/domain/CoachProgram";
 import { getDb } from "$lib/data/db/sqlite";
 import { getActiveOwnerId } from "$lib/data/activeOwner";
 import { nowMs } from "@logit/core/domain/time";
 
 function parse(json: string): CoachProgram | null {
   try {
-    return JSON.parse(json) as CoachProgram;
+    return parseProgram(json);
   } catch {
     return null;
   }

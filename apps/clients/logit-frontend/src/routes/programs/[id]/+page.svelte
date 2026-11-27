@@ -1,11 +1,13 @@
 <script lang="ts">
+  import { blockLine, canRunBlock, PROGRAM_BLOCKS_THIS_APP_RUNS, UPDATE_LINE } from "@logit/core/domain/CoachProgram";
+  import { getBlockDeclaration } from "$lib/plugins/blockPluginStore";
   import { coachFor } from "$lib/features/coaching/coachCache";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { back } from "$lib/navigation";
-  import { Dumbbell, Activity } from "lucide-svelte";
+  import { Dumbbell, Activity, Info } from "lucide-svelte";
 
   import { Button } from "$lib/components/ui/button";
   import { Badge } from "$lib/components/ui/badge";
@@ -179,14 +181,18 @@
                     <div class="mt-1 flex flex-col gap-0.5">
                       {#each sortByOrder(day.blocks) as block (block.id)}
                         <p class="flex items-center gap-1.5 text-xs text-muted-foreground">
-                          {#if block.type === "strength"}
+                          {#if !canRunBlock(block, PROGRAM_BLOCKS_THIS_APP_RUNS) || (block.type === "plugin" && !getBlockDeclaration(block.pluginId))}
+                            <!-- Program data v2: a part this app can't run; the rest of the day works. -->
+                            <Info class="h-3 w-3 shrink-0" />
+                            <span class="truncate">{block.type === "plugin" && canRunBlock(block, PROGRAM_BLOCKS_THIS_APP_RUNS) ? `${block.name} · add the plugin to use it` : UPDATE_LINE}</span>
+                          {:else if block.type === "strength"}
                             <Dumbbell class="h-3 w-3 shrink-0" />
                             <span class="truncate">
                               {block.exerciseName}{block.sets.length ? ` · ${setSummary(block)}` : ""}
                             </span>
                           {:else}
                             <Activity class="h-3 w-3 shrink-0" />
-                            <span class="truncate">{block.activityName}</span>
+                            <span class="truncate">{blockLine(block)}</span>
                           {/if}
                         </p>
                       {/each}

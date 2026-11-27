@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { blockLine } from "@logit/core/domain/CoachProgram";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { onMount } from "svelte";
@@ -7,7 +8,7 @@
   import { Skeleton } from "$lib/components/ui/skeleton";
   import { coachProgramApi } from "@logit/core/api/coachProgramApi";
   import { BUILTIN_PROGRAMS, isBuiltinProgramId } from "@logit/core/domain/builtinPrograms";
-  import {
+  import { parseProgram,
     getProgramProgress,
     startOfLocalDayMs,
     type CoachProgram,
@@ -48,7 +49,7 @@
         .filter((r) => !r.deletedAtMs && r.dataJson)
         .map((r) => {
           try {
-            const p = JSON.parse(r.dataJson!) as CoachProgram;
+            const p = parseProgram(r.dataJson!);
             return { ...p, ...(r.startedAtMs ? { clientStartedAtMs: r.startedAtMs } : {}) };
           } catch {
             return null;
@@ -103,6 +104,9 @@
   }
 
   function blockText(b: ProgramBlock): string {
+    // Program data v2's newer blocks: their own one line says it all.
+    if (b.type === "circuit" || b.type === "mobility" || b.type === "plugin") return "";
+    if (b.type !== "strength" && b.type !== "cardio") return "";
     if (b.type === "cardio") {
       const parts = [];
       if (b.targetDurationSec) parts.push(`${Math.round(b.targetDurationSec / 60)} min`);
@@ -263,7 +267,7 @@
                   {#each [...day.blocks].sort((a, b) => a.orderIndex - b.orderIndex) as b (b.id)}
                     {@const ss = supersetNote(day, b)}
                     <div class="flex flex-col gap-0.5 text-[13px]">
-                      <span>{b.type === "strength" ? b.exerciseName : b.activityName}{#if ss}<span class="ml-1.5 text-[11px] text-primary">{ss}</span>{/if}</span>
+                      <span>{blockLine(b)}{#if ss}<span class="ml-1.5 text-[11px] text-primary">{ss}</span>{/if}</span>
                       <span class="text-xs text-muted-foreground">{blockText(b)}</span>
                       {#if b.note}<span class="text-xs italic text-muted-foreground">{b.note}</span>{/if}
                     </div>

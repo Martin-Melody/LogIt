@@ -34,7 +34,7 @@ import { normalizeRecipe, type ProgressionRecipe } from "@logit/core/domain/prog
 import { isNativePlatform } from "$lib/platform/isNative";
 import { sessionChangedAtMs, type WorkoutSession } from "@logit/core/domain/workout";
 import type { WorkoutSplit } from "@logit/core/domain/WorkoutSplit";
-import type { CoachProgram } from "@logit/core/domain/CoachProgram";
+import { parseProgram, type CoachProgram } from "@logit/core/domain/CoachProgram";
 import type { CoachNutritionPlan } from "@logit/core/domain/CoachNutritionPlan";
 import type { CheckinSchedule, CheckinSubmission } from "@logit/core/domain/Checkin";
 import type { CoachMessage } from "@logit/core/domain/CoachMessage";
@@ -484,7 +484,7 @@ export async function pullAndMergeCoachPrograms(): Promise<boolean> {
         continue;
       }
       try {
-        const program = JSON.parse(entry.dataJson) as CoachProgram;
+        const program = parseProgram(entry.dataJson);
         const existing = await repo.getAssignedProgram(program.id);
         // The client's Start lives outside the coach's data. Keep a local start the server
         // hasn't confirmed yet (it's queued in the outbox) rather than wiping it.

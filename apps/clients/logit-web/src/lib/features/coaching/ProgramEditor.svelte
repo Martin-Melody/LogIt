@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { blockLine } from "@logit/core/domain/CoachProgram";
   import * as Table from "$lib/components/ui/table/index.js";
   import ConfirmDialog, { type Ask } from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import { DateField } from "$lib/components/ui/date-field/index.js";
@@ -299,7 +300,7 @@
                   <Table.Cell colspan={8} class="px-2 pb-1 pt-3">
                     <span class="flex flex-wrap items-center gap-2">
                       {#if labels.get(block.id)}<span class="rounded-[5px] bg-muted-foreground px-1.5 text-[11px] font-bold text-background">{labels.get(block.id)}</span>{/if}
-                      <span class="font-semibold">{block.type === "strength" ? block.exerciseName : block.activityName}</span>
+                      <span class="font-semibold">{blockLine(block)}</span>
                       <span class="ml-auto flex flex-wrap gap-2.5 text-[11px] text-muted-foreground">
                         {#if bi > 0}<button type="button" class="hover:text-foreground" aria-label="Move up" onclick={() => edit((p) => P.moveBlock(p, week.id, day.id, block.id, -1))}>↑</button>{/if}
                         {#if bi < day.blocks.length - 1}<button type="button" class="hover:text-foreground" aria-label="Move down" onclick={() => edit((p) => P.moveBlock(p, week.id, day.id, block.id, 1))}>↓</button>{/if}
@@ -311,7 +312,7 @@
                         <button type="button" class="hover:text-destructive" onclick={() => edit((p) => P.removeBlock(p, week.id, day.id, block.id))}>Remove</button>
                       </span>
                     </span>
-                    <label class="sr-only" for="note-{block.id}">Note for {block.type === "strength" ? block.exerciseName : block.activityName}</label>
+                    <label class="sr-only" for="note-{block.id}">Note for {blockLine(block)}</label>
                     <input id="note-{block.id}" value={block.note ?? ""} placeholder="Note for the client (optional)" class="mt-1 h-7 w-full rounded-[7px] border border-transparent bg-transparent px-1 text-xs text-muted-foreground hover:border-input focus:border-input"
                       oninput={(e) => { const v = e.currentTarget.value; edit((p) => P.updateBlock(p, week.id, day.id, block.id, { note: v || undefined })); }} />
                     {#if block.type === "strength"}

@@ -1,4 +1,5 @@
-import type { SetType } from "./workout";
+import type { MobilityMetric, SetType } from "./workout";
+import type { BlockValue } from "./blockPlugin";
 import { createId } from "./ids";
 import { nowMs } from "./time";
 
@@ -14,6 +15,12 @@ import { nowMs } from "./time";
 export type ProgramStartMode = "fixed-date" | "manual";
 
 export type CoachProgram = {
+  /** 2 for programs with rules and the newer blocks (program data v2); missing = 1. v2 only
+   * adds fields: every v1 field keeps its meaning, so apps that read v1 keep working. */
+  schemaVersion?: number;
+  /** v2: how the numbers move week to week, for every exercise without its own rule.
+   * Missing (v1) = fixed: the numbers are as the coach typed them. */
+  rule?: ProgramRule;
   id: string;
   name: string;
   description?: string;
@@ -42,6 +49,8 @@ export type ProgramWeek = {
   id: string;
   weekNumber: number;
   name?: string;
+  /** v2: a lighter (deload) week: fewer sets, same weight (canvas PG2). */
+  lighter?: boolean;
   days: ProgramDay[];
 };
 
@@ -51,10 +60,75 @@ export type ProgramDay = {
   name?: string;
   /** Optional 0 (Sun)–6 (Sat) scheduling hint. */
   weekday?: number;
+  /** v2: when the session usually starts, "HH:mm" (canvas Q5: "before/after training" meals
+   * follow it). The client can set their own on the phone. */
+  sessionTime?: string;
   blocks: ProgramBlock[];
 };
 
-export type ProgramBlock = ProgramStrength | ProgramCardio;
+/**
+ * v2: a progression rule (canvas PG4). Built in: LogIt Adaptive (weight from the client's
+ * strength estimate, aiming for `repsInReserve` reps left), Linear (fill the rep range, then
+ * add a step), a 4-week wave, or fixed (nothing moves). Or the coach's own rule, or one from a
+ * plugin, which the client allows first (PG8).
+ */
+export type ProgramRule =
+  | { kind: "fixed" }
+  | { kind: "adaptive"; repsInReserve?: number }
+  | { kind: "linear"; stepKg?: number }
+  | { kind: "wave" }
+  | { kind: "own"; ruleId: string; name: string }
+  | { kind: "plugin"; pluginId: string; name: string };
+
+export type ProgramBlock = ProgramStrength | ProgramCardio | ProgramCircuit | ProgramMobility | ProgramPluginBlock;
+
+/** Fields every v2 block can carry. */
+type V2Block = {
+  id: string;
+  orderIndex: number;
+  /** As on strength blocks; a circuit is a group of its own and leaves it unset. */
+  supersetGroup?: string;
+  /** The lowest app version that can run this block ("1.1.0"). Older apps show "Update
+   * LogIt to see this part" instead, and the rest of the day still works. */
+  minAppVersion?: string;
+  note?: string;
+};
+
+/** v2: a circuit (canvas Q4): rounds of exercises with rest between them and between rounds.
+ * Runs with the phone's circuit timer. A member has reps or a time. */
+export type ProgramCircuit = V2Block & {
+  type: "circuit";
+  rounds: number;
+  memberRestSec?: number;
+  roundRestSec?: number;
+  members: { id: string; exerciseName: string; exerciseId?: string; reps?: number; durationSec?: number }[];
+  /** How it moves up: the same every week, a round more every two weeks, or each exercise's own rule. */
+  progression?: "same" | "add-round" | "each";
+};
+
+/** v2: a mobility drill; progresses like the client's own mobility drills. */
+export type ProgramMobility = V2Block & {
+  type: "mobility";
+  drillName: string;
+  drillId?: string;
+  metric?: MobilityMetric;
+  perSide?: boolean;
+  sets?: number;
+  /** Hold goal per set, seconds. */
+  targetSec?: number;
+  /** Or a time for the whole drill, minutes ("Shoulder CARs · 5 min"). */
+  minutes?: number;
+};
+
+/** v2: a block from a plugin (canvas Q4): it runs its own screen in the workout. The values
+ * are the plugin's own settings; the client allows the plugin first (PG8). */
+export type ProgramPluginBlock = V2Block & {
+  type: "plugin";
+  pluginId: string;
+  /** What the coach saw it called, for when the plugin isn't there. */
+  name: string;
+  values?: Record<string, BlockValue>;
+};
 
 export type ProgramStrength = {
   type: "strength";
@@ -69,6 +143,8 @@ export type ProgramStrength = {
   /** Exercises the coach approves as swaps for this one. Shown first when the client taps
    * Swap, and always allowed whatever the coach's swap rule (see swaps.ts). */
   alternatives?: SwapAlternative[];
+  /** v2: this exercise's own rule, over the program's. */
+  rule?: ProgramRule;
 };
 
 export type SwapAlternative = { exerciseName: string; exerciseId?: string };
@@ -99,6 +175,8 @@ export type ProgramSet = {
   restSec?: number;
   /** Tempo notation, e.g. "3-1-1-0" (eccentric-pause-concentric-pause). */
   tempo?: string;
+  /** v2: the coach typed this week's numbers over the rule's (canvas PG3); they stay put. */
+  pinned?: boolean;
 };
 
 // ── Program ───────────────────────────────────────────────────────────────────
@@ -692,3 +770,90 @@ export function restText(sec: number | undefined): string {
   if (sec == null) return "";
   return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;
 }
+
+
+// ── Program data v2 ─────────────────────────────────────────────────────────────
+
+export const PROGRAM_SCHEMA_VERSION = 2;
+
+/** The phone release that first runs circuits, mobility and plugin blocks in coach programs. */
+export const V2_BLOCKS_APP_VERSION = "1.1.0";
+
+/** The newest blocks an app built from this code runs: apps pass it as their appVersion, so
+ * what they can run doesn't depend on what the store release happens to be numbered. Bump it
+ * (and V2_BLOCKS_APP_VERSION's successors) with each new block type. */
+export const PROGRAM_BLOCKS_THIS_APP_RUNS = V2_BLOCKS_APP_VERSION;
+
+const KNOWN_BLOCKS = new Set(["strength", "cardio", "circuit", "mobility", "plugin"]);
+
+/** v1 → v2, losing nothing: v2 only adds fields. A v1 program's numbers were all typed by the
+ * coach, so its rule is "fixed". Programs from before 2026-11 that say "on-accept" start when
+ * the client taps Start (see getProgramStartMs). Newer programs come back unchanged. */
+export function upgradeProgram(program: CoachProgram): CoachProgram {
+  if ((program.schemaVersion ?? 1) >= PROGRAM_SCHEMA_VERSION) return program;
+  const startMode: ProgramStartMode = program.startMode === "fixed-date" ? "fixed-date" : "manual";
+  return {
+    ...program,
+    schemaVersion: PROGRAM_SCHEMA_VERSION,
+    rule: program.rule ?? { kind: "fixed" },
+    startMode,
+    weeks: program.weeks.map((w) => ({
+      ...w,
+      days: w.days.map((d) => ({
+        ...d,
+        blocks: d.blocks.map((b) => (KNOWN_BLOCKS.has(b.type) ? withMinVersion(b) : b)),
+      })),
+    })),
+  };
+}
+
+/** A program from storage or the server, in the newest shape. */
+export function parseProgram(json: string): CoachProgram {
+  return upgradeProgram(JSON.parse(json) as CoachProgram);
+}
+
+/** The newer blocks say which app first runs them. */
+function withMinVersion(b: ProgramBlock): ProgramBlock {
+  if (b.type === "strength" || b.type === "cardio" || b.minAppVersion) return b;
+  return { ...b, minAppVersion: V2_BLOCKS_APP_VERSION };
+}
+
+/** The rule an exercise follows: its own, else the program's, else fixed. */
+export function ruleFor(program: Pick<CoachProgram, "rule">, block: ProgramBlock): ProgramRule {
+  return (block.type === "strength" ? block.rule : undefined) ?? program.rule ?? { kind: "fixed" };
+}
+
+/** "1.0.3" < "1.1.0". Anything that isn't a version ("web", "dev") counts as new enough. */
+export function appVersionAtLeast(appVersion: string | null | undefined, min: string): boolean {
+  const parse = (v: string) => v.trim().split(/[.\s(]/).slice(0, 3).map((x) => Number.parseInt(x, 10));
+  if (!appVersion) return true;
+  const a = parse(appVersion);
+  if (a.some((n) => Number.isNaN(n))) return true;
+  const b = parse(min);
+  for (let i = 0; i < 3; i++) {
+    const x = a[i] ?? 0, y = b[i] ?? 0;
+    if (x !== y) return x > y;
+  }
+  return true;
+}
+
+/** Whether this app can run a block: a type it knows, at a version it has. */
+export function canRunBlock(block: { type: string; minAppVersion?: string }, appVersion?: string | null): boolean {
+  if (!KNOWN_BLOCKS.has(block.type)) return false;
+  return !("minAppVersion" in block && block.minAppVersion) || appVersionAtLeast(appVersion, block.minAppVersion);
+}
+
+/** One line for a block in a day's list (any type; unknown ones ask for an update). */
+export function blockLine(block: ProgramBlock | { type: string; id: string }): string {
+  const b = block as ProgramBlock;
+  switch (b.type) {
+    case "strength": return b.exerciseName;
+    case "cardio": return b.activityName;
+    case "circuit": return `Circuit · ${b.rounds} ${b.rounds === 1 ? "round" : "rounds"} · ${b.members.map((m) => m.exerciseName).join(", ")}`;
+    case "mobility": return b.minutes ? `${b.drillName} · ${b.minutes} min` : b.drillName;
+    case "plugin": return b.name;
+    default: return UPDATE_LINE;
+  }
+}
+
+export const UPDATE_LINE = "Update LogIt to see this part";
