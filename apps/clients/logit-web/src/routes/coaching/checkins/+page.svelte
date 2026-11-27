@@ -142,6 +142,15 @@
     }
   }
 
+  // Canvas K4: Ctrl/⌘ Enter sends and goes on to the next one.
+  function replyKey(e: KeyboardEvent) {
+    if (picker?.key(e)) return;
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && reply.trim() && !busy) {
+      e.preventDefault();
+      void markReviewed(true);
+    }
+  }
+
   const NUDGE = "Hi! Just a reminder your check-in is waiting. Fill it in when you get a minute.";
 </script>
 
@@ -228,7 +237,7 @@
             <label for="reply" class="text-xs font-medium text-muted-foreground">Reply to {firstName(selClient?.name)}</label>
             <SavedReplyPicker bind:this={picker} bind:draft={reply} bind:open={repliesOpen} fill={{ firstName: firstName(selClient?.name), coachName: me }} />
             <div class="relative">
-              <textarea id="reply" rows="3" bind:value={reply} onkeydown={(e) => picker?.key(e)} placeholder="Type / for a saved reply"
+              <textarea id="reply" rows="3" bind:value={reply} onkeydown={replyKey} placeholder="Type / for a saved reply"
                 class="w-full resize-y rounded-[10px] border border-input bg-background py-2.5 pl-3 pr-10 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring"></textarea>
               <button type="button" onclick={() => (repliesOpen = !repliesOpen)} aria-label="Saved replies" aria-expanded={repliesOpen}
                 class="absolute right-2 top-2 flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"><MessageSquareQuoteIcon class="size-4" /></button>
@@ -246,7 +255,7 @@
                   class="h-[34px] rounded-[9px] border border-border px-3 text-[13px] font-medium hover:bg-muted disabled:opacity-50">Move back to review</button>
               {/if}
             </div>
-            <p class="text-[11px] text-muted-foreground">The reply goes into your conversation with {firstName(selClient?.name)}, saying which check-in it answers.</p>
+            <p class="text-[11px] text-muted-foreground"><kbd class="font-sans">Ctrl</kbd> <kbd class="font-sans">Enter</kbd> sends{nextName ? ` and goes to ${nextName}` : ""} · the reply goes into your conversation with {firstName(selClient?.name)}, saying which check-in it answers.</p>
           </div>
         </section>
         {#if selClient}<div class="lg:col-start-2 xl:col-start-auto">{#key selected.id}<CheckinWeekPanel client={selClient} untilMs={selected.submittedAtMs} />{/key}</div>{/if}

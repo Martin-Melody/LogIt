@@ -20,7 +20,7 @@ week as plain numbers: sessions against their program, the best set of their mai
 week before, their 7-day average weight, average calories and protein against their targets, and
 how they did on your habits. A row they don't share says "Not shared".
 
-Write a reply (type **/** for a saved reply) and **Send and go to …** moves on to the next person, or
+Write a reply (type **/** for a saved reply) and **Send and go to …** (or Ctrl Enter) moves on to the next person, or
 **Mark reviewed, no reply**. The reply also goes into your conversation with them, marked with the
 check-in it answers.
 
