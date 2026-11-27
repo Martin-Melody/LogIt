@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { trainingDayOn } from "$lib/features/nutrition/trainingDay";
 import { Separator } from "$lib/components/ui/separator/index.js";
 import { Skeleton } from "$lib/components/ui/skeleton/index.js";
 import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
@@ -104,6 +105,16 @@ import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
     dateIso = iso;
     followingToday = iso === localDateIso();
     void loadDay();
+    void loadTargets().catch(() => {});
+  }
+
+  /** That day's plan and day type (canvas MP2, FX1): a past day keeps the plan it had. */
+  async function loadTargets() {
+    const fallbackKg = $profile.weight != null && $profile.weightUnit === "kg" ? $profile.weight : null;
+    const want = dateIso;
+    const trainingDay = await trainingDayOn(want);
+    const n = await getNutritionTargets(getNutritionDeps(), { fallbackWeightKg: fallbackKg, dateIso: want, trainingDay });
+    if (want === dateIso) nut = n;
   }
 
   function shiftWeek(weeks: number) {
@@ -140,13 +151,7 @@ import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
   async function load() {
     ui.error = null;
     try {
-      const fallbackKg = $profile.weight != null && $profile.weightUnit === "kg" ? $profile.weight : null;
-      const [n] = await Promise.all([
-        getNutritionTargets(getNutritionDeps(), { fallbackWeightKg: fallbackKg }),
-        loadDay(),
-        loadWeek(),
-      ]);
-      nut = n;
+      await Promise.all([loadTargets(), loadDay(), loadWeek()]);
     } catch (e) {
       ui.error = e instanceof Error ? e.message : "Failed to load";
     } finally {

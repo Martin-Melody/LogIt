@@ -17,7 +17,10 @@
     type CoachNutritionPlan,
     type PlannedFood,
     type PlannedMeal,
+    planDay,
+    type PlanDay,
   } from "@logit/core/domain/CoachNutritionPlan";
+  import { trainingDayOn } from "$lib/features/nutrition/trainingDay";
   import { getNutritionRepo, getCoachNutritionPlanRepo } from "$lib/data/repoProvider";
   import { pushNutritionDay } from "$lib/sync/syncService";
   import { fmtKcal } from "$lib/features/nutrition/nutrition";
@@ -25,8 +28,11 @@
   const ui = $state({ loading: true, logged: new Set<string>(), swapFor: null as string | null });
   let plan = $state<CoachNutritionPlan | null>(null);
 
+  // Today's day type (canvas MP2): a training day's meals or a rest day's.
+  let day = $state<PlanDay | null>(null);
   async function load() {
     plan = await getCoachNutritionPlanRepo().getAssignedPlan();
+    day = plan ? planDay(plan, localDateIso(), await trainingDayOn(localDateIso())) : null;
     ui.loading = false;
   }
 
@@ -58,14 +64,15 @@
 
   {#if ui.loading}
     <p class="px-3 py-4 text-sm text-muted-foreground">Loading…</p>
-  {:else if !plan?.meals?.length}
+  {:else if !day?.meals.length}
     <p class="px-3 py-6 text-sm text-muted-foreground">Your coach hasn't set a meal plan.</p>
   {:else}
-    {#if plan.note}
-      <p class="px-3 py-2 text-xs text-muted-foreground border-b border-border whitespace-pre-line">{plan.note}</p>
+    {#if plan?.note}
+      <p class="px-3 py-2 text-xs text-muted-foreground border-b border-border whitespace-pre-line">{plan?.note}</p>
     {/if}
 
-    {#each plan.meals as meal (meal.id)}
+    {#if plan?.mode && plan.mode !== "same" && day}<p class="px-3 pt-2 text-xs font-medium text-muted-foreground">Today: {day.name}</p>{/if}
+    {#each day.meals as meal (meal.id)}
       {@const mt = mealTotals(meal)}
       <div class="border-b border-border">
         <div class="flex items-center justify-between px-3 py-2">
@@ -126,7 +133,7 @@
         <span class="text-xs font-semibold">Grocery list</span>
       </div>
       <ul class="flex flex-col gap-1 text-xs">
-        {#each groceryList(plan) as item (item.name + (item.brand ?? ""))}
+        {#each plan ? groceryList(plan) : [] as item (item.name + (item.brand ?? ""))}
           <li class="flex justify-between">
             <span>{item.name}{#if item.brand}<span class="text-muted-foreground"> · {item.brand}</span>{/if}</span>
             <span class="text-muted-foreground tabular-nums">{item.grams} g</span>

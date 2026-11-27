@@ -8,6 +8,8 @@ import type { CoachNutritionPlan } from "../domain/CoachNutritionPlan";
 export interface AssignedNutritionPlanRepo {
   getAssignedPlan(): Promise<CoachNutritionPlan | null>;
   listAssignedPlans(): Promise<CoachNutritionPlan[]>;
+  /** Every plan, ended ones too, for "which plan applied that day" (planOn). */
+  listPlanHistory?(): Promise<CoachNutritionPlan[]>;
 
   // ── Sync-merge surface (sync loop only) ──
   upsertFromRemote(plan: CoachNutritionPlan): Promise<void>;
