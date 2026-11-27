@@ -1,6 +1,6 @@
 <!-- A group's members (design canvas G7, D1): organisers and moderators first. Organisers give
      roles; organisers and moderators mute members in the chat, remove them, and answer requests
-     to join at the top (G14). -->
+     to join at the top, with the answers to the group's questions (G14, K8). -->
 <script lang="ts">
   import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { muteItems } from "$lib/features/groups/muteItems";
@@ -17,6 +17,7 @@
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import PersonAvatar from "$lib/components/social/PersonAvatar.svelte";
   import GroupInviteSheet from "$lib/components/social/GroupInviteSheet.svelte";
+  import GroupFormSheet from "$lib/components/social/GroupFormSheet.svelte";
   import { back } from "$lib/navigation";
 
   const id = $derived(page.params.id!);
@@ -28,6 +29,7 @@
   let picked = $state<GroupMember | null>(null);
   let removing = $state<GroupMember | null>(null);
   let inviting = $state(false);
+  let editing = $state(false);
   const me = $derived(authStore.user?.username ?? "");
   const organiser = $derived(group?.me.role === "Organiser");
   const moderator = $derived(!!group && canModerate(group.me.role));
@@ -53,6 +55,10 @@
     // You first, then organisers, then by name (the server's order).
     return [...list.filter((m) => m.user.username === me), ...list.filter((m) => m.user.username !== me)];
   });
+  const asked = (ms: number) => {
+    const days = Math.floor((Date.now() - ms) / 86_400_000);
+    return days < 1 ? "today" : days === 1 ? "yesterday" : new Date(ms).toLocaleDateString(undefined, { day: "numeric", month: "short" });
+  };
   const since = (ms: number) => new Date(ms).toLocaleDateString(undefined, { month: "long", year: new Date(ms).getFullYear() === new Date().getFullYear() ? undefined : "numeric" });
 
   async function setRole(m: GroupMember, role: GroupRole) {
@@ -65,15 +71,38 @@
     }
   }
 
-  // Approving adds them (and tells them); declining tells nobody.
-  async function answer(r: GroupRequest, approve: boolean) {
+  // Canvas K8. Approve happens at once with Undo; it's sent (and they're told) when the toast
+  // closes. Decline tells them "The organisers didn't approve your request", so it asks first.
+  let declining = $state<GroupRequest | null>(null);
+  function approve(r: GroupRequest) {
     requests = requests.filter((x) => x.user.id !== r.user.id);
-    try {
-      if (approve) {
+    let undone = false;
+    let sent = false;
+    const send = async () => {
+      if (undone || sent) return;
+      sent = true;
+      try {
         await groupsApi.approve(id, r.user.username);
         await load();
-        toast.success(`${r.user.displayName} is in`);
-      } else await groupsApi.decline(id, r.user.username);
+      } catch {
+        requests = [r, ...requests];
+        toast.error(`Couldn't let ${r.user.displayName} in. Try again.`);
+      }
+    };
+    toast.success(`${r.user.displayName} is in`, {
+      duration: 5000,
+      action: { label: "Undo", onClick: () => { undone = true; requests = [r, ...requests]; } },
+      onAutoClose: () => void send(),
+      onDismiss: () => void send(),
+    });
+  }
+  async function decline() {
+    const r = declining;
+    declining = null;
+    if (!r) return;
+    requests = requests.filter((x) => x.user.id !== r.user.id);
+    try {
+      await groupsApi.decline(id, r.user.username);
     } catch {
       requests = [r, ...requests];
       toast.error("Couldn't do that. Try again.");
@@ -147,17 +176,32 @@
       <h2 class="px-4 pb-1 pt-3.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Asked to join · {requests.length}</h2>
       <ul class="mb-3">
         {#each requests as r (r.user.id)}
-          <li class="flex min-h-16 items-center gap-3 border-b border-border px-4">
-            <a href="/social/{r.user.username}" class="flex min-w-0 flex-1 items-center gap-3 py-2 text-inherit no-underline">
+          <li class="flex flex-col gap-2 border-b border-border px-4 py-3">
+            <a href="/social/{r.user.username}" class="flex min-w-0 items-center gap-3 text-inherit no-underline">
               <PersonAvatar name={r.user.displayName} src={r.user.avatarUrl} size={40} />
-              <span class="flex min-w-0 flex-col"><span class="truncate text-[15px] font-medium">{r.user.displayName}</span><span class="truncate text-[12px] text-muted-foreground">@{r.user.username}{r.followedBy ? ` · followed by ${r.followedBy}` : ""}</span></span>
+              <span class="flex min-w-0 flex-col"><span class="truncate text-[15px] font-medium">{r.user.displayName}</span><span class="truncate text-[12px] text-muted-foreground">@{r.user.username} · asked {asked(r.atMs)}{r.followedBy ? ` · followed by ${r.followedBy}` : ""}</span></span>
             </a>
-            <button type="button" class="h-9 shrink-0 rounded-lg bg-primary px-3 text-[13px] font-semibold text-primary-foreground" onclick={() => answer(r, true)}>Approve</button>
-            <button type="button" class="h-9 shrink-0 rounded-lg border border-border px-3 text-[13px] font-semibold" onclick={() => answer(r, false)}>Decline</button>
+            {#if r.answers?.length}
+              <dl class="flex flex-col gap-1.5 rounded-lg bg-muted px-3 py-2.5 text-[14px]">
+                {#each r.answers as a (a.questionId)}
+                  <div><dt class="text-[12px] text-muted-foreground">{a.question}</dt><dd class="leading-snug">{a.value}</dd></div>
+                {/each}
+              </dl>
+            {/if}
+            <div class="flex gap-2">
+              <button type="button" class="h-10 flex-1 rounded-lg border border-border text-[14px] font-semibold" onclick={() => (declining = r)}>Decline</button>
+              <button type="button" class="h-10 flex-1 rounded-lg bg-primary text-[14px] font-semibold text-primary-foreground" onclick={() => approve(r)}>Approve</button>
+            </div>
           </li>
         {/each}
       </ul>
       <h2 class="px-4 pb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Members</h2>
+    {/if}
+    {#if organiser && group?.access === "Request" && !query}
+      <div class="mx-4 mb-3 flex min-h-12 items-center justify-between gap-3 rounded-xl border border-border px-3.5">
+        <span class="text-[14px]">Join questions{group.joinQuestions?.length ? ` · ${group.joinQuestions.length}` : " · none"}</span>
+        <button type="button" class="h-9 rounded-lg border border-border px-3 text-[13px] font-semibold" onclick={() => (editing = true)}>{group.joinQuestions?.length ? "Edit" : "Add"}</button>
+      </div>
     {/if}
     {#snippet person(m: GroupMember)}
         {@const mine = m.user.username === me}
@@ -188,6 +232,14 @@
   items={muteItems(muting, (m, min) => void mute(m, min))}
 />
 <ConfirmDialog
+  open={!!declining}
+  onOpenChange={(v) => { if (!v) declining = null; }}
+  title="Decline {declining?.user.displayName ?? ''}?"
+  description="They're told the organisers didn't approve their request. No reason is given, and they can ask again."
+  confirmLabel="Decline"
+  onConfirm={decline}
+/>
+<ConfirmDialog
   open={!!removing}
   onOpenChange={(v) => { if (!v) removing = null; }}
   title="Remove {removing?.user.displayName ?? ''}?"
@@ -195,4 +247,5 @@
   confirmLabel="Remove"
   onConfirm={remove}
 />
+{#if editing && group}<GroupFormSheet {group} onclose={() => (editing = false)} onsaved={(g) => (group = g)} />{/if}
 {#if inviting && group}<GroupInviteSheet groupId={group.id} name={group.name} code={group.inviteCode} onclose={() => (inviting = false)} />{/if}

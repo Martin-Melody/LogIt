@@ -341,7 +341,7 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
         NotificationType.Cheer => Kind.Cheers,
         NotificationType.GroupNote or NotificationType.GroupRequest or NotificationType.GroupApproved or NotificationType.GroupEvent
             or NotificationType.GroupEventChanged or NotificationType.GroupEventCancelled or NotificationType.GroupEventReminder
-            or NotificationType.GroupReport => Kind.Groups,
+            or NotificationType.GroupReport or NotificationType.GroupDeclined => Kind.Groups,
         _ => Kind.Coaching,
     };
 
@@ -399,6 +399,7 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
         NotificationType.GroupEventCancelled => $"cancelled {n.Event?.Title ?? "an event"}",
         NotificationType.GroupEventReminder => $"{n.Event?.Title ?? "Your event"} is tomorrow",
         NotificationType.GroupReport => n.Group is null ? "Something in your group was reported" : $"Something in {n.Group.Name} was reported",
+        NotificationType.GroupDeclined => "The organisers didn't approve your request",
         NotificationType.GroupPostReply => n.Group is null ? "replied to you in a group" : $"replied to you in {n.Group.Name}",
         _ => "sent you something",
     };
@@ -421,6 +422,7 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
         NotificationType.GroupEventCancelled => ("cancelled event", "cancelled events"),
         NotificationType.GroupEventReminder => ("event tomorrow", "events tomorrow"),
         NotificationType.GroupReport => ("report", "reports"),
+        NotificationType.GroupDeclined => ("request not approved", "requests not approved"),
         NotificationType.GroupPostReply => ("reply", "replies"),
         _ => ("coaching update", "coaching updates"),
     };
@@ -435,6 +437,10 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
         if (batch.Count == 1 && batch[0] is { Type: NotificationType.GroupReport, Group: not null } report)
             return new PushMessage(report.Group.Name, "Something was reported. Open Reports in the group's ⋯", "social",
                 new Dictionary<string, string> { ["type"] = "GroupReport", ["count"] = "1", ["notificationId"] = report.Id.ToString() });
+        // Not approved: the group's name, never which organiser (canvas K8).
+        if (batch.Count == 1 && batch[0] is { Type: NotificationType.GroupDeclined, Group: not null } declined)
+            return new PushMessage(declined.Group.Name, What(declined), "social",
+                new Dictionary<string, string> { ["type"] = "GroupDeclined", ["count"] = "1", ["notificationId"] = declined.Id.ToString() });
         if (batch.Count == 1 && batch[0] is { Event: not null, Group: not null } one)
             return new PushMessage(one.Group.Name, one.Type == NotificationType.GroupEventReminder ? What(one) : $"{NameOf(one.Actor)} {What(one)}", "social",
                 new Dictionary<string, string> { ["type"] = one.Type.ToString(), ["count"] = "1", ["notificationId"] = one.Id.ToString(), ["eventId"] = one.EventId.ToString()! });

@@ -1356,6 +1356,9 @@ namespace Logit.Api.Migrations
                         .HasMaxLength(24)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("JoinQuestionsJson")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Kind")
                         .IsRequired()
                         .HasMaxLength(16)
@@ -1537,6 +1540,9 @@ namespace Logit.Api.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AnswersJson")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")

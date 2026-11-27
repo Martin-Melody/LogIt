@@ -1,5 +1,5 @@
 <!-- New group (design canvas G6, from Messages) and Edit group (G8): name, what it is, where, an
-     optional photo, and who can find and join it (G11). Whoever makes it is its organiser. -->
+     optional photo, who can find and join it (G11), and questions for people asking (K8). Whoever makes it is its organiser. -->
 <script lang="ts">
   import { goto } from "$app/navigation";
   import { Camera, X } from "lucide-svelte";
@@ -12,6 +12,8 @@
   import { chip } from "$lib/components/ui/choice";
   import { Input } from "$lib/components/ui/input";
   import { choosePhoto } from "$lib/features/photos/photoChooser.svelte";
+  import type { AskQuestion } from "@logit/core/domain/coachRequest";
+  import JoinQuestionsEditor from "./JoinQuestionsEditor.svelte";
 
   const { group = null, onclose, onsaved }: { group?: Group | null; onclose: () => void; onsaved?: (g: Group) => void } = $props();
 
@@ -28,6 +30,13 @@
   let access = $state<GroupAccess>(group?.access ?? "InviteOnly");
   // svelte-ignore state_referenced_locally
   let saving = $state(false);
+  // Canvas K8: questions for people asking to join (only when it asks for approval).
+  // svelte-ignore state_referenced_locally
+  let questions = $state<AskQuestion[]>(group?.joinQuestions ?? []);
+  const cleanQuestions = () =>
+    questions
+      .map((q) => ({ ...q, label: q.label.trim(), options: q.kind === "choice" ? (q.options ?? []).map((o) => o.trim()).filter(Boolean) : null }))
+      .filter((q) => q.label);
   const accessOptions: { value: GroupAccess; label: string; note: string }[] = [
     { value: "InviteOnly", label: "Invite only", note: "Hidden from search. Join with the link, the QR or a member's invite" },
     { value: "Request", label: "Anyone can find it, ask to join", note: "In search; an organiser approves each request" },
@@ -45,9 +54,12 @@
     saving = true;
     try {
       const photoId = changedPhoto && photo ? (await uploadPhoto(photo)).id : undefined;
-      const saved = group
-        ? await groupsApi.edit(group.id, { name: name.trim(), kind, place: place.trim(), photoId, removePhoto: changedPhoto && !photo, access })
+      const joinQuestions = access === "Request" ? cleanQuestions() : undefined;
+      let saved = group
+        ? await groupsApi.edit(group.id, { name: name.trim(), kind, place: place.trim(), photoId, removePhoto: changedPhoto && !photo, access, joinQuestions })
         : await groupsApi.create({ name: name.trim(), kind, place: place.trim() || null, photoId, access });
+      // A new group gets its questions once it exists.
+      if (!group && joinQuestions?.length) saved = await groupsApi.edit(saved.id, { joinQuestions });
       onsaved?.(saved);
       onclose();
       if (!group) await goto(`/groups/${saved.id}`);
@@ -102,6 +114,13 @@
           </label>
         {/each}
       </RadioGroup.Root>
+      {#if access === "Request"}
+        <div class="mt-2 flex flex-col gap-2">
+          <span class="text-[13px] font-medium">Questions when someone asks (optional)</span>
+          <span class="text-[12px] leading-snug text-muted-foreground">Asked of everyone who asks to join. Only organisers and moderators see the answers.</span>
+          <JoinQuestionsEditor bind:questions />
+        </div>
+      {/if}
       <span class="text-[12px] text-muted-foreground">Invites from members always work. {access === "InviteOnly" ? "Forum posts labelled with the group stay inside it." : "Forum posts labelled with the group are public, like the rest of the Forum."}</span>
     </div>
     {#if !group}

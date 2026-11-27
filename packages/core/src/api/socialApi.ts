@@ -203,7 +203,7 @@ export type ReportReason =
   | "SexualContent" | "SelfHarm" | "Misinformation" | "Other";
 
 export type NotificationKind =
-  | "Like" | "Comment" | "Follow" | "Mention" | "Repost" | "Quote" | "FollowRequest" | "FollowAccepted" | "Reply" | "CoachInvite" | "CoachProgram" | "CoachPaymentFailed" | "Cheer" | "StoryCheer" | "GroupNote" | "GroupRequest" | "GroupApproved" | "GroupEvent" | "GroupEventChanged" | "GroupEventCancelled" | "GroupEventReminder" | "GroupReport" | "GroupPostReply";
+  | "Like" | "Comment" | "Follow" | "Mention" | "Repost" | "Quote" | "FollowRequest" | "FollowAccepted" | "Reply" | "CoachInvite" | "CoachProgram" | "CoachPaymentFailed" | "Cheer" | "StoryCheer" | "GroupNote" | "GroupRequest" | "GroupApproved" | "GroupEvent" | "GroupEventChanged" | "GroupEventCancelled" | "GroupEventReminder" | "GroupReport" | "GroupPostReply" | "GroupDeclined";
 
 export interface SocialSettings {
   isPrivate: boolean;

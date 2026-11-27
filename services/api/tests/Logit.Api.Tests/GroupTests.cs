@@ -234,10 +234,47 @@ public class GroupTests : IDisposable
             Assert.Equal(0, await db.Notifications.CountAsync(n => n.Type == NotificationType.GroupRequest)); // dealt with
         });
 
-        // Ben asks and Conor declines: nobody's told, Ben can ask again.
+        // Ben asks and Conor declines: Ben is told it wasn't approved, not by whom, and can ask again.
         (await ben.PostAsJsonAsync($"/groups/{askId}/join", new { })).EnsureSuccessStatusCode();
         (await conor.DeleteAsync($"/groups/{askId}/requests/ben")).EnsureSuccessStatusCode();
         Assert.False((await Get(ben, $"/groups/{askId}/about")).GetProperty("requested").GetBoolean());
+        await _api.WithDbAsync(async db =>
+        {
+            var declined = await db.Notifications.Include(n => n.Actor).SingleAsync(n => n.Type == NotificationType.GroupDeclined);
+            Assert.Equal("ben", declined.Actor.Username);
+        });
+    }
+
+    [Fact]
+    public async Task Join_questions_are_asked_when_asking_and_only_organisers_see_the_answers()
+    {
+        var (conor, _, _) = await _api.SignUpAsync("qconor");
+        var (ava, _, _) = await _api.SignUpAsync("qava");
+        var id = (await Json(await conor.PostAsJsonAsync("/groups", new { name = "Cork Powerlifting Club", access = "Request" }))).GetProperty("id").GetString();
+        var questions = new object[]
+        {
+            new { id = "gym", label = "Where do you train?", kind = "text", options = (string[]?)null, optional = false },
+            new { id = "comp", label = "Have you competed before?", kind = "choice", options = new[] { "Yes", "Not yet" }, optional = true },
+        };
+        var edited = await Json(await conor.PatchAsJsonAsync($"/groups/{id}", new { joinQuestions = questions }));
+        Assert.Equal(2, edited.GetProperty("joinQuestions").GetArrayLength());
+        Assert.Equal(HttpStatusCode.BadRequest, (await conor.PatchAsJsonAsync($"/groups/{id}", new { joinQuestions = new[] { new { id = "x", label = "Pick", kind = "choice", options = new[] { "One" }, optional = false } } })).StatusCode);
+
+        // Asking shows them; the required one has to be answered, and a choice has to be one of its answers.
+        Assert.Equal(2, (await Get(ava, $"/groups/{id}/about")).GetProperty("questions").GetArrayLength());
+        var missing = await ava.PostAsJsonAsync($"/groups/{id}/join", new { });
+        Assert.Equal(HttpStatusCode.BadRequest, missing.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await ava.PostAsJsonAsync($"/groups/{id}/join", new { answers = new Dictionary<string, string> { ["gym"] = "Flyefit", ["comp"] = "Maybe" } })).StatusCode);
+        Assert.Equal("requested", (await Json(await ava.PostAsJsonAsync($"/groups/{id}/join", new { answers = new Dictionary<string, string> { ["gym"] = "Flyefit Douglas", ["comp"] = "Not yet" } }))).GetProperty("status").GetString());
+
+        var request = (await Get(conor, $"/groups/{id}/requests"))[0];
+        var answers = request.GetProperty("answers");
+        Assert.Equal("Where do you train?", answers[0].GetProperty("question").GetString());
+        Assert.Equal("Flyefit Douglas", answers[0].GetProperty("value").GetString());
+
+        // Taking the questions off: asking needs no answers again.
+        await Json(await conor.PatchAsJsonAsync($"/groups/{id}", new { joinQuestions = Array.Empty<object>() }));
+        Assert.Equal(JsonValueKind.Null, (await Get(ava, $"/groups/{id}/about")).GetProperty("questions").ValueKind);
     }
 
     [Fact]

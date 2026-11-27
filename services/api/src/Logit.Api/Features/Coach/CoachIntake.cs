@@ -27,7 +27,7 @@ public static class CoachIntake
         new("food", "Do you want help with food too?", "choice", ["Yes", "No", "Not sure"], false),
     ];
 
-    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+    internal static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     public static List<Question> QuestionsOf(User coach)
     {

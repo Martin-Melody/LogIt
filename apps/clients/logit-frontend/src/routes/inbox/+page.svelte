@@ -198,7 +198,7 @@
       : t === "Quote" ? Quote
       : t === "Cheer" || t === "StoryCheer" ? ThumbsUp
       : t === "GroupNote" ? Pin
-      : t === "GroupRequest" || t === "GroupApproved" ? UsersIcon
+      : t === "GroupRequest" || t === "GroupApproved" || t === "GroupDeclined" ? UsersIcon
       : t.startsWith("GroupEvent") ? CalendarIcon
       : t === "GroupReport" ? FlagIcon
       : t === "GroupPostReply" ? MessageCircle
@@ -227,6 +227,7 @@
     if (n.type === "GroupReport") return "· something was reported. Open Reports in the group's ⋯";
     if (n.type === "GroupPostReply") return n.group ? `replied to you in ${n.group.name}` : "replied to you in a group";
     if (n.type === "GroupEventReminder") return `· ${n.event?.title ?? "Your event"} is tomorrow`;
+    if (n.type === "GroupDeclined") return "· The organisers didn't approve your request";
     return n.type === "Comment" ? "commented on your post" : "followed you";
   }
 
@@ -240,6 +241,7 @@
     if (n.type === "GroupReport") return n.group ? `/groups/${n.group.id}/reports` : "/messages";
     if (n.type === "GroupPostReply") return n.groupPostId ? `/social/forum/${n.groupPostId}` : "/messages";
     if (n.type === "GroupRequest") return n.group ? `/groups/${n.group.id}/members` : "/messages";
+    if (n.type === "GroupDeclined") return n.group ? `/groups/join?id=${n.group.id}` : "/messages";
     return n.postId ? `/social/post/${n.postId}` : `/social/${n.actor.username}`;
   }
 
@@ -348,7 +350,7 @@
               </div>
               <div class="min-w-0 flex-1">
                 <p class="text-sm leading-snug">
-                  <span class="font-semibold">{n.type === "GroupEventReminder" || n.type === "GroupReport" ? (n.group?.name ?? "Your group") : n.actor.displayName}</span>
+                  <span class="font-semibold">{n.type === "GroupEventReminder" || n.type === "GroupReport" || n.type === "GroupDeclined" ? (n.group?.name ?? "Your group") : n.actor.displayName}</span>
                   <span class="text-muted-foreground"> {verb(n)}</span>
                 </p>
                 {#if n.postBody}
