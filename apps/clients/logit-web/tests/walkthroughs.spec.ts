@@ -19,6 +19,23 @@ const PREPARE: Record<string, (page: Page) => Promise<void>> = {
     if (!(await p.locator('[data-guide="plan-save"]').isVisible())) await p.getByRole("button", { name: "+ New split" }).click();
   },
   "program.saved": (p) => p.locator('[data-guide="program-editor"] input').first().fill("Beginner full body"),
+  // An exercise's swap list shows once a program is open and an exercise picked (adding one to an empty day).
+  "swap.added": async (p) => {
+    if (!/[?&]id=/.test(p.url())) {
+      await p.locator('[data-guide="programs-library"] a, [data-guide="programs-assign"]').first().click();
+      await p.waitForURL(/[?&]id=/);
+    }
+    const editor = p.locator('[data-guide="program-editor"]');
+    await expect(editor).toBeVisible();
+    const blocks = editor.locator("ul li button.text-left");
+    if (await blocks.count()) await blocks.first().click();
+    else {
+      await editor.getByRole("button", { name: "+ Exercise" }).click();
+      await p.locator("#add-exercise").fill("Bench");
+      await p.locator("#add-exercise").press("Enter");
+      await editor.locator("ul li button.text-left").first().click();
+    }
+  },
 };
 
 /** What a person does to finish each "do" step, by the signal it waits for. */
@@ -84,6 +101,11 @@ const ACTIONS: Record<string, (page: Page) => Promise<void>> = {
     if (await niamh.count()) await niamh.first().click();
     else await p.getByRole("option").first().click();
     await dialog.getByRole("button", { name: "Assign", exact: true }).click();
+  },
+  "swap.added": async (p) => {
+    await p.locator('[data-guide="program-swaps"]').getByRole("button", { name: "+ Swap" }).click();
+    await p.locator("#add-swap").fill("Dumbbell");
+    await p.locator("#add-swap").press("Enter");
   },
   "message.sent": async (p) => {
     await p.locator('[data-guide="message-compose"] textarea').fill("How's the knee this week?");
