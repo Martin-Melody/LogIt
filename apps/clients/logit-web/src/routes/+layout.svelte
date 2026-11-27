@@ -24,6 +24,7 @@
   import AwayDialog from "$lib/features/coaching/AwayDialog.svelte";
   import SandboxBanner from "$lib/features/guide/SandboxBanner.svelte";
   import StudioNeeded from "$lib/features/onboarding/StudioNeeded.svelte";
+  import StudioEnded from "$lib/features/onboarding/StudioEnded.svelte";
   import { guide, walkthroughsFor } from "$lib/features/guide/guide.svelte";
   import { onSampleActivity, sandbox } from "$lib/features/guide/sandbox.svelte";
   import { adminState } from "$lib/features/admin/adminState.svelte";
@@ -125,6 +126,14 @@
   const isTrialCoachingAnyTier = $derived.by(() => {
     void page.url.pathname;
     return coachTrial();
+  });
+  // P9 (coach who stops): below Studio with real clients still attached, the server closes the
+  // coaching pages (403). Asked once; the page shows why instead of a raw error.
+  let studioEnded = $state(false);
+  $effect(() => {
+    // Not known to be Studio yet (the user loads after the first render): the server's answer decides.
+    if (apiClient.getUser()?.tier === "Studio" || apiClient.isSelfHosted() || !isCoachingPath(page.url.pathname, page.url.searchParams)) return;
+    void coachApi.getRoster().then(() => (studioEnded = false), (e) => (studioEnded = e instanceof Error && /requires a Studio/i.test(e.message)));
   });
   // The admin console: open to any signed-in account whatever its plan; the server decides
   // who is an admin, and the page says "not found" to everyone else.
@@ -260,7 +269,9 @@
       {/if}
       <main class="flex-1 px-4 py-6 sm:px-8 sm:py-7">
         <div class="mx-auto w-full {isAdminPath ? 'max-w-[1280px]' : 'max-w-[1120px]'}">
-          {#if isTrialCoachingAnyTier && page.url.pathname.startsWith("/coaching/links")}
+          {#if studioEnded && isCoachingPath(page.url.pathname, page.url.searchParams)}
+            <StudioEnded />
+          {:else if isTrialCoachingAnyTier && page.url.pathname.startsWith("/coaching/links")}
             <StudioNeeded what="links" />
           {:else if isTrialCoachingAnyTier && page.url.pathname.startsWith("/coaching/payments")}
             <StudioNeeded what="payments" />

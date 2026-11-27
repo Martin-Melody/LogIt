@@ -342,7 +342,8 @@ export const STUDIO_CHAPTERS: Chapter[] = [
         body: "Open the program and choose Assign…. Pick who gets it (Niamh, if you're using the sample clients; you can pick several) and when it starts: when they tap Start, or a date you choose. Someone already on a program can switch now or start this one when theirs ends. Each gets their own copy.",
       },
       {
-        id: "library", on: "web", route: "/coaching/programs", target: "programs-library", kind: "look",
+        // The tab in the route takes them back to the list from the program they just assigned.
+        id: "library", on: "web", route: "/coaching/programs?tab=programs", target: "programs-library", kind: "look",
         title: "Who uses what",
         body: "Back in Programs, each of yours shows how many clients have it. Edit the original and Save offers to update their copies too. LogIt's and the community's programs are read-only until you copy one.",
       },
@@ -452,9 +453,9 @@ export const STUDIO_CHAPTERS: Chapter[] = [
     feature: "coach-swaps",
     steps: [
       {
-        id: "default", on: "web", route: "/coaching/programs", target: "swap-default", kind: "look",
+        id: "default", on: "web", route: "/coaching/programs?tab=rules", target: "swap-default", kind: "look",
         title: "Your swap rule",
-        body: "Choose what clients may swap in your programs: any exercise, the same muscles only, or only the swaps you list under each exercise. Set it for everyone here and change it for one client on their page. A swap that isn't allowed becomes a message asking you.",
+        body: "Programs › Rules: choose what clients may swap in your programs: any exercise, the same muscles only, or only the swaps you list under each exercise. Set it for everyone here and change it for one client on their page. A swap that isn't allowed becomes a message asking you.",
       },
     ],
   },

@@ -324,3 +324,31 @@ a local self-hosted one; driven over the WebView's DevTools connection and real 
 
 Not testable here: Play Billing purchases (no Play on the emulator image), push notifications (not
 built), the music bar (needs a music app), sounds.
+
+## Round 18 — coaching overhaul: P8, P9, P10 and the walkthroughs (2026-11-27)
+
+Run on the local stack against the coaching overhaul branches (#143–#184): P8 (coach who trains,
+Studio, with sample clients) and P10 (client on a free invite, phone) through the new pages:
+Messages inbox and saved replies, Today and Your month with Edit cards, check-in review, a client's
+Overview cards and + Card, sending a month, Coaching › Plugins with a card pack and the climbing
+plugins, and the coach's phone. P9 (coach who stops: Studio → Pro with real clients attached).
+Then every web walkthrough chapter (Pro and Studio) end to end.
+
+| # | Found | Fix |
+|---|---|---|
+| 18.1 | The phone's pulls saved the time *after* each request as their next `since`, so anything the server saved during a request was skipped for good (Dara's phone never got a check-in reply or her month) | Pulls save the time from before asking (#179) |
+| 18.2 | The phone only mirrored programs and check-in forms written *on the phone*: a coach working on the web saw "isn't on a program from you" there | Read from the server (#180) |
+| 18.3 | "This block" never enabled: `programStatus` leaves `startsAtMs` null while a program runs | Block start = end less its weeks (#177) |
+| 18.4 | Your month cards re-fetched in a loop: sample activity (every few seconds) cleared the month cache | The server's month never counts samples; it isn't cleared (#178) |
+| 18.5 | A check-in reply from the review screen got a 404 and the check-in stayed open: a new parameter's default shadowed `selected` | Renamed (#183) |
+| 18.6 | P9: a coach on Pro with real clients saw "This feature requires a Studio-tier account or higher." on every coaching page | A "Coaching needs Studio" page: clients stay connected and keep what they were given, nothing deleted, Back to Studio (#184) |
+| 18.7 | Studio walkthrough failed at its start: the Practice dialog was renamed in #144 but the test still looked for the old name | Test updated (#184) |
+| 18.8 | "Give it to a client" pointed at Assign…, which only exists inside an open program; the pop-up covered the list so a person couldn't open one | The first program is marked too; opening it moves the mark to Assign… (#184) |
+| 18.9 | "Who uses what" stayed on the open program: a route without a query matches any query | Step route `?tab=programs` takes them back to the list (#184) |
+| 18.10 | "Exercise swaps" pointed at Programs, but the swap rule moved to Programs › Rules | Route `?tab=rules` (#184) |
+| 18.11 | Install dialog said a card pack "goes on your phone and here"; the phone doesn't run card packs | Says Today and Your month on the web (#181) |
+| 18.12 | Coaching › Plugins left widgets to Me, but a widget is what goes on a client's page (W9/W11) | Listed as "Client cards" (#182) |
+
+Not fixed, need server state: Mark unread, Pin and Mute for conversations; React and Delete on a
+coach's message; "Save as a saved reply" from a message. P11 (paid package) wasn't rerun: payments
+didn't change in this overhaul's last phases.

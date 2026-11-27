@@ -288,16 +288,13 @@
 
       {#if source === "yours"}
         <section data-guide="programs-library" class="flex flex-col rounded-[12px] border border-border bg-card" aria-label="Your programs">
-          {#each active as p (p.id)}
+          {#each active as p, pi (p.id)}
             {@const n = clientsOn(p.id)}
             <ActionMenu actions={rowActions(p)} label="More for {p.name}">
               {#snippet children({ props, more })}
                 <article {...props} class="flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-border px-5 py-4 first:border-t-0 data-[state=open]:bg-muted/40">
-                  <button type="button" onclick={() => select(p.id)} class="flex min-w-0 flex-[1_1_320px] flex-col gap-0.5 text-left">
-                    <span class="text-[15px] font-semibold">{p.name}</span>
-                    {#if p.origin && (p.origin.name !== p.name || p.origin.author)}<span class="text-xs text-muted-foreground">From {p.origin.kind === "logit" ? "LogIt" : "the community"}{p.origin.name !== p.name ? `: ${p.origin.name}` : ""}{p.origin.author ? ` by ${p.origin.author}` : ""}</span>{/if}
-                    <span class="text-[13px] text-muted-foreground">{P.programSummary(p)}</span>
-                  </button>
+                  <!-- The walkthrough's "Assign to a client" points at the first program first: open it, then Assign…. -->
+                  {#if pi === 0}<div data-guide="programs-assign" class="flex min-w-0 flex-[1_1_320px]">{@render openRow(p, "flex-1")}</div>{:else}{@render openRow(p, "flex-[1_1_320px]")}{/if}
                   <span class="text-[13px] tabular-nums {n ? '' : 'text-muted-foreground'}">{n} {n === 1 ? "client" : "clients"}</span>
                   {@render more()}
                 </article>
@@ -348,3 +345,11 @@
 
 <AssignProgramDialog bind:open={assignOpen} program={assignFor} onassigned={load} />
 <StartFromProgramDialog bind:open={startOpen} bind:tab={startTab} yours={active} oncopy={copyIn} />
+
+{#snippet openRow(p: CoachProgram, grow: string)}
+  <button type="button" onclick={() => select(p.id)} class="flex min-w-0 {grow} flex-col gap-0.5 text-left">
+                    <span class="text-[15px] font-semibold">{p.name}</span>
+                    {#if p.origin && (p.origin.name !== p.name || p.origin.author)}<span class="text-xs text-muted-foreground">From {p.origin.kind === "logit" ? "LogIt" : "the community"}{p.origin.name !== p.name ? `: ${p.origin.name}` : ""}{p.origin.author ? ` by ${p.origin.author}` : ""}</span>{/if}
+                    <span class="text-[13px] text-muted-foreground">{P.programSummary(p)}</span>
+  </button>
+{/snippet}

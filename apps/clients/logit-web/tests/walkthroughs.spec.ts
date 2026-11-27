@@ -63,18 +63,26 @@ const ACTIONS: Record<string, (page: Page) => Promise<void>> = {
   },
   "checkin.reviewed": async (p) => {
     await p.locator("#reply").fill("Good week. Swap squats for leg press until the knee settles.");
-    await p.getByRole("button", { name: "Send and mark reviewed" }).click();
+    // "Send and go to {next}" when more are waiting (canvas K4).
+    await p.getByRole("button", { name: /^Send and (mark reviewed|go to )/ }).click();
   },
   "program.created": (p) => p.locator('[data-guide="programs-new"]').click(),
   "program.saved": (p) => p.locator('[data-guide="program-save"]').click(),
   "program.assigned": async (p) => {
-    await p.locator('[data-guide="programs-assign"]').click();
-    const dialog = p.getByRole("dialog", { name: /Assign/ });
-    // The client picker is our own Select: open it, then pick Niamh if she's listed.
-    await dialog.getByRole("button", { name: "Client" }).click();
+    // On the list the mark is the first program: open it, then its Assign….
+    if (!/[?&]id=/.test(p.url())) {
+      await p.locator('[data-guide="programs-assign"]').first().click();
+      await p.waitForURL(/[?&]id=/);
+    }
+    await p.getByRole("button", { name: "Assign…" }).click();
+    await expect(p.getByRole("dialog", { name: /^Assign (?!to a client)/ })).toBeVisible();
+    const dialog = p.getByRole("dialog", { name: /^Assign (?!to a client)/ });
+    // "Add a client" is our own Select: open it, then pick Niamh if she's listed.
+    await dialog.getByRole("button", { name: "Add a client" }).or(dialog.getByRole("combobox", { name: "Add a client" })).first().click();
     const niamh = p.getByRole("option", { name: /Niamh/ });
+    // Niamh if she's joined by now, else whoever's first.
     if (await niamh.count()) await niamh.first().click();
-    else await p.keyboard.press("Escape");
+    else await p.getByRole("option").first().click();
     await dialog.getByRole("button", { name: "Assign", exact: true }).click();
   },
   "message.sent": async (p) => {
@@ -113,13 +121,13 @@ async function signIn(page: Page, username: string) {
 
 async function play(page: Page, chapter: Chapter) {
   await page.goto(`/?guide=${chapter.id}`);
-  const practise = page.getByRole("dialog", { name: "Practise on sample clients first?" });
+  const practise = page.getByRole("dialog", { name: "Practise on sample clients", exact: true });
   const steps = chapter.steps.filter((s) => s.on === "web");
   for (const [i, step] of steps.entries()) {
     const pop = page.getByRole("dialog", { name: step.title, exact: true });
     await expect(pop.or(practise)).toBeVisible({ timeout: 30_000 });
     if (await practise.isVisible()) {
-      await practise.getByRole("button", { name: /Add sample clients and start|Use the sample clients/ }).click();
+      await practise.getByRole("button", { name: /^Start$/ }).click();
       await expect(pop).toBeVisible({ timeout: 60_000 });
     }
     if (step.kind === "do" && PREPARE[step.signal!]) await PREPARE[step.signal!](page);
