@@ -50,6 +50,10 @@ public class User
     public string? CoachAskQuestionsJson { get; set; }
     /// "Stop these emails" in the email sent when a coach answers a request (RequestEmails).
     public bool RequestEmailsOff { get; set; }
+    /// The coach's agreement (canvas J4, K9), Markdown in their own words; new clients tick it
+    /// before taking a spot. Null: no agreement.
+    public string? CoachAgreement { get; set; }
+    public DateTime? CoachAgreementChangedAt { get; set; }
     /// Social privacy (see Features/Social/Privacy.cs). A private account's follows need its
     /// approval, and only accepted followers see its posts, profile cards and follow lists.
     public bool IsPrivate { get; set; }

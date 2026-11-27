@@ -25,6 +25,15 @@ Your request is a conversation with the coach: in **Messages › Requests › Se
   can leave the list any time.
 - **Say it's not a fit.** Nothing was shared or paid. Delete the request and your answers go.
 
+## Take the spot
+
+**Take the spot** opens a page on the web with the package, when you start and when you're first
+charged, what the coach will see (change it any time), and the coach's agreement if they wrote one:
+read it and tick that you agree. Paying needs you to be 18 or over; under 18, ask the coach to sort
+payment outside LogIt. You pay the coach on Stripe's page, then you're straight back, coached. If you
+already have a coach, taking a spot ends that coaching: a plan through LogIt stops renewing, and you
+keep that coach until the end of what you paid for.
+
 You can change your answers or withdraw while the request is open. If you don't have the app yet,
 you get an email when the coach replies (stop them from the link in the email).
 

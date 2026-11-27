@@ -40,6 +40,12 @@ public class CoachClientRelationship
     public Guid? InterestedPackageId { get; set; }
     /// When it went on the waiting list (for "Waiting since").
     public DateTime? WaitingSince { get; set; }
+    /// When the client agreed to the coach's agreement, and the words they agreed to (canvas J1, K9).
+    public DateTime? AgreedAt { get; set; }
+    public string? AgreedText { get; set; }
+    /// Coaching ends on this date: the client took a spot with another coach and keeps this one
+    /// until the end of what they paid for (one coach at a time). The payment sweep ends it.
+    public DateTime? EndsAt { get; set; }
 
     public User Coach { get; set; } = null!;
     public User Client { get; set; } = null!;

@@ -2,7 +2,7 @@ import { ApiError, apiClient, type ApiFetcher } from "./client";
 import type { SwapRule } from "../domain/swaps";
 import type { ClientPayment, LinkPackage } from "../domain/coachPayments";
 import type { CoachProfile, MyCoachProfile } from "../domain/coachProfile";
-import type { AskQuestion, CoachIntake, OfferInput, RequestAnswer, RequestOffer, RequestStage } from "../domain/coachRequest";
+import type { AskQuestion, CoachIntake, OfferCard, OfferInput, OfferState, RequestAnswer, RequestOffer, RequestStage } from "../domain/coachRequest";
 
 export interface CoachClientUser {
   id: string;
@@ -155,6 +155,22 @@ export interface MyCoachingRequest {
   /** "Expect spots" while on the waiting list. */
   expectSpots?: string | null;
   offer?: RequestOffer | null;
+}
+
+/** Taking a spot (canvas J1). */
+export interface TakeInfo {
+  offer: OfferCard;
+  state: OfferState;
+  relationshipId: string;
+  relationship: "requested" | "active" | "closed";
+  coach: CoachClientUser;
+  agreement: { text: string; changedAt: string | null } | null;
+  agreedAt: string | null;
+  sharing: Sharing;
+  paymentsReady: boolean;
+  /** "This ends coaching with Joe Burke"; paidUntil when coaching with them runs on to then. */
+  otherCoach: { name: string; paidUntil: string | null } | null;
+  isSample: boolean;
 }
 
 /** A closed request in the coach's Closed list (canvas C6). */
@@ -362,9 +378,33 @@ export function coachApiFor(api: ApiFetcher) {
       await api.fetch("/email/stop-request-emails", { method: "POST", body: JSON.stringify({ userId, token }) });
     },
 
+    /** What the take page shows (canvas J1). */
+    async takeInfo(offerId: string): Promise<TakeInfo> {
+      return api.fetch(`/coach/offers/${offerId}`);
+    },
+
     /** Take an offer with no payment through LogIt (a paid one answers 402: pay at checkout). */
-    async takeOffer(offerId: string, sharing?: Sharing): Promise<{ relationshipId: string; status: "active" }> {
-      return api.fetch(`/coach/offers/${offerId}/take`, { method: "POST", body: JSON.stringify({ sharing }) });
+    async takeOffer(offerId: string, sharing?: Sharing, agreed = false): Promise<{ relationshipId: string; status: "active" }> {
+      return api.fetch(`/coach/offers/${offerId}/take`, { method: "POST", body: JSON.stringify({ sharing, agreed }) });
+    },
+
+    /** Pay for an offer on Stripe's page; come back to successUrl with ?session_id=. */
+    async checkoutOffer(offerId: string, input: { sharing: Sharing; agreed: boolean; adult: boolean; successUrl: string; cancelUrl: string }): Promise<{ url: string }> {
+      return api.fetch(`/coach/offers/${offerId}/checkout`, { method: "POST", body: JSON.stringify(input) });
+    },
+
+    /** Back from Stripe: start coaching now rather than waiting for Stripe's webhook. */
+    async confirmOfferCheckout(offerId: string, sessionId: string): Promise<{ status: "active" | "pending"; relationshipId?: string }> {
+      return api.fetch("/coach/payments/checkout/confirm", { method: "POST", body: JSON.stringify({ offerId, sessionId }) });
+    },
+
+    /** The coach's agreement (canvas J4); null text = none. */
+    async getAgreement(): Promise<{ text: string | null; changedAt: string | null }> {
+      return api.fetch("/coach/agreement");
+    },
+
+    async saveAgreement(text: string | null): Promise<{ text: string | null; changedAt: string | null }> {
+      return api.fetch("/coach/agreement", { method: "PUT", body: JSON.stringify({ text }) });
     },
 
     async acceptRequest(relationshipId: string): Promise<void> {

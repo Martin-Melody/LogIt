@@ -131,6 +131,8 @@ public static class CoachIntake
         public const string Withdrawn = "withdrawn";
         public const string Reopened = "reopened";
         public const string Joined = "joined";
+        /// In the old coach's conversation: the client moved to another coach.
+        public const string Leaving = "leaving";
     }
 
     public record OfferCard(Guid OfferId, string PackageName, string PackageDescription, long AmountCents, string Currency,

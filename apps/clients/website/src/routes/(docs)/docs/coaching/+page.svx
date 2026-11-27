@@ -40,6 +40,10 @@ your newest invite link.
 
 <CanCant ids={["coach-profile"]} />
 
+Under **When someone becomes your client**, write your coaching agreement: people tick it before they
+take a spot, and see it as your words, not LogIt's. Make sure it matches your refund rules in
+Payments. If you change it, current clients see the new words but aren't asked to agree again.
+
 ## Your Today page
 
 <HowTo id="studio.today" />

@@ -49,7 +49,7 @@ export interface RequestOffer {
 
 /** The kinds of request steps recorded as cards in the conversation (CoachMessage.kind). */
 export type RequestEvent =
-  | "asked" | "offer" | "offer-changed" | "offer-withdrawn" | "waitlist" | "closed" | "withdrawn" | "reopened" | "joined";
+  | "asked" | "offer" | "offer-changed" | "offer-withdrawn" | "waitlist" | "closed" | "withdrawn" | "reopened" | "joined" | "leaving";
 
 export interface CoachIntake {
   spots: number | null;
@@ -145,6 +145,9 @@ export function eventLine(kind: RequestEvent, reader: "client" | "coach", coach:
       return reader === "client" ? `${c} reopened your request` : `You reopened ${p}'s request`;
     case "joined":
       return reader === "client" ? `You took the spot. ${c} is your coach now.` : `${p} took the spot. Coaching has started.`;
+    case "leaving":
+      // The coach reads the server's words, which carry the end date.
+      return reader === "client" ? `You moved to another coach. Coaching with ${c} ends when what you paid for runs out.` : "";
     default:
       return ""; // a step a newer server knows: the message's own words are shown instead
   }
@@ -159,7 +162,7 @@ export const ASK_AGAIN_TEXT = "Is the spot still free? Could you offer it again?
 
 /** Who a step reads as for this viewer: the coach sends offers and answers; the client withdraws and joins. */
 export function readerOf(kind: RequestEvent, mine: boolean): "client" | "coach" {
-  const clientSends = kind === "withdrawn" || kind === "joined" || kind === "asked";
+  const clientSends = kind === "withdrawn" || kind === "joined" || kind === "asked" || kind === "leaving";
   return clientSends === mine ? "client" : "coach";
 }
 

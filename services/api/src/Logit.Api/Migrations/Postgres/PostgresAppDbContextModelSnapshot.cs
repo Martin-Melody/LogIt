@@ -370,6 +370,12 @@ namespace Logit.Api.Migrations.Postgres
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("AgreedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("AgreedText")
+                        .HasColumnType("text");
+
                     b.Property<string>("AnswersJson")
                         .HasColumnType("text");
 
@@ -380,6 +386,9 @@ namespace Logit.Api.Migrations.Postgres
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("EndsAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid?>("InterestedPackageId")
@@ -3057,6 +3066,12 @@ namespace Logit.Api.Migrations.Postgres
 
                     b.Property<int>("CheersFrom")
                         .HasColumnType("integer");
+
+                    b.Property<string>("CoachAgreement")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("CoachAgreementChangedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CoachAskQuestionsJson")
                         .HasColumnType("text");

@@ -365,6 +365,12 @@ namespace Logit.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("AgreedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AgreedText")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("AnswersJson")
                         .HasColumnType("TEXT");
 
@@ -375,6 +381,9 @@ namespace Logit.Api.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("EndsAt")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid?>("InterestedPackageId")
@@ -3052,6 +3061,12 @@ namespace Logit.Api.Migrations
 
                     b.Property<int>("CheersFrom")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("CoachAgreement")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("CoachAgreementChangedAt")
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("CoachAskQuestionsJson")
                         .HasColumnType("TEXT");

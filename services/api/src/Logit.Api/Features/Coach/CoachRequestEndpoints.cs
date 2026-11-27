@@ -19,7 +19,12 @@ public static class CoachRequestEndpoints
     public record OfferBody(Guid? PackageId, int? HoldDays, DateTime? StartsOn, DateTime? FirstChargeOn, string? Message);
     public record NoteBody(string? Message, string? ExpectSpots = null, bool Block = false);
     public record AskBody(Dictionary<string, string>? Answers, Guid? InterestedPackageId, SharingDto? Sharing);
-    public record TakeBody(SharingDto? Sharing);
+    /// Agreed: ticked the coach's agreement (needed when they have one). Adult: 18 or over,
+    /// needed to pay (decided 26 Nov: under 18s pay another way).
+    public record TakeBody(SharingDto? Sharing, bool Agreed = false, bool Adult = false);
+    public record OfferCheckoutBody(SharingDto? Sharing, bool Agreed, bool Adult, string SuccessUrl, string CancelUrl);
+    public record AgreementBody(string? Text);
+    public const int MaxAgreement = 8000;
 
     public static void MapCoachRequestEndpoints(this IEndpointRouteBuilder app)
     {
@@ -39,7 +44,12 @@ public static class CoachRequestEndpoints
         g.MapPost("/ask/{username}", Ask);
         g.MapPost("/requests/mine/{relationshipId:guid}/withdraw", WithdrawMine);
         g.MapDelete("/requests/mine/{relationshipId:guid}", DeleteMine);
+        g.MapGet("/offers/{offerId:guid}", TakeInfo);
         g.MapPost("/offers/{offerId:guid}/take", Take);
+        g.MapPost("/offers/{offerId:guid}/checkout", Checkout);
+        // The coach's agreement (canvas J4): read by them, shown to clients in TakeInfo.
+        g.MapGet("/agreement", GetAgreement).RequireCoaching();
+        g.MapPut("/agreement", PutAgreement).RequireCoaching();
     }
 
     // ── The coach's intake settings ──────────────────────────────────────────
@@ -391,15 +401,51 @@ public static class CoachRequestEndpoints
         return Results.NoContent();
     }
 
-    /// Taking an offer with no payment through LogIt starts coaching now. A paid offer goes
-    /// through checkout instead (402 until build plan 1.5 connects it).
-    private static async Task<IResult> Take(Guid offerId, [FromBody] TakeBody body, ClaimsPrincipal caller, AppDbContext db)
+    // ── Taking the spot (canvas J1, J2, K9) ──────────────────────────────────
+
+    private static Task<CoachOffer?> MyOffer(AppDbContext db, Guid offerId, Guid me) =>
+        db.CoachOffers.Include(o => o.Relationship).ThenInclude(r => r.Client)
+            .Include(o => o.Relationship).ThenInclude(r => r.Coach)
+            .FirstOrDefaultAsync(o => o.Id == offerId && o.Relationship.ClientId == me);
+
+    /// What the take page shows: the offer, the coach's agreement, and the coaching it ends.
+    private static async Task<IResult> TakeInfo(Guid offerId, ClaimsPrincipal caller, AppDbContext db)
     {
         var me = caller.GetUserId();
         var now = DateTime.UtcNow;
-        var offer = await db.CoachOffers.Include(o => o.Relationship).ThenInclude(r => r.Client)
-            .FirstOrDefaultAsync(o => o.Id == offerId && o.Relationship.ClientId == me);
+        var offer = await MyOffer(db, offerId, me);
         if (offer is null) return Results.NotFound();
+        var rel = offer.Relationship;
+        var other = await db.CoachClientRelationships.AsNoTracking().Include(r => r.Coach).Include(r => r.Payment)
+            .Where(r => r.ClientId == me && r.CoachId != rel.CoachId && !r.Coach.IsSample
+                && (r.Status == CoachClientStatus.Active || r.Status == CoachClientStatus.Paused))
+            .FirstOrDefaultAsync();
+        var account = offer.PackageId is null ? null
+            : await db.CoachPaymentAccounts.AsNoTracking().FirstOrDefaultAsync(a => a.CoachId == rel.CoachId);
+        return Results.Ok(new
+        {
+            offer = CardOf(offer),
+            state = StateOf(offer, now),
+            relationshipId = rel.Id,
+            relationship = rel.Status == CoachClientStatus.Active ? "active" : rel.Status == CoachClientStatus.Pending ? "requested" : "closed",
+            coach = rel.Coach.ToProfileDto(false),
+            agreement = string.IsNullOrWhiteSpace(rel.Coach.CoachAgreement) ? null : new { text = rel.Coach.CoachAgreement, changedAt = rel.Coach.CoachAgreementChangedAt },
+            agreedAt = rel.AgreedAt,
+            sharing = rel.ToSharingDto(),
+            paymentsReady = account is { CardPaymentsActive: true },
+            // Canvas J1: "This ends coaching with Joe Burke" (one coach at a time).
+            otherCoach = other is null ? null : new
+            {
+                name = NameOf(other.Coach),
+                paidUntil = other.Payment is { Mode: PaymentModes.Stripe, State: PaymentStates.Paid, PaidUntil: { } u } && u > now ? u : (DateTime?)null,
+            },
+            isSample = rel.Client.IsSample,
+        });
+    }
+
+    /// Checks shared by both ways of taking: the offer is open, the agreement is ticked.
+    private static IResult? CannotTake(CoachOffer offer, bool agreed, DateTime now)
+    {
         var rel = offer.Relationship;
         if (rel.Status != CoachClientStatus.Pending) return Results.Conflict(new { error = "This request isn't open any more." });
         switch (StateOf(offer, now))
@@ -409,18 +455,122 @@ public static class CoachRequestEndpoints
             case not OfferStates.Open:
                 return Results.Json(new { error = "This offer isn't open any more.", code = "closed" }, statusCode: StatusCodes.Status410Gone);
         }
-        // A sandbox sample client never pays (as on a paid link).
-        if (offer.PackageId is not null && !rel.Client.IsSample)
+        if (!string.IsNullOrWhiteSpace(rel.Coach.CoachAgreement) && !agreed)
+            return Results.BadRequest(new { error = $"Tick that you agree to {NameOf(rel.Coach)}'s coaching agreement.", code = "agreement" });
+        return null;
+    }
+
+    private static void RecordAgreement(CoachClientRelationship rel, bool agreed, DateTime now)
+    {
+        if (!agreed || string.IsNullOrWhiteSpace(rel.Coach.CoachAgreement)) return;
+        rel.AgreedAt = now;
+        rel.AgreedText = rel.Coach.CoachAgreement;
+    }
+
+    /// Taking an offer with no payment through LogIt starts coaching now. A paid offer goes
+    /// through Checkout instead (402).
+    private static async Task<IResult> Take(Guid offerId, [FromBody] TakeBody body, ClaimsPrincipal caller, AppDbContext db,
+        Payments.CoachPaymentService payments, CancellationToken ct)
+    {
+        var me = caller.GetUserId();
+        var now = DateTime.UtcNow;
+        var offer = await MyOffer(db, offerId, me);
+        if (offer is null) return Results.NotFound();
+        var rel = offer.Relationship;
+        // A sandbox sample client never pays (as on a paid link), and agrees to anything.
+        var sample = rel.Client.IsSample;
+        if (CannotTake(offer, body.Agreed || sample, now) is { } problem) return problem;
+        if (offer.PackageId is not null && !sample)
             return Results.Json(new { error = "This offer is paid: pay to start coaching.", code = "payment_required" }, statusCode: StatusCodes.Status402PaymentRequired);
 
         offer.State = OfferStates.Taken;
         offer.ClosedAt = now;
         if (body.Sharing is { } s) rel.ApplySharing(s);
+        RecordAgreement(rel, body.Agreed, now);
         rel.Status = CoachClientStatus.Active;
         rel.RequestStage = null;
         rel.UpdatedAt = now; // "client since"
         Post(db, rel, me, Events.Joined, $"{NameOf(rel.Client)} took the spot. Coaching has started.", new { offerId = offer.Id }, null, now);
-        await db.SaveChangesAsync();
+        await payments.SwitchCoachesAsync(me, rel.CoachId, now, ct);
+        await db.SaveChangesAsync(ct);
         return Results.Ok(new { relationshipId = rel.Id, status = "active" });
+    }
+
+    /// Paying for an offer: Stripe Checkout on the coach's account, with the offer's package and
+    /// a later first charge when the offer says so. Coaching starts when Stripe says it's paid
+    /// (webhook, or the take page confirming), even if the hold ran out meanwhile.
+    private static async Task<IResult> Checkout(Guid offerId, [FromBody] OfferCheckoutBody body, ClaimsPrincipal caller,
+        AppDbContext db, Payments.ICoachStripe stripe, ILoggerFactory lf, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(body.SuccessUrl) || string.IsNullOrWhiteSpace(body.CancelUrl))
+            return Results.BadRequest(new { error = "successUrl and cancelUrl are required." });
+        var me = caller.GetUserId();
+        var now = DateTime.UtcNow;
+        var offer = await MyOffer(db, offerId, me);
+        if (offer is null) return Results.NotFound();
+        if (CannotTake(offer, body.Agreed, now) is { } problem) return problem;
+        if (offer.PackageId is null) return Results.BadRequest(new { error = "This offer has no payment: take it instead.", code = "no_payment" });
+        if (!body.Adult)
+            return Results.BadRequest(new { error = $"Paying needs you to be 18 or over. Under 18? Ask {NameOf(offer.Relationship.Coach)} to sort payment outside LogIt.", code = "adult" });
+        var rel = offer.Relationship;
+        var account = await db.CoachPaymentAccounts.AsNoTracking().FirstOrDefaultAsync(a => a.CoachId == rel.CoachId, ct);
+        if (!stripe.Configured || account is not { CardPaymentsActive: true, StripeAccountId: not null })
+            return Results.Json(new { error = $"{NameOf(rel.Coach)} can't take payments right now. Let them know.", code = "payments_not_ready" }, statusCode: StatusCodes.Status409Conflict);
+
+        if (body.Sharing is { } s) rel.ApplySharing(s);
+        RecordAgreement(rel, body.Agreed, now);
+        await db.SaveChangesAsync(ct);
+
+        var meta = new Payments.CheckoutMeta(rel.CoachId, me, null, offer.PackageId, body.Sharing ?? rel.ToSharingDto(), offer.Id);
+        var successUrl = body.SuccessUrl + (body.SuccessUrl.Contains('?') ? "&" : "?") + "session_id={CHECKOUT_SESSION_ID}";
+        var monthly = offer.Interval == PaymentIntervals.Month;
+        // The first charge: the offer's date, or its start date when coaching starts later.
+        DateTime? firstCharge = offer.FirstChargeOn ?? (offer.StartsOn is { } start && start > now ? start : null);
+        try
+        {
+            var started = await stripe.CreateCheckoutAsync(new Payments.CheckoutStartRequest(
+                account.StripeAccountId!,
+                Monthly: monthly,
+                Currency: offer.Currency,
+                AmountCents: offer.AmountCents,
+                ProductName: offer.PackageName,
+                Description: string.IsNullOrWhiteSpace(offer.PackageDescription) ? null : offer.PackageDescription,
+                CustomerEmail: string.IsNullOrWhiteSpace(rel.Client.Email) ? null : rel.Client.Email,
+                ClientReferenceId: me.ToString(),
+                Metadata: meta.ToMetadata(),
+                SuccessUrl: successUrl,
+                CancelUrl: body.CancelUrl,
+                FirstChargeAt: monthly ? firstCharge : null), ct);
+            return Results.Ok(new { url = started.Url });
+        }
+        catch (Stripe.StripeException ex)
+        {
+            lf.CreateLogger("Logit.CoachPayments").LogWarning("Checkout for offer {Offer} failed: {Reason}", offer.Id, ex.Message);
+            return Results.Json(new { error = "Couldn't start the payment. Try again in a minute.", code = "stripe_error" }, statusCode: 502);
+        }
+    }
+
+    private static async Task<IResult> GetAgreement(ClaimsPrincipal caller, AppDbContext db)
+    {
+        var me = await db.Users.FindAsync(caller.GetUserId());
+        return me is null ? Results.NotFound() : Results.Ok(new { text = me.CoachAgreement, changedAt = me.CoachAgreementChangedAt });
+    }
+
+    /// Saving it changes what new clients agree to; current clients see the new words but
+    /// aren't asked again (canvas K9).
+    private static async Task<IResult> PutAgreement([FromBody] AgreementBody body, ClaimsPrincipal caller, AppDbContext db)
+    {
+        var me = await db.Users.FindAsync(caller.GetUserId());
+        if (me is null) return Results.NotFound();
+        var text = string.IsNullOrWhiteSpace(body.Text) ? null : body.Text.Trim();
+        if (text?.Length > MaxAgreement) return Results.BadRequest(new { error = $"Keep the agreement under {MaxAgreement:N0} characters." });
+        if (text != me.CoachAgreement)
+        {
+            me.CoachAgreement = text;
+            me.CoachAgreementChangedAt = text is null ? null : DateTime.UtcNow;
+            me.UpdatedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+        }
+        return Results.Ok(new { text = me.CoachAgreement, changedAt = me.CoachAgreementChangedAt });
     }
 }

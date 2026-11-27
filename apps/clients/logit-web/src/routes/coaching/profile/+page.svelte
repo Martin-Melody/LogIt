@@ -36,6 +36,10 @@
   let form = $state<CoachProfile>({ headline: "", mode: "online", place: "", about: "", goodFor: [] });
   let custom = $state("");
   let saving = $state(false);
+  // Canvas J4: what new clients agree to before taking a spot.
+  let agreement = $state("");
+  let savedAgreement = "";
+  let agreementChanged = $state<string | null>(null);
   let error = $state<string | null>(null);
 
   onMount(async () => {
@@ -45,6 +49,9 @@
       packages = mine.packages;
       onProfile = new Set(mine.packages.filter((p) => p.showOnProfile).map((p) => p.id));
       isPublic = mine.public;
+      const a = await coachApi.getAgreement().catch(() => null);
+      agreement = savedAgreement = a?.text ?? "";
+      agreementChanged = a?.changedAt ?? null;
     } catch (e) {
       loadError = e instanceof ApiError ? e.message : "Couldn't load your profile.";
     } finally {
@@ -80,6 +87,11 @@
       const saved = await coachApi.saveCoachProfile({ ...form, place: form.place?.trim() || null }, [...onProfile]);
       isPublic = saved.public;
       packages = saved.packages;
+      if (agreement.trim() !== savedAgreement.trim()) {
+        const a = await coachApi.saveAgreement(agreement.trim() || null);
+        savedAgreement = a.text ?? "";
+        agreementChanged = a.changedAt;
+      }
       toast.success("Profile saved");
     } catch (err) {
       error = err instanceof ApiError ? err.message : "Couldn't save it. Try again.";
@@ -189,6 +201,17 @@
             <p class="text-sm text-muted-foreground">No packages yet. Your profile says "Ask {name.split(" ")[0]} about prices", and you agree them yourself.</p>
           {/if}
           <Button variant="outline" size="sm" class="self-start" href="/coaching/payments">Manage packages</Button>
+        </section>
+
+        <section class="flex flex-col gap-2 border-t border-border pt-6" aria-labelledby="agreement-title">
+          <h2 id="agreement-title" class="text-base font-semibold">When someone becomes your client</h2>
+          <Label for="agreement">Coaching agreement <span class="font-normal text-muted-foreground">optional</span></Label>
+          <p class="text-xs text-muted-foreground">They tick it before taking a spot. Your words, shown as yours: LogIt doesn't check them, so make sure they match your refund rules in Payments.</p>
+          <RichTextEditor bind:value={agreement} label="Coaching agreement" maxlength={8000}
+            placeholder={"1. Check in every Sunday.\n2. Tell me about any pain or injury before training through it.\n3. Cancel any time; you keep coaching until the end of the month you paid for."} />
+          <p class="text-xs text-muted-foreground">
+            {agreementChanged ? `Last changed ${new Date(agreementChanged).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}. ` : ""}If you change it, current clients see the new words but aren't asked to agree again.
+          </p>
         </section>
 
         {#if error}<Alert.Root variant="destructive"><Alert.Description>{error}</Alert.Description></Alert.Root>{/if}

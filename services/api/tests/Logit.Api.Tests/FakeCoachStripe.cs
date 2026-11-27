@@ -19,8 +19,22 @@ public sealed class FakeCoachStripe : ICoachStripe
     public Task<string> CreateAccountAsync(string email, string displayName, string country, CancellationToken ct) => Task.FromResult("acct_new");
     public Task<string> OnboardingLinkAsync(string accountId, string returnUrl, string refreshUrl, CancellationToken ct) => Task.FromResult("https://connect.stripe.test");
     public Task<ConnectAccountStatus> GetAccountAsync(string accountId, CancellationToken ct) => Task.FromResult(new ConnectAccountStatus(true, false, "Coach", "eur"));
-    public Task<CheckoutStart> CreateCheckoutAsync(CheckoutStartRequest req, CancellationToken ct) => Task.FromResult(new CheckoutStart("cs_new", "https://checkout.stripe.test"));
-    public Task<CheckoutInfo> GetCheckoutAsync(string accountId, string sessionId, CancellationToken ct) => throw new NotSupportedException();
+    /// Every checkout asked for; GetCheckoutAsync reports the last one, paid while CheckoutPaid.
+    public List<CheckoutStartRequest> Checkouts { get; } = [];
+    public bool CheckoutPaid { get; set; } = true;
+
+    public Task<CheckoutStart> CreateCheckoutAsync(CheckoutStartRequest req, CancellationToken ct)
+    {
+        Checkouts.Add(req);
+        return Task.FromResult(new CheckoutStart("cs_new", "https://checkout.stripe.test"));
+    }
+
+    public Task<CheckoutInfo> GetCheckoutAsync(string accountId, string sessionId, CancellationToken ct)
+    {
+        var last = Checkouts.LastOrDefault() ?? throw new NotSupportedException();
+        return Task.FromResult(new CheckoutInfo(sessionId, CheckoutPaid, last.Monthly ? "sub_" + sessionId : null, "cus_1",
+            last.FirstChargeAt is null ? last.AmountCents : 0, last.Currency, last.Metadata));
+    }
     public Task<StripeSubscriptionInfo> GetSubscriptionAsync(string accountId, string subscriptionId, CancellationToken ct) =>
         Task.FromResult(new StripeSubscriptionInfo(subscriptionId, SubscriptionStatus, false, null));
     public Task<string> CreateBillingPortalAsync(string accountId, string customerId, string returnUrl, CancellationToken ct) =>

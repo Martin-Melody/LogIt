@@ -39,7 +39,10 @@ public record CheckoutStartRequest(
     string ClientReferenceId,
     Dictionary<string, string> Metadata,
     string SuccessUrl,
-    string CancelUrl);
+    string CancelUrl,
+    // Monthly only: no charge until this date (a later first charge, canvas C2). Stripe needs it
+    // at least two days ahead; nearer dates charge now.
+    DateTime? FirstChargeAt = null);
 
 public record CheckoutStart(string SessionId, string Url);
 
@@ -167,7 +170,11 @@ public class CoachStripe(IConfiguration config) : ICoachStripe
             AllowPromotionCodes = true,
         };
         if (req.Monthly)
-            options.SubscriptionData = new SessionSubscriptionDataOptions { Metadata = req.Metadata };
+            options.SubscriptionData = new SessionSubscriptionDataOptions
+            {
+                Metadata = req.Metadata,
+                TrialEnd = req.FirstChargeAt is { } at && at > DateTime.UtcNow.AddDays(2) ? at : null,
+            };
         else
         {
             options.PaymentIntentData = new SessionPaymentIntentDataOptions { Metadata = req.Metadata };

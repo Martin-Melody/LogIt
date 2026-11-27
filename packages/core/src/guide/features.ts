@@ -346,7 +346,7 @@ export const FEATURES: Feature[] = [
     section: "Having a coach",
     plan: "Free",
     summary: "Ask a coach to coach you, talk it over, choose what they see, and send check-ins.",
-    web: ["/my-coach", "/my-coach/checkin/[scheduleId]", "/my-coach/checkins", "/my-coach/checkins/[submissionId]", "/c/[code]", "/ask/[username]", "/stop-emails"],
+    web: ["/my-coach", "/my-coach/checkin/[scheduleId]", "/my-coach/checkins", "/my-coach/checkins/[submissionId]", "/c/[code]", "/ask/[username]", "/stop-emails", "/take/[offerId]"],
     phone: ["/checkins", "/checkins/[scheduleId]", "/checkins/sent/[submissionId]", "/messages/request/[relationshipId]"],
     whereWeb: "Coach › My coach",
     wherePhone: "Settings › Account › Coaching, and Splits › From your coach",

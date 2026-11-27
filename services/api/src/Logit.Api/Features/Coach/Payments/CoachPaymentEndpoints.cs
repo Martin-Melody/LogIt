@@ -566,11 +566,19 @@ public static class CoachPaymentEndpoints
         [FromBody] ConfirmCheckoutRequest req, ClaimsPrincipal caller, AppDbContext db, ICoachStripe stripe,
         CoachPaymentService payments, TimeProvider clock, ILoggerFactory lf, CancellationToken ct)
     {
-        var normalized = Registration.Normalize(req.Code ?? "");
-        var link = normalized is null ? null : await db.CoachInviteLinks.AsNoTracking()
-            .FirstOrDefaultAsync(l => l.Code == normalized, ct);
-        if (link is null || string.IsNullOrWhiteSpace(req.SessionId)) return Results.NotFound();
-        var account = await db.CoachPaymentAccounts.AsNoTracking().FirstOrDefaultAsync(a => a.CoachId == link.CoachId, ct);
+        // Paid through a link (its code) or for an offer (canvas J1).
+        Guid? coachId = null;
+        if (req.OfferId is { } offerId)
+            coachId = await db.CoachOffers.Where(o => o.Id == offerId && o.Relationship.ClientId == caller.GetUserId())
+                .Select(o => (Guid?)o.Relationship.CoachId).FirstOrDefaultAsync(ct);
+        else
+        {
+            var normalized = Registration.Normalize(req.Code ?? "");
+            coachId = normalized is null ? null : await db.CoachInviteLinks.AsNoTracking()
+                .Where(l => l.Code == normalized).Select(l => (Guid?)l.CoachId).FirstOrDefaultAsync(ct);
+        }
+        if (coachId is null || string.IsNullOrWhiteSpace(req.SessionId)) return Results.NotFound();
+        var account = await db.CoachPaymentAccounts.AsNoTracking().FirstOrDefaultAsync(a => a.CoachId == coachId, ct);
         if (account?.StripeAccountId is null || !stripe.Configured) return Results.NotFound();
 
         CheckoutInfo info;
@@ -648,4 +656,4 @@ public record ClientRuleRequest(string? Rule, int? Days);
 public record PaidElsewhereRequest(DateOnly? Until);
 public record StopRequest(bool Stop);
 public record StartCheckoutRequest(SharingDto? Sharing, string SuccessUrl, string CancelUrl);
-public record ConfirmCheckoutRequest(string? Code, string SessionId);
+public record ConfirmCheckoutRequest(string? Code, string SessionId, Guid? OfferId = null);

@@ -7,7 +7,7 @@ namespace Logit.Api.Features.Coach.Payments;
 
 /// What a checkout carries in its metadata, so the webhook (or the success page) can start
 /// coaching without anything stored before the client paid.
-public record CheckoutMeta(Guid CoachId, Guid ClientId, Guid? LinkId, Guid? PackageId, SharingDto Sharing)
+public record CheckoutMeta(Guid CoachId, Guid ClientId, Guid? LinkId, Guid? PackageId, SharingDto Sharing, Guid? OfferId = null)
 {
     public Dictionary<string, string> ToMetadata() => new()
     {
@@ -15,6 +15,8 @@ public record CheckoutMeta(Guid CoachId, Guid ClientId, Guid? LinkId, Guid? Pack
         ["logit_client"] = ClientId.ToString(),
         ["logit_link"] = LinkId?.ToString() ?? "",
         ["logit_package"] = PackageId?.ToString() ?? "",
+        // Paying for a coach's offer (canvas J1): taking it is what the payment does.
+        ["logit_offer"] = OfferId?.ToString() ?? "",
         // One character per area, in SharingDto order.
         ["logit_share"] = string.Concat(new[] { Sharing.Workouts, Sharing.Nutrition, Sharing.Bodyweight, Sharing.Habits, Sharing.Checkins }
             .Select(b => b ? '1' : '0')),
@@ -26,9 +28,10 @@ public record CheckoutMeta(Guid CoachId, Guid ClientId, Guid? LinkId, Guid? Pack
         if (!m.TryGetValue("logit_client", out var k) || !Guid.TryParse(k, out var clientId)) return null;
         Guid? link = m.TryGetValue("logit_link", out var l) && Guid.TryParse(l, out var lid) ? lid : null;
         Guid? package = m.TryGetValue("logit_package", out var p) && Guid.TryParse(p, out var pid) ? pid : null;
+        Guid? offer = m.TryGetValue("logit_offer", out var o) && Guid.TryParse(o, out var oid) ? oid : null;
         var s = m.TryGetValue("logit_share", out var share) && share.Length == 5 ? share : "11111";
         return new CheckoutMeta(coachId, clientId, link, package,
-            new SharingDto(s[0] == '1', s[1] == '1', s[2] == '1', s[3] == '1', s[4] == '1'));
+            new SharingDto(s[0] == '1', s[1] == '1', s[2] == '1', s[3] == '1', s[4] == '1'), offer);
     }
 }
 
@@ -145,6 +148,23 @@ public class CoachPaymentService(
             await AddReceipt(meta.CoachId, rel.Id, info.SessionId, info.AmountTotal, info.Currency, now, ct);
         }
 
+        if (meta.OfferId is { } offerId)
+        {
+            // Paying took the spot, even if the offer ran out meanwhile (canvas C2: a little late
+            // is still hers). The request becomes coaching; other coaches end (one at a time).
+            var offer = await db.CoachOffers.FirstOrDefaultAsync(o => o.Id == offerId && o.RelationshipId == rel.Id, ct);
+            if (offer is not null && offer.State != OfferStates.Taken)
+            {
+                offer.State = OfferStates.Taken;
+                offer.ClosedAt = now;
+                rel.RequestStage = null;
+                var client = await db.Users.FirstAsync(u => u.Id == meta.ClientId, ct);
+                CoachIntake.Post(db, rel, meta.ClientId, CoachIntake.Events.Joined,
+                    $"{CoachIntake.NameOf(client)} paid and took the spot. Coaching has started.", new { offerId }, null, now);
+            }
+            await SwitchCoachesAsync(meta.ClientId, meta.CoachId, now, ct);
+        }
+
         await db.SaveChangesAsync(ct);
         log.LogInformation("Coach {CoachId} got a paid client {ClientId} ({Interval})", meta.CoachId, meta.ClientId, payment.Interval);
         await EmailCoachPaid(account, rel, payment, meta.LinkId, ct);
@@ -249,12 +269,64 @@ public class CoachPaymentService(
         await db.SaveChangesAsync(ct);
     }
 
+    // ── One coach at a time ──────────────────────────────────────────────────
+
+    /// Taking a spot with `newCoachId` ends coaching with anyone else (canvas J1). A plan paid
+    /// through LogIt stops renewing and coaching runs to the end of what was paid; otherwise it
+    /// ends now. Each old coach is told in their conversation. The caller saves.
+    public async Task SwitchCoachesAsync(Guid clientId, Guid newCoachId, DateTime now, CancellationToken ct)
+    {
+        var client = await db.Users.FirstAsync(u => u.Id == clientId, ct);
+        if (client.IsSample) return;
+        var others = await db.CoachClientRelationships.Include(r => r.Payment).Include(r => r.Coach)
+            .Where(r => r.ClientId == clientId && r.CoachId != newCoachId && !r.Coach.IsSample
+                && (r.Status == CoachClientStatus.Active || r.Status == CoachClientStatus.Paused))
+            .ToListAsync(ct);
+        foreach (var rel in others)
+        {
+            if (rel.Payment is { Mode: PaymentModes.Stripe, State: PaymentStates.Paid, PaidUntil: { } until } && until > now)
+            {
+                await SetStopAtPeriodEndAsync(rel, true, now, ct);
+                rel.EndsAt = until;
+                CoachIntake.Post(db, rel, clientId, CoachIntake.Events.Leaving,
+                    $"{CoachIntake.NameOf(client)} is moving to another coach. Their plan stops renewing, and coaching ends on {until:ddd d MMM}.",
+                    new { endsOnMs = CoachIntake.Ms(until) }, null, now);
+            }
+            else
+            {
+                await StopForEndAsync(rel, RefundRule.None, false, now, ct);
+                rel.Status = CoachClientStatus.Revoked;
+                rel.UpdatedAt = now;
+                CoachIntake.Post(db, rel, clientId, CoachIntake.Events.Leaving,
+                    $"{CoachIntake.NameOf(client)} moved to another coach, so coaching has ended.", null, null, now);
+            }
+        }
+    }
+
+    /// Coaching that was set to end on a date (the client moved to another coach) ends then.
+    private async Task EndScheduledAsync(DateTime now, CancellationToken ct)
+    {
+        var due = await db.CoachClientRelationships.Include(r => r.Payment)
+            .Where(r => r.EndsAt != null && r.EndsAt <= now
+                && (r.Status == CoachClientStatus.Active || r.Status == CoachClientStatus.Paused))
+            .ToListAsync(ct);
+        foreach (var rel in due)
+        {
+            await StopForEndAsync(rel, RefundRule.None, false, now, ct);
+            rel.Status = CoachClientStatus.Revoked;
+            rel.UpdatedAt = now;
+            log.LogInformation("Coaching {RelationshipId} ended on its date (client moved coach)", rel.Id);
+        }
+        if (due.Count > 0) await db.SaveChangesAsync(ct);
+    }
+
     // ── The coach's rule, applied over time ──────────────────────────────────
 
     /// Run hourly: one-off packages that ran out, plans stopped at month end, and the coach's
     /// rule (pause or end coaching N days after a client stopped being paid up).
     public async Task SweepAsync(DateTime now, CancellationToken ct)
     {
+        await EndScheduledAsync(now, ct);
         var rows = await db.CoachClientPayments
             .Include(p => p.Relationship)
             .Where(p => p.Relationship.Status == CoachClientStatus.Active

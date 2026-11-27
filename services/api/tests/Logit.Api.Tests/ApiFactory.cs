@@ -116,6 +116,13 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
         await work(scope.ServiceProvider.GetRequiredService<AppDbContext>());
     }
 
+    /// Run something with the app's services in a scope (a service's own method, in a test).
+    public async Task WithServicesAsync(Func<IServiceProvider, Task> work)
+    {
+        using var scope = Services.CreateScope();
+        await work(scope.ServiceProvider);
+    }
+
     public async Task<T> WithDbAsync<T>(Func<AppDbContext, Task<T>> work)
     {
         using var scope = Services.CreateScope();

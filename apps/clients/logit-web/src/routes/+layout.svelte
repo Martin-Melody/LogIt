@@ -82,7 +82,7 @@
   // and any account can use it (a Free account can be coached). The "update your card" link
   // from a failed-payment email opens signed out too. Both are pages of their own, no sidebar.
   // Invite links and asking from a profile: their own pages, signed in or not.
-  const isInviteLink = $derived(page.url.pathname.startsWith("/c/") || page.url.pathname.startsWith("/ask/") || page.url.pathname === "/stop-emails");
+  const isInviteLink = $derived(page.url.pathname.startsWith("/c/") || page.url.pathname.startsWith("/ask/") || page.url.pathname.startsWith("/take/") || page.url.pathname === "/stop-emails");
   const isPayFix = $derived(page.url.pathname.startsWith("/pay/fix/"));
   // A Free account on the hosted server can still reach these: the "plans are in the app"
   // page, and Account (password, deleting the account, which the store listing promises can
@@ -130,7 +130,8 @@
 
   async function guardRoute() {
     if (!apiClient.isAuthenticated()) {
-      if (isInviteLink || isPayFix) return;
+      // Taking a spot is your own offer: sign in first, then back to it.
+      if ((isInviteLink && !page.url.pathname.startsWith("/take/")) || isPayFix) return;
       // Come back to where you were going after signing in: an invite link, or a docs page's
       // "Show me in the app" (/?guide=<chapter>), or any other page.
       const here = page.url.pathname + page.url.search;
