@@ -219,6 +219,8 @@ public class GroupTests : IDisposable
         Assert.Equal("member", (await Json(await ava.PostAsJsonAsync($"/groups/{openId}/join", new { }))).GetProperty("status").GetString());
         Assert.Equal("requested", (await Json(await ava.PostAsJsonAsync($"/groups/{askId}/join", new { onBoard = false }))).GetProperty("status").GetString());
         Assert.True((await Get(ava, $"/groups/{askId}/about")).GetProperty("requested").GetBoolean());
+        // Her Sent list (canvas R4) has it until an organiser answers.
+        Assert.Equal(askId, (await Get(ava, "/groups/requests/mine")).GetProperty("requests")[0].GetProperty("groupId").GetString());
         Assert.Equal(HttpStatusCode.NotFound, (await ava.GetAsync($"/groups/{askId}")).StatusCode);
         Assert.Equal(1, (await Get(conor, $"/groups/{askId}")).GetProperty("requests").GetInt32());
         Assert.Equal(HttpStatusCode.NotFound, (await ben.GetAsync($"/groups/{askId}/requests")).StatusCode); // not a member

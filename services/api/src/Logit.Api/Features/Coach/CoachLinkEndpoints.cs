@@ -170,6 +170,12 @@ public static class CoachLinkEndpoints
             // "none", "invited" (the coach already invited you), "requested" or "active".
             relationship = RelationshipState(existing),
             relationshipId = existing is { Status: not CoachClientStatus.Revoked } ? existing.Id : (Guid?)null,
+            // Asking through a free link answers the coach's questions (canvas P2, R1).
+            questions = CoachIntake.QuestionsOf(link.Coach),
+            spots = await CoachIntake.SpotsAsync(db, link.Coach, DateTime.UtcNow),
+            stage = existing is { Status: CoachClientStatus.Pending, RequestedByClient: true } ? existing.RequestStage ?? RequestStages.Asked : null,
+            coachedSince = existing is { Status: CoachClientStatus.Active or CoachClientStatus.Paused } ? existing.UpdatedAt : (DateTime?)null,
+            otherCoach = me is { } id ? await CoachIntake.OtherCoachAsync(db, id, link.CoachId) : null,
         });
     }
 

@@ -29,7 +29,9 @@ public static class CoachProfileEndpoints
     /// first), else the newest paid one (AskPays: pay and start); null when there's no live link.
     public record CoachingSectionDto(
         string Headline, string Mode, string? Place, string About, List<string> GoodFor,
-        List<PublicPackageDto> Packages, string? AskCode, bool AskPays);
+        List<PublicPackageDto> Packages, string? AskCode, bool AskPays,
+        // Canvas A4: the client limit is reached; "waitlist" asks onto the waiting list, "stop" turns the button off.
+        bool Full = false, string WhenFull = "waitlist", string? ExpectSpots = null);
 
     public const int MaxHeadline = 120, MaxPlace = 80, MaxAbout = 4000, MaxGoodFor = 6, MaxTag = 24;
     public static readonly string[] Modes = ["online", "inperson", "both"];
@@ -66,7 +68,9 @@ public static class CoachProfileEndpoints
             .OrderBy(l => l.PackageId != null).ThenByDescending(l => l.CreatedAt)
             .Select(l => new { l.Code, Pays = l.PackageId != null })
             .FirstOrDefaultAsync();
-        return new CoachingSectionDto(p.Headline, p.Mode, p.Place, p.About, p.GoodFor, packages, ask?.Code, ask?.Pays ?? false);
+        var spots = await CoachIntake.SpotsAsync(db, u, now);
+        return new CoachingSectionDto(p.Headline, p.Mode, p.Place, p.About, p.GoodFor, packages, ask?.Code, ask?.Pays ?? false,
+            spots.Full, spots.WhenFull, spots.ExpectSpots);
     }
 
     private static async Task<IResult> Get(ClaimsPrincipal caller, AppDbContext db, IConfiguration config)

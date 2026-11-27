@@ -3142,6 +3142,9 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<string>("PublicProfileJson")
                         .HasColumnType("text");
 
+                    b.Property<bool>("RequestEmailsOff")
+                        .HasColumnType("boolean");
+
                     b.Property<Guid?>("SampleOwnerId")
                         .HasColumnType("uuid");
 

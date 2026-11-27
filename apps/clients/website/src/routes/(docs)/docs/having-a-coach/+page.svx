@@ -10,11 +10,26 @@ title: Having a coach
 
 <FeatureFacts id="my-coach" />
 
-## Join a coach
+## Ask a coach
 
-Your coach sends you a link (or invites you by username). Open it, choose what they may see, and send
-the request. Nothing is shared until they accept. Some coaches charge through their link: you pay on
-the link's page before coaching starts.
+Tap **Ask to be coached** on a coach's profile, or open the link they shared. You answer a few
+questions (what you want, how long you've trained, any injuries…) and pick the package you're
+interested in. Only the coach sees your answers, and nothing else is shared.
+
+Your request is a conversation with the coach: in **Messages › Requests › Sent** on the phone, or
+**My coach** on the web. They might ask you something first, then:
+
+- **Offer you a spot.** The offer shows as a card with the package, the price and how long they're
+  holding the spot. Take it before then, or ask them to offer it again if it runs out.
+- **Put you on their waiting list** when they're full. They offer you a spot when one opens; you
+  can leave the list any time.
+- **Say it's not a fit.** Nothing was shared or paid. Delete the request and your answers go.
+
+You can change your answers or withdraw while the request is open. If you don't have the app yet,
+you get an email when the coach replies (stop them from the link in the email).
+
+If a coach invited you by username, accept it in My coach. Some coaches charge through their link:
+you pay on the link's page before coaching starts.
 
 <HowTo id="pro.coach" />
 

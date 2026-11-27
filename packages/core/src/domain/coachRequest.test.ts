@@ -37,3 +37,25 @@ describe("requests", () => {
     expect(clientCan("notafit", null, now)).toMatchObject({ delete: true, reply: false, take: false });
   });
 });
+
+describe("eventLine", () => {
+  it("says each step for whoever reads it", async () => {
+    const { eventLine } = await import("./coachRequest");
+    expect(eventLine("offer", "client", "Sam Rowe", "Aoife Byrne")).toBe("Sam offered you a spot");
+    expect(eventLine("offer", "coach", "Sam Rowe", "Aoife Byrne")).toBe("You offered Aoife a spot");
+    expect(eventLine("waitlist", "client", "Sam Rowe", "Aoife")).toBe("You're on Sam's waiting list");
+    expect(eventLine("withdrawn", "coach", "Sam", "Aoife")).toBe("Aoife withdrew their request");
+  });
+});
+
+describe("sentLine", () => {
+  it("says where a sent request stands", async () => {
+    const { sentLine } = await import("./coachRequest");
+    const now = Date.UTC(2026, 11, 1, 12);
+    expect(sentLine({ requestedAt: "2026-11-28T10:00:00Z" }, now)).toBe("Request sent 3 days ago");
+    expect(sentLine({ stage: "waiting", requestedAt: "2026-11-12T10:00:00Z", waitingSince: "2026-11-12T10:00:00Z", expectSpots: "January" }, now))
+      .toBe("Waiting list since 12 Nov · spots in January");
+    expect(sentLine({ stage: "offered", requestedAt: "2026-11-30T10:00:00Z", offer: offer("open") }, now)).toMatch(/^Offer to look at · held until /);
+    expect(sentLine({ stage: "notafit", requestedAt: "2026-11-30T10:00:00Z", closed: true }, now)).toBe("Closed");
+  });
+});

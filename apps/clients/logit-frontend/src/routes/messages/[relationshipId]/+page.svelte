@@ -23,6 +23,7 @@
   import { StagedPhoto } from "$lib/features/chat/stagedPhoto.svelte";
   import { back } from "$lib/navigation";
   import type { CoachMessage } from "@logit/core/domain/CoachMessage";
+  import { eventLine, readerOf, type RequestEvent } from "@logit/core/domain/coachRequest";
   import { getMessagesRepo } from "$lib/data/repoProvider";
   import { pullAndMergeMessages, markThreadRead } from "$lib/sync/syncService";
   import { sendMessage } from "$lib/usecases/messages/sendMessage";
@@ -100,12 +101,14 @@
 
   // Runs of messages from one side (shadcn Message): joined corners, one time under the run.
   const runs = $derived.by(() => {
-    const out: { key: string; mine: boolean; time: boolean; items: CoachMessage[] }[] = [];
+    const out: { key: string; mine: boolean; time: boolean; event: boolean; items: CoachMessage[] }[] = [];
     messages.forEach((m, i) => {
       const time = i === 0 || m.createdAtMs - messages[i - 1]!.createdAtMs > 3_600_000;
+      // A step from before coaching started (an offer, the waiting list…): a line of its own.
+      const event = !!m.kind;
       const prev = out.at(-1);
-      if (prev && !time && prev.mine === m.mine) prev.items.push(m);
-      else out.push({ key: m.id, mine: m.mine, time, items: [m] });
+      if (prev && !time && !event && !prev.event && prev.mine === m.mine) prev.items.push(m);
+      else out.push({ key: m.id, mine: m.mine, time, event, items: [m] });
     });
     return out;
   });
@@ -139,6 +142,10 @@
       {#each runs as run (run.key)}
         {@const last = run.items.at(-1)!}
         {#if run.time}<p class="py-2 text-center text-[12px] text-muted-foreground">{fmt(run.items[0]!.createdAtMs)}</p>{/if}
+        {#if run.event}
+          {@const k = last.kind as RequestEvent}
+          <p class="px-6 py-1 text-center text-[13px] leading-snug text-muted-foreground">{eventLine(k, readerOf(k, last.mine), name, name) || last.body}</p>
+        {:else}
         <Message.Root align={run.mine ? "end" : "start"} class="shrink-0 text-[15px]">
           <Message.Content class="gap-1">
             {#each run.items as m, k (m.id)}
@@ -168,6 +175,7 @@
             <Message.Footer class="px-1 text-[12px] font-normal">{new Date(last.createdAtMs).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}{#if run.items.some((m) => m.mine && !m.synced)} · sending…{/if}</Message.Footer>
           </Message.Content>
         </Message.Root>
+        {/if}
       {/each}
     {/if}
   </div>

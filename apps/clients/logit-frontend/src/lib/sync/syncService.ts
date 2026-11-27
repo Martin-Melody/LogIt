@@ -717,6 +717,7 @@ export async function pullAndMergeMessages(): Promise<boolean> {
         ...(m.photoUrl ? { photo: { url: m.photoUrl, width: m.photoWidth ?? 0, height: m.photoHeight ?? 0 } } : {}),
         ...(m.voiceUrl ? { voice: { url: m.voiceUrl, ms: m.voiceMs ?? 0, peaks: m.voicePeaks ?? "" } } : {}),
         reaction: m.reaction ?? null,
+        ...(m.kind ? { kind: m.kind } : {}),
       });
     }
     setTimestamp(MESSAGES_LAST_PULLED_KEY, Date.now());

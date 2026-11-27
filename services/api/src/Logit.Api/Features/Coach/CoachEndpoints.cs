@@ -932,7 +932,9 @@ public static class CoachEndpoints
     private static async Task<IResult> SendMessage(
         [FromBody] SendMessageRequest req,
         ClaimsPrincipal caller,
-        AppDbContext db)
+        AppDbContext db,
+        Logit.Api.Features.Email.IEmailSender email,
+        IConfiguration config)
     {
         var callerId = caller.GetUserId();
         if (string.IsNullOrWhiteSpace(req.MessageId))
@@ -973,6 +975,9 @@ public static class CoachEndpoints
         };
         db.CoachMessages.Add(message);
         await db.SaveChangesAsync();
+        // A coach answering a request: an email if they don't have the app yet (canvas R7).
+        if (relationship.Status == CoachClientStatus.Pending && relationship.CoachId == callerId)
+            await RequestEmails.MaybeSendAsync(db, email, config, relationship.Id, null, message.Id);
 
         return Results.Ok(new { id = message.Id, messageId = message.MessageId });
     }

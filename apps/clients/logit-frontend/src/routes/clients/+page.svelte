@@ -22,6 +22,7 @@
   import { Button } from "$lib/components/ui/button";
   import LockCard from "$lib/components/billing/LockCard.svelte";
   import { authStore } from "$lib/api/authStore.svelte";
+  import { sentLine } from "@logit/core/domain/coachRequest";
   import { coachPaymentsApi } from "@logit/core/api/coachPaymentsApi";
   import { clientPaymentNote } from "@logit/core/domain/coachPayments";
 
@@ -246,13 +247,19 @@
             </li>
           {/each}
           {#each requests as r (r.relationshipId)}
-            <li class="flex items-center justify-between px-3 py-2.5 text-sm">
-              <span><span>{r.coach.displayName || r.coach.username}</span><span class="block text-xs text-muted-foreground">Waiting for them to accept</span></span>
-              <Button size="sm" variant="outline" disabled={ui.busyId === r.relationshipId}
-                onclick={() => act(r.relationshipId, () => coachApi.revokeRelationship(r.relationshipId))}>Cancel</Button>
+            {@const name = r.coach.displayName || r.coach.username}
+            <!-- R5: a request is its conversation, where it can be withdrawn. -->
+            <li>
+              <a href="/messages/request/{r.relationshipId}?name={encodeURIComponent(name)}" class="flex min-h-14 items-center justify-between gap-2 px-3 py-2.5 text-sm text-inherit no-underline hover:bg-muted/40">
+                <span><span class="font-medium">{name}</span><span class="block text-xs text-muted-foreground">Coach request · {sentLine(r, Date.now())}</span></span>
+                <span class="text-muted-foreground">›</span>
+              </a>
             </li>
           {/each}
         </ul>
+        {#if coaches.length > 0 && requests.length > 0}
+          <p class="px-3 pb-3 text-xs text-muted-foreground">{coaches[0]!.coach.displayName || coaches[0]!.coach.username} can't see your {requests.length === 1 ? "request" : "requests"}.</p>
+        {/if}
       </div>
     {/if}
 

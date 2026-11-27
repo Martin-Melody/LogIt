@@ -199,7 +199,7 @@
       <!-- Canvas P1: the Coaching section, the same as on getlogit.app and the phone. -->
       <section class="rounded-[10px] border border-border bg-card p-4">
         <CoachingSection section={profile.coaching} name={profile.displayName}
-          askHref={profile.coaching.askCode && !profile.isSelf ? `/c/${profile.coaching.askCode}` : null}
+          askHref={profile.isSelf ? null : `/ask/${encodeURIComponent(profile.username)}`}
           mentionHref={(u) => `/social/${u}`} tagHref={(t) => `/social/tag/${encodeURIComponent(t)}`} />
         {#if profile.isSelf}<Button variant="outline" size="sm" class="mt-3" href="/coaching/profile">Edit your coaching profile</Button>{/if}
       </section>

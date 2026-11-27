@@ -23,8 +23,28 @@ export interface PublicPackage {
  * `askPays`: that link takes payment and starts coaching straight away. */
 export interface CoachingSection extends CoachProfile {
   packages: PublicPackage[];
+  /** Older apps' button: a live invite link. The profile now asks by username (/coach/ask). */
   askCode: string | null;
   askPays: boolean;
+  /** Canvas A4: the coach's client limit is reached (missing on older servers = not full). */
+  full?: boolean;
+  /** When full: "waitlist" asks onto the waiting list, "stop" turns the button off. */
+  whenFull?: "waitlist" | "stop";
+  expectSpots?: string | null;
+}
+
+/** What the profile's ask button says and whether it works (canvas P1, A4). */
+export function askButton(section: Pick<CoachingSection, "full" | "whenFull" | "expectSpots">, first: string): {
+  label: string;
+  enabled: boolean;
+  note: string;
+  fullLine: string | null;
+} {
+  if (!section.full) return { label: "Ask to be coached", enabled: true, note: `${first} reads what you send and replies. You only pay if ${first} offers you a spot and you take it.`, fullLine: null };
+  const fullLine = `Full right now.${section.expectSpots ? ` ${first} expects spots in ${section.expectSpots}.` : ""}`;
+  return section.whenFull === "stop"
+    ? { label: "Not taking new clients", enabled: false, note: `${first} isn't taking requests right now.`, fullLine }
+    : { label: "Join the waiting list", enabled: true, note: `Joining asks the same questions. ${first} reads them when a spot opens.`, fullLine };
 }
 
 export interface ProfilePackage extends PublicPackage {

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import AskSheet from "$lib/components/coaching/AskSheet.svelte";
   import CoachingSection from "@logit/ui/CoachingSection.svelte";
   import * as Tabs from "$lib/components/ui/tabs/index.js";
   import { Spinner } from "$lib/components/ui/spinner/index.js";
@@ -256,6 +257,8 @@
   function onPostChange(id: string, next: ApiPost | null) {
     posts = next ? posts.map((p) => (p.id === id ? next : p)) : posts.filter((p) => p.id !== id);
   }
+  // Canvas P2: asking happens in a sheet over the profile.
+  let asking = $state(false);
 </script>
 
 {#snippet count(n: number | undefined, label: string, href: string | null)}
@@ -340,8 +343,11 @@
   {#if profile.coaching && !locked}
     <!-- Canvas P1: the Coaching section, the same as on the web and getlogit.app. -->
     <CoachingSection section={profile.coaching} name={shownName} class="border-t border-border px-4 py-4"
-      askHref={profile.coaching.askCode && !isSelf ? `/onboarding/coach?code=${encodeURIComponent(profile.coaching.askCode)}` : null}
+      onask={isSelf ? undefined : () => (asking = true)}
       mentionHref={(u) => `/social/${u}`} tagHref={(t) => `/social/tag/${encodeURIComponent(t)}`} />
+  {/if}
+  {#if profile.coaching && !isSelf}
+    <AskSheet open={asking} username={profile.username} onclose={() => (asking = false)} />
   {/if}
 
   {#if locked}

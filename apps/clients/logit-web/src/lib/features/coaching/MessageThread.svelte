@@ -32,6 +32,8 @@
     compact = false,
     onRead,
     onSent,
+    card,
+    closedNote = null,
   }: {
     relationshipId: string;
     otherName: string;
@@ -40,6 +42,10 @@
     compact?: boolean;
     onRead?: () => void;
     onSent?: (body: string, atMs: number) => void;
+    /** Draws a request step (a message with a kind: an offer, the waiting list…) as a card. */
+    card?: import("svelte").Snippet<[RemoteMessage]>;
+    /** A closed request: read-only, with this note where the composer was (canvas A3). */
+    closedNote?: string | null;
   } = $props();
 
   let messages = $state<RemoteMessage[]>([]);
@@ -52,7 +58,8 @@
   let currentId = "";
   let poll: ReturnType<typeof setInterval> | undefined;
 
-  async function refresh(scroll = false) {
+  /** Also called by the page after it changes something (an offer taken, a message it sent). */
+  export async function refresh(scroll = false) {
     const id = relationshipId;
     try {
       // In the order they were sent. The server lists them by when they last changed, and
@@ -174,16 +181,17 @@
   const shown = $derived(compact ? messages.slice(-4) : messages);
   // Runs from one side (shadcn Message): joined corners, the time once under each run.
   const runs = $derived.by(() => {
-    const out: { key: string; mine: boolean; day: boolean; items: RemoteMessage[] }[] = [];
+    const out: { key: string; mine: boolean; day: boolean; event: boolean; items: RemoteMessage[] }[] = [];
     shown.forEach((m, i) => {
       const day = !compact && (i === 0 || dayLabel(m.createdAtMs) !== dayLabel(shown[i - 1]!.createdAtMs));
+      const event = !!m.kind && !!card;
       const prev = out.at(-1);
-      if (prev && !day && prev.mine === m.mine && m.createdAtMs - prev.items.at(-1)!.createdAtMs < 3_600_000) prev.items.push(m);
-      else out.push({ key: m.messageId, mine: m.mine, day, items: [m] });
+      if (prev && !day && !event && !prev.event && prev.mine === m.mine && m.createdAtMs - prev.items.at(-1)!.createdAtMs < 3_600_000) prev.items.push(m);
+      else out.push({ key: m.messageId, mine: m.mine, day, event, items: [m] });
     });
     return out;
   });
-  const lastMine = $derived(messages.findLast((m) => m.mine));
+  const lastMine = $derived(messages.findLast((m) => m.mine && !m.kind));
   const joined = (mine: boolean, first: boolean, last: boolean) =>
     mine ? `${first ? "" : "rounded-tr-md!"} ${last ? "" : "rounded-br-md!"}` : `${first ? "" : "rounded-tl-md!"} ${last ? "" : "rounded-bl-md!"}`;
   const joinedKids = (mine: boolean, first: boolean, last: boolean) =>
@@ -203,6 +211,9 @@
     {/if}
     {#each runs as run (run.key)}
       {#if run.day}<div class="py-1.5 text-center text-[11px] text-muted-foreground">{dayLabel(run.items[0]!.createdAtMs)}</div>{/if}
+      {#if run.event && card}
+        <div class="shrink-0 py-1">{@render card(run.items[0]!)}</div>
+      {:else}
       <Message.Root align={run.mine ? "end" : "start"} class="shrink-0 text-[13px]">
         <Message.Content class="gap-1">
           {#each run.items as m, k (m.messageId)}
@@ -271,10 +282,14 @@
           <Message.Footer class="px-1 text-[10px] font-normal">{time(run.items.at(-1)!.createdAtMs)}{#if run.mine && lastMine && run.items.includes(lastMine) && lastMine.readAtMs != null} · Seen{/if}</Message.Footer>
         </Message.Content>
       </Message.Root>
+      {/if}
     {/each}
     {#if dragging}<div class="pointer-events-none absolute inset-2 grid place-items-center rounded-xl border-2 border-dashed border-ring/60 text-sm text-muted-foreground">Drop the photo to add it</div>{/if}
   </div>
   {#if error}<p class="pt-1 text-xs text-destructive">{error}</p>{/if}
+  {#if closedNote}
+    <p class="border-t border-border pt-3 text-center text-[13px] text-muted-foreground">{closedNote}</p>
+  {:else}
   <form data-guide="message-compose" class="flex flex-col gap-1.5 border-t border-border pt-3" onsubmit={(e) => { e.preventDefault(); void send(); }}>
     {#if recording}
       <VoiceRecorder onsend={sendVoice} oncancel={() => (recording = false)} onerror={(m) => (error = m)} />
@@ -299,4 +314,5 @@
     {/if}
     {#if !compact}<span class="text-[11px] text-muted-foreground">Enter sends · Shift+Enter for a new line · it reaches their phone on its next sync</span>{/if}
   </form>
+  {/if}
 </div>

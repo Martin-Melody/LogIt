@@ -3137,6 +3137,9 @@ namespace Logit.Api.Migrations
                     b.Property<string>("PublicProfileJson")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("RequestEmailsOff")
+                        .HasColumnType("INTEGER");
+
                     b.Property<Guid?>("SampleOwnerId")
                         .HasColumnType("TEXT");
 

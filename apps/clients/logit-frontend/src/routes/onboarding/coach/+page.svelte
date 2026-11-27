@@ -18,6 +18,7 @@
   import { isNativePlatform } from "$lib/platform/isNative";
   import SharingList from "$lib/components/coaching/SharingList.svelte";
   import { codeFromInvite } from "$lib/features/onboarding/coachCode";
+  import AskSheet from "$lib/components/coaching/AskSheet.svelte";
 
   const WEB_URL = import.meta.env.VITE_WEB_URL || "https://app.getlogit.app";
   const HERE = "/onboarding/coach";
@@ -78,13 +79,20 @@
     }
   }
 
+  // A free code asks the coach's questions first (canvas P2); the coach answers in a conversation.
+  let asking = $state(false);
+
   async function connect() {
     if (!info || sending) return;
+    if (info.relationship === "none") {
+      asking = true;
+      return;
+    }
     sending = true;
     error = null;
     try {
       if (info.relationship === "invited" && info.relationshipId) await coachApi.acceptInvite(info.relationshipId, sharing);
-      else if (info.relationship === "none" || info.relationship === "paused") await coachApi.requestCoaching(code.trim(), sharing);
+      else if (info.relationship === "paused") await coachApi.requestCoaching(code.trim(), sharing);
       resetTours();
       onboarding.complete();
       await goto("/clients");
@@ -149,11 +157,14 @@
           <span class="text-[13px] text-muted-foreground">{coachName}'s coaching is paid. Payment happens on the web, then everything comes to this app.</span>
         {:else if info.state !== "active" && info.relationship !== "invited"}
           <span class="text-[13px] text-muted-foreground">This code isn't taking new clients. Ask {coachName} for a new one.</span>
+        {:else if info.relationship === "none"}
+          <span class="text-[13px] text-muted-foreground">{coachName} has a few questions first. Nothing is shared until you take a spot.</span>
         {:else}
           <span class="text-[13px] text-muted-foreground">{coachName} will see what you switch on below. Change it any time in My coach.</span>
         {/if}
+        {#if info.otherCoach && info.relationship !== "active"}<span class="text-xs text-muted-foreground">You're coached by {info.otherCoach}</span>{/if}
       </div>
-      {#if !info.isSelf && !paid && (info.relationship === "none" || info.relationship === "invited" || info.relationship === "paused") && (info.state === "active" || info.relationship === "invited")}
+      {#if !info.isSelf && !paid && (info.relationship === "invited" || info.relationship === "paused") && (info.state === "active" || info.relationship === "invited")}
         <p class="mt-4 mb-1 text-[13px] font-semibold">What {coachName} can see</p>
         <SharingList {sharing} disabled={sending} onchange={(s) => (sharing = s)} />
       {/if}
@@ -164,15 +175,22 @@
     {#if info && paid && !info.isSelf && info.relationship !== "active"}
       <a href="{WEB_URL}/c/{encodeURIComponent(code.trim())}" target="_blank" rel="noopener"
         class="flex h-[52px] items-center justify-center rounded-[10px] bg-primary text-base font-semibold text-primary-foreground">Pay on the web</a>
-    {:else if info && (info.relationship === "active" || info.relationship === "requested")}
+    {:else if info && info.relationship === "requested" && info.relationshipId}
+      <button type="button" class="h-[52px] rounded-[10px] bg-primary text-primary-foreground text-base font-semibold"
+        onclick={() => { resetTours(); onboarding.complete(); void goto(`/messages/request/${info!.relationshipId}?name=${encodeURIComponent(coachName)}`); }}>Open the conversation</button>
+    {:else if info && info.relationship === "active"}
       <button type="button" class="h-[52px] rounded-[10px] bg-primary text-primary-foreground text-base font-semibold"
         onclick={() => { resetTours(); onboarding.complete(); void goto("/clients"); }}>Open My coach</button>
     {:else}
       <button type="button" class="h-[52px] rounded-[10px] bg-primary text-primary-foreground text-base font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
         disabled={!info || info.isSelf || sending || (info.state !== "active" && info.relationship !== "invited")} onclick={() => void connect()}>
         {#if sending}<Spinner class="h-4 w-4" />{/if}
-        {info && !info.isSelf ? (info.relationship === "invited" ? `Accept ${coachName} as my coach` : `Connect with ${coachName}`) : "Connect"}
+        {info && !info.isSelf ? (info.relationship === "invited" ? `Accept ${coachName} as my coach` : info.relationship === "none" ? `Ask ${coachName} to coach you` : `Connect with ${coachName}`) : "Connect"}
       </button>
+    {/if}
+    {#if info}
+      <AskSheet open={asking} username={info.coach.username} code={code.trim()} onclose={() => (asking = false)}
+        onsent={() => { resetTours(); onboarding.complete(); }} />
     {/if}
   {/if}
 </div>

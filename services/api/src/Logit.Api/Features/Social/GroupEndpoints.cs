@@ -42,6 +42,7 @@ public static class GroupEndpoints
         g.MapGet("/{id:guid}/about", About).RequireAuthorization();
         g.MapPost("/{id:guid}/join", JoinById).RequireAuthorization().RequireRateLimiting("social-write");
         g.MapDelete("/{id:guid}/request", CancelRequest).RequireAuthorization();
+        g.MapGet("/requests/mine", MyRequests).RequireAuthorization();
         g.MapGet("/{id:guid}/requests", Requests).RequireAuthorization();
         g.MapPost("/{id:guid}/requests/{username}", Approve).RequireAuthorization();
         g.MapDelete("/{id:guid}/requests/{username}", Decline).RequireAuthorization();
@@ -432,6 +433,18 @@ public static class GroupEndpoints
             catch (DbUpdateException) { /* asked twice at once */ }
         }
         return Results.Ok(new { id, status = "requested" });
+    }
+
+    /// Groups I've asked to join, still waiting for an organiser (Messages › Requests › Sent, canvas R4).
+    private static async Task<IResult> MyRequests(ClaimsPrincipal caller, AppDbContext db)
+    {
+        var me = caller.GetUserId();
+        var rows = await db.GroupJoinRequests.AsNoTracking().Include(r => r.Group)
+            .Where(r => r.UserId == me).OrderByDescending(r => r.CreatedAt).ToListAsync();
+        return Results.Ok(new
+        {
+            requests = rows.Select(r => new { groupId = r.GroupId, name = r.Group.Name, photoUrl = PhotoOf(r.Group), askedAt = r.CreatedAt }),
+        });
     }
 
     private static async Task<IResult> CancelRequest(Guid id, ClaimsPrincipal caller, AppDbContext db)

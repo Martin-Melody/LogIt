@@ -116,6 +116,15 @@ export interface InviteLinkInfo {
   paymentsReady?: boolean;
   /** I already pay this coach through LogIt. */
   paying?: boolean;
+  /** The coach's questions (a free link asks them; canvas P2). Missing on older servers. */
+  questions?: AskQuestion[];
+  spots?: { full: boolean; whenFull: "waitlist" | "stop"; expectSpots: string | null };
+  /** My open request's stage, when relationship is "requested". */
+  stage?: RequestStage | null;
+  /** Already this coach's client: since when (ISO). */
+  coachedSince?: string | null;
+  /** The coach I already have, if it's someone else (canvas R1). */
+  otherCoach?: string | null;
 }
 
 /** A client asking to be coached, through a link. */
@@ -170,6 +179,8 @@ export interface AskInfo {
   relationshipId: string | null;
   relationship: "none" | "requested" | "invited" | "active";
   stage: RequestStage | null;
+  coachedSince: string | null;
+  otherCoach: string | null;
 }
 
 /** One submitted check-in in the coach's inbox. `dataJson` is a CheckinSubmission. */
@@ -344,6 +355,11 @@ export function coachApiFor(api: ApiFetcher) {
     /** Delete a closed request: my answers go. */
     async deleteMyRequest(relationshipId: string): Promise<void> {
       await api.fetch(`/coach/requests/mine/${relationshipId}`, { method: "DELETE" });
+    },
+
+    /** "Stop these emails" from the request-reply email; the link carries the key. */
+    async stopRequestEmails(userId: string, token: string): Promise<void> {
+      await api.fetch("/email/stop-request-emails", { method: "POST", body: JSON.stringify({ userId, token }) });
     },
 
     /** Take an offer with no payment through LogIt (a paid one answers 402: pay at checkout). */

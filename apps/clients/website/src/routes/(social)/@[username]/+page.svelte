@@ -38,7 +38,7 @@
   {#if p.coaching}
     <!-- Canvas P1: what a coach offers, and Ask to be coached (on the web app, where the ask happens). -->
     <CoachingSection section={p.coaching} name={p.displayName} class="rounded-2xl border border-border p-4"
-      askHref={p.coaching.askCode ? `${DASHBOARD_URL}/c/${p.coaching.askCode}` : null} />
+      askHref={`${DASHBOARD_URL}/ask/${encodeURIComponent(p.username)}`} />
   {/if}
   <!-- Design canvas PR5: the same Training cards as the app. Both tabs are in the page for search engines. -->
   {#if hasCards}

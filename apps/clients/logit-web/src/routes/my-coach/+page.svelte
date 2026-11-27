@@ -25,6 +25,9 @@
   import { loadAssignedForms, loadAssignedPrograms, loadMySubmissions } from "$lib/features/coaching/myCoachData";
   import { shortDate, sinceLabel, weekdayDate } from "$lib/features/coaching/format";
   import { coachPaymentsApi } from "@logit/core/api/coachPaymentsApi";
+  import { page } from "$app/state";
+  import { tick } from "svelte";
+  import MyRequest from "$lib/features/coaching/requests/MyRequest.svelte";
   import { clientPaymentNote, shortDate as payDate } from "@logit/core/domain/coachPayments";
 
   // You as a client: your coach, what they've given you, your check-ins and what they can see.
@@ -45,7 +48,7 @@
 
   async function load() {
     try {
-      const [c, i, r] = await Promise.all([coachApi.listCoaches(), coachApi.listReceivedInvites(), coachApi.listMyRequests().catch(() => [])]);
+      const [c, i, r] = await Promise.all([coachApi.listCoaches(), coachApi.listReceivedInvites(), coachApi.listMyRequests(true).catch(() => [])]);
       coaches = c;
       invites = i;
       requests = r;
@@ -71,7 +74,16 @@
       loading = false;
     }
   }
-  onMount(load);
+  // From an email or the ask page: straight to that request's conversation.
+  const focusRequest = page.url.searchParams.get("request");
+  onMount(async () => {
+    await load();
+    if (focusRequest) {
+      await tick();
+      document.getElementById(`request-${focusRequest}`)?.scrollIntoView({ block: "start" });
+    }
+  });
+  const openRequests = $derived(requests.filter((r) => !r.closed));
 
   // Which week of which program you're on, and which of its days you've done.
   const running = $derived(programs.map((p) => ({ p, s: programStatus(p) })).filter((x) => x.s.state !== "finished"));
@@ -112,16 +124,6 @@
     }
   }
 
-  async function changeRequestSharing(r: MyCoachingRequest, next: Sharing) {
-    const before = r.sharing;
-    r.sharing = next;
-    try {
-      r.sharing = await coachApi.updateSharing(r.relationshipId, next);
-    } catch {
-      r.sharing = before;
-    }
-  }
-
   async function answerInvite(inv: ReceivedInvite, accept: boolean) {
     busy = inv.relationshipId;
     try {
@@ -133,16 +135,6 @@
       void coachBadges.refresh(undefined, true);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Couldn't save");
-    } finally {
-      busy = null;
-    }
-  }
-
-  async function cancelRequest(r: MyCoachingRequest) {
-    busy = r.relationshipId;
-    try {
-      await coachApi.revokeRelationship(r.relationshipId);
-      requests = requests.filter((x) => x.relationshipId !== r.relationshipId);
     } finally {
       busy = null;
     }
@@ -218,19 +210,17 @@
       </section>
     {/each}
 
-    {#each requests as r (r.relationshipId)}
-      <section class="flex flex-col gap-3 rounded-[10px] border border-border bg-card px-[18px] py-4">
-        <div class="flex items-center gap-3">
-          <Avatar name={coachName(r)} url={r.coach.avatarUrl} size={40} />
-          <div>
-            <h2 class="text-sm font-semibold">Waiting for {coachName(r)} to accept</h2>
-            <p class="text-xs text-muted-foreground">You asked {shortDate(Date.parse(r.requestedAt))}. Nothing is shared until they accept.</p>
-          </div>
-        </div>
-        <div class="max-w-md"><SharingSwitches sharing={r.sharing} onchange={(s) => changeRequestSharing(r, s)} /></div>
-        <button type="button" disabled={busy === r.relationshipId} onclick={() => cancelRequest(r)} class="h-[34px] w-fit rounded-[9px] border border-border px-3 text-[13px] hover:bg-muted">Cancel request</button>
-      </section>
-    {/each}
+    {#if requests.length}
+      <!-- Requests you sent (canvas A1–A3, R5): each is a conversation with that coach. -->
+      <div class="flex flex-col gap-2">
+        {#if coaches.length}
+          <p class="text-xs text-muted-foreground">{openRequests.length} coach {openRequests.length === 1 ? "request" : "requests"} open{#if openRequests.length} · {openRequests.map((r) => `${coachName(r)}${r.stage === "waiting" ? ", waiting list" : ""}`).join(" · ")}{/if}. {coachName(coaches[0]!)} can't see your requests.</p>
+        {/if}
+        {#each requests as r (r.relationshipId)}
+          <MyRequest request={r} open={!r.closed || r.relationshipId === focusRequest} onchange={load} />
+        {/each}
+      </div>
+    {/if}
 
     {#if coaches.length === 0 && invites.length === 0 && requests.length === 0}
       <header><h1 class="text-[26px] font-bold tracking-tight">My coach</h1></header>

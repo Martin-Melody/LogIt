@@ -1,16 +1,18 @@
-<!-- A coach's Coaching section (canvas P1), the same on getlogit.app, the web, the phone and the
-     profile editor's preview. Each app says where "Ask to be coached" goes (null hides it) and
-     how @mentions and #tags link. -->
+<!-- A coach's Coaching section (canvas P1, A4), the same on getlogit.app, the web, the phone and
+     the profile editor's preview. Each app says where "Ask to be coached" goes: a link (askHref),
+     or the app's own ask sheet (onask); neither hides the button. -->
 <script lang="ts">
   import type { CoachingSection } from "@logit/core/domain/coachProfile";
-  import { whereText } from "@logit/core/domain/coachProfile";
+  import { askButton, whereText } from "@logit/core/domain/coachProfile";
   import { priceText } from "@logit/core/domain/coachPayments";
   import RichText from "./RichText.svelte";
 
   let {
     section,
     name,
-    askHref,
+    askHref = null,
+    onask,
+    otherCoach = null,
     mentionHref,
     tagHref,
     class: className = "",
@@ -18,13 +20,18 @@
     section: CoachingSection;
     /** The coach's display name. */
     name: string;
-    askHref: string | null;
+    askHref?: string | null;
+    onask?: () => void;
+    /** Canvas R1: the viewer is coached by someone else. One quiet line; the other coach is never told. */
+    otherCoach?: string | null;
     mentionHref?: (username: string) => string;
     tagHref?: (tag: string) => string;
     class?: string;
   } = $props();
 
   const first = $derived(name.trim().split(/\s+/)[0] || name);
+  const ask = $derived(askButton(section, first));
+  const btn = "inline-flex h-11 items-center justify-center rounded-lg px-4 text-[15px] font-semibold no-underline transition-opacity";
 </script>
 
 <section aria-labelledby="coaching-title" class="flex flex-col gap-3 {className}">
@@ -33,6 +40,9 @@
     <p class="text-[15px] font-medium">{section.headline}</p>
     <p class="text-[13px] text-muted-foreground">{whereText(section)}</p>
   </div>
+  {#if ask.fullLine}
+    <p class="rounded-lg bg-muted px-3 py-2 text-[13px] font-medium">{ask.fullLine}</p>
+  {/if}
   {#if section.about}
     <RichText text={section.about} class="text-[14px] leading-relaxed text-muted-foreground" {mentionHref} {tagHref} />
   {/if}
@@ -61,13 +71,17 @@
   {:else}
     <p class="text-[13px] text-muted-foreground">Ask {first} about prices.</p>
   {/if}
-  {#if askHref}
-    <a href={askHref}
-      class="inline-flex h-11 items-center justify-center rounded-lg bg-primary px-4 text-[15px] font-semibold text-primary-foreground no-underline hover:opacity-90">
-      {section.askPays ? "Start coaching" : "Ask to be coached"}
-    </a>
-    <p class="text-xs text-muted-foreground">
-      {section.askPays ? `You pay ${first} through Stripe and coaching starts straight away.` : `${first} reads what you send and replies.`}
-    </p>
+  {#if askHref || onask}
+    {#if !ask.enabled}
+      <button type="button" disabled class="{btn} bg-muted text-muted-foreground">{ask.label}</button>
+    {:else if onask}
+      <button type="button" onclick={onask} class="{btn} bg-primary text-primary-foreground hover:opacity-90">{ask.label}</button>
+    {:else}
+      <a href={askHref} class="{btn} bg-primary text-primary-foreground hover:opacity-90">{ask.label}</a>
+    {/if}
+    <p class="text-xs text-muted-foreground">{ask.note}</p>
+  {/if}
+  {#if otherCoach}
+    <p class="text-xs text-muted-foreground">You're coached by {otherCoach}</p>
   {/if}
 </section>

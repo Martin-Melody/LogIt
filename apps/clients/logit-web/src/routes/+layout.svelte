@@ -81,7 +81,8 @@
   // An invite link from a coach: anyone can open it, signed in or not (it has its own sign-up),
   // and any account can use it (a Free account can be coached). The "update your card" link
   // from a failed-payment email opens signed out too. Both are pages of their own, no sidebar.
-  const isInviteLink = $derived(page.url.pathname.startsWith("/c/"));
+  // Invite links and asking from a profile: their own pages, signed in or not.
+  const isInviteLink = $derived(page.url.pathname.startsWith("/c/") || page.url.pathname.startsWith("/ask/") || page.url.pathname === "/stop-emails");
   const isPayFix = $derived(page.url.pathname.startsWith("/pay/fix/"));
   // A Free account on the hosted server can still reach these: the "plans are in the app"
   // page, and Account (password, deleting the account, which the store listing promises can
@@ -105,7 +106,11 @@
   });
   // Social (feed, messages, groups and their posts) is open to every account on the web (Martin,
   // 25 Nov: anyone can read, any account can take part); the training dashboard stays Pro.
-  const isSocialPath = $derived(page.url.pathname.startsWith("/social") || page.url.pathname.startsWith("/groups"));
+  // Being coached is free too (Studio is for the coach): My coach holds your requests and their
+  // conversations, which the "a coach replied" email opens (canvas R7).
+  const isSocialPath = $derived(
+    page.url.pathname.startsWith("/social") || page.url.pathname.startsWith("/groups") || page.url.pathname.startsWith("/my-coach"),
+  );
   // A Free account trying coaching with sample clients gets the Coaching workspace (W3);
   // its own training dashboard still needs Pro, so "Me" lands on /upgrade.
   const isTrialCoaching = $derived.by(() => {

@@ -99,6 +99,21 @@ public static class CoachIntake
 
     public static bool IsFull(User coach, int taken) => coach.CoachSpots is int spots && taken >= spots;
 
+    /// What someone thinking of asking sees about a coach's spots (canvas A4).
+    public record Spots(bool Full, string WhenFull, string? ExpectSpots);
+
+    public static async Task<Spots> SpotsAsync(AppDbContext db, User coach, DateTime now) =>
+        new(IsFull(coach, await TakenAsync(db, coach.Id, now)), coach.CoachWhenFull ?? "waitlist", coach.CoachExpectSpots);
+
+    /// The coach someone already has, other than this one (canvas R1: "You're coached by Joe
+    /// Burke", one quiet line; the other coach is never told).
+    public static Task<string?> OtherCoachAsync(AppDbContext db, Guid me, Guid notCoachId) =>
+        db.CoachClientRelationships.AsNoTracking()
+            .Where(r => r.ClientId == me && r.CoachId != notCoachId && !r.Coach.IsSample
+                && (r.Status == CoachClientStatus.Active || r.Status == CoachClientStatus.Paused))
+            .Select(r => r.Coach.DisplayName != "" && r.Coach.DisplayName != null ? r.Coach.DisplayName : r.Coach.Username)
+            .FirstOrDefaultAsync();
+
     /// The latest offer on a request, with its state as of now.
     public static async Task<CoachOffer?> LatestOfferAsync(AppDbContext db, Guid relationshipId) =>
         await db.CoachOffers.Where(o => o.RelationshipId == relationshipId).OrderByDescending(o => o.CreatedAt).FirstOrDefaultAsync();
@@ -126,7 +141,7 @@ public static class CoachIntake
 
     /// Records a step as a message from `senderId`. `body` says it in words for apps that don't
     /// draw the card; the coach's own words, if any, go first as an ordinary message.
-    public static void Post(AppDbContext db, CoachClientRelationship rel, Guid senderId, string kind, string body,
+    public static CoachMessage Post(AppDbContext db, CoachClientRelationship rel, Guid senderId, string kind, string body,
         object? card, string? note, DateTime now)
     {
         var ms = new DateTimeOffset(now).ToUnixTimeMilliseconds();
@@ -136,11 +151,13 @@ public static class CoachIntake
                 MessageId = $"note-{Guid.NewGuid():N}", RelationshipId = rel.Id, SenderUserId = senderId,
                 Body = note.Trim(), CreatedAtMs = ms,
             });
-        db.CoachMessages.Add(new CoachMessage
+        var evt = new CoachMessage
         {
             MessageId = $"evt-{Guid.NewGuid():N}", RelationshipId = rel.Id, SenderUserId = senderId,
             Body = body, CreatedAtMs = ms + 1, Kind = kind, CardJson = card is null ? null : ToJson(card),
-        });
+        };
+        db.CoachMessages.Add(evt);
+        return evt;
     }
 
     public static string Money(long cents, string currency) => Payments.PaymentEmails.Money(cents, currency);

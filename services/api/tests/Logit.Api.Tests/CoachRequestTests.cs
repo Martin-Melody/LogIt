@@ -2,7 +2,10 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Logit.Api.Data.Entities;
+using Logit.Api.Features.Email;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Logit.Api.Tests;
 
@@ -230,5 +233,112 @@ public class CoachRequestTests : IClassFixture<ApiFactory>
         var reset = await Json(await coach.PutAsJsonAsync("/coach/intake", new { spots = 12, resetQuestions = true }));
         Assert.False(reset.GetProperty("customQuestions").GetBoolean());
         Assert.Equal(5, reset.GetProperty("questions").GetArrayLength());
+    }
+}
+
+/// The email when a coach answers someone who has no app yet (canvas R7), and the bits of
+/// 1.3 the ask sheet reads: questions before signing in, the "full" state on the profile.
+public class RequestEmailTests
+{
+    private static readonly Dictionary<string, string> Answers = new()
+    {
+        ["goal"] = "Strength", ["experience"] = "3+ years", ["days"] = "3", ["food"] = "No",
+    };
+
+    [Fact]
+    public async Task One_email_per_unread_run_none_with_the_app_and_the_stop_link_works()
+    {
+        var email = new FakeEmailSender();
+        await using var api = new ApiFactory
+        {
+            ConfigureTestServices = s =>
+            {
+                s.RemoveAll<IEmailSender>();
+                s.AddSingleton<IEmailSender>(email);
+            },
+        };
+        var (coach, _, coachName) = await api.SignUpAsync("mail_coach", UserTier.Studio);
+        var (client, clientId, _) = await api.SignUpAsync("mail_client");
+        var relId = JsonDocument.Parse(await (await client.PostAsJsonAsync($"/coach/ask/{coachName}", new { answers = Answers })).Content.ReadAsStringAsync())
+            .RootElement.GetProperty("relationshipId").GetGuid();
+
+        var send = await coach.PostAsJsonAsync("/coach/messages", new { messageId = "c1", relationshipId = relId, body = "Hi! Is the knee ok?", createdAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() });
+        Assert.True(send.IsSuccessStatusCode);
+        var mail = Assert.Single(email.Sent);
+        Assert.Contains("replied to your coaching request", mail.Subject);
+        Assert.DoesNotContain("knee", mail.Body); // who and what, never the words
+
+        // Still unread: an offer on top doesn't email again.
+        await coach.PostAsJsonAsync($"/coach/requests/{relId}/offer", new { });
+        Assert.Single(email.Sent);
+
+        // Once it's read, the next step emails again; with the app, nothing.
+        await api.WithDbAsync(db => db.CoachMessages.Where(m => m.RelationshipId == relId).ExecuteUpdateAsync(s => s.SetProperty(m => m.ReadAtMs, 1L)));
+        await coach.PostAsJsonAsync($"/coach/requests/{relId}/waitlist", new { message = "" });
+        Assert.Equal(2, email.Sent.Count);
+        Assert.Contains("waiting list", email.Sent[^1].Subject);
+
+        var stop = System.Text.RegularExpressions.Regex.Match(email.Sent[^1].Body, @"stop-emails\?u=([0-9a-f-]+)&t=([0-9a-f]+)");
+        Assert.True(stop.Success);
+        var anon = api.CreateClient();
+        Assert.Equal(HttpStatusCode.BadRequest, (await anon.PostAsJsonAsync("/email/stop-request-emails", new { userId = clientId, token = "nope" })).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await anon.PostAsJsonAsync("/email/stop-request-emails", new { userId = Guid.Parse(stop.Groups[1].Value), token = stop.Groups[2].Value })).StatusCode);
+        await api.WithDbAsync(db => db.CoachMessages.Where(m => m.RelationshipId == relId).ExecuteUpdateAsync(s => s.SetProperty(m => m.ReadAtMs, 1L)));
+        await coach.PostAsJsonAsync("/coach/messages", new { messageId = "c2", relationshipId = relId, body = "x", createdAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() });
+        Assert.Equal(2, email.Sent.Count);
+    }
+
+    [Fact]
+    public async Task No_email_when_they_have_the_app()
+    {
+        var email = new FakeEmailSender();
+        await using var api = new ApiFactory
+        {
+            ConfigureTestServices = s =>
+            {
+                s.RemoveAll<IEmailSender>();
+                s.AddSingleton<IEmailSender>(email);
+            },
+        };
+        var (coach, _, coachName) = await api.SignUpAsync("app_coach", UserTier.Studio);
+        var (client, clientId, _) = await api.SignUpAsync("app_client");
+        await api.WithDbAsync(async db => { db.PushDevices.Add(new PushDevice { UserId = clientId, Token = "t" }); await db.SaveChangesAsync(); });
+        var relId = JsonDocument.Parse(await (await client.PostAsJsonAsync($"/coach/ask/{coachName}", new { answers = Answers })).Content.ReadAsStringAsync())
+            .RootElement.GetProperty("relationshipId").GetGuid();
+        await coach.PostAsJsonAsync($"/coach/requests/{relId}/offer", new { });
+        Assert.Empty(email.Sent);
+    }
+
+    [Fact]
+    public async Task Ask_info_shows_before_signing_in_and_the_profile_says_when_full()
+    {
+        await using var api = new ApiFactory();
+        var (coach, coachId, coachName) = await api.SignUpAsync("full_coach", UserTier.Studio);
+        await coach.PutAsJsonAsync("/coach/profile", new { profile = new { headline = "Strength coaching", mode = "online", about = "", goodFor = Array.Empty<string>() } });
+        await coach.PutAsJsonAsync("/coach/intake", new { spots = 1, whenFull = "waitlist", expectSpots = "January" });
+
+        var anon = api.CreateClient();
+        var info = JsonDocument.Parse(await (await anon.GetAsync($"/coach/ask/{coachName}")).Content.ReadAsStringAsync()).RootElement;
+        Assert.Equal(5, info.GetProperty("questions").GetArrayLength());
+        Assert.Equal("none", info.GetProperty("relationship").GetString());
+
+        var (client, clientId, _) = await api.SignUpAsync("full_client");
+        await api.WithDbAsync(async db =>
+        {
+            db.CoachClientRelationships.Add(new CoachClientRelationship { CoachId = coachId, ClientId = clientId, Status = CoachClientStatus.Active });
+            await db.SaveChangesAsync();
+        });
+        var profile = JsonDocument.Parse(await (await anon.GetAsync($"/public/users/{coachName}")).Content.ReadAsStringAsync()).RootElement;
+        var section = profile.GetProperty("profile").GetProperty("coaching");
+        Assert.True(section.GetProperty("full").GetBoolean());
+        Assert.Equal("January", section.GetProperty("expectSpots").GetString());
+
+        // Their client sees since when; someone else's client sees who coaches them.
+        var mine = JsonDocument.Parse(await (await client.GetAsync($"/coach/ask/{coachName}")).Content.ReadAsStringAsync()).RootElement;
+        Assert.Equal("active", mine.GetProperty("relationship").GetString());
+        Assert.NotEqual(JsonValueKind.Null, mine.GetProperty("coachedSince").ValueKind);
+        var (_, _, otherCoachName) = await api.SignUpAsync("other_coach", UserTier.Studio);
+        var other = JsonDocument.Parse(await (await client.GetAsync($"/coach/ask/{otherCoachName}")).Content.ReadAsStringAsync()).RootElement;
+        Assert.Equal("full_coach", other.GetProperty("otherCoach").GetString());
     }
 }

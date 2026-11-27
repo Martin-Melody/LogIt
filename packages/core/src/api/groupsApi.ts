@@ -126,6 +126,9 @@ export const groupsApi = {
   joinById: (id: string, onBoard: boolean, eventId?: string) =>
     apiClient.fetch<{ id: string; status: "member" | "requested" }>(`/groups/${id}/join`, json("POST", { onBoard, eventId })),
   cancelRequest: (id: string) => apiClient.fetch<void>(`/groups/${id}/request`, { method: "DELETE" }),
+  /** Groups I've asked to join, still waiting for an organiser (Messages › Requests › Sent). */
+  myRequests: async () =>
+    (await apiClient.fetch<{ requests: { groupId: string; name: string; photoUrl: string | null; askedAt: string }[] }>("/groups/requests/mine")).requests,
   requests: (id: string) => apiClient.fetch<GroupRequest[]>(`/groups/${id}/requests`),
   approve: (id: string, username: string) => apiClient.fetch<void>(`/groups/${id}/requests/${encodeURIComponent(username)}`, { method: "POST" }),
   /** Mute someone in the chat for `minutes`, or lift it (null). */

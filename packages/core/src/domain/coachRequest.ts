@@ -118,3 +118,65 @@ export function clientCan(stage: RequestStage, offer: RequestOffer | null, nowMs
     reply: !closed,
   };
 }
+
+/** A request step as one line in the conversation, said for whoever is reading (canvas A1–A5, C6). */
+export function eventLine(kind: RequestEvent, reader: "client" | "coach", coach: string, client: string): string {
+  const c = firstName(coach);
+  const p = firstName(client);
+  switch (kind) {
+    case "asked":
+      return reader === "client" ? `You asked ${c} to coach you` : `${p} asked you to coach them`;
+    case "offer":
+      return reader === "client" ? `${c} offered you a spot` : `You offered ${p} a spot`;
+    case "offer-changed":
+      return reader === "client" ? `${c} changed the offer` : `You changed the offer`;
+    case "offer-withdrawn":
+      return reader === "client" ? `${c} withdrew the offer. You weren't charged, and your request is still open.` : `You withdrew the offer. ${p}'s request is still open.`;
+    case "waitlist":
+      return reader === "client" ? `You're on ${c}'s waiting list` : `You put ${p} on your waiting list`;
+    case "closed":
+      return reader === "client" ? `${c} can't coach you right now. Nothing was shared and nothing was paid.` : `You closed ${p}'s request`;
+    case "withdrawn":
+      return reader === "client" ? "You withdrew your request" : `${p} withdrew their request`;
+    case "reopened":
+      return reader === "client" ? `${c} reopened your request` : `You reopened ${p}'s request`;
+    case "joined":
+      return reader === "client" ? `You took the spot. ${c} is your coach now.` : `${p} took the spot. Coaching has started.`;
+    default:
+      return ""; // a step a newer server knows: the message's own words are shown instead
+  }
+}
+
+export function firstName(name: string): string {
+  return name.trim().split(/\s+/)[0] || name;
+}
+
+/** The words "Ask Sam to offer it again" sends as an ordinary message (canvas A5). */
+export const ASK_AGAIN_TEXT = "Is the spot still free? Could you offer it again?";
+
+/** Who a step reads as for this viewer: the coach sends offers and answers; the client withdraws and joins. */
+export function readerOf(kind: RequestEvent, mine: boolean): "client" | "coach" {
+  const clientSends = kind === "withdrawn" || kind === "joined" || kind === "asked";
+  return clientSends === mine ? "client" : "coach";
+}
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const dayMonth = (ms: number) => `${new Date(ms).getDate()} ${MONTHS[new Date(ms).getMonth()]}`;
+
+/** A request I sent, in one line for lists (canvas R4, R5). */
+export function sentLine(
+  r: { stage?: RequestStage; requestedAt: string; waitingSince?: string | null; expectSpots?: string | null; offer?: RequestOffer | null; closed?: boolean },
+  nowMs: number,
+): string {
+  const stage = r.stage ?? "asked";
+  if (r.closed || stage === "notafit" || stage === "withdrawn") return stage === "withdrawn" ? "Withdrawn" : "Closed";
+  if (stage === "waiting") {
+    const since = Date.parse(r.waitingSince ?? r.requestedAt);
+    return `Waiting list since ${dayMonth(since)}${r.expectSpots ? ` · spots in ${r.expectSpots}` : ""}`;
+  }
+  const offer = r.offer ? offerStateNow(r.offer, nowMs) : null;
+  if (stage === "offered" && offer === "open") return `Offer to look at · held until ${dayMonth(r.offer!.card.holdUntilMs)}`;
+  if (stage === "offered" && offer === "expired") return "The offer ran out";
+  const days = Math.floor((nowMs - Date.parse(r.requestedAt)) / 86_400_000);
+  return `Request sent ${days <= 0 ? "today" : days === 1 ? "yesterday" : `${days} days ago`}`;
+}

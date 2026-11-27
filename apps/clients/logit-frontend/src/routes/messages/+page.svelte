@@ -21,6 +21,7 @@
   import { back } from "$lib/navigation";
   import { coachApi } from "@logit/core/api/coachApi";
   import { dmApi } from "@logit/core/api/dmApi";
+  import { groupsApi } from "@logit/core/api/groupsApi";
   import { trainingApi } from "@logit/core/api/trainingApi";
   import { getMessagesRepo } from "$lib/data/repoProvider";
   import { pullAndMergeMessages } from "$lib/sync/syncService";
@@ -78,6 +79,7 @@
   let rows = $state<Row[] | null>(null);
   let creating = $state(false);
   let requests = $state(0);
+  let sent = $state(0);
   let training = $state<Set<string>>(new Set());
   let error = $state(false);
   let now = $state(Date.now());
@@ -118,6 +120,7 @@
         trainingApi.friends().catch(() => []),
       ]);
       requests = unread.requests;
+      void Promise.all([coachApi.listMyRequests().catch(() => []), groupsApi.myRequests().catch(() => [])]).then(([c, g]) => (sent = c.length + g.length));
       training = new Set(friends.map((f) => f.username));
       now = Date.now();
       rows = [
@@ -162,10 +165,11 @@
     <button type="button" aria-label="New group" class="flex size-11 items-center justify-center text-muted-foreground" onclick={() => (creating = true)}><Users class="size-5" /></button>
   </PageHeader>
 
-  {#if requests > 0}
-    <a href="/messages/requests" class="flex min-h-13 items-center justify-between gap-3 border-b border-border px-4 text-[15px] font-medium text-inherit no-underline hover:bg-muted/40">
-      Message requests
-      <span class="flex items-center gap-1.5 text-sm text-muted-foreground tabular-nums">{requests}<ChevronRight class="size-4" /></span>
+  {#if requests > 0 || sent > 0}
+    <!-- Canvas R4: received message requests, and coaches and groups you asked. -->
+    <a href={requests > 0 ? "/messages/requests" : "/messages/requests?tab=sent"} class="flex min-h-13 items-center justify-between gap-3 border-b border-border px-4 text-[15px] font-medium text-inherit no-underline hover:bg-muted/40">
+      Requests
+      <span class="flex items-center gap-1.5 text-sm text-muted-foreground tabular-nums">{requests > 0 ? requests : `${sent} sent`}<ChevronRight class="size-4" /></span>
     </a>
   {/if}
   {#if waiting > 0}

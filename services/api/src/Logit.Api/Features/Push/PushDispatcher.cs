@@ -137,7 +137,9 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
             var names = wanted.AsEnumerable().Reverse().Select(m => m.Sender).DistinctBy(u => u.Id).Select(NameOf).ToList();
             var message = new PushMessage(
                 names.Count == 1 ? names[0] : names.Count == 2 ? $"{names[0]} and {names[1]}" : $"{names[0]} and {names.Count - 1} others",
-                names.Count > 1 ? $"{wanted.Count} messages" : wanted.Count == 1 ? "sent you a message" : $"sent you {wanted.Count} messages",
+                names.Count > 1 ? $"{wanted.Count} messages"
+                    : wanted.Count == 1 ? StepText(wanted[0].Kind) ?? "sent you a message"
+                    : StepText(wanted[^1].Kind) is { } step ? step : $"sent you {wanted.Count} messages",
                 "messages",
                 wanted.Select(m => m.RelationshipId).Distinct().Count() == 1
                     ? new Dictionary<string, string> { ["type"] = "Message", ["relationshipId"] = wanted[0].RelationshipId.ToString() }
@@ -147,6 +149,20 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
         }
         return sent;
     }
+
+    /// A request step said the way a push says it (who, then what; never the words).
+    private static string? StepText(string? kind) => kind switch
+    {
+        "offer" => "offered you a spot",
+        "offer-changed" => "changed their offer",
+        "offer-withdrawn" => "withdrew their offer",
+        "waitlist" => "put you on their waiting list",
+        "closed" => "answered your request",
+        "reopened" => "reopened your request",
+        "withdrawn" => "withdrew their request",
+        "joined" => "took the spot",
+        _ => null,
+    };
 
     /// Messages between people, like coach messages: straight away, who and never what. A message
     /// that lands in someone's requests makes no push (Instagram); reading it first drops it.

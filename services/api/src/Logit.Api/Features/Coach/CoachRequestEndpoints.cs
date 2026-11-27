@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Logit.Api.Data;
 using Logit.Api.Data.Entities;
+using Logit.Api.Features.Email;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using static Logit.Api.Features.Coach.CoachIntake;
@@ -34,7 +35,7 @@ public static class CoachRequestEndpoints
         g.MapPost("/requests/{relationshipId:guid}/reopen", Reopen).RequireTier(UserTier.Studio);
         g.MapGet("/requests/closed", Closed).RequireTier(UserTier.Studio);
         // Asking, from the profile (links ask through /coach/links/code/{code}/request).
-        g.MapGet("/ask/{username}", AskInfo);
+        g.MapGet("/ask/{username}", AskInfo).AllowAnonymous(); // the ask sheet shows before signing up
         g.MapPost("/ask/{username}", Ask);
         g.MapPost("/requests/mine/{relationshipId:guid}/withdraw", WithdrawMine);
         g.MapDelete("/requests/mine/{relationshipId:guid}", DeleteMine);
@@ -91,7 +92,7 @@ public static class CoachRequestEndpoints
         return open;
     }
 
-    private static async Task<IResult> Offer(Guid relationshipId, [FromBody] OfferBody body, ClaimsPrincipal caller, AppDbContext db)
+    private static async Task<IResult> Offer(Guid relationshipId, [FromBody] OfferBody body, ClaimsPrincipal caller, AppDbContext db, IEmailSender email, IConfiguration config)
     {
         var coachId = caller.GetUserId();
         var now = DateTime.UtcNow;
@@ -129,14 +130,16 @@ public static class CoachRequestEndpoints
         rel.RequestStage = RequestStages.Offered;
         rel.UpdatedAt = now;
         var coach = NameOf(rel.Coach);
-        Post(db, rel, coachId, replaced is null ? Events.Offer : Events.OfferChanged,
+        var kind = replaced is null ? Events.Offer : Events.OfferChanged;
+        var evt = Post(db, rel, coachId, kind,
             $"{coach} {(replaced is null ? "offered you a spot" : "changed the offer")}: {offer.PackageName}, {PriceText(offer)}. Held until {offer.HoldUntil:ddd d MMM}.",
             CardOf(offer), body.Message, now);
         await db.SaveChangesAsync();
+        await RequestEmails.MaybeSendAsync(db, email, config, rel.Id, kind, evt.Id);
         return Results.Ok(new { offerId = offer.Id });
     }
 
-    private static async Task<IResult> WithdrawOffer(Guid relationshipId, ClaimsPrincipal caller, AppDbContext db)
+    private static async Task<IResult> WithdrawOffer(Guid relationshipId, ClaimsPrincipal caller, AppDbContext db, IEmailSender email, IConfiguration config)
     {
         var coachId = caller.GetUserId();
         var now = DateTime.UtcNow;
@@ -146,13 +149,14 @@ public static class CoachRequestEndpoints
         if (closed is null) return Results.Conflict(new { error = "There's no open offer to withdraw." });
         rel.RequestStage = RequestStages.Asked;
         rel.UpdatedAt = now;
-        Post(db, rel, coachId, Events.OfferWithdrawn,
+        var evt = Post(db, rel, coachId, Events.OfferWithdrawn,
             $"{NameOf(rel.Coach)} withdrew the offer. You weren't charged, and your request is still open.", new { offerId = closed.Id }, null, now);
         await db.SaveChangesAsync();
+        await RequestEmails.MaybeSendAsync(db, email, config, rel.Id, Events.OfferWithdrawn, evt.Id);
         return Results.NoContent();
     }
 
-    private static async Task<IResult> Waitlist(Guid relationshipId, [FromBody] NoteBody body, ClaimsPrincipal caller, AppDbContext db)
+    private static async Task<IResult> Waitlist(Guid relationshipId, [FromBody] NoteBody body, ClaimsPrincipal caller, AppDbContext db, IEmailSender email, IConfiguration config)
     {
         var coachId = caller.GetUserId();
         var now = DateTime.UtcNow;
@@ -165,14 +169,15 @@ public static class CoachRequestEndpoints
         rel.RequestStage = RequestStages.Waiting;
         rel.WaitingSince ??= now;
         rel.UpdatedAt = now;
-        Post(db, rel, coachId, Events.Waitlist,
+        var evt = Post(db, rel, coachId, Events.Waitlist,
             $"You're on {NameOf(rel.Coach)}'s waiting list. They'll offer you a spot here when one opens.",
             new { expectSpots = rel.Coach.CoachExpectSpots }, body.Message, now);
         await db.SaveChangesAsync();
+        await RequestEmails.MaybeSendAsync(db, email, config, rel.Id, Events.Waitlist, evt.Id);
         return Results.NoContent();
     }
 
-    private static async Task<IResult> NotAFit(Guid relationshipId, [FromBody] NoteBody body, ClaimsPrincipal caller, AppDbContext db)
+    private static async Task<IResult> NotAFit(Guid relationshipId, [FromBody] NoteBody body, ClaimsPrincipal caller, AppDbContext db, IEmailSender email, IConfiguration config)
     {
         var coachId = caller.GetUserId();
         var now = DateTime.UtcNow;
@@ -183,16 +188,17 @@ public static class CoachRequestEndpoints
         rel.Status = CoachClientStatus.Revoked; // kept, not deleted: the conversation stays readable
         rel.RequestStage = RequestStages.NotAFit;
         rel.UpdatedAt = now;
-        Post(db, rel, coachId, Events.Closed,
+        var evt = Post(db, rel, coachId, Events.Closed,
             $"{NameOf(rel.Coach)} can't coach you right now. Nothing was shared and nothing was paid.", null, body.Message, now);
         // "Block further requests" (canvas C3): for spam or abuse; they aren't told.
         if (body.Block && !await db.Blocks.AnyAsync(b => b.BlockerId == coachId && b.BlockedId == rel.ClientId))
             db.Blocks.Add(new Block { BlockerId = coachId, BlockedId = rel.ClientId, CreatedAt = now });
         await db.SaveChangesAsync();
+        if (!body.Block) await RequestEmails.MaybeSendAsync(db, email, config, rel.Id, Events.Closed, evt.Id);
         return Results.NoContent();
     }
 
-    private static async Task<IResult> Reopen(Guid relationshipId, ClaimsPrincipal caller, AppDbContext db)
+    private static async Task<IResult> Reopen(Guid relationshipId, ClaimsPrincipal caller, AppDbContext db, IEmailSender email, IConfiguration config)
     {
         var coachId = caller.GetUserId();
         var now = DateTime.UtcNow;
@@ -205,8 +211,9 @@ public static class CoachRequestEndpoints
         rel.Status = CoachClientStatus.Pending;
         rel.RequestStage = RequestStages.Asked;
         rel.UpdatedAt = now;
-        Post(db, rel, coachId, Events.Reopened, $"{NameOf(rel.Coach)} reopened your request.", null, null, now);
+        var evt = Post(db, rel, coachId, Events.Reopened, $"{NameOf(rel.Coach)} reopened your request.", null, null, now);
         await db.SaveChangesAsync();
+        await RequestEmails.MaybeSendAsync(db, email, config, rel.Id, Events.Reopened, evt.Id);
         return Results.NoContent();
     }
 
@@ -240,10 +247,10 @@ public static class CoachRequestEndpoints
     {
         var coach = await CoachByUsername(db, username);
         if (coach is null || !CoachingAccess.CanCoach(coach, config)) return Results.NotFound(new { error = "They aren't coaching on LogIt." });
-        var me = caller.GetUserId();
+        Guid? me = caller.Identity?.IsAuthenticated == true ? caller.GetUserId() : null;
         var now = DateTime.UtcNow;
         var taken = await TakenAsync(db, coach.Id, now);
-        var existing = await db.CoachClientRelationships.AsNoTracking()
+        var existing = me is null ? null : await db.CoachClientRelationships.AsNoTracking()
             .FirstOrDefaultAsync(r => r.CoachId == coach.Id && r.ClientId == me && r.Status != CoachClientStatus.Revoked);
         var packages = await db.CoachPackages.AsNoTracking().Where(k => k.CoachId == coach.Id && !k.Hidden && k.ShowOnProfile)
             .OrderBy(k => k.AmountCents).Select(k => new { k.Id, k.Name, k.AmountCents, k.Currency, k.Interval, k.Weeks }).ToListAsync();
@@ -261,6 +268,9 @@ public static class CoachRequestEndpoints
                 : existing.Status is CoachClientStatus.Active or CoachClientStatus.Paused ? "active"
                 : existing.RequestedByClient ? "requested" : "invited",
             stage = existing?.RequestStage,
+            // Already this coach's client: since when (canvas R1).
+            coachedSince = existing is { Status: CoachClientStatus.Active or CoachClientStatus.Paused } ? existing.UpdatedAt : (DateTime?)null,
+            otherCoach = me is { } id ? await OtherCoachAsync(db, id, coach.Id) : null,
         });
     }
 

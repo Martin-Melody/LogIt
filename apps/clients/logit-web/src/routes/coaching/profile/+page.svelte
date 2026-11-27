@@ -198,9 +198,9 @@
       <aside class="sticky top-6 flex w-full max-w-[360px] flex-[1_1_300px] flex-col gap-2" aria-label="Preview">
         <span class="text-xs font-medium text-muted-foreground">Preview</span>
         <div class="rounded-[28px] border-[8px] border-muted bg-background p-4">
-          <CoachingSectionView section={preview} {name} askHref={null} />
+          <CoachingSectionView section={preview} {name} onask={() => {}} />
         </div>
-        <span class="text-xs text-muted-foreground">"Ask to be coached" appears once you have an invite link.</span>
+        <span class="text-xs text-muted-foreground">"Ask to be coached" opens your questions. Change them, and your client limit, in Requests.</span>
       </aside>
     </div>
   {/if}

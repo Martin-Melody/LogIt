@@ -48,6 +48,8 @@ public class User
     public string? CoachExpectSpots { get; set; }
     /// The questions people answer when they ask (CoachIntake.Question[] as JSON); null = LogIt's five.
     public string? CoachAskQuestionsJson { get; set; }
+    /// "Stop these emails" in the email sent when a coach answers a request (RequestEmails).
+    public bool RequestEmailsOff { get; set; }
     /// Social privacy (see Features/Social/Privacy.cs). A private account's follows need its
     /// approval, and only accepted followers see its posts, profile cards and follow lists.
     public bool IsPrivate { get; set; }

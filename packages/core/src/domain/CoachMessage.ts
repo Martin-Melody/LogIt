@@ -21,6 +21,8 @@ export type CoachMessage = {
   voice?: MessageVoice;
   /** The other person's reaction to it (only the person it was sent to reacts). */
   reaction?: string | null;
+  /** A step in a request (an offer, the waiting list…), drawn as a line; `body` says it in words too. */
+  kind?: string | null;
 };
 
 export type MessageVoice = { id?: string; url: string; ms: number; peaks: string };
