@@ -25,8 +25,8 @@ program. A request opens in Clients › Requests, where you answer it.
 <FeatureFacts id="coach-saved-replies" />
 
 Type **/** at the start of any message box to pick one of your saved replies: keep typing to
-narrow the list (`/sw` finds `/swap`), then Enter puts it in the box with **{first name}**,
-**{exercise}** (when they've asked about an exercise in their program) and **{coach name}** filled
+narrow the list (`/sw` finds `/swap`), then Enter puts it in the box with `{first name}`,
+`{exercise}` (when they've asked about an exercise in their program) and `{coach name}` filled
 in. You can still change it before sending. Make and edit them from Messages › ⋯ › Saved replies;
 they're plain text.
 

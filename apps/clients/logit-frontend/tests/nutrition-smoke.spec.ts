@@ -322,14 +322,14 @@ test("a coach-assigned plan supersedes the target and shows a meal plan", async 
   await expect(page.getByText("Two weeks at a deficit")).toBeVisible();
   await page.getByRole("link", { name: /coach's meal plan/ }).click();
   await page.waitForURL("**/nutrition/plan");
-  await expect(page.getByRole("heading", { name: "Meal plan" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Today's food" })).toBeVisible();
   await expect(page.getByText("Breakfast")).toBeVisible();
   await expect(page.getByText(/Oats · 100 g/)).toBeVisible();
   await expect(page.getByText("Grocery list")).toBeVisible();
   await page.screenshot({ path: `${SHOTS}/11-coach-meal-plan.png`, fullPage: true });
 
-  // log a food from the plan → it lands in today's diary
-  await page.getByRole("button", { name: "Log", exact: true }).first().click();
+  // log the meal as planned → it lands in today's diary
+  await page.getByRole("button", { name: "Log as planned" }).first().click();
   await page.goto("/nutrition");
   await expect(page.getByText(/Oats/).first()).toBeVisible();
 });

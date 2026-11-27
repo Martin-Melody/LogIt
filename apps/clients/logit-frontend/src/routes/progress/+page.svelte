@@ -89,7 +89,8 @@
       </Tabs.List>
 
       <Tabs.Content value="summary">
-        <ProgressSummary />
+        <!-- Only while open: it reads every session, and its tiles shouldn't sit hidden in the page. -->
+        {#if tab === "summary"}<ProgressSummary />{/if}
       </Tabs.Content>
 
       <Tabs.Content value="goals">
