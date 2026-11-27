@@ -446,7 +446,7 @@ export const FEATURES: Feature[] = [
     server: [
       "/coach/roster", "/coach/clients/{clientId}/charts", "/coach/clients/{clientId}/charts/{chartId}",
       "/coach/clients/{relationshipId}/ending", "/coach/clients/{relationshipId}/end",
-      "/coach/clients/{relationshipId}/pause", "/coach/clients/{relationshipId}/resume",
+      "/coach/clients/{relationshipId}/pause", "/coach/clients/{relationshipId}/resume", "/coach/away",
     ],
     can: [
       "Answer requests: offer a spot, keep a waiting list, or say it's not a fit, on the web or the phone",

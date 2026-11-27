@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { coachAway } from "$lib/features/coaching/away.svelte";
+  import PlaneIcon from "@lucide/svelte/icons/plane";
   import { untrack } from "svelte";
   import { goto } from "$app/navigation";
   import PlusIcon from "@lucide/svelte/icons/plus";
@@ -276,6 +278,9 @@
             <Command.Shortcut class="tracking-normal">{coachBadges.checkins ? `${coachBadges.checkins} waiting` : "None waiting"}</Command.Shortcut>
           </Command.Item>
           <Command.Item value="Invite a client invite link" onSelect={() => go("/coaching/links")}><LinkIcon class="text-muted-foreground" />Invite a client</Command.Item>
+          <Command.Item value="Set away holiday out of office back on" onSelect={() => { commands.palette = false; void coachAway.load().then(() => (coachAway.dialogOpen = true)); }}>
+            <PlaneIcon class="text-muted-foreground" />{coachAway.value ? "Away…" : "Set away…"}
+          </Command.Item>
           {#if sandbox.on && !practice.locked}
             <Command.Item value="Practice view sample clients {practice.on ? 'turn off' : 'turn on'}"
               onSelect={() => { commands.palette = false; practice.set(!practice.on); }}>

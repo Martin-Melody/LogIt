@@ -30,6 +30,8 @@
   import { Kbd } from "$lib/components/ui/kbd";
   import { commands, modKey } from "$lib/features/commands/commands.svelte";
   import { coachBadges } from "$lib/features/coaching/badges.svelte";
+  import { coachAway } from "$lib/features/coaching/away.svelte";
+  import PlaneIcon from "@lucide/svelte/icons/plane";
 
   let {
     isStudio = false,
@@ -226,6 +228,13 @@
                 </a>
               {/snippet}
             </DropdownMenu.Item>
+            {#if isStudio && !admin}
+              <!-- Canvas Z7: away until a date. -->
+              <DropdownMenu.Item onclick={() => { void coachAway.load().then(() => (coachAway.dialogOpen = true)); }}>
+                <PlaneIcon class="size-4" />
+                {coachAway.value?.now ? `Away until ${new Date(coachAway.value.until).toLocaleDateString(undefined, { day: "numeric", month: "short" })}…` : "Set away…"}
+              </DropdownMenu.Item>
+            {/if}
             {#if adminState.isAdmin && !admin}
               <DropdownMenu.Item>
                 {#snippet child({ props })}

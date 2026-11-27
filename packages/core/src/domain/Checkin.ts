@@ -332,6 +332,8 @@ export function missedCheckin(
   s: CheckinSchedule,
   submissions: CheckinSubmission[],
   atMs: number = nowMs(),
+  /** The coach was away then (canvas Z7): a check-in due in that time isn't late. */
+  excuse?: { fromMs: number; untilMs: number } | null,
 ): { periodIndex: number; dueMs: number } | null {
   if (s.archived) return null;
   const current = currentPeriodIndex(s, atMs);
@@ -340,7 +342,10 @@ export function missedCheckin(
   const done = submissions.some(
     (x) => x.scheduleId === s.id && x.periodIndex === previous && x.submittedAtMs !== undefined,
   );
-  return done ? null : { periodIndex: previous, dueMs: periodDueMs(s, previous) };
+  if (done) return null;
+  const dueMs = periodDueMs(s, previous);
+  if (excuse && dueMs >= excuse.fromMs && dueMs < excuse.untilMs) return null;
+  return { periodIndex: previous, dueMs };
 }
 
 // ── The client's list: this period and earlier ones ─────────────────────────────

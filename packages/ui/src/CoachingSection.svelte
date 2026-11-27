@@ -3,7 +3,7 @@
      or the app's own ask sheet (onask); neither hides the button. -->
 <script lang="ts">
   import type { CoachingSection } from "@logit/core/domain/coachProfile";
-  import { askButton, whereText } from "@logit/core/domain/coachProfile";
+  import { askButton, awayLine, whereText } from "@logit/core/domain/coachProfile";
   import { priceText } from "@logit/core/domain/coachPayments";
   import RichText from "./RichText.svelte";
 
@@ -34,6 +34,8 @@
 
   const first = $derived(name.trim().split(/\s+/)[0] || name);
   const ask = $derived(askButton(section, first));
+  // Canvas Z7: "Away until 2 Jan" when the coach tells people who ask.
+  const away = $derived(awayLine(section.awayUntil, first));
   const btn = "inline-flex h-11 items-center justify-center rounded-lg px-4 text-[15px] font-semibold no-underline transition-opacity";
 </script>
 
@@ -43,6 +45,9 @@
     <p class="text-[15px] font-medium">{section.headline}</p>
     <p class="text-[13px] text-muted-foreground">{whereText(section)}</p>
   </div>
+  {#if away}
+    <p class="rounded-lg bg-muted px-3 py-2 text-[13px] font-medium">{away}</p>
+  {/if}
   {#if ask.fullLine}
     <p class="rounded-lg bg-muted px-3 py-2 text-[13px] font-medium">{ask.fullLine}</p>
   {/if}

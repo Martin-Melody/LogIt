@@ -21,6 +21,7 @@
   import StudioModeDialog from "$lib/features/guide/StudioModeDialog.svelte";
   import StudioFinishDialog from "$lib/features/guide/StudioFinishDialog.svelte";
   import StudioOnDialog from "$lib/features/guide/StudioOnDialog.svelte";
+  import AwayDialog from "$lib/features/coaching/AwayDialog.svelte";
   import SandboxBanner from "$lib/features/guide/SandboxBanner.svelte";
   import StudioNeeded from "$lib/features/onboarding/StudioNeeded.svelte";
   import { guide, walkthroughsFor } from "$lib/features/guide/guide.svelte";
@@ -274,4 +275,5 @@
   <StudioModeDialog />
   <StudioFinishDialog />
   <StudioOnDialog />
+  {#if isStudio}<AwayDialog />{/if}
 {/if}

@@ -13,6 +13,7 @@
   import { chip } from "$lib/components/ui/choice";
   import { coachApi, SHARE_ALL, type AskInfo } from "@logit/core/api/coachApi";
   import { firstName, type AskQuestion } from "@logit/core/domain/coachRequest";
+  import { awayLine } from "@logit/core/domain/coachProfile";
   import { formatMoney } from "@logit/core/domain/coachPayments";
 
   let {
@@ -113,6 +114,7 @@
         <p class="text-[13px] text-muted-foreground">
           {info.full ? `${c} is full right now${info.expectSpots ? ` and expects spots in ${info.expectSpots}` : ""}. ` : ""}{c} reads these before replying. Only {c} sees your answers.
         </p>
+        {#if awayLine(info.awayUntil, c)}<p class="rounded-lg bg-muted px-3 py-2.5 text-[14px]">{awayLine(info.awayUntil, c)}</p>{/if}
         {#each questions as q (q.id)}
           <div class="flex flex-col gap-2">
             <span id="q-{q.id}" class="text-[15px] font-semibold leading-snug">{q.label}{#if q.optional}<span class="ml-1.5 text-sm font-normal text-muted-foreground">Optional</span>{/if}</span>

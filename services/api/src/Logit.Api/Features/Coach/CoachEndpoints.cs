@@ -340,6 +340,8 @@ public static class CoachEndpoints
             swapRule = SwapRules.Effective(r, r.Coach),
             status = r.Status == CoachClientStatus.Paused ? "paused" : "active",
             payment = CoachPaymentEndpoints.ClientPaymentDto(r.Payment, accounts.GetValueOrDefault(r.CoachId)),
+            // Canvas Z7: pinned in the conversation while the coach is away.
+            away = CoachAway.Dto(r.Coach, DateTime.UtcNow),
         }));
     }
 

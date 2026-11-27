@@ -41,6 +41,15 @@ them a message, and suggest another coach if you like. They keep their program a
 If a client has waited five days for a reply, Today says so. After seven days without one, they can
 stop coaching with the unused days refunded.
 
+## Away
+
+Going away for a while? **Set away** from your account menu or ⌘K: the day you go, the day you're back,
+and a note. The note is pinned in every client's conversation until you're back, and it ends by itself
+on that day (or End now). Check-ins due while you're away aren't marked late, people who ask to be
+coached see when you're back, and the seven-day clock starts again from your back-on day. Payments
+carry on; to stop charging one client while you're away, pause coaching on their page. No automatic
+replies are sent: the pinned note does that job.
+
 ## Sharing
 
 Each client chooses what you see: workouts, nutrition diary, bodyweight, habits and check-ins. They can

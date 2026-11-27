@@ -275,6 +275,7 @@ public static class CoachRequestEndpoints
             full = IsFull(coach, taken),
             whenFull = coach.CoachWhenFull ?? "waitlist",
             expectSpots = coach.CoachExpectSpots,
+            awayUntil = CoachAway.ForAskers(coach, now),
             isSelf = coach.Id == me,
             relationshipId = existing?.Id,
             relationship = existing is null ? "none"

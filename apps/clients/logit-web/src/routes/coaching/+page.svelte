@@ -9,6 +9,8 @@
   import { coachPaymentsApi } from "@logit/core/api/coachPaymentsApi";
   import { coachProblemText, needsCoach, type PaymentClient } from "@logit/core/domain/coachPayments";
   import { toast } from "$lib/components/ui/sonner";
+  import { Button } from "$lib/components/ui/button";
+  import { coachAway } from "$lib/features/coaching/away.svelte";
   import Avatar from "$lib/features/coaching/Avatar.svelte";
   import { coachBadges } from "$lib/features/coaching/badges.svelte";
   import {
@@ -32,6 +34,7 @@
     }
   }
   onMount(load);
+  onMount(() => void coachAway.load());
   // Payments that need the coach (failed, overdue, paused) belong here too, not only on the
   // Payments page (bug hunt 6.2). No payments set up: nothing to add.
   let payments = $state<PaymentClient[]>([]);
@@ -137,6 +140,15 @@
           <h2 class="text-sm font-semibold">Needs you</h2>
           <span class="text-xs text-muted-foreground">Newest first</span>
         </div>
+        {#if coachAway.value}
+          {@const a = coachAway.value}
+          <!-- Canvas Z7: a slim line while away (or planned). -->
+          <div class="-mx-[18px] flex items-center gap-3 border-t border-border bg-muted/50 px-[18px] py-2.5 text-[13px]">
+            <span class="flex-1">{a.now ? "You're away" : `Away from ${new Date(a.from).toLocaleDateString(undefined, { day: "numeric", month: "short" })}`}, back on {new Date(a.until).toLocaleDateString(undefined, { day: "numeric", month: "short" })}. Your note is pinned for clients.</span>
+            <Button size="sm" variant="ghost" onclick={() => (coachAway.dialogOpen = true)}>Edit</Button>
+            <Button size="sm" variant="outline" onclick={() => void coachAway.end().then(() => toast.success("You're back"))}>{a.now ? "End now" : "Cancel"}</Button>
+          </div>
+        {/if}
         {#if stripeNeeds !== false}
           <div class="flex items-center gap-3 border-t border-warning/40 bg-warning/5 -mx-[18px] px-[18px] py-3">
             <span class="flex min-w-0 flex-1 flex-col">

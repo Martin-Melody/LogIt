@@ -122,6 +122,34 @@ public class CoachEndingTests
     }
 
     [Fact]
+    public async Task Away_pins_a_note_for_clients_and_holds_the_no_reply_clock_until_the_coach_is_back()
+    {
+        await using var w = await CoachedAsync("away");
+        var asked = DateTimeOffset.UtcNow.AddDays(-8).ToUnixTimeMilliseconds();
+        await Json(await w.Client.PostAsJsonAsync("/coach/messages", new { messageId = "a1", relationshipId = w.RelId, body = "Can I move Thursday?", createdAtMs = asked }));
+        Assert.Equal(JsonValueKind.Object, (await Json(await w.Client.GetAsync($"/coach/coaches/{w.RelId}/manage"))).GetProperty("quiet").ValueKind);
+
+        // Away since yesterday, back in three days.
+        var from = DateTime.UtcNow.Date.AddDays(-1);
+        var until = DateTime.UtcNow.Date.AddDays(3);
+        Assert.Equal(HttpStatusCode.BadRequest, (await w.Coach.PutAsJsonAsync("/coach/away", new { from, until = from })).StatusCode);
+        await Json(await w.Coach.PutAsJsonAsync("/coach/away", new { from, until, note = "Back on the 2nd. Keep training." }));
+
+        var mine = (await Json(await w.Client.GetAsync("/coach/coaches")))[0].GetProperty("away");
+        Assert.Equal("Back on the 2nd. Keep training.", mine.GetProperty("note").GetString());
+        Assert.True(mine.GetProperty("now").GetBoolean());
+        Assert.Equal(JsonValueKind.Null, (await Json(await w.Client.GetAsync($"/coach/coaches/{w.RelId}/manage"))).GetProperty("quiet").ValueKind);
+        Assert.Equal(HttpStatusCode.Conflict, (await w.Client.PostAsJsonAsync($"/coach/coaches/{w.RelId}/stop", new { quiet = true })).StatusCode);
+        // People who ask see when they're back.
+        Assert.NotEqual(JsonValueKind.Null, (await Json(await w.Client.GetAsync($"/coach/ask/{w.CoachName}"))).GetProperty("awayUntil").ValueKind);
+
+        // Back early: the clock counts from now, so it isn't quiet yet.
+        (await w.Coach.DeleteAsync("/coach/away")).EnsureSuccessStatusCode();
+        Assert.Equal(JsonValueKind.Null, (await Json(await w.Client.GetAsync("/coach/coaches")))[0].GetProperty("away").ValueKind);
+        Assert.Equal(JsonValueKind.Null, (await Json(await w.Client.GetAsync($"/coach/coaches/{w.RelId}/manage"))).GetProperty("quiet").ValueKind);
+    }
+
+    [Fact]
     public async Task After_a_week_with_no_reply_the_client_can_stop_with_a_refund()
     {
         await using var w = await CoachedAsync("quiet");

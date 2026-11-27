@@ -2,6 +2,8 @@
      version made with "Change for Aoife only"), Send a form, and their check-ins with a column per
      number question, so a coach who asks about sleep sees a sleep column. -->
 <script lang="ts">
+  import { awayExcuse } from "@logit/core/api/coachApi";
+  import { coachAway } from "$lib/features/coaching/away.svelte";
   import { guideSignal } from "$lib/features/guide/signal";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
@@ -117,7 +119,7 @@
       </div>
       {#each mine as f (f.id)}
         {@const src = sourceOf(f)}
-        {@const m = sharing.checkins ? missedCheckin(f, subs) : null}
+        {@const m = sharing.checkins ? missedCheckin(f, subs, undefined, awayExcuse(coachAway.value)) : null}
         <div class="flex flex-wrap items-center gap-3 border-t border-border py-3">
           <span class="flex min-w-0 flex-[1_1_260px] flex-col gap-0.5">
             <span class="flex items-center gap-2 text-[13px] font-medium">

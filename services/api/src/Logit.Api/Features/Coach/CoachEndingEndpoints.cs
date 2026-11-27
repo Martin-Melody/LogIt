@@ -168,8 +168,17 @@ public static class CoachEndingEndpoints
     public static bool IsQuiet(CoachClientRelationship rel, DateTime? waitingSince, DateTime now)
     {
         if (waitingSince is not { } since) return false;
-        var from = rel.PausedUntil is { } back && back > since ? back : since;
-        return now - from >= QuietAfter;
+        // Away (canvas Z7): never quiet while away.
+        if (rel.Coach is { } coach && CoachAway.IsAway(coach, now)) return false;
+        return now - QuietFrom(rel, since, now) >= QuietAfter;
+    }
+
+    /// Where the Z2 clock starts: the unanswered message, or the day the coach came back from
+    /// an away (Z7) or a pause (E2), whichever is later.
+    public static DateTime QuietFrom(CoachClientRelationship rel, DateTime since, DateTime now)
+    {
+        if (rel.Coach is { } coach) since = CoachAway.ClockFrom(coach, since, now);
+        return rel.PausedUntil is { } back && back > since ? back : since;
     }
 
     private static async Task<IResult> Manage(Guid relationshipId, ClaimsPrincipal caller, AppDbContext db, CoachPaymentService payments, CancellationToken ct)
@@ -226,7 +235,7 @@ public static class CoachEndingEndpoints
             // Canvas Z2: the coach hasn't replied for a week.
             quiet = quiet ? new
             {
-                days = (int)Math.Floor((now - waiting!.Value).TotalDays),
+                days = (int)Math.Floor((now - QuietFrom(rel, waiting!.Value, now)).TotalDays),
                 lastMessage = lastMessage?.Body,
                 lastMessageAt = lastMessage is null ? (DateTime?)null : DateTimeOffset.FromUnixTimeMilliseconds(lastMessage.CreatedAtMs).UtcDateTime,
                 refundCents = last is not null && p?.PaidUntil is { } u ? CoachPaymentService.UnusedShare(last.AmountCents, last.PaidAt, u, now) : 0,

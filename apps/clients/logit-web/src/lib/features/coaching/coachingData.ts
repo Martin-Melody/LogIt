@@ -1,7 +1,9 @@
+import { coachAway } from "./away.svelte";
 import { coachTrial } from "$lib/workspace";
 import { practice } from "$lib/features/guide/sandbox.svelte";
 import {
   coachApi,
+  awayExcuse,
   SHARE_ALL,
   type CheckinInboxItem,
   type CoachingRequest,
@@ -121,14 +123,17 @@ export async function loadCoachingOverview(): Promise<CoachingOverview> {
     // Requests come through invite links, which are Studio-only: none while trying samples.
     coachTrial() ? Promise.resolve([] as CoachingRequest[]) : coachApi.listRequests().catch(() => [] as CoachingRequest[]),
     coachApi.listSentInvites().catch(() => [] as SentInvite[]),
+    coachAway.load(),
   ]);
   const now = Date.now();
+  // Canvas Z7: check-ins due while you were away aren't missed.
+  const excuse = awayExcuse(coachAway.value);
   // Practice view: the samples, or everyone else (never both). Programs and schedules
   // nobody was given (templates) belong to both.
   const shown = roster.filter((r) => practice.shows(r.client.isSample));
   const ids = new Set(shown.map((r) => r.client.id));
   const mine = <T extends { recipientUserId?: string | null }>(x: T) => !x.recipientUserId || ids.has(x.recipientUserId);
-  const clients = shown.map((r) => summarise(r, inbox, schedules, programs, now));
+  const clients = shown.map((r) => summarise(r, inbox, schedules, programs, now, excuse));
   return {
     clients,
     inbox: inbox.filter((i) => ids.has(i.clientUserId)),
@@ -150,6 +155,7 @@ function summarise(
   schedules: MyCheckinSchedule[],
   programs: MyCoachProgram[],
   now: number,
+  excuse: ReturnType<typeof awayExcuse> = null,
 ): ClientSummary {
   const sharing = r.sharing ?? SHARE_ALL;
   const mine = inbox.filter((i) => i.clientUserId === r.client.id);
@@ -160,7 +166,7 @@ function summarise(
   const paused = !!r.pausedUntil && Date.parse(r.pausedUntil) > now;
   if (sharing.checkins && !paused) {
     for (const s of clientSchedules) {
-      const m = missedCheckin(s.schedule, subs, now);
+      const m = missedCheckin(s.schedule, subs, now, excuse);
       if (m && (!missed || m.dueMs > missed.dueMs)) missed = { schedule: s.schedule, dueMs: m.dueMs };
     }
   }

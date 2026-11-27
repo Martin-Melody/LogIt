@@ -3086,6 +3086,21 @@ namespace Logit.Api.Migrations
                     b.Property<string>("AvatarUrl")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("AwayExcusesCheckins")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("AwayFrom")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AwayNote")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("AwayTellAskers")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("AwayUntil")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("BackupDeviceId")
                         .HasColumnType("TEXT");
 

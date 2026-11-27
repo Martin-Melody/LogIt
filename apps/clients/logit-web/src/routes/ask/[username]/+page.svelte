@@ -14,6 +14,7 @@
   import { shortDate } from "$lib/features/coaching/format";
   import GetTheApp from "$lib/features/onboarding/GetTheApp.svelte";
   import Logo from "@logit/ui/Logo.svelte";
+  import { awayLine } from "@logit/core/domain/coachProfile";
 
   const username = $derived(page.params.username ?? "");
   let info = $state<AskInfo | null>(null);
@@ -115,6 +116,8 @@
             {info.full ? `${first} is full right now${info.expectSpots ? ` and expects spots in ${info.expectSpots}` : ""}. ` : ""}{first} reads these before replying. Only {first} sees your answers.
           </p>
         </div>
+        {@const away = awayLine(info.awayUntil, first)}
+        {#if away}<p class="rounded-[10px] bg-muted px-3.5 py-2.5 text-[13px]">{away}</p>{/if}
         <AskForm coachName={name} questions={info.questions} packages={info.packages} bind:answers bind:interested
           {signedIn} waitingList={info.full} onsignedin={signedInNow} onsend={send} />
       {/if}

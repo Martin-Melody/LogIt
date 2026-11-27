@@ -31,6 +31,17 @@ export interface CoachingSection extends CoachProfile {
   /** When full: "waitlist" asks onto the waiting list, "stop" turns the button off. */
   whenFull?: "waitlist" | "stop";
   expectSpots?: string | null;
+  /** Canvas Z7: away until then (only when the coach tells people who ask). */
+  awayUntil?: string | null;
+}
+
+/** "Away until 2 Jan" for people about to ask (canvas Z7), or null. */
+export function awayLine(awayUntil: string | null | undefined, first: string, now = new Date()): string | null {
+  if (!awayUntil) return null;
+  const until = new Date(awayUntil);
+  if (until <= now) return null;
+  const day = until.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+  return `${first} is away until ${day}. You can still ask; ${first} replies when back.`;
 }
 
 /** What the profile's ask button says and whether it works (canvas P1, A4). */

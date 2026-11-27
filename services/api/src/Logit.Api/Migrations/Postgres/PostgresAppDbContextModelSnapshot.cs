@@ -3091,6 +3091,21 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<string>("AvatarUrl")
                         .HasColumnType("text");
 
+                    b.Property<bool>("AwayExcusesCheckins")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("AwayFrom")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("AwayNote")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("AwayTellAskers")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("AwayUntil")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("BackupDeviceId")
                         .HasColumnType("text");
 

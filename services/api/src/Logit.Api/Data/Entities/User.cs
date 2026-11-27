@@ -50,6 +50,15 @@ public class User
     public string? CoachAskQuestionsJson { get; set; }
     /// "Stop these emails" in the email sent when a coach answers a request (RequestEmails).
     public bool RequestEmailsOff { get; set; }
+    /// Away (canvas Z7): from this day until the "back on" day, a note pinned in clients'
+    /// conversations; ends by itself on AwayUntil. See CoachAway.
+    public DateTime? AwayFrom { get; set; }
+    public DateTime? AwayUntil { get; set; }
+    public string? AwayNote { get; set; }
+    /// Check-ins due while away aren't marked late.
+    public bool AwayExcusesCheckins { get; set; } = true;
+    /// People who ask to be coached are told when the coach is back.
+    public bool AwayTellAskers { get; set; } = true;
     /// The coach's agreement (canvas J4, K9), Markdown in their own words; new clients tick it
     /// before taking a spot. Null: no agreement.
     public string? CoachAgreement { get; set; }

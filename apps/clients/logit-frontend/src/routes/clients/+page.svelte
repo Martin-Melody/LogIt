@@ -223,6 +223,13 @@
               {:else if m?.endsAt}
                 <p role="status" class="mx-3 mb-2 rounded-lg bg-muted px-3 py-2 text-xs">Coaching with {name} ends {new Date(m.endsAt).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })}.</p>
               {/if}
+              {#if c.away?.now}
+                <!-- Canvas Z7: pinned while the coach is away. -->
+                <div role="status" class="mx-3 mb-2 flex flex-col gap-1 rounded-lg bg-muted px-3 py-2.5">
+                  <span class="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{name} is away until {new Date(c.away.until).toLocaleDateString(undefined, { day: "numeric", month: "short" })}</span>
+                  {#if c.away.note}<span class="text-[13px] leading-relaxed">{c.away.note}</span>{/if}
+                </div>
+              {/if}
               {#if m?.change || m?.payDue}
                 <!-- Canvas K14: answering a change of package and paying happen on the web (W6). -->
                 <div role="status" class="mx-3 mb-2 flex flex-col gap-2 rounded-lg border border-primary/40 px-3 py-2.5">

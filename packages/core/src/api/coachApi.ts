@@ -58,6 +58,23 @@ export interface CoachRelationship {
   status?: "active" | "paused";
   /** How I pay this coach through LogIt, if I do. Never carries a price (app store rules). */
   payment?: ClientPayment | null;
+  /** Canvas Z7: the coach is away (or will be); pinned in the conversation while away. */
+  away?: CoachAway | null;
+}
+
+/** A coach's away (canvas Z7). `now`: it has started. */
+export interface CoachAway {
+  from: string;
+  until: string;
+  note: string | null;
+  now: boolean;
+  excuseCheckins: boolean;
+  tellAskers: boolean;
+}
+
+/** The check-in excuse for missedCheckin while (and after) a coach is away. */
+export function awayExcuse(away: CoachAway | null | undefined): { fromMs: number; untilMs: number } | null {
+  return away?.excuseCheckins ? { fromMs: Date.parse(away.from), untilMs: Date.parse(away.until) } : null;
 }
 
 /** A coach's review of one of my check-ins. */
@@ -246,6 +263,8 @@ export interface AskInfo {
   full: boolean;
   whenFull: "waitlist" | "stop";
   expectSpots: string | null;
+  /** Canvas Z7: the coach is away until then. */
+  awayUntil?: string | null;
   isSelf: boolean;
   relationshipId: string | null;
   relationship: "none" | "requested" | "invited" | "active";
@@ -452,6 +471,17 @@ export function coachApiFor(api: ApiFetcher) {
     },
 
     /** Coach: pause coaching until a date (YYYY-MM-DD); payments and check-ins pause. */
+    /** Canvas Z7: your own away, set it, or end it now. */
+    async getAway(): Promise<CoachAway | null> {
+      return (await api.fetch<{ away: CoachAway | null }>("/coach/away")).away;
+    },
+    async setAway(input: { from: string; until: string; note?: string; excuseCheckins: boolean; tellAskers: boolean }): Promise<CoachAway | null> {
+      return (await api.fetch<{ away: CoachAway | null }>("/coach/away", { method: "PUT", body: JSON.stringify(input) })).away;
+    },
+    async endAway(): Promise<void> {
+      await api.fetch("/coach/away", { method: "DELETE" });
+    },
+
     async pauseCoaching(relationshipId: string, until: string, message?: string): Promise<void> {
       await api.fetch(`/coach/clients/${relationshipId}/pause`, { method: "POST", body: JSON.stringify({ until, message }) });
     },

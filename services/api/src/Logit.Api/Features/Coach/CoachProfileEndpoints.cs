@@ -31,7 +31,9 @@ public static class CoachProfileEndpoints
         string Headline, string Mode, string? Place, string About, List<string> GoodFor,
         List<PublicPackageDto> Packages, string? AskCode, bool AskPays,
         // Canvas A4: the client limit is reached; "waitlist" asks onto the waiting list, "stop" turns the button off.
-        bool Full = false, string WhenFull = "waitlist", string? ExpectSpots = null);
+        bool Full = false, string WhenFull = "waitlist", string? ExpectSpots = null,
+        // Canvas Z7: away, when the coach tells people who ask.
+        DateTime? AwayUntil = null);
 
     public const int MaxHeadline = 120, MaxPlace = 80, MaxAbout = 4000, MaxGoodFor = 6, MaxTag = 24;
     public static readonly string[] Modes = ["online", "inperson", "both"];
@@ -70,7 +72,7 @@ public static class CoachProfileEndpoints
             .FirstOrDefaultAsync();
         var spots = await CoachIntake.SpotsAsync(db, u, now);
         return new CoachingSectionDto(p.Headline, p.Mode, p.Place, p.About, p.GoodFor, packages, ask?.Code, ask?.Pays ?? false,
-            spots.Full, spots.WhenFull, spots.ExpectSpots);
+            spots.Full, spots.WhenFull, spots.ExpectSpots, CoachAway.ForAskers(u, now));
     }
 
     private static async Task<IResult> Get(ClaimsPrincipal caller, AppDbContext db, IConfiguration config)

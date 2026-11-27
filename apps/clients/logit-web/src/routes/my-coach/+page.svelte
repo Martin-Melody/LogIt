@@ -32,7 +32,7 @@
   import RequestEventCard from "$lib/features/coaching/requests/RequestEventCard.svelte";
   import AgreementDialog from "$lib/features/coaching/requests/AgreementDialog.svelte";
   import { Button } from "$lib/components/ui/button";
-  import type { ManageCoaching } from "@logit/core/api/coachApi";
+  import { awayExcuse, type ManageCoaching } from "@logit/core/api/coachApi";
   import { clientPaymentNote, formatMoney, shortDate as payDate } from "@logit/core/domain/coachPayments";
 
   // You as a client: your coach, what they've given you, your check-ins and what they can see.
@@ -124,8 +124,11 @@
   type Due = { form: CheckinSchedule; dueMs: number; draft: boolean; late: boolean };
   const due = $derived.by((): Due[] => {
     const out: Due[] = [];
+    // Canvas Z7: due while the coach was away isn't late.
+    // shortcut: forms don't record their coach, so this only applies with one coach; add the coach id to schedules if clients ever keep two.
+    const excuse = coaches.length === 1 ? awayExcuse(coaches[0].away) : null;
     for (const f of forms) {
-      const missed = missedCheckin(f, subs);
+      const missed = missedCheckin(f, subs, undefined, excuse);
       if (missed) {
         out.push({ form: f, dueMs: missed.dueMs, draft: subs.some((s) => s.scheduleId === f.id && s.periodIndex === missed.periodIndex), late: true });
         continue;
@@ -438,6 +441,13 @@
           {#if !paused}
             <section id="messages-{c.relationshipId}" class="flex scroll-mt-4 flex-col rounded-[10px] border border-border bg-card px-[18px] pb-4 pt-3">
               <h2 class="pb-1 text-sm font-semibold">Messages</h2>
+              {#if c.away?.now}
+                <!-- Canvas Z7: pinned while the coach is away. -->
+                <div role="status" class="mb-2 rounded-[10px] border border-border bg-muted/60 px-3.5 py-2.5">
+                  <p class="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{name} is away until {shortDate(Date.parse(c.away.until))}</p>
+                  {#if c.away.note}<p class="mt-1 text-[13px] leading-relaxed">{c.away.note}</p>{/if}
+                </div>
+              {/if}
               <MessageThread relationshipId={c.relationshipId} otherName={name} onRead={() => void coachBadges.refresh(undefined, true)}>
                 {#snippet card(m)}
                   <RequestEventCard message={m} reader="client" coach={name} client={apiClient.getUser()?.displayName ?? "You"} stateOf={() => "taken"} />
