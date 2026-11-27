@@ -111,20 +111,21 @@
     void goto(u, { replaceState: true, noScroll: true, keepFocus: true });
   }
 
-  async function markReviewed(sendReply: boolean, reviewedNow = true, item: CheckinInboxItem | null = selected) {
-    const selected = item;
-    if (!selected || !overview || busy) return;
+  /** The open check-in, or `item` (a row's menu). */
+  async function markReviewed(sendReply: boolean, reviewedNow = true, item?: CheckinInboxItem) {
+    const target = item ?? selected;
+    if (!target || !overview || busy) return;
     busy = true;
     try {
       const text = sendReply ? reply.trim() : "";
       if (text) {
         // Canvas K4: it goes into your conversation, saying which check-in it answers.
-        const card: CheckinReplyCard = { scheduleName: selSchedule?.name ?? "Check-in", periodStartMs: selSubmission?.periodStartMs ?? selected.submittedAtMs, submissionId: selected.id };
-        await messagesApi.send({ relationshipId: selected.relationshipId, messageId: createId("msg"), body: text, createdAtMs: Date.now(), kind: "checkin-reply", cardJson: JSON.stringify(card) });
+        const card: CheckinReplyCard = { scheduleName: selSchedule?.name ?? "Check-in", periodStartMs: selSubmission?.periodStartMs ?? target.submittedAtMs, submissionId: target.id };
+        await messagesApi.send({ relationshipId: target.relationshipId, messageId: createId("msg"), body: text, createdAtMs: Date.now(), kind: "checkin-reply", cardJson: JSON.stringify(card) });
       }
       // The reply is kept with the review too, so the client sees it with this check-in.
-      const at = await coachApi.setCheckinReviewed(selected.clientUserId, selected.id, reviewedNow, text || undefined);
-      const done = selected;
+      const at = await coachApi.setCheckinReviewed(target.clientUserId, target.id, reviewedNow, text || undefined);
+      const done = target;
       overview = {
         ...overview,
         inbox: overview.inbox.map((i) => (i.id === done.id && i.clientUserId === done.clientUserId ? { ...i, reviewedAtMs: at } : i)),
