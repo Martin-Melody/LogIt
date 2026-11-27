@@ -1,6 +1,7 @@
 <!-- Coaching › Profile (canvas P3): the Coaching section of the coach's one profile, with a phone
      preview of exactly what people see. -->
 <script lang="ts">
+  import AutoMessagesSection from "$lib/features/coaching/AutoMessagesSection.svelte";
   import { onMount } from "svelte";
   import { apiClient, ApiError } from "@logit/core/api/client";
   import { coachApi } from "@logit/core/api/coachApi";
@@ -255,6 +256,7 @@
           <Button variant="outline" size="sm" class="self-start" href="/coaching/payments">Manage packages</Button>
         </section>
 
+        <AutoMessagesSection />
         <section class="flex flex-col gap-2 border-t border-border pt-6" aria-labelledby="agreement-title">
           <h2 id="agreement-title" class="text-base font-semibold">When someone becomes your client</h2>
           <Label for="agreement">Coaching agreement <span class="font-normal text-muted-foreground">optional</span></Label>

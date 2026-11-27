@@ -17,6 +17,10 @@ export interface CoachClientUser {
  * phone never lists them (it has no Practice view). */
 export const isRealClient = (x: { client: { isSample?: boolean } }): boolean => !x.client.isSample;
 
+/** Messages sent for the coach, each on or off with its text ({first name}, {coach name}). */
+export type AutoMessage = { on: boolean; text: string };
+export type AutoMessages = { onStart: AutoMessage; onAsk: AutoMessage; onWaitingList: AutoMessage };
+
 /** What a client lets one coach read. The server enforces it on every coach read; a
  * switched-off area answers 403 with `code: "not_shared"`. */
 export interface Sharing {
@@ -640,6 +644,14 @@ export function coachApiFor(api: ApiFetcher) {
       return api.fetch("/coach/cards", { method: "PUT", body: JSON.stringify(layout) });
     },
     /** Canvas W10: my saved replies. */
+    /** Messages sent for you (canvas MS3). */
+    async getAutoMessages(): Promise<AutoMessages> {
+      return api.fetch("/coach/auto-messages");
+    },
+    async saveAutoMessages(s: AutoMessages): Promise<AutoMessages> {
+      return api.fetch("/coach/auto-messages", { method: "PUT", body: JSON.stringify(s) });
+    },
+
     async getSavedReplies(): Promise<import("../domain/savedReplies").SavedReply[]> {
       return (await api.fetch<{ replies: import("../domain/savedReplies").SavedReply[] }>("/coach/saved-replies")).replies;
     },

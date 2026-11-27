@@ -68,6 +68,33 @@ export function readGroupInvite(json: string | null | undefined): { groupId: str
   }
 }
 
+/** A coach inviting someone they chat with to coaching (canvas MS5). The server builds it. */
+export type CoachInviteCard = {
+  coachUsername: string;
+  coachName: string;
+  headline: string;
+  packages: { name: string; amountCents: number; currency: string; interval: string }[];
+  /** Set when the coach made an offer: the card opens it. */
+  offer: { offerId: string; packageName: string; amountCents: number; currency: string; interval: string; pays: boolean; holdUntilMs: number } | null;
+};
+
+export function readCoachInvite(json: string | null | undefined): CoachInviteCard | null {
+  if (!json) return null;
+  try {
+    const c = JSON.parse(json);
+    if (typeof c?.coachUsername !== "string") return null;
+    return {
+      coachUsername: c.coachUsername,
+      coachName: c.coachName ?? c.coachUsername,
+      headline: c.headline ?? "",
+      packages: Array.isArray(c.packages) ? c.packages : [],
+      offer: c.offer && typeof c.offer.offerId === "string" ? c.offer : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 /** A reply to a photo story: the quoted photo, or null (no photo, or the story has gone). */
 export function readStoryPhoto(json: string | null | undefined): { url: string; width: number; height: number } | null {
   if (!json) return null;

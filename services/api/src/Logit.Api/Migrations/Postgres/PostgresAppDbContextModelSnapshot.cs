@@ -3127,6 +3127,9 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<string>("CoachAskQuestionsJson")
                         .HasColumnType("text");
 
+                    b.Property<string>("CoachAutoMessagesJson")
+                        .HasColumnType("text");
+
                     b.Property<string>("CoachCardsJson")
                         .HasColumnType("text");
 

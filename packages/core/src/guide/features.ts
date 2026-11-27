@@ -393,7 +393,7 @@ export const FEATURES: Feature[] = [
     web: ["/coaching/profile"],
     whereWeb: "Coaching › Profile",
     docs: "/docs/coaching#your-coaching-profile",
-    server: ["/coach/profile", "/coach/intake", "/coach/agreement"],
+    server: ["/coach/profile", "/coach/intake", "/coach/agreement", "/coach/auto-messages"],
     can: ["Write About you with formatting", "Choose which packages show, with their prices"],
     cant: ["Show the Coaching section before you have Studio (you can write it while you try)"],
   },

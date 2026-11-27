@@ -33,7 +33,12 @@
   import { nextReaction, withMyReaction } from "@logit/core/domain/dmReactions";
   import DumbbellIcon from "@lucide/svelte/icons/dumbbell";
   import TrophyIcon from "@lucide/svelte/icons/trophy";
-  import { cardTitle, readCard, readGroupInvite, readStoryPhoto, readStoryQuote, recordCard, workoutCard } from "@logit/core/domain/messageCard";
+  import { cardTitle, readCard, readCoachInvite, readGroupInvite, readStoryPhoto, readStoryQuote, recordCard, workoutCard } from "@logit/core/domain/messageCard";
+  import { formatMoney } from "@logit/core/domain/coachPayments";
+  import { coachApi } from "@logit/core/api/coachApi";
+  import { canCoach } from "$lib/workspace";
+  import InviteToCoachingDialog from "$lib/features/coaching/invite/InviteToCoachingDialog.svelte";
+  import AskDialog from "$lib/features/coaching/ask/AskDialog.svelte";
 
   // One conversation between people (the phone's chat screen, design canvas M2), by username
   // or thread. Same server rules as the phone: a request you received shows Accept / Delete;
@@ -42,6 +47,32 @@
   let { to, onchange, ondelete }: { to: DmTo; onchange?: () => void; ondelete?: () => void } = $props();
 
   let chat = $state<DmChat | null>(null);
+  // Coaching between the two of you (canvas MS5): the chat stays here; a line links to the
+  // coaching conversation, which lives where your role puts it.
+  let inviting = $state(false);
+  let asking = $state<{ username: string; name: string } | null>(null);
+  let coachingLink = $state<{ text: string; href: string } | null>(null);
+  async function findCoaching(username: string) {
+    const [clients, asks, coaches, mine] = await Promise.all([
+      canCoach() ? coachApi.listClients().catch(() => []) : Promise.resolve([]),
+      canCoach() ? coachApi.listRequests().catch(() => []) : Promise.resolve([]),
+      coachApi.listCoaches().catch(() => []),
+      coachApi.listMyRequests().catch(() => []),
+    ]);
+    const first = (s: { displayName: string; username: string }) => (s.displayName || s.username).split(" ")[0];
+    const c = clients.find((x) => x.client.username === username);
+    if (c) return void (coachingLink = { text: `${first(c.client)} is your client`, href: `/messages?c=${c.relationshipId}` });
+    const a = asks.find((x) => x.client.username === username);
+    if (a) return void (coachingLink = { text: `${first(a.client)} asked you to coach them`, href: `/clients?tab=${a.stage === "waiting" ? "waiting" : "requests"}&r=${a.relationshipId}` });
+    const k = coaches.find((x) => x.coach.username === username);
+    if (k) return void (coachingLink = { text: `${first(k.coach)} coaches you`, href: `/social/messages?c=${k.relationshipId}` });
+    const m = mine.find((x) => x.coach.username === username);
+    coachingLink = m ? { text: `You asked ${first(m.coach)} to coach you`, href: `/social/messages?c=${m.relationshipId}` } : null;
+  }
+  $effect(() => {
+    const u = chat?.other?.username;
+    if (u) void findCoaching(u);
+  });
   let error = $state<string | null>(null);
   let draft = $state("");
   let sending = $state(false);
@@ -343,6 +374,7 @@
             {/snippet}
           </DropdownMenu.Trigger>
           <DropdownMenu.Content align="end">
+            {#if chat.other && !group && canCoach()}<DropdownMenu.Item onclick={() => (inviting = true)}>Invite to coaching</DropdownMenu.Item><DropdownMenu.Separator />{/if}
             <DropdownMenu.Item class="text-destructive" onclick={() => (confirmDelete = true)}>Delete chat</DropdownMenu.Item>
             {#if chat.other?.id}<DropdownMenu.Item class="text-destructive" onclick={() => openReport("User", chat!.other!.id!, `@${chat!.other!.username}`)}>Report</DropdownMenu.Item>{/if}
             {#if chat.other}<DropdownMenu.Item class="text-destructive" onclick={() => (confirmBlock = true)}>Block {name}</DropdownMenu.Item>{/if}
@@ -350,6 +382,9 @@
         </DropdownMenu.Root>
       {/if}
     </header>
+    {#if coachingLink && !group}
+      <a href={coachingLink.href} class="border-b border-border bg-muted/40 px-4 py-2 text-xs text-muted-foreground hover:text-foreground">{coachingLink.text} · <span class="underline underline-offset-2">Open the coaching chat</span></a>
+    {/if}
   {/if}
 
   <div bind:this={listEl} role="log" aria-label="Messages" class="relative flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto px-4 py-3 {dragging ? 'bg-muted/40' : ''}"
@@ -382,6 +417,7 @@
               {@const card = story ? readStoryQuote(m.cardJson) : readCard(m.cardType, m.cardJson)}
               {@const storyPhoto = story ? readStoryPhoto(m.cardJson) : null}
               {@const invite = m.cardType === "GroupInvite" ? readGroupInvite(m.cardJson) : null}
+              {@const coachInv = m.cardType === "CoachInvite" ? readCoachInvite(m.cardJson) : null}
               {@const align = m.mine ? "end" : "start"}
               {@const actions = messageActions(m)}
               <ContextMenu.Root>
@@ -391,6 +427,21 @@
                       class="group/row relative flex w-full items-center gap-1 {m.mine ? 'flex-row-reverse' : ''} {editing?.id === m.id ? 'opacity-60' : ''} {m.reactions?.length && !m.deleted ? 'mb-3.5' : ''}">
                       <div class="relative flex min-w-0 max-w-[75%] flex-col gap-1 {m.mine ? 'items-end' : 'items-start'}">
                         {#if story}<span class="px-1 text-[11px] text-muted-foreground">{m.mine ? `Replied to ${name}'s story` : "Replied to your story"}{card || storyPhoto ? "" : " · no longer available"}</span>{/if}
+                        {#if coachInv}
+                          <div class="flex w-[280px] flex-col gap-1.5 rounded-[18px] border border-border bg-background px-3.5 py-3 {joined(m.mine, first, end)}">
+                            {#if coachInv.offer}
+                              <span class="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{m.mine ? "You offered a spot" : `${coachInv.coachName.split(" ")[0]} offered you a spot`}</span>
+                              <span class="flex items-baseline justify-between gap-2"><span class="text-[13px] font-semibold">{coachInv.offer.packageName}</span>{#if coachInv.offer.pays}<span class="text-[13px] font-semibold tabular-nums">{formatMoney(coachInv.offer.amountCents, coachInv.offer.currency)}</span>{/if}</span>
+                              <span class="text-xs text-muted-foreground">Held until {new Date(coachInv.offer.holdUntilMs).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })}</span>
+                              {#if !m.mine}<a href="/take/{coachInv.offer.offerId}" class="mt-1 inline-flex h-9 items-center justify-center rounded-[9px] bg-primary px-3 text-[13px] font-semibold text-primary-foreground">Look at the offer</a>{/if}
+                            {:else}
+                              <span class="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{m.mine ? "Your coaching invite" : `${coachInv.coachName.split(" ")[0]} coaches`}</span>
+                              <span class="text-[13px] font-semibold">{coachInv.headline}</span>
+                              {#if coachInv.packages.length}<span class="text-xs text-muted-foreground">{coachInv.packages.map((p) => `${p.name} ${formatMoney(p.amountCents, p.currency)}`).join(" · ")}</span>{/if}
+                              {#if !m.mine}<button type="button" onclick={() => (asking = { username: coachInv.coachUsername, name: coachInv.coachName })} class="mt-1 inline-flex h-9 items-center justify-center rounded-[9px] bg-primary px-3 text-[13px] font-semibold text-primary-foreground">Ask {coachInv.coachName.split(" ")[0]} to coach you</button>{/if}
+                            {/if}
+                          </div>
+                        {/if}
                         {#if invite}
                           <div class="flex w-[260px] flex-col gap-1.5 rounded-[18px] border border-border bg-background px-3 py-2.5 {joined(m.mine, first, end)}">
                             <span class="text-[11px] text-muted-foreground">{m.mine ? "You sent an invite to a group" : "Invited you to a group"}</span>
@@ -594,3 +645,10 @@
     </AlertDialog.Footer>
   </AlertDialog.Content>
 </AlertDialog.Root>
+
+{#if chat?.other && chat.threadId}
+  <InviteToCoachingDialog bind:open={inviting} to={{ threadId: chat.threadId }} username={chat.other.username} name={name} onsent={() => void load(true)} />
+{/if}
+{#if asking}
+  <AskDialog bind:open={() => !!asking, (v) => { if (!v) asking = null; }} username={asking.username} name={asking.name} />
+{/if}

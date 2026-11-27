@@ -362,6 +362,9 @@ public static class CoachRequestEndpoints
         existing.InterestedPackageId = interested;
         existing.ApplySharing(sharing ?? SharingDto.All);
         existing.UpdatedAt = now;
+        // Canvas MS3: the coach's automatic first reply, or their waiting-list message.
+        if (!isSample && await db.Users.FindAsync(me) is { } asker)
+            CoachAutoMessages.Queue(db, existing, coach, asker, stage == RequestStages.Waiting ? CoachAutoMessages.When.WaitingList : CoachAutoMessages.When.Ask, now);
         await db.SaveChangesAsync();
         return Results.Ok(new { relationshipId = existing.Id, status = "requested", stage });
     }

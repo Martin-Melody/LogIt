@@ -64,6 +64,9 @@ public static class DirectMessageEndpoints
     /// An invite to a group (canvas G16): the client sends {"groupId"}, the server checks you're a
     /// member, records the invite and stores the group's name and look.
     public const string GroupInviteCard = "GroupInvite";
+    /// A coach inviting someone they chat with to coaching (canvas MS5): their coaching section,
+    /// and an offer when the coach made one. Built here, like a group invite.
+    public const string CoachInviteCard = "CoachInvite";
     private const int MaxCardJson = 4000;
 
     /// `request`: the viewer hasn't accepted this thread, so a photo's address is withheld.
@@ -106,6 +109,7 @@ public static class DirectMessageEndpoints
         : x.Body.Length > 0 ? x.Body : x.PhotoId is not null ? "Sent a photo"
         : x.VoiceId is not null ? $"Voice message · {x.VoiceMs / 60000}:{x.VoiceMs / 1000 % 60:00}"
         : x.CardType == "PersonalRecord" ? "Shared a record" : x.CardType == GroupInviteCard ? "Sent a group invite"
+            : x.CardType == CoachInviteCard ? "Sent a coaching invite"
             : x.CardType is null ? "" : "Shared a workout";
 
     private static long Ms(DateTime t) => new DateTimeOffset(DateTime.SpecifyKind(t, DateTimeKind.Utc)).ToUnixTimeMilliseconds();
@@ -247,7 +251,50 @@ public static class DirectMessageEndpoints
     private static async Task<bool> TheyAcceptedAsync(AppDbContext db, DmMember mine, Guid otherId) =>
         await db.DmMembers.AnyAsync(m => m.ThreadId == mine.ThreadId && m.UserId == otherId && m.Accepted);
 
-    private static async Task<IResult> Send(SendRequest req, ClaimsPrincipal caller, AppDbContext db, TimeProvider clock)
+    /// The coach's coaching section for the card, and the offer (from {"offerId"}) when it's an open
+    /// one this coach made to this person. Null when the sender shows no coaching section.
+    private static async Task<string?> CoachInviteCardAsync(AppDbContext db, Guid coachId, Guid otherId, string? requestJson, IConfiguration config, DateTime now)
+    {
+        var coach = await db.Users.FindAsync(coachId);
+        if (coach is null) return null;
+        var section = await Coach.CoachProfileEndpoints.SectionAsync(db, coach, config, now);
+        if (section is null) return null;
+        System.Text.Json.Nodes.JsonObject? offer = null;
+        try
+        {
+            using var doc = JsonDocument.Parse(string.IsNullOrWhiteSpace(requestJson) ? "{}" : requestJson);
+            if (doc.RootElement.TryGetProperty("offerId", out var o) && o.TryGetGuid(out var offerId))
+            {
+                var found = await db.CoachOffers.AsNoTracking().Include(x => x.Relationship)
+                    .FirstOrDefaultAsync(x => x.Id == offerId && x.Relationship.CoachId == coachId && x.Relationship.ClientId == otherId);
+                if (found is null || found.State != OfferStates.Open || found.HoldUntil < now) return null;
+                offer = new()
+                {
+                    ["offerId"] = found.Id,
+                    ["packageName"] = found.PackageName,
+                    ["amountCents"] = found.AmountCents,
+                    ["currency"] = found.Currency,
+                    ["interval"] = found.Interval,
+                    ["pays"] = found.PackageId != null,
+                    ["holdUntilMs"] = Ms(found.HoldUntil),
+                };
+            }
+        }
+        catch (JsonException) { return null; }
+        var packages = new System.Text.Json.Nodes.JsonArray();
+        foreach (var p in section.Packages.Take(3))
+            packages.Add(new System.Text.Json.Nodes.JsonObject { ["name"] = p.Name, ["amountCents"] = p.AmountCents, ["currency"] = p.Currency, ["interval"] = p.Interval });
+        return new System.Text.Json.Nodes.JsonObject
+        {
+            ["coachUsername"] = coach.Username,
+            ["coachName"] = string.IsNullOrWhiteSpace(coach.DisplayName) ? coach.Username : coach.DisplayName,
+            ["headline"] = section.Headline,
+            ["packages"] = packages,
+            ["offer"] = offer,
+        }.ToJsonString();
+    }
+
+    private static async Task<IResult> Send(SendRequest req, ClaimsPrincipal caller, AppDbContext db, TimeProvider clock, IConfiguration config)
     {
         var meId = caller.GetUserId();
         var body = (req.Body ?? "").Trim();
@@ -255,7 +302,7 @@ public static class DirectMessageEndpoints
         {
             if (body.Length == 0) return Results.BadRequest(new { error = "Write something first." });
         }
-        else if (req.CardType is not null && req.CardType != GroupInviteCard)
+        else if (req.CardType is not null && req.CardType != GroupInviteCard && req.CardType != CoachInviteCard)
         {
             if (!CardTypes.Contains(req.CardType)) return Results.BadRequest(new { error = "That can't be shared in a message." });
             if (string.IsNullOrEmpty(req.CardJson) || req.CardJson.Length > MaxCardJson) return Results.BadRequest(new { error = "That's too big to share." });
@@ -293,7 +340,7 @@ public static class DirectMessageEndpoints
         }
         if (inGroup)
         {
-            if (req.CardType is StoryCard or GroupInviteCard) return Results.BadRequest(new { error = "That can't be sent to a group." });
+            if (req.CardType is StoryCard or GroupInviteCard or CoachInviteCard) return Results.BadRequest(new { error = "That can't be sent to a group." });
             var muted = await db.GroupMembers.Where(m => m.GroupId == thread!.GroupId && m.UserId == meId).Select(m => m.MutedUntil).FirstOrDefaultAsync();
             if (muted > clock.GetUtcNow().UtcDateTime)
                 return Results.Json(new { error = "A moderator muted you in this chat for now. You can still read it." }, statusCode: 403);
@@ -339,6 +386,11 @@ public static class DirectMessageEndpoints
                 ["photoHeight"] = story.PhotoHeight,
                 ["expiresAtMs"] = Ms(story.ExpiresAt),
             }.ToJsonString();
+        }
+        else if (req.CardType == CoachInviteCard)
+        {
+            cardJson = await CoachInviteCardAsync(db, meId, other!.Id, req.CardJson, config, now);
+            if (cardJson is null) return Results.BadRequest(new { error = "Set up your coaching profile first (Coaching › Profile)." });
         }
         else if (req.CardType == GroupInviteCard)
         {
@@ -400,7 +452,7 @@ public static class DirectMessageEndpoints
             db.ChangeTracker.Clear();
             var key = PairKey(meId, other!.Id);
             var id = await db.DmThreads.Where(t => t.PairKey == key).Select(t => t.Id).FirstAsync();
-            return await Send(req with { Username = null, ThreadId = id }, caller, db, clock);
+            return await Send(req with { Username = null, ThreadId = id }, caller, db, clock, config);
         }
         return Results.Ok(Dto(message, meId, now));
     }

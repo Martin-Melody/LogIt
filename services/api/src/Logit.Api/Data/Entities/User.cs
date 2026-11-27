@@ -43,6 +43,8 @@ public class User
     public string? CoachNutritionPrefsJson { get; set; }
     /// Canvas W10: the coach's saved replies ([{ id, shortcut, title, body }]).
     public string? CoachSavedRepliesJson { get; set; }
+    /// Messages sent for the coach (canvas MS3), JSON: CoachAutoMessages.Settings.
+    public string? CoachAutoMessagesJson { get; set; }
     /// Canvas W11: which cards show on a client's Overview ({ all, packages, clients }).
     public string? CoachCardsJson { get; set; }
     /// The Coaching section of this coach's profile (CoachProfileEndpoints.CoachProfile as JSON):

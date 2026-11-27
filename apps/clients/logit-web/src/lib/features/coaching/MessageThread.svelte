@@ -201,7 +201,7 @@
     shown.forEach((m, i) => {
       const day = !compact && (i === 0 || dayLabel(m.createdAtMs) !== dayLabel(shown[i - 1]!.createdAtMs));
       // Swap messages ("lasting-swap", "program-swap") and check-in replies are ordinary bubbles; only request steps are cards.
-      const event = !!m.kind && !m.kind.endsWith("swap") && m.kind !== "checkin-reply" && m.kind !== "month-report" && !!card;
+      const event = !!m.kind && !m.kind.endsWith("swap") && m.kind !== "checkin-reply" && m.kind !== "month-report" && m.kind !== "auto" && !!card;
       const prev = out.at(-1);
       if (prev && !day && !event && !prev.event && prev.mine === m.mine && m.createdAtMs - prev.items.at(-1)!.createdAtMs < 3_600_000) prev.items.push(m);
       else out.push({ key: m.messageId, mine: m.mine, day, event, items: [m] });
@@ -269,6 +269,7 @@
                       <span class="whitespace-pre-wrap break-words">{m.body}</span>
                     </Bubble.Content>
                   </Bubble.Root>
+                  {#if m.kind === "auto"}<span class="px-1 text-[11px] text-muted-foreground">Sent automatically{m.mine ? " · from your settings" : ""}</span>{/if}
                 {/if}
               {/if}
               {#if m.reaction}<ChatReactions reactions={reactionsOf(m)} {align} onpick={(e) => void react(m, e)} />{/if}
