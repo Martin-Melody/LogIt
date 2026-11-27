@@ -39,6 +39,7 @@ export interface LinkPackage {
 export interface CoachPackage extends LinkPackage {
   id: string;
   hidden: boolean;
+  showOnProfile?: boolean;
   /** Names of the links it's on. */
   links: string[];
   /** Clients paying for it now. */
@@ -54,6 +55,10 @@ export interface PaymentAccount {
   displayName: string | null;
   currency: string;
   country: string;
+  /** What Stripe wants, in Stripe's words (canvas Z4). */
+  needs?: string | null;
+  /** The coach stopped taking payments through LogIt (canvas K18). */
+  stopped?: boolean;
 }
 
 export interface PaymentSettings {
@@ -85,6 +90,12 @@ export interface PaymentClient {
   rule: PaymentRule;
   days: number;
   actionAt: string | null;
+  /** Disputed with their bank (canvas K10); changes nothing on its own. */
+  disputed?: boolean;
+  /** The coach paused coaching until then (canvas E1). */
+  pausedUntil?: string | null;
+  /** An accepted change of package starting at their next payment (canvas K14). */
+  pendingPackage?: string | null;
 }
 
 export interface PaymentsOverview {
@@ -186,6 +197,7 @@ export function needsCoach(clients: PaymentClient[], now: Date = new Date()): Pa
   return clients
     .filter((c) =>
       c.status === "paused" ||
+      !!c.disputed ||
       (c.mode === "stripe" && c.unpaidSince !== null) ||
       (c.mode === "elsewhere" && c.paidUntil !== null && new Date(c.paidUntil) <= now))
     .sort((a, b) => (a.unpaidSince ?? a.paidUntil ?? "").localeCompare(b.unpaidSince ?? b.paidUntil ?? ""));
@@ -197,6 +209,7 @@ export function coachProblemText(c: PaymentClient, now: Date = new Date()): stri
   const action = c.actionAt
     ? ` Your rule: coaching ${c.rule === "end" ? "ends" : "pauses"} on ${shortDate(c.actionAt, now)} if it's still unpaid.`
     : c.rule === "keep" ? " Your rule for them is to keep coaching." : "";
+  if (c.disputed) return `${name} disputed a payment with their bank. Coaching carries on; answer it in Stripe.`;
   if (c.status === "paused") return `${name}'s coaching is paused until they pay. Paying restarts it straight away.`;
   if (c.mode === "elsewhere") return `${name} was marked paid outside LogIt up to ${shortDate(c.paidUntil, now)}. Mark them paid again when they pay.`;
   if (c.state === "failed")

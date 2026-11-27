@@ -321,6 +321,8 @@ public class CoachPaymentTests : IAsyncLifetime
         }
         public Task PauseCollectionAsync(string accountId, string subscriptionId, DateTime? resumesAt, CancellationToken ct) => Task.CompletedTask;
         public Task<bool> RetryUnpaidAsync(string accountId, string subscriptionId, CancellationToken ct) => Task.FromResult(true);
+        public Task<string?> CustomerOfPaymentAsync(string accountId, string paymentIntentId, CancellationToken ct) => Task.FromResult<string?>(null);
+        public Task ChangeMonthlyPriceAsync(string accountId, string subscriptionId, long amountCents, string currency, string productName, CancellationToken ct) => Task.CompletedTask;
         public Task SetCancelAtPeriodEndAsync(string accountId, string subscriptionId, bool cancel, CancellationToken ct)
         {
             StopAtEnd.Add((subscriptionId, cancel));

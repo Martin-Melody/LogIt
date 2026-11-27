@@ -186,8 +186,23 @@ public static class CoachEndingEndpoints
             .Where(m => m.RelationshipId == rel.Id && m.SenderUserId == me && m.Kind == null)
             .OrderByDescending(m => m.CreatedAtMs).Select(m => new { m.Body, m.CreatedAtMs }).FirstOrDefaultAsync(ct);
         var receipts = await db.CoachPaymentReceipts.CountAsync(r => r.RelationshipId == rel.Id && r.AmountCents > 0, ct);
+        // Canvas K14: a change of package waiting for their answer, or the changed-to package due now.
+        var change = await db.CoachOffers.AsNoTracking()
+            .Where(o => o.RelationshipId == rel.Id && o.IsChange && o.State == OfferStates.Open && o.HoldUntil > now)
+            .OrderByDescending(o => o.CreatedAt).FirstOrDefaultAsync(ct);
+        var due = p?.PendingPayPackageId is { } dueId ? await db.CoachPackages.AsNoTracking().FirstOrDefaultAsync(k => k.Id == dueId, ct) : null;
         return Results.Ok(new
         {
+            change = change is null ? null : new
+            {
+                offerId = change.Id, packageName = change.PackageName, packageDescription = change.PackageDescription,
+                amountCents = change.AmountCents, currency = change.Currency, interval = change.Interval, weeks = change.Weeks,
+                pays = change.PackageId is not null,
+                startsOn = p is { Mode: PaymentModes.Stripe, PaidUntil: { } pu } && pu > now ? pu : now,
+            },
+            payDue = due is null ? null : new { packageName = due.Name, amountCents = due.AmountCents, currency = due.Currency, interval = due.Interval },
+            pendingPackage = p?.PendingNoPayment == true ? "No payment through LogIt" : p?.PendingPackageId is { } pid2
+                ? await db.CoachPackages.Where(k => k.Id == pid2).Select(k => k.Name).FirstOrDefaultAsync(ct) : null,
             coach = rel.Coach.ToProfileDto(false),
             since = rel.UpdatedAt,
             plan = p is null || p.Mode != PaymentModes.Stripe ? null : new

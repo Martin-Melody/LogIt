@@ -139,6 +139,13 @@ public static class CoachIntake
         public const string Ended = "ended";
         public const string Stopping = "stopping";
         public const string Stopped = "stopped";
+        /// Payments (canvas K14, K18, Q9).
+        public const string PackageChange = "package-change";
+        public const string PackageChangeAccepted = "package-change-accepted";
+        public const string PackageChangeDeclined = "package-change-declined";
+        public const string PayForChange = "pay-for-change";
+        public const string PlanChanged = "plan-changed";
+        public const string Refunded = "refunded";
     }
 
     public record OfferCard(Guid OfferId, string PackageName, string PackageDescription, long AmountCents, string Currency,

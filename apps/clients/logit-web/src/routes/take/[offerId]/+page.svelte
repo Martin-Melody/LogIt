@@ -253,7 +253,7 @@
           <Checkbox bind:checked={adult} class="mt-0.5" />
           <span class="text-[13px]">I'm 18 or over<span class="block text-xs text-muted-foreground">Paying needs you to be 18 or over. Under 18? {c} can coach you with payment sorted outside LogIt.</span></span>
         </label>
-        {#if !info.paymentsReady}<p class="text-[13px] text-destructive">{c} can't take payments right now. Let {c} know in your conversation.</p>{/if}
+        {#if !info.paymentsReady}<p class="rounded-[10px] bg-muted px-3.5 py-2.5 text-[13px]"><b class="font-semibold">{c} can't take payments right now.</b> {c}'s been told. Your offer is kept, and the days {c} holds it for start again once it's fixed.</p>{/if}
       {/if}
 
       {#if onIphone}

@@ -190,7 +190,28 @@
   },
   {
     "method": "POST",
+    "route": "/coach/payments/clients/{relationshipId:guid}/change-package",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": false
+  },
+  {
+    "method": "POST",
     "route": "/coach/payments/clients/{relationshipId:guid}/paid-elsewhere",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": false
+  },
+  {
+    "method": "GET",
+    "route": "/coach/payments/clients/{relationshipId:guid}/receipts",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": false
+  },
+  {
+    "method": "POST",
+    "route": "/coach/payments/clients/{relationshipId:guid}/refund",
     "plan": "Studio",
     "orActivelyCoached": false,
     "orSampleCoach": false
@@ -240,6 +261,13 @@
   {
     "method": "PUT",
     "route": "/coach/payments/settings",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": false
+  },
+  {
+    "method": "POST",
+    "route": "/coach/payments/stop",
     "plan": "Studio",
     "orActivelyCoached": false,
     "orSampleCoach": false

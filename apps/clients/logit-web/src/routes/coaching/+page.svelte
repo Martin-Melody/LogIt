@@ -35,8 +35,14 @@
   // Payments that need the coach (failed, overdue, paused) belong here too, not only on the
   // Payments page (bug hunt 6.2). No payments set up: nothing to add.
   let payments = $state<PaymentClient[]>([]);
+  // Canvas Z4: Stripe needs something (restricted, or details due), in Stripe's words.
+  let stripeNeeds = $state<string | null | false>(false);
   onMount(async () => {
-    try { payments = needsCoach((await coachPaymentsApi.overview()).clients); } catch { payments = []; }
+    try {
+      const o = await coachPaymentsApi.overview();
+      payments = needsCoach(o.clients);
+      stripeNeeds = o.account.connected && (!o.account.ready || o.account.requirementsDue) && (o.account.requirementsDue || !!o.account.needs) ? (o.account.needs ?? null) : false;
+    } catch { payments = []; }
   });
   onMount(() => onSampleActivity(() => void load()));
 
@@ -131,7 +137,16 @@
           <h2 class="text-sm font-semibold">Needs you</h2>
           <span class="text-xs text-muted-foreground">Newest first</span>
         </div>
-        {#if items.length === 0 && payments.length === 0}
+        {#if stripeNeeds !== false}
+          <div class="flex items-center gap-3 border-t border-warning/40 bg-warning/5 -mx-[18px] px-[18px] py-3">
+            <span class="flex min-w-0 flex-1 flex-col">
+              <span class="text-[13px] font-medium">Stripe needs something from you</span>
+              <span class="text-xs text-muted-foreground">Clients can't pay you until it's done, and payouts are on hold.{#if stripeNeeds}{" "}Stripe says: "{stripeNeeds}"{/if}</span>
+            </span>
+            <a href="/coaching/payments?tab=packages" class="h-8 shrink-0 rounded-[9px] bg-primary px-3 text-xs font-semibold leading-8 text-primary-foreground">Finish in Stripe</a>
+          </div>
+        {/if}
+        {#if items.length === 0 && payments.length === 0 && stripeNeeds === false}
           <p class="border-t border-border py-4 text-[13px] text-muted-foreground">
             {overview.clients.length === 0 ? "No clients yet. Invite someone from Clients, or share an invite link." : "Nothing waiting. Nice."}
           </p>

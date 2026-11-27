@@ -4,6 +4,7 @@
   import * as AlertDialog from "$lib/components/ui/alert-dialog";
   import { Skeleton } from "$lib/components/ui/skeleton";
   import { toast } from "$lib/components/ui/sonner";
+  import { goto } from "$app/navigation";
   import { apiClient } from "@logit/core/api/client";
   import {
     coachApi,
@@ -94,6 +95,16 @@
       const r = await coachApi.retryPayment(card).catch(() => ({ paid: false, error: undefined as string | undefined }));
       if (r.paid) toast.success("Paid. Coaching is back on.");
       else toast.error(r.error ?? "The payment didn't go through yet. Stripe tries again over the next few days.");
+      await load();
+    }
+    // Back from paying for a changed package (canvas K14).
+    const changed = page.url.searchParams.get("changed");
+    const sessionId = page.url.searchParams.get("session_id");
+    if (changed && sessionId) {
+      const r = await coachPaymentsApi.confirmChangeCheckout(changed, sessionId).catch(() => ({ status: "pending" as const }));
+      if (r.status === "active") toast.success("Paid. You're on your new package.");
+      else toast.message("Stripe is still confirming the payment. It shows here when it's done.");
+      void goto("/my-coach", { replaceState: true, noScroll: true });
       await load();
     }
     if (focusRequest) {
@@ -192,6 +203,30 @@
 
   // Stripe's billing page for this plan: change a card that failed (Stripe takes the overdue
   // payment straight away), see receipts. Only on the web; the app never links to paying.
+  // Canvas K14: answer a change of package, or pay for it when it's due.
+  async function answerChange(c: CoachRelationship, offerId: string, accept: boolean) {
+    busy = c.relationshipId;
+    try {
+      await coachPaymentsApi.answerPackageChange(c.relationshipId, offerId, accept);
+      toast.success(accept ? "Accepted. It starts at your next payment." : "You kept your package");
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't do that");
+    } finally {
+      busy = null;
+    }
+  }
+  async function payChange(c: CoachRelationship) {
+    busy = c.relationshipId;
+    try {
+      const back = `${location.origin}/my-coach`;
+      location.href = (await coachPaymentsApi.payChange(c.relationshipId, `${back}?changed=${c.relationshipId}`, back)).url;
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't open Stripe");
+      busy = null;
+    }
+  }
+
   async function openBilling(c: CoachRelationship) {
     busy = c.relationshipId;
     try {
@@ -321,6 +356,43 @@
         </section>
       {:else if m?.endsAt}
         <p role="status" class="rounded-[10px] bg-muted px-[18px] py-3 text-[13px]">Coaching with {name} ends {weekdayDate(Date.parse(m.endsAt))}. Your program and history stay yours.</p>
+      {/if}
+      {#if m?.change}
+        {@const ch = m.change}
+        <!-- K14: the coach suggests another package; nothing changes unless they accept. -->
+        <section class="flex flex-col gap-3 rounded-[12px] border border-primary/40 bg-card px-[18px] py-4 shadow-sm">
+          <span class="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{name} suggests a different package</span>
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex min-w-0 flex-col gap-1">
+              <h2 class="text-[15px] font-semibold">{ch.packageName}</h2>
+              {#each ch.packageDescription.split(/\n+/).filter(Boolean).slice(0, 3) as l (l)}<p class="text-[13px] text-muted-foreground">{l}</p>{/each}
+            </div>
+            {#if ch.pays}
+              <div class="shrink-0 text-right"><p class="text-lg font-bold tabular-nums">{formatMoney(ch.amountCents, ch.currency)}</p><p class="text-xs text-muted-foreground">{ch.interval === "month" ? "a month" : ch.weeks ? `${ch.weeks} weeks` : "once"}</p></div>
+            {/if}
+          </div>
+          <p class="text-[13px]">
+            {#if !ch.pays}From {weekdayDate(Date.parse(ch.startsOn))} you'd pay {name} another way, not through LogIt.
+            {:else if m.plan?.interval === "month" && ch.interval === "month"}From {weekdayDate(Date.parse(ch.startsOn))} your monthly payment becomes {formatMoney(ch.amountCents, ch.currency)}. Nothing is charged now.
+            {:else}{m.plan?.interval === "month" ? "Your monthly plan stops renewing. " : ""}On {weekdayDate(Date.parse(ch.startsOn))} you pay {formatMoney(ch.amountCents, ch.currency)} for {ch.packageName}.{/if}
+            It starts at your next payment, so you never pay twice.
+          </p>
+          <div class="flex flex-wrap gap-2">
+            <Button disabled={busy === c.relationshipId} onclick={() => void answerChange(c, ch.offerId, true)}>Accept</Button>
+            <Button variant="outline" disabled={busy === c.relationshipId} onclick={() => void answerChange(c, ch.offerId, false)}>Keep my package</Button>
+          </div>
+        </section>
+      {/if}
+      {#if m?.payDue}
+        <section role="status" class="flex flex-wrap items-center gap-3 rounded-[12px] border border-warning/40 bg-warning/5 px-[18px] py-4">
+          <span class="flex flex-[1_1_300px] flex-col gap-0.5">
+            <h2 class="text-sm font-semibold">Time to pay for {m.payDue.packageName}</h2>
+            <span class="text-[13px] text-muted-foreground">{formatMoney(m.payDue.amountCents, m.payDue.currency)}{m.payDue.interval === "month" ? " a month" : ""}, on Stripe's page. Coaching carries on once it's paid.</span>
+          </span>
+          <Button disabled={busy === c.relationshipId} onclick={() => void payChange(c)}>Pay {formatMoney(m.payDue.amountCents, m.payDue.currency)} ↗</Button>
+        </section>
+      {:else if m?.pendingPackage}
+        <p class="rounded-[10px] bg-muted px-[18px] py-3 text-[13px]">You're moving to {m.pendingPackage}{m.plan?.paidUntil ? ` on ${weekdayDate(Date.parse(m.plan.paidUntil))}` : ""}.</p>
       {/if}
       {#if m?.quiet}
         <!-- Z2: the coach hasn't replied for a week. -->

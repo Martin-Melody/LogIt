@@ -287,6 +287,9 @@ namespace Logit.Api.Migrations
                         .HasMaxLength(3)
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("Disputed")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int?>("FailDays")
                         .HasColumnType("INTEGER");
 
@@ -317,6 +320,15 @@ namespace Logit.Api.Migrations
 
                     b.Property<bool>("PausedForPayment")
                         .HasColumnType("INTEGER");
+
+                    b.Property<bool>("PendingNoPayment")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("PendingPackageId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("PendingPayPackageId")
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid>("RelationshipId")
                         .HasColumnType("TEXT");
@@ -685,6 +697,9 @@ namespace Logit.Api.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("IsChange")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("PackageDescription")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -808,6 +823,9 @@ namespace Logit.Api.Migrations
                         .HasMaxLength(10)
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("PaymentsStopped")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("RequirementsDue")
                         .HasColumnType("INTEGER");
 
@@ -819,6 +837,9 @@ namespace Logit.Api.Migrations
 
                     b.Property<string>("StripeAccountId")
                         .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StripeNeeds")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("UpdatedAt")

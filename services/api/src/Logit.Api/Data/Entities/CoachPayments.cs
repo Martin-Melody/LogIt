@@ -18,6 +18,11 @@ public class CoachPaymentAccount
     public string Currency { get; set; } = "eur";
     public string Country { get; set; } = "ie";
     public DateTime? StatusCheckedAt { get; set; }
+    /// What Stripe wants, in its own words where we have them (canvas Z4), e.g. "an ID document".
+    public string? StripeNeeds { get; set; }
+    /// The coach stopped taking payments through LogIt (canvas K18): no new checkouts; plans
+    /// already running stop renewing and become "paid elsewhere".
+    public bool PaymentsStopped { get; set; }
 
     /// What happens when a client's payment fails, a one-off package runs out, or a monthly
     /// plan is stopped (see PaymentRules). Each client can have their own instead.
@@ -91,6 +96,15 @@ public class CoachClientPayment
     public bool PausedForPayment { get; set; }
     /// The coach was emailed about the current problem (one email per problem).
     public DateTime? CoachEmailedAt { get; set; }
+    /// The client disputed a payment with their bank (canvas K10). Changes nothing on its own:
+    /// the coach answers it in Stripe and decides whether coaching goes on.
+    public bool Disputed { get; set; }
+    /// An accepted change of package (canvas K14) that starts at the next payment: the plan
+    /// stops renewing, then they pay for this package (or, NoPayment, pay another way).
+    public Guid? PendingPackageId { get; set; }
+    public bool PendingNoPayment { get; set; }
+    /// The changed-to package is due now: the client pays it from the card in the conversation.
+    public Guid? PendingPayPackageId { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

@@ -51,7 +51,9 @@ export interface RequestOffer {
 export type RequestEvent =
   | "asked" | "offer" | "offer-changed" | "offer-withdrawn" | "waitlist" | "closed" | "withdrawn" | "reopened" | "joined" | "leaving"
   // Pausing and ending (canvas E1, E2, M1, Z2).
-  | "paused" | "resumed" | "ended" | "stopping" | "stopped";
+  | "paused" | "resumed" | "ended" | "stopping" | "stopped"
+  // Payments (canvas K14, K18, Q9).
+  | "package-change" | "package-change-accepted" | "package-change-declined" | "pay-for-change" | "plan-changed" | "refunded";
 
 export interface CoachIntake {
   spots: number | null;
@@ -153,6 +155,14 @@ export function eventLine(kind: RequestEvent, reader: "client" | "coach", coach:
       return reader === "client" ? `${c} is back: coaching carries on` : `Coaching with ${p} carries on`;
     case "ended":
       return reader === "client" ? `${c} ended coaching` : `Coaching with ${p} ended`;
+    case "package-change-accepted":
+      return reader === "client" ? "You accepted the change of package" : `${p} accepted the change of package`;
+    case "package-change-declined":
+      return reader === "client" ? "You kept your package" : `${p} kept their package`;
+    case "package-change":
+    case "pay-for-change":
+    case "plan-changed":
+    case "refunded":
     case "stopping":
     case "stopped":
       // The server's words carry the end date or the refund.
@@ -174,7 +184,7 @@ export const ASK_AGAIN_TEXT = "Is the spot still free? Could you offer it again?
 
 /** Who a step reads as for this viewer: the coach sends offers and answers; the client withdraws and joins. */
 export function readerOf(kind: RequestEvent, mine: boolean): "client" | "coach" {
-  const clientSends = kind === "withdrawn" || kind === "joined" || kind === "asked" || kind === "leaving" || kind === "stopping" || kind === "stopped";
+  const clientSends = kind === "withdrawn" || kind === "joined" || kind === "asked" || kind === "leaving" || kind === "stopping" || kind === "stopped" || kind === "package-change-accepted" || kind === "package-change-declined";
   return clientSends === mine ? "client" : "coach";
 }
 

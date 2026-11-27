@@ -129,7 +129,7 @@ public static class CoachEndpoints
             {
                 package = await db.CoachPackages.FirstOrDefaultAsync(k => k.Id == pid && k.CoachId == coachId && !k.Hidden);
                 if (package is null) return Results.BadRequest(new { error = "That package isn't available." });
-                if (!await db.CoachPaymentAccounts.AnyAsync(a => a.CoachId == coachId && a.CardPaymentsActive))
+                if (!await db.CoachPaymentAccounts.AnyAsync(a => a.CoachId == coachId && a.CardPaymentsActive && !a.PaymentsStopped))
                     return Results.BadRequest(new { error = "Paid packages need payments set up first.", code = "payments_not_ready" });
             }
             if (body.Message?.Length > CoachIntake.MaxMessage) return Results.BadRequest(new { error = "That message is too long." });

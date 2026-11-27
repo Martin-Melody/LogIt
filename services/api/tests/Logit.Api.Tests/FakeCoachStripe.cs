@@ -39,13 +39,26 @@ public sealed class FakeCoachStripe : ICoachStripe
         Task.FromResult(new StripeSubscriptionInfo(subscriptionId, SubscriptionStatus, false, null));
     public Task<string> CreateBillingPortalAsync(string accountId, string customerId, string returnUrl, CancellationToken ct) =>
         Task.FromResult("https://billing.stripe.test/" + customerId);
-    public Task SetCancelAtPeriodEndAsync(string accountId, string subscriptionId, bool cancel, CancellationToken ct) => Task.CompletedTask;
+    /// SetCancelAtPeriodEndAsync throws while true.
+    public bool PeriodEndFails { get; set; }
+    public Task SetCancelAtPeriodEndAsync(string accountId, string subscriptionId, bool cancel, CancellationToken ct) =>
+        PeriodEndFails ? throw new InvalidOperationException("Stripe is down") : Task.CompletedTask;
 
     /// Pauses asked for, by subscription: the resume date, or null when resumed.
     public Dictionary<string, DateTime?> Paused { get; } = [];
     public Task PauseCollectionAsync(string accountId, string subscriptionId, DateTime? resumesAt, CancellationToken ct)
     {
         Paused[subscriptionId] = resumesAt;
+        return Task.CompletedTask;
+    }
+
+    public Task<string?> CustomerOfPaymentAsync(string accountId, string paymentIntentId, CancellationToken ct) => Task.FromResult<string?>("cus_" + paymentIntentId);
+
+    /// Monthly price changes asked for: subscription → new amount.
+    public Dictionary<string, long> PriceChanges { get; } = [];
+    public Task ChangeMonthlyPriceAsync(string accountId, string subscriptionId, long amountCents, string currency, string productName, CancellationToken ct)
+    {
+        PriceChanges[subscriptionId] = amountCents;
         return Task.CompletedTask;
     }
 

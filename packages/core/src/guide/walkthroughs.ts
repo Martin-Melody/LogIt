@@ -479,7 +479,7 @@ export const STUDIO_CHAPTERS: Chapter[] = [
       {
         id: "tabs", on: "web", route: "/coaching/payments", target: "payments-tabs", kind: "look",
         title: "Paid through your own Stripe",
-        body: "Coaching › Payments connects your own Stripe account. Make packages (monthly, or one-off like 12 weeks), attach one to an invite link, and people pay on the link's page before they join. LogIt takes no cut. Clients tab: who's paid; mark someone who pays you another way as paid elsewhere.",
+        body: "Coaching › Payments is optional: connect your own Stripe account, make packages (monthly, or a block of weeks), and offer one when someone asks to be coached. LogIt takes no cut. Clients tab: who pays what, with Manage to change a package, refund, or mark someone paid elsewhere.",
       },
     ],
   },

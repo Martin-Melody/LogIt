@@ -346,6 +346,7 @@ api.MapCoachProfileEndpoints();
 api.MapCoachRequestEndpoints();
 api.MapRequestEmailEndpoints();
 api.MapCoachEndingEndpoints();
+Logit.Api.Features.Coach.Payments.CoachPaymentManageEndpoints.MapCoachPaymentManageEndpoints(api);
 api.MapDiagnosticsEndpoints();
 api.MapPluginEndpoints();
 api.MapSandboxEndpoints();

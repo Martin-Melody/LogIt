@@ -120,6 +120,10 @@ public class CoachPaymentService(
         }
 
         payment.Mode = PaymentModes.Stripe;
+        payment.PendingPayPackageId = null;
+        payment.PendingPackageId = null;
+        payment.PendingNoPayment = false;
+        payment.Disputed = false;
         payment.PackageId = package?.Id;
         payment.PackageName = package?.Name ?? payment.PackageName;
         payment.AmountCents = package?.AmountCents ?? info.AmountTotal;
@@ -321,6 +325,73 @@ public class CoachPaymentService(
         if (due.Count > 0) await db.SaveChangesAsync(ct);
     }
 
+    // ── Stripe telling us things (canvas Z4, K10) ────────────────────────────
+
+    /// The coach's Stripe account changed: read its status again (restricted or fixed).
+    public async Task AccountChangedAsync(string accountId, DateTime now, CancellationToken ct)
+    {
+        var account = await db.CoachPaymentAccounts.FirstOrDefaultAsync(a => a.StripeAccountId == accountId, ct);
+        if (account is null || !stripe.Configured) return;
+        await CoachPaymentEndpoints.TryRefresh(db, stripe, account, now, log, ct);
+    }
+
+    /// A payment was disputed with the client's bank (or the dispute closed).
+    public async Task DisputeChangedAsync(string accountId, string? paymentIntentId, bool open, DateTime now, CancellationToken ct)
+    {
+        if (paymentIntentId is null) return;
+        var account = await db.CoachPaymentAccounts.AsNoTracking().FirstOrDefaultAsync(a => a.StripeAccountId == accountId, ct);
+        if (account is null) return;
+        string? customer;
+        try { customer = await stripe.CustomerOfPaymentAsync(accountId, paymentIntentId, ct); }
+        catch (Exception ex) { log.LogWarning("Couldn't read the disputed payment {Pi}: {Reason}", paymentIntentId, ex.Message); return; }
+        if (customer is null) return;
+        var payment = await db.CoachClientPayments.FirstOrDefaultAsync(p => p.StripeCustomerId == customer && p.Relationship.CoachId == account.CoachId, ct);
+        if (payment is null) return;
+        payment.Disputed = open;
+        payment.UpdatedAt = now;
+        await db.SaveChangesAsync(ct);
+    }
+
+    /// Changes of package (canvas K14) and stopped payments (K18) take effect when the month
+    /// paid for ends: no payment through LogIt, or the new package to pay for.
+    private async Task ApplyPendingChangesAsync(DateTime now, CancellationToken ct)
+    {
+        var due = await db.CoachClientPayments.Include(p => p.Relationship).ThenInclude(r => r.Coach)
+            .Where(p => (p.PendingNoPayment || p.PendingPackageId != null) && p.PaidUntil != null && p.PaidUntil <= now
+                && (p.Relationship.Status == CoachClientStatus.Active || p.Relationship.Status == CoachClientStatus.Paused))
+            .ToListAsync(ct);
+        foreach (var p in due)
+        {
+            var coach = CoachIntake.NameOf(p.Relationship.Coach);
+            if (p.PendingNoPayment)
+            {
+                // Paid another way from now on: coaching carries on unless the coach ends it.
+                p.Mode = PaymentModes.Elsewhere;
+                p.State = PaymentStates.Paid;
+                p.UnpaidSince = null;
+                p.PaidUntil = null;
+                p.StripeSubscriptionId = null;
+                p.StopsAtPeriodEnd = false;
+                p.PendingNoPayment = false;
+                CoachIntake.Post(db, p.Relationship, p.Relationship.CoachId, CoachIntake.Events.PlanChanged,
+                    $"Your plan with {coach} has stopped. You now pay {coach} another way.", null, null, now);
+            }
+            else if (p.PendingPackageId is { } next)
+            {
+                var package = await db.CoachPackages.AsNoTracking().FirstOrDefaultAsync(k => k.Id == next, ct);
+                if (package is null) { p.PendingPackageId = null; continue; }
+                CoachIntake.Post(db, p.Relationship, p.Relationship.CoachId, CoachIntake.Events.PayForChange,
+                    $"Time to pay for {package.Name}: {CoachIntake.Money(package.AmountCents, package.Currency)}. Coaching carries on once it's paid.",
+                    new { packageId = package.Id, packageName = package.Name, amountCents = package.AmountCents, currency = package.Currency, interval = package.Interval }, null, now);
+                // The card is posted once; paying it clears the pending change (FulfillCheckout).
+                p.PendingPackageId = null;
+                p.PendingPayPackageId = package.Id;
+            }
+            p.UpdatedAt = now;
+        }
+        if (due.Count > 0) await db.SaveChangesAsync(ct);
+    }
+
     /// A coach's pause reaches its date: coaching carries on (Stripe resumes charging by itself).
     private async Task EndPausesAsync(DateTime now, CancellationToken ct)
     {
@@ -342,6 +413,7 @@ public class CoachPaymentService(
     {
         await EndScheduledAsync(now, ct);
         await EndPausesAsync(now, ct);
+        await ApplyPendingChangesAsync(now, ct);
         var rows = await db.CoachClientPayments
             .Include(p => p.Relationship)
             .Where(p => p.Relationship.Status == CoachClientStatus.Active
@@ -497,6 +569,9 @@ public class CoachPaymentService(
         var key = RefundKey(paid.ExternalId);
         if (await db.CoachPaymentReceipts.AnyAsync(r => r.ExternalId == key, ct)) return EndMoney.None;
         var cents = RefundAmount(rule, paid, paidUntil, now);
+        // Never more than what's left of it after refunds given earlier (canvas Q9).
+        var before = -await db.CoachPaymentReceipts.Where(r => r.ExternalId.StartsWith(key + ":")).SumAsync(r => (long?)r.AmountCents, ct) ?? 0;
+        cents = Math.Min(cents, paid.AmountCents - before);
         if (cents <= 0) return EndMoney.None;
         try
         {
@@ -721,7 +796,7 @@ public static class PaymentEmails
             $"{client} (@{username}) paid {Money(p.AmountCents, p.Currency)} for {p.PackageName}{via}.{renews}\n\n" +
             "They're on your client list now." + (clientUrl is null ? "" : $" Give them a program:\n{clientUrl}") + "\n\n" +
             "The money goes to your Stripe account as usual. Stripe sends its own receipt.\n\n" +
-            "LogIt · Turn these off in Coaching › Payments › Packages and settings.");
+            "LogIt · Turn these off in Coaching › Payments › Settings.");
     }
 
     internal static string Money(long cents, string currency)

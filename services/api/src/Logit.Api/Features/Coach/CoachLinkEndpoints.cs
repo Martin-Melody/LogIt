@@ -207,7 +207,7 @@ public static class CoachLinkEndpoints
                 interval = package.Interval,
                 weeks = package.Weeks,
             },
-            paymentsReady = account is { CardPaymentsActive: true },
+            paymentsReady = account is { CardPaymentsActive: true, PaymentsStopped: false },
             // Already paying this coach through LogIt (paying again would charge twice).
             paying = existing is { Status: CoachClientStatus.Active, Payment: { Mode: PaymentModes.Stripe } ep }
                 && ep.State != PaymentStates.Ended,

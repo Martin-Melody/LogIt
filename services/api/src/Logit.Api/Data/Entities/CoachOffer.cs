@@ -26,6 +26,8 @@ public class CoachOffer
     /// OfferStates.*. Open offers past HoldUntil read as Expired.
     public string State { get; set; } = OfferStates.Open;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    /// A change of package for someone already coached (canvas K14), not a spot.
+    public bool IsChange { get; set; }
     public DateTime? ClosedAt { get; set; }
 }
 

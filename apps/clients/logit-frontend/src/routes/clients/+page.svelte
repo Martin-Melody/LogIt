@@ -223,6 +223,14 @@
               {:else if m?.endsAt}
                 <p role="status" class="mx-3 mb-2 rounded-lg bg-muted px-3 py-2 text-xs">Coaching with {name} ends {new Date(m.endsAt).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })}.</p>
               {/if}
+              {#if m?.change || m?.payDue}
+                <!-- Canvas K14: answering a change of package and paying happen on the web (W6). -->
+                <div role="status" class="mx-3 mb-2 flex flex-col gap-2 rounded-lg border border-primary/40 px-3 py-2.5">
+                  <span class="text-sm font-semibold">{m.payDue ? `Time to pay for ${m.payDue.packageName}` : `${name} suggests ${m.change?.packageName}`}</span>
+                  <span class="text-xs text-muted-foreground">{m.payDue ? "Pay on the web; coaching carries on once it's paid." : "Nothing changes unless you accept. Accept or keep your package on the web."}</span>
+                  <a href="{WEB_URL}/my-coach" target="_blank" rel="noopener" class="inline-flex h-9 items-center self-start rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground">{m.payDue ? "Pay on the web" : "See it on the web"}</a>
+                </div>
+              {/if}
               {#if m?.quiet}
                 <!-- Canvas Z2: the coach hasn't replied for a week. -->
                 <div role="status" class="mx-3 mb-3 flex flex-col gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5">

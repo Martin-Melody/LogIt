@@ -201,6 +201,15 @@ export interface ManageCoaching {
   endsAt: string | null;
   /** The coach hasn't replied for a week (canvas Z2). */
   quiet: { days: number; lastMessage: string | null; lastMessageAt: string | null; refundCents: number } | null;
+  /** A change of package waiting for their answer (canvas K14). */
+  change?: {
+    offerId: string; packageName: string; packageDescription: string; amountCents: number; currency: string;
+    interval: "month" | "once"; weeks: number | null; pays: boolean; startsOn: string;
+  } | null;
+  /** The package they changed to is due now: pay it on Stripe's page. */
+  payDue?: { packageName: string; amountCents: number; currency: string; interval: "month" | "once" } | null;
+  /** An accepted change starting at their next payment. */
+  pendingPackage?: string | null;
 }
 
 /** Taking a spot (canvas J1). */

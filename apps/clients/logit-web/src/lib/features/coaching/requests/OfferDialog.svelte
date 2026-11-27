@@ -37,6 +37,7 @@
   const p = $derived(firstName(name));
   let packages = $state<CoachPackage[]>([]);
   let ready = $state(false);
+  let connected = $state(false);
   let pick = $state(NONE);
   let hold = $state("7");
   let startMode = $state("pays");
@@ -58,6 +59,7 @@
       (o) => {
         packages = o.packages.filter((k) => !k.hidden);
         ready = o.account.ready;
+        connected = o.account.connected;
         pick = current
           ? (current.packageId ?? NONE)
           : interestedPackageId && packages.some((k) => k.id === interestedPackageId) ? interestedPackageId : NONE;
@@ -127,6 +129,7 @@
               <RadioGroup.Item value={k.id} disabled={!ready} />
               <span class="flex min-w-0 flex-1 flex-col">
                 <span class="text-sm font-medium">{k.name}{#if k.id === interestedPackageId}<span class="ml-1.5 text-xs font-normal text-muted-foreground">· {p} picked this</span>{/if}</span>
+                {#if !ready && connected}<span class="text-xs text-muted-foreground">Can't be paid until you finish in Stripe</span>{/if}
               </span>
               <span class="text-sm tabular-nums">{formatMoney(k.amountCents, k.currency)} {k.interval === "month" ? "a month" : "once"}</span>
             </label>
@@ -141,8 +144,8 @@
         </RadioGroup.Root>
         {#if packages.length && !ready}
           <div class="flex flex-wrap items-center gap-2">
-            <p class="text-xs text-muted-foreground">Paid packages need payments set up.</p>
-            <Button variant="outline" size="sm" href="/coaching/payments">Set up payments</Button>
+            <p class="text-xs text-muted-foreground">{connected ? "Stripe needs something before clients can pay you." : "Paid packages need Stripe connected first."}</p>
+            <Button variant="outline" size="sm" href="/coaching/payments?tab=packages">{connected ? "Finish in Stripe" : "Connect Stripe first"}</Button>
           </div>
         {/if}
       </fieldset>

@@ -562,10 +562,12 @@ export const FEATURES: Feature[] = [
       "/coach/payments", "/coach/payments/connect", "/coach/payments/refresh", "/coach/payments/settings",
       "/coach/payments/packages", "/coach/payments/packages/{packageId}", "/coach/links/{linkId}/package",
       "/coach/payments/clients/{relationshipId}/rule", "/coach/payments/clients/{relationshipId}/paid-elsewhere",
-      "/coach/payments/clients/{relationshipId}/stop",
+      "/coach/payments/clients/{relationshipId}/stop", "/coach/payments/clients/{relationshipId}/receipts",
+      "/coach/payments/clients/{relationshipId}/refund", "/coach/payments/clients/{relationshipId}/change-package",
+      "/coach/payments/stop",
     ],
     table: "Take payments from clients",
-    cant: ["Take payment in the app: clients pay on your invite link's web page"],
+    cant: ["Take payment in the app: clients pay on Stripe's web page"],
   },
 ];
 

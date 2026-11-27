@@ -104,7 +104,7 @@
         <Label for="invite-package">Package</Label>
         <OptionSelect id="invite-package" bind:value={pkg}
           options={[...packages.map((k) => ({ value: k.id, label: `${k.name} · ${formatMoney(k.amountCents, k.currency)}${k.interval === "month" ? " a month" : ""}`, disabled: !ready })), { value: NONE, label: "No payment through LogIt" }]} />
-        {#if packages.length && !ready}<span class="text-xs text-muted-foreground">Paid packages need payments set up.</span>{/if}
+        {#if packages.length && !ready}<span class="text-xs text-muted-foreground">Paid packages can be offered once Stripe is ready, in Payments.</span>{/if}
       </div>
       <div class="flex flex-col gap-1.5">
         <Label for="invite-message">Message <span class="font-normal text-muted-foreground">optional</span></Label>

@@ -292,6 +292,9 @@ namespace Logit.Api.Migrations.Postgres
                         .HasMaxLength(3)
                         .HasColumnType("character varying(3)");
 
+                    b.Property<bool>("Disputed")
+                        .HasColumnType("boolean");
+
                     b.Property<int?>("FailDays")
                         .HasColumnType("integer");
 
@@ -322,6 +325,15 @@ namespace Logit.Api.Migrations.Postgres
 
                     b.Property<bool>("PausedForPayment")
                         .HasColumnType("boolean");
+
+                    b.Property<bool>("PendingNoPayment")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("PendingPackageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("PendingPayPackageId")
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("RelationshipId")
                         .HasColumnType("uuid");
@@ -690,6 +702,9 @@ namespace Logit.Api.Migrations.Postgres
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<bool>("IsChange")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("PackageDescription")
                         .IsRequired()
                         .HasColumnType("text");
@@ -813,6 +828,9 @@ namespace Logit.Api.Migrations.Postgres
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)");
 
+                    b.Property<bool>("PaymentsStopped")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("RequirementsDue")
                         .HasColumnType("boolean");
 
@@ -825,6 +843,9 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<string>("StripeAccountId")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<string>("StripeNeeds")
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");

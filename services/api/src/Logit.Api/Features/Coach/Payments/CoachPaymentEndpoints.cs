@@ -48,12 +48,16 @@ public static class CoachPaymentEndpoints
     private static object AccountDto(CoachPaymentAccount? a) => a is null ? new
     {
         connected = false, ready = false, requirementsDue = false,
+        needs = (string?)null, stopped = false,
         displayName = (string?)null, currency = "eur", country = "ie",
     } : new
     {
-        connected = a.StripeAccountId is not null,
-        ready = a.CardPaymentsActive,
+        connected = a.StripeAccountId is not null && !a.PaymentsStopped,
+        ready = a.CardPaymentsActive && !a.PaymentsStopped,
         requirementsDue = a.RequirementsDue,
+        // Canvas Z4: what Stripe wants, in Stripe's words.
+        needs = a.StripeNeeds,
+        stopped = a.PaymentsStopped,
         displayName = a.DisplayName,
         currency = a.Currency,
         country = a.Country,
@@ -77,6 +81,7 @@ public static class CoachPaymentEndpoints
         interval = p.Interval,
         weeks = p.Weeks,
         hidden = p.Hidden,
+        showOnProfile = p.ShowOnProfile,
         links,
         clients,
     };
@@ -160,6 +165,10 @@ public static class CoachPaymentEndpoints
                 rule,
                 days,
                 actionAt = p is null ? null : CoachPaymentService.ActionAt(p, account),
+                // Canvas K10: a dispute, the coach's pause, and an accepted change of package.
+                disputed = p?.Disputed ?? false,
+                pausedUntil = r.PausedUntil,
+                pendingPackage = p?.PendingPackageId is { } pp ? packages.FirstOrDefault(k => k.Id == pp)?.Name : p?.PendingNoPayment == true ? "No payment through LogIt" : null,
             };
         }).ToList();
 
@@ -179,19 +188,31 @@ public static class CoachPaymentEndpoints
                 monthCount = receipts.Count,
                 paying = clients.Count(c => c.mode == PaymentModes.Stripe && c.state != PaymentStates.Ended),
                 elsewhere = clients.Count(c => c.mode == PaymentModes.Elsewhere),
-                problems = clients.Count(c => c.status == "paused" || c.unpaidSince is not null
+                problems = clients.Count(c => c.status == "paused" || c.disputed || c.unpaidSince is not null
                     || (c.mode == PaymentModes.Elsewhere && c.paidUntil <= now)),
             },
         });
     }
 
-    private static async Task TryRefresh(AppDbContext db, ICoachStripe stripe, CoachPaymentAccount a, DateTime now, ILogger log, CancellationToken ct)
+    public static async Task TryRefresh(AppDbContext db, ICoachStripe stripe, CoachPaymentAccount a, DateTime now, ILogger log, CancellationToken ct)
     {
         try
         {
             var s = await stripe.GetAccountAsync(a.StripeAccountId!, ct);
+            var wasReady = a.CardPaymentsActive;
             a.CardPaymentsActive = s.CardPaymentsActive;
             a.RequirementsDue = s.RequirementsDue;
+            a.StripeNeeds = s.RequirementsDue ? s.Needs : null;
+            // Canvas Z4: fixed again, so offers held while it was restricted get their days back.
+            if (!wasReady && s.CardPaymentsActive)
+            {
+                var held = await db.CoachOffers.Where(o => o.Relationship.CoachId == a.CoachId && o.PackageId != null && o.State == OfferStates.Open).ToListAsync(ct);
+                foreach (var o in held)
+                {
+                    var days = Math.Max(1, (o.HoldUntil - o.CreatedAt).TotalDays);
+                    if (o.HoldUntil < now.AddDays(days)) o.HoldUntil = now.AddDays(days);
+                }
+            }
             a.DisplayName = s.DisplayName ?? a.DisplayName;
             if (s.Currency is { Length: 3 } c) a.Currency = c.ToLowerInvariant();
             a.StatusCheckedAt = now;
@@ -248,6 +269,13 @@ public static class CoachPaymentEndpoints
                 account.UpdatedAt = now;
                 await db.SaveChangesAsync(ct);
                 log.LogInformation("Coach {CoachId} created Stripe account {Account}", coachId, id);
+            }
+            // Starting again after "Stop taking payments through LogIt" (canvas K18).
+            if (account.PaymentsStopped)
+            {
+                account.PaymentsStopped = false;
+                account.UpdatedAt = now;
+                await db.SaveChangesAsync(ct);
             }
             var url = await stripe.OnboardingLinkAsync(account.StripeAccountId!, req.ReturnUrl, req.RefreshUrl, ct);
             return Results.Ok(new { url });
@@ -351,6 +379,7 @@ public static class CoachPaymentEndpoints
         p.Interval = req.Interval!;
         p.Weeks = req.Interval == PaymentIntervals.Once ? req.Weeks : null;
         p.Hidden = req.Hidden;
+        if (req.ShowOnProfile is { } shown) p.ShowOnProfile = shown;
         p.UpdatedAt = now;
     }
 
@@ -377,7 +406,7 @@ public static class CoachPaymentEndpoints
         // A package only picked for them needs no payments; paying through the link does.
         if (!payAndStart) return null;
         var account = await db.CoachPaymentAccounts.AsNoTracking().FirstOrDefaultAsync(a => a.CoachId == coachId, ct);
-        if (account is not { CardPaymentsActive: true })
+        if (account is not { CardPaymentsActive: true, PaymentsStopped: false })
             return Error(409, "payments_not_ready", "Finish connecting Stripe before putting a package on a link.");
         return null;
     }
@@ -523,7 +552,7 @@ public static class CoachPaymentEndpoints
             return Error(StatusCodes.Status410Gone, state, "This link can't be used any more. Ask your coach for a new one.");
 
         var account = await db.CoachPaymentAccounts.AsNoTracking().FirstOrDefaultAsync(a => a.CoachId == link.CoachId, ct);
-        if (!stripe.Configured || account is not { CardPaymentsActive: true, StripeAccountId: not null })
+        if (!stripe.Configured || account is not { CardPaymentsActive: true, PaymentsStopped: false, StripeAccountId: not null })
             return Error(409, "payments_not_ready", "This coach can't take payments right now. Let them know.");
 
         var existing = await db.CoachClientRelationships.AsNoTracking().Include(r => r.Payment)
@@ -573,7 +602,11 @@ public static class CoachPaymentEndpoints
     {
         // Paid through a link (its code) or for an offer (canvas J1).
         Guid? coachId = null;
-        if (req.OfferId is { } offerId)
+        if (req.RelationshipId is { } relId)
+            // Paying for a change of package (canvas K14).
+            coachId = await db.CoachClientRelationships.Where(r => r.Id == relId && r.ClientId == caller.GetUserId())
+                .Select(r => (Guid?)r.CoachId).FirstOrDefaultAsync(ct);
+        else if (req.OfferId is { } offerId)
             coachId = await db.CoachOffers.Where(o => o.Id == offerId && o.Relationship.ClientId == caller.GetUserId())
                 .Select(o => (Guid?)o.Relationship.CoachId).FirstOrDefaultAsync(ct);
         else
@@ -645,6 +678,15 @@ public static class CoachPaymentEndpoints
                 if (ev.Data.Object is Subscription sub)
                     await payments.SubscriptionChangedAsync(ev.Account, CoachStripe.FromSubscription(sub), now, ct);
                 break;
+            // Canvas Z4: charges or payouts switched off, or details due.
+            case "account.updated" or "v2.core.account.updated":
+                await payments.AccountChangedAsync(ev.Account, now, ct);
+                break;
+            // Canvas K10: shown on Payments; changes nothing on its own.
+            case "charge.dispute.created" or "charge.dispute.closed":
+                if (ev.Data.Object is Dispute dispute)
+                    await payments.DisputeChangedAsync(ev.Account, dispute.PaymentIntentId, ev.Type == "charge.dispute.created", now, ct);
+                break;
         }
         return Results.Ok();
     }
@@ -655,10 +697,10 @@ public static class CoachPaymentEndpoints
 public record FixLinkRequest(string? Token);
 public record ConnectRequest(string? Country, string ReturnUrl, string RefreshUrl);
 public record PaymentSettingsRequest(string? FailRule, int FailDays, bool EmailOnFail, bool ShowClientNote);
-public record PackageRequest(string? Name, string? Description, long AmountCents, string? Interval, int? Weeks, bool Hidden);
+public record PackageRequest(string? Name, string? Description, long AmountCents, string? Interval, int? Weeks, bool Hidden, bool? ShowOnProfile = null);
 public record LinkPackageRequest(Guid? PackageId);
 public record ClientRuleRequest(string? Rule, int? Days);
 public record PaidElsewhereRequest(DateOnly? Until);
 public record StopRequest(bool Stop);
 public record StartCheckoutRequest(SharingDto? Sharing, string SuccessUrl, string CancelUrl);
-public record ConfirmCheckoutRequest(string? Code, string SessionId, Guid? OfferId = null);
+public record ConfirmCheckoutRequest(string? Code, string SessionId, Guid? OfferId = null, Guid? RelationshipId = null);

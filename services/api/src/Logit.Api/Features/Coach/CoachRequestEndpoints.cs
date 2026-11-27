@@ -119,7 +119,7 @@ public static class CoachRequestEndpoints
             package = await db.CoachPackages.FirstOrDefaultAsync(k => k.Id == pid && k.CoachId == coachId && !k.Hidden);
             if (package is null) return Results.BadRequest(new { error = "That package isn't available." });
             // She'd be sent to a checkout that can't take her money (canvas Z4).
-            if (!await db.CoachPaymentAccounts.AnyAsync(a => a.CoachId == coachId && a.CardPaymentsActive))
+            if (!await db.CoachPaymentAccounts.AnyAsync(a => a.CoachId == coachId && a.CardPaymentsActive && !a.PaymentsStopped))
                 return Results.BadRequest(new { error = "Paid packages need payments set up first. Offer it with no payment through LogIt, or set up payments.", code = "payments_not_ready" });
         }
 
@@ -432,7 +432,7 @@ public static class CoachRequestEndpoints
             agreement = string.IsNullOrWhiteSpace(rel.Coach.CoachAgreement) ? null : new { text = rel.Coach.CoachAgreement, changedAt = rel.Coach.CoachAgreementChangedAt },
             agreedAt = rel.AgreedAt,
             sharing = rel.ToSharingDto(),
-            paymentsReady = account is { CardPaymentsActive: true },
+            paymentsReady = account is { CardPaymentsActive: true, PaymentsStopped: false },
             // Canvas J1: "This ends coaching with Joe Burke" (one coach at a time).
             otherCoach = other is null ? null : new
             {
@@ -515,7 +515,7 @@ public static class CoachRequestEndpoints
             return Results.BadRequest(new { error = $"Paying needs you to be 18 or over. Under 18? Ask {NameOf(offer.Relationship.Coach)} to sort payment outside LogIt.", code = "adult" });
         var rel = offer.Relationship;
         var account = await db.CoachPaymentAccounts.AsNoTracking().FirstOrDefaultAsync(a => a.CoachId == rel.CoachId, ct);
-        if (!stripe.Configured || account is not { CardPaymentsActive: true, StripeAccountId: not null })
+        if (!stripe.Configured || account is not { CardPaymentsActive: true, PaymentsStopped: false, StripeAccountId: not null })
             return Results.Json(new { error = $"{NameOf(rel.Coach)} can't take payments right now. Let them know.", code = "payments_not_ready" }, statusCode: StatusCodes.Status409Conflict);
 
         if (body.Sharing is { } s) rel.ApplySharing(s);
