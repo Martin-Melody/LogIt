@@ -39,6 +39,15 @@ public class User
     /// headline, where they coach, About (Markdown), who they're a good fit for. Shown publicly
     /// once they coach for real (Studio, or any account on a self-hosted server).
     public string? CoachProfileJson { get; set; }
+    /// How many clients this coach takes (canvas P3 "Client limit"); null = no limit. Open
+    /// offers hold a spot each until they run out.
+    public int? CoachSpots { get; set; }
+    /// When full: "waitlist" (people join the waiting list) or "stop" (no new requests).
+    public string? CoachWhenFull { get; set; }
+    /// "Expect spots" shown on the profile and to people waiting, e.g. "January".
+    public string? CoachExpectSpots { get; set; }
+    /// The questions people answer when they ask (CoachIntake.Question[] as JSON); null = LogIt's five.
+    public string? CoachAskQuestionsJson { get; set; }
     /// Social privacy (see Features/Social/Privacy.cs). A private account's follows need its
     /// approval, and only accepted followers see its posts, profile cards and follow lists.
     public bool IsPrivate { get; set; }

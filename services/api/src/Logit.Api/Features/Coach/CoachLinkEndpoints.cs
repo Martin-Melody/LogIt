@@ -207,43 +207,17 @@ public static class CoachLinkEndpoints
             return Results.Json(new { error = "This link is paid: pay to start coaching.", code = "payment_required" },
                 statusCode: StatusCodes.Status402PaymentRequired);
 
-        switch (relState)
+        if (relState == "none")
         {
-            case "active":
-                return Results.Conflict(new { error = "You're already coached by them.", code = "already_coached" });
-            case "paused":
-                return Results.Conflict(new { error = "Coaching with them is paused until it's paid.", code = "paused" });
-            case "invited":
-                // The coach already asked you, so asking back is a yes.
-                existing!.ApplySharing(sharing);
-                existing.Status = CoachClientStatus.Active;
-                existing.UpdatedAt = DateTime.UtcNow;
-                await db.SaveChangesAsync();
-                return Results.Ok(new { relationshipId = existing.Id, status = "active" });
-            case "requested":
-                existing!.ApplySharing(sharing);
-                existing.UpdatedAt = DateTime.UtcNow;
-                await db.SaveChangesAsync();
-                return Results.Ok(new { relationshipId = existing.Id, status = "requested" });
+            var use = (await LinkUse(db, [link.Id]))[link.Id];
+            var state = !CoachingAccess.CanCoach(link.Coach, config) ? "off" : LinkState(link, use.Joined + use.Waiting, DateTime.UtcNow);
+            if (state != "active")
+                return Results.Json(new { error = LinkStateMessage(state), code = state }, statusCode: StatusCodes.Status410Gone);
         }
 
-        var use = (await LinkUse(db, [link.Id]))[link.Id];
-        var state = !CoachingAccess.CanCoach(link.Coach, config) ? "off" : LinkState(link, use.Joined + use.Waiting, DateTime.UtcNow);
-        if (state != "active")
-            return Results.Json(new { error = LinkStateMessage(state), code = state }, statusCode: StatusCodes.Status410Gone);
-
-        if (existing is null)
-        {
-            existing = new CoachClientRelationship { CoachId = link.CoachId, ClientId = me };
-            db.CoachClientRelationships.Add(existing);
-        }
-        existing.Status = CoachClientStatus.Pending;
-        existing.RequestedByClient = true;
-        existing.InviteLinkId = link.Id;
-        existing.ApplySharing(sharing);
-        existing.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync();
-        return Results.Ok(new { relationshipId = existing.Id, status = "requested" });
+        // New, waiting-list, already-asked and invited-by-the-coach requests all follow the same
+        // rules as asking from the profile (CoachRequestEndpoints).
+        return await CoachRequestEndpoints.CreateOrUpdateAsync(db, link.Coach, me, req.Answers, req.InterestedPackageId, sharing, link.Id, isSample);
     }
 
     private static string LinkStateMessage(string state) => state switch
@@ -271,6 +245,8 @@ public static class CoachLinkEndpoints
             .Where(r => r.CoachId == coachId && r.Status == CoachClientStatus.Pending && r.RequestedByClient)
             .OrderByDescending(r => r.UpdatedAt)
             .ToListAsync();
+        var offers = await LatestOffersAsync(db, rows.Select(r => r.Id).ToList());
+        var now = DateTime.UtcNow;
         return Results.Ok(new
         {
             requests = rows.Select(r => new
@@ -280,15 +256,35 @@ public static class CoachLinkEndpoints
                 linkName = r.InviteLink?.Name,
                 sharing = r.ToSharingDto(),
                 requestedAt = r.UpdatedAt,
+                // Requests (canvas C1–C6): where it stands, what they answered, any offer.
+                stage = r.RequestStage ?? CoachIntake.Events.Asked,
+                answers = CoachIntake.AnswersOf(r),
+                interestedPackageId = r.InterestedPackageId,
+                waitingSince = r.WaitingSince,
+                offer = offers.TryGetValue(r.Id, out var o) ? OfferDto(o, now) : null,
             }),
         });
     }
+
+    /// The newest offer on each request.
+    private static async Task<Dictionary<Guid, CoachOffer>> LatestOffersAsync(AppDbContext db, List<Guid> relIds) =>
+        (await db.CoachOffers.AsNoTracking().Where(o => relIds.Contains(o.RelationshipId)).ToListAsync())
+            .GroupBy(o => o.RelationshipId)
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(o => o.CreatedAt).First());
+
+    private static object OfferDto(CoachOffer o, DateTime now) => new
+    {
+        card = CoachIntake.CardOf(o),
+        state = CoachIntake.StateOf(o, now),
+        createdAt = o.CreatedAt,
+    };
 
     private static async Task<IResult> AcceptRequest(Guid relationshipId, ClaimsPrincipal caller, AppDbContext db)
     {
         var r = await FindRequest(db, relationshipId, caller.GetUserId());
         if (r is null) return Results.NotFound();
         r.Status = CoachClientStatus.Active;
+        r.RequestStage = null;
         r.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
         return Results.NoContent();
@@ -299,6 +295,7 @@ public static class CoachLinkEndpoints
         var r = await FindRequest(db, relationshipId, caller.GetUserId());
         if (r is null) return Results.NotFound();
         r.Status = CoachClientStatus.Revoked; // see RevokeRelationship for why not deleted
+        r.RequestStage = RequestStages.NotAFit;
         r.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
         return Results.NoContent();
@@ -308,15 +305,20 @@ public static class CoachLinkEndpoints
         db.CoachClientRelationships.FirstOrDefaultAsync(r =>
             r.Id == id && r.CoachId == coachId && r.Status == CoachClientStatus.Pending && r.RequestedByClient);
 
-    /// The client's own requests still waiting for a coach's answer.
-    private static async Task<IResult> GetMyRequests(ClaimsPrincipal caller, AppDbContext db)
+    /// The client's own requests still waiting for a coach's answer; with includeClosed, also
+    /// the ones closed (not a fit, withdrawn) and not deleted. Older apps don't ask for those.
+    private static async Task<IResult> GetMyRequests(ClaimsPrincipal caller, AppDbContext db, bool includeClosed = false)
     {
         var me = caller.GetUserId();
         var rows = await db.CoachClientRelationships.AsNoTracking()
             .Include(r => r.Coach)
-            .Where(r => r.ClientId == me && r.Status == CoachClientStatus.Pending && r.RequestedByClient)
+            .Where(r => r.ClientId == me && r.RequestedByClient && (r.Status == CoachClientStatus.Pending
+                || (includeClosed && r.Status == CoachClientStatus.Revoked
+                    && (r.RequestStage == RequestStages.NotAFit || r.RequestStage == RequestStages.Withdrawn))))
             .OrderByDescending(r => r.UpdatedAt)
             .ToListAsync();
+        var offers = await LatestOffersAsync(db, rows.Select(r => r.Id).ToList());
+        var now = DateTime.UtcNow;
         return Results.Ok(new
         {
             requests = rows.Select(r => new
@@ -325,6 +327,12 @@ public static class CoachLinkEndpoints
                 coach = r.Coach.ToProfileDto(false),
                 sharing = r.ToSharingDto(),
                 requestedAt = r.UpdatedAt,
+                stage = r.RequestStage ?? CoachIntake.Events.Asked,
+                closed = r.Status == CoachClientStatus.Revoked,
+                answers = CoachIntake.AnswersOf(r),
+                waitingSince = r.WaitingSince,
+                expectSpots = r.RequestStage == RequestStages.Waiting ? r.Coach.CoachExpectSpots : null,
+                offer = offers.TryGetValue(r.Id, out var o) ? OfferDto(o, now) : null,
             }),
         });
     }
@@ -347,4 +355,5 @@ public static class CoachLinkEndpoints
 }
 
 public record CreateLinkRequest(string? Name, int? ExpiresInDays, int? MaxUses, Guid? PackageId = null);
-public record CoachingRequestBody(SharingDto? Sharing);
+/// Answers: the coach's questions (CoachIntake), keyed by question id; older apps send none.
+public record CoachingRequestBody(SharingDto? Sharing, Dictionary<string, string>? Answers = null, Guid? InterestedPackageId = null);

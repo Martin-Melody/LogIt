@@ -343,6 +343,7 @@ api.MapSyncEndpoints();
 api.MapBillingEndpoints();
 api.MapCoachEndpoints();
 api.MapCoachProfileEndpoints();
+api.MapCoachRequestEndpoints();
 api.MapDiagnosticsEndpoints();
 api.MapPluginEndpoints();
 api.MapSandboxEndpoints();

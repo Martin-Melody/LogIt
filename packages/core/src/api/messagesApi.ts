@@ -1,4 +1,5 @@
 import { apiClient, type ApiFetcher } from "./client";
+import type { RequestEvent } from "../domain/coachRequest";
 
 export interface RemoteMessage {
   messageId: string;
@@ -15,6 +16,10 @@ export interface RemoteMessage {
   voicePeaks?: string | null;
   /** The other person's reaction (only the person it was sent to reacts). */
   reaction?: string | null;
+  /** A step in a request (an offer, the waiting list…); `body` says it in words too. */
+  kind?: RequestEvent | null;
+  /** What that step's card shows, as JSON (an OfferCard for "offer" and "offer-changed"). */
+  cardJson?: string | null;
 }
 
 export interface SendMessageInput {

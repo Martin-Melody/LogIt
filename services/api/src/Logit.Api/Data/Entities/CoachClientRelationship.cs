@@ -29,6 +29,18 @@ public class CoachClientRelationship
     /// (see SwapRules). Null: the coach's default (User.CoachSwapRule).
     public string? SwapRule { get; set; }
 
+    // ── A request (canvas R3, C1–C6): the conversation before coaching starts ──
+    /// Where a client's request stands while Pending (RequestStages.*), and why a closed one
+    /// closed. Null for coach invites and for rows from before requests had stages.
+    public string? RequestStage { get; set; }
+    /// The client's answers to the coach's questions (CoachIntake.Answer[] as JSON), with the
+    /// question as it was asked.
+    public string? AnswersJson { get; set; }
+    /// The package they said they were interested in, if any.
+    public Guid? InterestedPackageId { get; set; }
+    /// When it went on the waiting list (for "Waiting since").
+    public DateTime? WaitingSince { get; set; }
+
     public User Coach { get; set; } = null!;
     public User Client { get; set; } = null!;
     public CoachClientPayment? Payment { get; set; }
@@ -38,3 +50,16 @@ public class CoachClientRelationship
 /// Active relationships give the coach access, so a paused one behaves like no coaching until
 /// it's paid again. Appended last: the column stores the number.
 public enum CoachClientStatus { Pending, Active, Revoked, Paused }
+
+/// A client's request while Pending, and how a Revoked one ended.
+public static class RequestStages
+{
+    public const string Asked = "asked";
+    public const string Waiting = "waiting";
+    public const string Offered = "offered";
+    /// Closed by the coach (Revoked).
+    public const string NotAFit = "notafit";
+    /// Withdrawn by the client, or they left the waiting list (Revoked).
+    public const string Withdrawn = "withdrawn";
+}
+

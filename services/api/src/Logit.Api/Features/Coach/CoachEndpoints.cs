@@ -915,14 +915,19 @@ public static class CoachEndpoints
 
     // ── Messaging ─────────────────────────────────────────────────────────────
 
-    /// The Active relationship the caller participates in, or null (not found / not a
-    /// participant / not Active — all indistinguishable to the caller).
+    /// The relationship the caller can message in, or null (not found / not a participant /
+    /// not open — all indistinguishable to the caller). Open: Active coaching, or a request
+    /// someone made, which is a conversation before coaching starts (canvas R3). With
+    /// `reading`, a closed request's conversation too: it stays readable, never replied to.
     private static Task<CoachClientRelationship?> ParticipantRelationship(
-        Guid callerId, Guid relationshipId, AppDbContext db) =>
+        Guid callerId, Guid relationshipId, AppDbContext db, bool reading = false) =>
         db.CoachClientRelationships.FirstOrDefaultAsync(r =>
             r.Id == relationshipId &&
-            r.Status == CoachClientStatus.Active &&
-            (r.CoachId == callerId || r.ClientId == callerId));
+            (r.CoachId == callerId || r.ClientId == callerId) &&
+            (r.Status == CoachClientStatus.Active
+                || (r.Status == CoachClientStatus.Pending && r.RequestedByClient)
+                || (reading && r.Status == CoachClientStatus.Revoked && r.RequestedByClient
+                    && (r.RequestStage == RequestStages.NotAFit || r.RequestStage == RequestStages.Withdrawn))));
 
     private static async Task<IResult> SendMessage(
         [FromBody] SendMessageRequest req,
@@ -979,7 +984,7 @@ public static class CoachEndpoints
         AppDbContext db)
     {
         var callerId = caller.GetUserId();
-        var relationship = await ParticipantRelationship(callerId, relationshipId, db);
+        var relationship = await ParticipantRelationship(callerId, relationshipId, db, reading: true);
         if (relationship is null) return Results.NotFound();
 
         var sinceUtc = DateTimeOffset.FromUnixTimeMilliseconds(since).UtcDateTime;
@@ -990,7 +995,8 @@ public static class CoachEndpoints
             .Select(m => new MessageDto(
                 m.MessageId, m.Body, m.CreatedAtMs, m.ReadAtMs, m.SenderUserId == callerId, m.ContextDateIso,
                 m.PhotoId == null ? null : "/photos/" + m.PhotoId.Value.ToString("N"), m.PhotoWidth, m.PhotoHeight,
-                m.VoiceId == null ? null : "/voice/" + m.VoiceId.Value.ToString("N"), m.VoiceMs, m.VoicePeaks, m.Reaction))
+                m.VoiceId == null ? null : "/voice/" + m.VoiceId.Value.ToString("N"), m.VoiceMs, m.VoicePeaks, m.Reaction,
+                m.Kind, m.CardJson))
             .ToListAsync();
 
         return Results.Ok(new { messages });
@@ -1015,7 +1021,8 @@ public static class CoachEndpoints
             .Select(m => new ThreadMessageDto(
                 m.RelationshipId, m.MessageId, m.Body, m.CreatedAtMs, m.ReadAtMs, m.SenderUserId == callerId, m.ContextDateIso,
                 m.PhotoId == null ? null : "/photos/" + m.PhotoId.Value.ToString("N"), m.PhotoWidth, m.PhotoHeight,
-                m.VoiceId == null ? null : "/voice/" + m.VoiceId.Value.ToString("N"), m.VoiceMs, m.VoicePeaks, m.Reaction))
+                m.VoiceId == null ? null : "/voice/" + m.VoiceId.Value.ToString("N"), m.VoiceMs, m.VoicePeaks, m.Reaction,
+                m.Kind, m.CardJson))
             .ToListAsync();
 
         return Results.Ok(new { messages });
@@ -1047,7 +1054,7 @@ public static class CoachEndpoints
         AppDbContext db)
     {
         var callerId = caller.GetUserId();
-        var relationship = await ParticipantRelationship(callerId, req.RelationshipId, db);
+        var relationship = await ParticipantRelationship(callerId, req.RelationshipId, db, reading: true);
         if (relationship is null) return Results.NotFound();
 
         var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -1092,10 +1099,12 @@ public record MarkReadRequest(Guid RelationshipId, long UpToMs);
 public record CoachReactRequest(Guid RelationshipId, string MessageId, string? Emoji);
 public record MessageDto(string MessageId, string Body, long CreatedAtMs, long? ReadAtMs, bool Mine, string? ContextDateIso = null,
     string? PhotoUrl = null, int PhotoWidth = 0, int PhotoHeight = 0, string? VoiceUrl = null, int VoiceMs = 0, string? VoicePeaks = null,
-    string? Reaction = null);
+    string? Reaction = null,
+    // A step in a request (CoachIntake.Events) and what its card shows; null for ordinary messages.
+    string? Kind = null, string? CardJson = null);
 public record ThreadMessageDto(Guid RelationshipId, string MessageId, string Body, long CreatedAtMs, long? ReadAtMs, bool Mine, string? ContextDateIso = null,
     string? PhotoUrl = null, int PhotoWidth = 0, int PhotoHeight = 0, string? VoiceUrl = null, int VoiceMs = 0, string? VoicePeaks = null,
-    string? Reaction = null);
+    string? Reaction = null, string? Kind = null, string? CardJson = null);
 
 public record UpsertProgramRequest(
     string ProgramId,

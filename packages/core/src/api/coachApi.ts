@@ -2,6 +2,7 @@ import { ApiError, apiClient, type ApiFetcher } from "./client";
 import type { SwapRule } from "../domain/swaps";
 import type { ClientPayment, LinkPackage } from "../domain/coachPayments";
 import type { CoachProfile, MyCoachProfile } from "../domain/coachProfile";
+import type { AskQuestion, CoachIntake, OfferInput, RequestAnswer, RequestOffer, RequestStage } from "../domain/coachRequest";
 
 export interface CoachClientUser {
   id: string;
@@ -124,6 +125,12 @@ export interface CoachingRequest {
   linkName: string | null;
   sharing: Sharing;
   requestedAt: string;
+  /** Older servers don't send these: treat missing as "asked" with no answers or offer. */
+  stage?: RequestStage;
+  answers?: RequestAnswer[];
+  interestedPackageId?: string | null;
+  waitingSince?: string | null;
+  offer?: RequestOffer | null;
 }
 
 export interface MyCoachingRequest {
@@ -131,6 +138,38 @@ export interface MyCoachingRequest {
   coach: CoachClientUser;
   sharing: Sharing;
   requestedAt: string;
+  stage?: RequestStage;
+  /** A request the coach closed or that was withdrawn (only with includeClosed). */
+  closed?: boolean;
+  answers?: RequestAnswer[];
+  waitingSince?: string | null;
+  /** "Expect spots" while on the waiting list. */
+  expectSpots?: string | null;
+  offer?: RequestOffer | null;
+}
+
+/** A closed request in the coach's Closed list (canvas C6). */
+export interface ClosedRequest {
+  relationshipId: string;
+  client: CoachClientUser;
+  linkName: string | null;
+  stage: RequestStage;
+  answers: RequestAnswer[];
+  closedAt: string;
+}
+
+/** What the ask sheet needs (canvas P2, A4). */
+export interface AskInfo {
+  coach: CoachClientUser;
+  questions: AskQuestion[];
+  packages: { id: string; name: string; amountCents: number; currency: string; interval: "month" | "once"; weeks: number | null }[];
+  full: boolean;
+  whenFull: "waitlist" | "stop";
+  expectSpots: string | null;
+  isSelf: boolean;
+  relationshipId: string | null;
+  relationship: "none" | "requested" | "invited" | "active";
+  stage: RequestStage | null;
 }
 
 /** One submitted check-in in the coach's inbox. `dataJson` is a CheckinSubmission. */
@@ -228,10 +267,15 @@ export function coachApiFor(api: ApiFetcher) {
       return api.fetch(`/coach/links/code/${encodeURIComponent(code)}`);
     },
 
-    async requestCoaching(code: string, sharing: Sharing): Promise<{ relationshipId: string; status: "requested" | "active" }> {
+    async requestCoaching(
+      code: string,
+      sharing: Sharing,
+      answers?: Record<string, string>,
+      interestedPackageId?: string | null,
+    ): Promise<{ relationshipId: string; status: "requested" | "active"; stage?: RequestStage | null }> {
       return api.fetch(`/coach/links/code/${encodeURIComponent(code)}/request`, {
         method: "POST",
-        body: JSON.stringify({ sharing }),
+        body: JSON.stringify({ sharing, answers, interestedPackageId }),
       });
     },
 
@@ -240,9 +284,71 @@ export function coachApiFor(api: ApiFetcher) {
       return requests;
     },
 
-    async listMyRequests(): Promise<MyCoachingRequest[]> {
-      const { requests } = await api.fetch<{ requests: MyCoachingRequest[] }>("/coach/requests/mine");
+    async listMyRequests(includeClosed = false): Promise<MyCoachingRequest[]> {
+      const { requests } = await api.fetch<{ requests: MyCoachingRequest[] }>(`/coach/requests/mine${includeClosed ? "?includeClosed=true" : ""}`);
       return requests;
+    },
+
+    // ── Asking and answering (canvas P2, R3, C1–C6, A1–A5) ──
+
+    /** Coach: the client limit, when-full rule, "expect spots" and the questions people answer. */
+    async getIntake(): Promise<CoachIntake> {
+      return api.fetch("/coach/intake");
+    },
+
+    async saveIntake(input: { spots: number | null; whenFull: "waitlist" | "stop"; expectSpots: string | null; questions?: AskQuestion[]; resetQuestions?: boolean }): Promise<CoachIntake> {
+      return api.fetch("/coach/intake", { method: "PUT", body: JSON.stringify(input) });
+    },
+
+    /** Coach: offer a spot, or change the open offer (the old one is replaced). */
+    async offerSpot(relationshipId: string, input: OfferInput): Promise<{ offerId: string }> {
+      return api.fetch(`/coach/requests/${relationshipId}/offer`, { method: "POST", body: JSON.stringify(input) });
+    },
+
+    async withdrawOffer(relationshipId: string): Promise<void> {
+      await api.fetch(`/coach/requests/${relationshipId}/withdraw-offer`, { method: "POST" });
+    },
+
+    async putOnWaitingList(relationshipId: string, message: string, expectSpots?: string | null): Promise<void> {
+      await api.fetch(`/coach/requests/${relationshipId}/waitlist`, { method: "POST", body: JSON.stringify({ message, expectSpots }) });
+    },
+
+    async notAFit(relationshipId: string, message: string, block = false): Promise<void> {
+      await api.fetch(`/coach/requests/${relationshipId}/not-a-fit`, { method: "POST", body: JSON.stringify({ message, block }) });
+    },
+
+    async reopenRequest(relationshipId: string): Promise<void> {
+      await api.fetch(`/coach/requests/${relationshipId}/reopen`, { method: "POST" });
+    },
+
+    async listClosedRequests(): Promise<ClosedRequest[]> {
+      const { requests } = await api.fetch<{ requests: ClosedRequest[] }>("/coach/requests/closed");
+      return requests;
+    },
+
+    /** Someone thinking of asking: the coach's questions, packages, and whether they're full. */
+    async askInfo(username: string): Promise<AskInfo> {
+      return api.fetch(`/coach/ask/${encodeURIComponent(username)}`);
+    },
+
+    /** Ask a coach from their profile. Answers are keyed by question id. */
+    async ask(username: string, answers: Record<string, string>, interestedPackageId: string | null, sharing: Sharing): Promise<{ relationshipId: string; status: "requested" | "active"; stage: RequestStage | null }> {
+      return api.fetch(`/coach/ask/${encodeURIComponent(username)}`, { method: "POST", body: JSON.stringify({ answers, interestedPackageId, sharing }) });
+    },
+
+    /** Withdraw my request, or leave the waiting list. */
+    async withdrawMyRequest(relationshipId: string): Promise<void> {
+      await api.fetch(`/coach/requests/mine/${relationshipId}/withdraw`, { method: "POST" });
+    },
+
+    /** Delete a closed request: my answers go. */
+    async deleteMyRequest(relationshipId: string): Promise<void> {
+      await api.fetch(`/coach/requests/mine/${relationshipId}`, { method: "DELETE" });
+    },
+
+    /** Take an offer with no payment through LogIt (a paid one answers 402: pay at checkout). */
+    async takeOffer(offerId: string, sharing?: Sharing): Promise<{ relationshipId: string; status: "active" }> {
+      return api.fetch(`/coach/offers/${offerId}/take`, { method: "POST", body: JSON.stringify({ sharing }) });
     },
 
     async acceptRequest(relationshipId: string): Promise<void> {

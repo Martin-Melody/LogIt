@@ -389,7 +389,7 @@ export const FEATURES: Feature[] = [
     web: ["/coaching/profile"],
     whereWeb: "Coaching › Profile",
     docs: "/docs/coaching#your-coaching-profile",
-    server: ["/coach/profile"],
+    server: ["/coach/profile", "/coach/intake"],
     can: ["Write About you with formatting", "Choose which packages show, with their prices"],
     cant: ["Show the Coaching section before you have Studio (you can write it while you try)"],
   },
@@ -405,6 +405,9 @@ export const FEATURES: Feature[] = [
     server: [
       "/coach/links", "/coach/links/{linkId}", "/coach/requests",
       "/coach/requests/{relationshipId}/accept", "/coach/requests/{relationshipId}/decline",
+      "/coach/requests/{relationshipId}/offer", "/coach/requests/{relationshipId}/withdraw-offer",
+      "/coach/requests/{relationshipId}/waitlist", "/coach/requests/{relationshipId}/not-a-fit",
+      "/coach/requests/{relationshipId}/reopen", "/coach/requests/closed",
     ],
     can: ["Limit a link by date or number of people, or turn it off"],
     cant: ["See anything of someone's until you accept them"],
