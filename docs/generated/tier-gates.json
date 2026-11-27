@@ -204,6 +204,13 @@
   },
   {
     "method": "GET",
+    "route": "/coach/month/",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": true
+  },
+  {
+    "method": "GET",
     "route": "/coach/nutrition-plans",
     "plan": "Studio",
     "orActivelyCoached": false,

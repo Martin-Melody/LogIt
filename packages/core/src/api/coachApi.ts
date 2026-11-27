@@ -216,6 +216,21 @@ export interface MyCoachingRequest {
   offer?: RequestOffer | null;
 }
 
+/** Your month (canvas W5), from GET /coach/month. */
+export interface CoachMonthData {
+  month: string;
+  currency: string;
+  /** Six months to `month`, oldest first; cents paid through LogIt less refunds, before Stripe's fees. */
+  income: { month: string; cents: number }[];
+  /** The best month before `month`, for "Best month yet". */
+  bestBeforeCents: number;
+  /** Clients marked as paying you another way. */
+  paidElsewhere: number;
+  clients: { count: number; spots: number | null; joined: number; left: number };
+  asked: { count: number; joined: number; waiting: number; notAFit: number };
+  longest: { name: string; sinceMs: number } | null;
+}
+
 export interface EndingPreview {
   mode: "stripe" | "elsewhere" | "none";
   lastPayment: { amountCents: number; currency: string; paidAt: string } | null;
@@ -609,6 +624,10 @@ export function coachApiFor(api: ApiFetcher) {
       return api.fetch("/coach/settings");
     },
 
+    /** Canvas W5: your month (sample clients never count). month = "YYYY-MM", default this one. */
+    async getMonth(month?: string): Promise<CoachMonthData> {
+      return api.fetch(`/coach/month${month ? `?month=${month}` : ""}`);
+    },
     /** Canvas W11: which cards show on a client's Overview. */
     async getCards(): Promise<import("../domain/coachCards").CardLayout> {
       return api.fetch("/coach/cards");

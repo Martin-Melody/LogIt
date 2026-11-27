@@ -373,13 +373,15 @@ export const FEATURES: Feature[] = [
     web: ["/coaching"],
     whereWeb: "Coaching › Today",
     docs: "/docs/coaching",
-    server: ["/coach/sandbox", "/coach/sandbox/clients/{userId}/token"],
+    server: ["/coach/sandbox", "/coach/sandbox/clients/{userId}/token", "/coach/month"],
     table: "Coach clients",
     can: [
       "Practise on sample clients; they react on their own and only you see them",
       "Remove the sample clients and add them back whenever you like",
+      "See your month: paid to you over six months, clients and spots, your clients' wins, who's worth a look",
+      "Arrange the cards on Today and Your month",
     ],
-    cant: ["Coach from a Pro or Free plan; if you leave Studio, your clients stay but read-only"],
+    cant: ["Coach from a Pro or Free plan; if you leave Studio, your clients stay but read-only", "Move Needs you off the top of Today"],
   },
   {
     id: "coach-profile",

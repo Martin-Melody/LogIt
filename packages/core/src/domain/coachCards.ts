@@ -29,7 +29,11 @@ export const COACH_CARDS: { id: CoachCardId; name: string; needs: ShareArea }[] 
 export const DEFAULT_CARDS: string[] = ["checkin", "training", "body", "food", "habits"];
 
 /** Which cards to show: the client's own list, else their package's, else everyone's, else LogIt's. */
-export type CardLayout = { all?: string[] | null; packages?: Record<string, string[]> | null; clients?: Record<string, string[]> | null };
+export type CardLayout = {
+  all?: string[] | null; packages?: Record<string, string[]> | null; clients?: Record<string, string[]> | null;
+  /** Canvas W13: Today's and Your month's own lists (null: the standard layout). */
+  today?: string[] | null; month?: string[] | null;
+};
 export function cardsFor(layout: CardLayout | null, clientId: string, packageId?: string | null): { cards: string[]; from: "client" | "package" | "all" | "default" } {
   const own = layout?.clients?.[clientId];
   if (own) return { cards: own, from: "client" };

@@ -13,6 +13,22 @@ title: Start coaching
 With Studio, the dashboard has a Coaching side (switch at the top of the sidebar). The Studio
 walkthrough in Guide takes you through it in ten short chapters, doing each thing for real.
 
+## Today and Your month
+
+**Today** is what needs you, grouped by what you'll do (review, reply, decide), with the week ahead
+beside it. **Your month** sums up a month (the arrows step back): what was paid to you through LogIt
+over six months (before Stripe's fees, with *Best month yet* only when it's true), your clients
+against your spots, who asked to be coached, your clients' wins (records, sessions against their
+programs, check-ins answered) and **Worth a look**: clients whose last two weeks look different from
+the six before. Only you see any of this.
+
+**Edit cards** arranges either page: move cards, remove them, or add Last week, Paid to you, Clients,
+Your clients' wins and Worth a look. Needs you always stays first on Today. *Back to the standard
+layout* undoes it all.
+
+In Practice view, Paid to you is a marked **Example** with made-up numbers (sample clients don't
+pay); everything else is what the samples really did.
+
 ## Practise on sample clients
 
 The first Studio chapter offers three sample clients: Niamh, who asks to join through your first

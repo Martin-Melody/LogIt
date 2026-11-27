@@ -103,6 +103,12 @@ export function programStatus(program: CoachProgram, now = Date.now()): ProgramS
 
 /** The program a client is on now: running first, then the next one scheduled, then one
  * waiting for Start. Archived (ended) and finished ones don't count. */
+/** When a program from you ends (or ended): its start plus its weeks; null before it starts. */
+export function programEndMs(program: CoachProgram): number | null {
+  const start = program.startMode === "fixed-date" ? program.startDateMs : program.clientStartedAtMs;
+  return start ? start + program.weeks.length * 7 * DAY : null;
+}
+
 export function currentProgram(programs: CoachProgram[], now = Date.now()): ProgramStatus | null {
   const order = { running: 0, scheduled: 1, waiting: 2, finished: 3 } as const;
   const live = programs

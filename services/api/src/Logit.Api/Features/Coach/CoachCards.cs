@@ -7,11 +7,12 @@ using Microsoft.EntityFrameworkCore;
 namespace Logit.Api.Features.Coach;
 
 /// Which cards a coach shows on a client's Overview (canvas W11): for everyone, for everyone on a
-/// package, or for one client; the most specific list wins. Card ids are LogIt's ("training",
-/// "food"…) or "plugin:<id>" for a widget plugin; the web decides what each one draws.
+/// package, or for one client; the most specific list wins. Today and Your month have one list
+/// each (canvas W13). Card ids are LogIt's ("training", "food"…) or "plugin:<id>" for a widget
+/// plugin; the web decides what each one draws.
 public static class CoachCards
 {
-    public record Layout(List<string>? All, Dictionary<string, List<string>>? Packages, Dictionary<string, List<string>>? Clients);
+    public record Layout(List<string>? All, Dictionary<string, List<string>>? Packages, Dictionary<string, List<string>>? Clients, List<string>? Today = null, List<string>? Month = null);
     public const int MaxCards = 30, MaxLists = 500, MaxId = 120;
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
@@ -47,7 +48,7 @@ public static class CoachCards
 
     private static async Task<IResult> Put([FromBody] Layout body, ClaimsPrincipal caller, AppDbContext db)
     {
-        var lists = new[] { body.All }.Concat(body.Packages?.Values ?? Enumerable.Empty<List<string>>()).Concat(body.Clients?.Values ?? Enumerable.Empty<List<string>>()).ToList();
+        var lists = new[] { body.All, body.Today, body.Month }.Concat(body.Packages?.Values ?? Enumerable.Empty<List<string>>()).Concat(body.Clients?.Values ?? Enumerable.Empty<List<string>>()).ToList();
         if (lists.Count > MaxLists) return Results.BadRequest(new { error = "Too many card lists." });
         foreach (var l in lists) if (Check(l) is { } err) return Results.BadRequest(new { error = err });
         var keys = (body.Packages?.Keys ?? Enumerable.Empty<string>()).Concat(body.Clients?.Keys ?? Enumerable.Empty<string>());

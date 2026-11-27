@@ -243,6 +243,35 @@ public class CoachEndingTests
     }
 
     [Fact]
+    public async Task Your_month_adds_up_receipts_refunds_clients_and_requests()
+    {
+        await using var w = await CoachedAsync("month", paying: false);
+        DateTime On(int month, int day) => new(2026, month, day, 12, 0, 0, DateTimeKind.Utc);
+        await w.Api.WithDbAsync(async db =>
+        {
+            db.CoachPaymentReceipts.AddRange(
+                new CoachPaymentReceipt { CoachId = w.CoachId, ExternalId = "a", AmountCents = 20000, PaidAt = On(1, 10) },
+                new CoachPaymentReceipt { CoachId = w.CoachId, ExternalId = "b", AmountCents = 3000, PaidAt = On(2, 10) },
+                new CoachPaymentReceipt { CoachId = w.CoachId, ExternalId = "c", AmountCents = 8000, PaidAt = On(3, 2) },
+                new CoachPaymentReceipt { CoachId = w.CoachId, ExternalId = "d", AmountCents = 5000, PaidAt = On(3, 20) },
+                new CoachPaymentReceipt { CoachId = w.CoachId, ExternalId = "refund:c", AmountCents = -1000, PaidAt = On(3, 25) },
+                new CoachPaymentReceipt { CoachId = w.CoachId, ExternalId = "e", AmountCents = 999, Currency = "usd", PaidAt = On(3, 25) });
+            await db.SaveChangesAsync();
+        });
+        var m = await Json(await w.Coach.GetAsync("/coach/month?month=2026-03"));
+        Assert.Equal("eur", m.GetProperty("currency").GetString());
+        var income = m.GetProperty("income").EnumerateArray().ToList();
+        Assert.Equal(6, income.Count);
+        Assert.Equal("2026-03", income[^1].GetProperty("month").GetString());
+        Assert.Equal(12000, income[^1].GetProperty("cents").GetInt64());
+        Assert.Equal(3000, income[^2].GetProperty("cents").GetInt64());
+        Assert.Equal(20000, m.GetProperty("bestBeforeCents").GetInt64());
+        Assert.Equal(1, m.GetProperty("clients").GetProperty("count").GetInt32());
+        // Anyone else sees only their own (here: nothing).
+        Assert.Equal(0, (await Json(await w.Client.GetAsync("/coach/month"))).GetProperty("clients").GetProperty("count").GetInt32());
+    }
+
+    [Fact]
     public async Task Overview_cards_save_for_everyone_a_package_or_a_client()
     {
         await using var w = await CoachedAsync("cards", paying: false);
@@ -252,6 +281,9 @@ public class CoachEndingTests
         var layout = new { all = new[] { "checkin", "training" }, clients = new Dictionary<string, string[]> { [client] = new[] { "food", "plugin:app.example.hangboard" } } };
         var saved = await Json(await w.Coach.PutAsJsonAsync("/coach/cards", layout));
         Assert.Equal("food", saved.GetProperty("clients").GetProperty(client)[0].GetString());
+        // Today and Your month (canvas W13) save alongside.
+        var pages = await Json(await w.Coach.PutAsJsonAsync("/coach/cards", new { today = new[] { "needs", "paid" }, month = new[] { "wins" } }));
+        Assert.Equal("paid", pages.GetProperty("today")[1].GetString());
         var twice = new { all = new[] { "food", "food" } };
         Assert.Equal(HttpStatusCode.BadRequest, (await w.Coach.PutAsJsonAsync("/coach/cards", twice)).StatusCode);
         var badKey = new { clients = new Dictionary<string, string[]> { ["dara"] = new[] { "food" } } };

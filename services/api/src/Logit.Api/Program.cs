@@ -351,6 +351,7 @@ Logit.Api.Features.Coach.CoachAway.MapCoachAwayEndpoints(api);
 Logit.Api.Features.Coach.CoachPluginConsent.MapCoachPluginConsentEndpoints(api);
 Logit.Api.Features.Coach.SavedReplies.MapSavedReplies(api);
 Logit.Api.Features.Coach.CoachCards.MapCoachCards(api);
+Logit.Api.Features.Coach.CoachMonth.MapCoachMonth(api);
 api.MapDiagnosticsEndpoints();
 api.MapPluginEndpoints();
 api.MapSandboxEndpoints();
