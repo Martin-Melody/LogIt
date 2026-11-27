@@ -42,6 +42,31 @@ you pay on the link's page before coaching starts.
 
 <HowTo id="pro.coach" />
 
+## Your meal plan
+
+If your coach gives you a meal plan, **Today's food** (Nutrition › meal plan) shows the day's
+meals at their times and your progress against the day's targets. A plan can have training and
+rest days; the day switches by itself from your program (a day you train counts as a training
+day), and meals timed around training follow your session time, so if you move training, they
+move with it. ⋯ shows the other day's plan and the grocery list.
+
+On each meal:
+
+- **Log as planned** logs it all in one go.
+- **Change amounts** lets you log what you really had (0 = skipped); your coach sees "changed
+  amounts", not off plan.
+- **Swap** on a food shows your coach's swaps, at the amount that matches the planned protein.
+  **Log something else** is always allowed; it counts toward your day, and your coach sees it as
+  off plan.
+- Tap a recipe for its ingredients and method.
+
+If you told your coach in your start-up form there's food you don't eat, you see the swap in its
+place. The **grocery list** covers the next 7 days (training and rest), with recipes as their
+ingredients; ticks stay on your phone, and Share sends it as text.
+
+Goals stay yours. If your coach suggests a change to your goal, it shows in your conversation:
+**Use their goal**, or **Keep mine**; they're told either way.
+
 ## Stopping
 
 **Stop coaching** on My coach. With a monthly plan it stops renewing, and coaching carries on until

@@ -150,6 +150,9 @@ export type LoggedItem = {
    * correlation (adaptive-progression-engine.md §9) that needs real clock time; the
    * day-level correlation only needs dateIso and works regardless. */
   loggedAtMs?: number;
+  /** Logged from a coach's meal plan (canvas MP7, SW2, Q7): which food, and whether as planned,
+   * as a swap or with a changed amount. Items without it on a day with a plan are off plan. */
+  plan?: { planId: string; mealId: string; foodId: string; how: "planned" | "swapped" | "changed" };
 };
 
 export type DiaryDay = {

@@ -15,6 +15,7 @@
   import { planDay, planFromIso, planOn, allMeals, type CoachNutritionPlan } from "@logit/core/domain/CoachNutritionPlan";
   import { dayTotals, localDateIso, type DiaryDay } from "@logit/core/domain/nutrition";
   import { isTrainingDay } from "@logit/core/domain/trainingDay";
+  import { dayAgainstPlan } from "@logit/core/domain/mealPlanDay";
   import type { WorkoutSession } from "@logit/core/domain/workout";
   import { getNutritionTargets, type ResolvedTargets } from "@logit/core/usecases/nutrition/getNutritionTargets";
   import { getWebDeps, getWebCoachProgramRepo, getWebNutritionDeps } from "$lib/deps";
@@ -95,15 +96,20 @@
         target: pd?.kcalTarget ?? null,
         kcal: Math.round(t?.kcal ?? 0),
         protein: Math.round(t?.proteinG ?? 0),
-        logged: pd && day ? mealsLogged(pd.meals, day) : null,
+        logged: pd && day && plan ? mealsLogged(plan, pd.meals, day) : null,
       });
     }
     return out;
   });
-  /** "4 of 5": planned meals with one of their foods (or a swap) in the diary that day. */
-  function mealsLogged(meals: CoachNutritionPlan["meals"] & {}, day: DiaryDay): string | null {
+  /** "4 of 5 · swapped dinner": from what they logged off the plan on their phone (canvas MP6,
+   * SW2); for days logged before that, by the foods' names. */
+  function mealsLogged(plan: CoachNutritionPlan, meals: CoachNutritionPlan["meals"] & {}, day: DiaryDay): string | null {
     const planned = meals.filter((m) => m.foods.length);
     if (!planned.length) return null;
+    if (day.items.some((i) => i.plan?.planId === plan.id)) {
+      const a = dayAgainstPlan(day, plan, meals);
+      return [`${a.logged} of ${a.of}`, ...(a.swapped.length ? [`swapped ${a.swapped.join(", ")}`] : []), ...(a.changed ? ["changed amounts"] : []), ...(a.offPlan ? [`${a.offPlan} off plan`] : [])].join(" · ");
+    }
     const names = new Set(day.items.map((i) => i.name.trim().toLowerCase()));
     const n = planned.filter((m) => m.foods.some((f) => names.has(f.name.trim().toLowerCase()) || f.swaps?.some((s) => names.has(s.name.trim().toLowerCase())))).length;
     return `${n} of ${planned.length}`;

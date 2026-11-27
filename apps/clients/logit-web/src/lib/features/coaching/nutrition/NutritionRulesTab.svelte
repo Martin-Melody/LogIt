@@ -32,6 +32,9 @@
     { value: "mine", label: "Only your swaps", hint: "The swaps you add to each food." },
     { value: "close", label: "Your swaps, then foods close to the plan", hint: "The same kind of food, within 15% of the calories and protein." },
   ];
+  // "Same kind of food" needs each food's kind (fish, poultry, grains…), which LogIt's food list
+  // doesn't carry yet; until it does, clients are offered only your swaps (canvas SW2).
+  const CLOSE_READY = false;
 </script>
 
 <div class="flex flex-col gap-4">
@@ -72,9 +75,10 @@
     <div class="flex flex-col gap-1.5" role="radiogroup" aria-label="Which food swaps clients may make">
       {#each SWAPS as s (s.value)}
         {@const on = (settings?.foodSwapRule ?? "mine") === s.value}
-        <button type="button" role="radio" aria-checked={on} onclick={() => void save({ foodSwapRule: s.value })}
-          class="flex flex-col rounded-[10px] border px-3.5 py-2.5 text-left transition-colors {on ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/50'}">
-          <span class="text-[13px] font-medium">{s.label}</span><span class="text-xs text-muted-foreground">{s.hint}</span>
+        {@const off = s.value === "close" && !CLOSE_READY}
+        <button type="button" role="radio" aria-checked={on} disabled={off} onclick={() => void save({ foodSwapRule: s.value })}
+          class="flex flex-col rounded-[10px] border px-3.5 py-2.5 text-left transition-colors disabled:opacity-60 {on ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/50'}">
+          <span class="text-[13px] font-medium">{s.label}</span><span class="text-xs text-muted-foreground">{off ? "Coming when LogIt's food list knows each food's kind (fish, poultry, grains…). Until then clients see your swaps." : s.hint}</span>
         </button>
       {/each}
     </div>
