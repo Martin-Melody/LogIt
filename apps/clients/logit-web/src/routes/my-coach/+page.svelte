@@ -28,7 +28,7 @@
   import { page } from "$app/state";
   import { tick } from "svelte";
   import MyRequest from "$lib/features/coaching/requests/MyRequest.svelte";
-  import { clientPaymentNote, shortDate as payDate } from "@logit/core/domain/coachPayments";
+  import { clientPaymentNote, formatMoney, shortDate as payDate } from "@logit/core/domain/coachPayments";
 
   // You as a client: your coach, what they've given you, your check-ins and what they can see.
 
@@ -200,6 +200,14 @@
             <p class="text-xs text-muted-foreground">@{inv.coach.username} · pick what they can see, then accept</p>
           </div>
         </div>
+        {#if inv.offer && inv.offer.state === "open"}
+          <!-- K13: an invite with an offer is taken like any offer (agreement, sharing, paying). -->
+          <p class="text-[13px]">{inv.offer.card.packageName} · {inv.offer.card.pays ? `${formatMoney(inv.offer.card.amountCents, inv.offer.card.currency)}${inv.offer.card.interval === "month" ? " a month" : ""}` : "no payment through LogIt"}</p>
+          <div class="flex gap-2">
+            <a href="/take/{inv.offer.card.offerId}" class="inline-flex h-[34px] items-center rounded-[9px] bg-primary px-3 text-[13px] font-semibold text-primary-foreground">See the offer</a>
+            <button type="button" disabled={busy === inv.relationshipId} onclick={() => answerInvite(inv, false)} class="h-[34px] rounded-[9px] border border-border px-3 text-[13px] hover:bg-muted disabled:opacity-50">Decline</button>
+          </div>
+        {:else}
         <div class="max-w-md">
           <SharingSwitches sharing={inviteSharing[inv.relationshipId] ?? SHARE_ALL} disabled={busy === inv.relationshipId} onchange={(s) => (inviteSharing[inv.relationshipId] = s)} />
         </div>
@@ -207,6 +215,7 @@
           <button type="button" disabled={busy === inv.relationshipId} onclick={() => answerInvite(inv, true)} class="h-[34px] rounded-[9px] bg-primary px-3 text-[13px] font-semibold text-primary-foreground disabled:opacity-50">Accept</button>
           <button type="button" disabled={busy === inv.relationshipId} onclick={() => answerInvite(inv, false)} class="h-[34px] rounded-[9px] border border-border px-3 text-[13px] hover:bg-muted disabled:opacity-50">Decline</button>
         </div>
+        {/if}
       </section>
     {/each}
 

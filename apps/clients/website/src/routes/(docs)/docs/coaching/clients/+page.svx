@@ -40,4 +40,4 @@ show you appear on their Insights tab, and you can build charts for them too.
 
 <HowTo id="phone.clients" />
 
-<CanCant ids={["coach-clients"]} />
+<CanCant ids={["coach-clients", "coach-requests"]} />

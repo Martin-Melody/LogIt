@@ -66,6 +66,22 @@ export async function resetSampleClients(now = Date.now()): Promise<SandboxClien
   return addSampleClients(now);
 }
 
+/**
+ * "Try it as Niamh" (canvas V3): Niamh asks through this link now, answering the coach's
+ * questions, so the coach sees exactly what a real request looks like. Null when she can't
+ * (she has asked already, or there's no Niamh).
+ */
+export async function sampleAsksThrough(code: string): Promise<string | null> {
+  const niamh = (await sandboxApi.list()).find((c) => c.key === "niamh");
+  if (!niamh || niamh.status !== "None") return null;
+  const api = await as(niamh.userId);
+  const coach = apiClient.getUser()?.username;
+  const questions = coach ? (await api.coach.askInfo(coach).catch(() => null))?.questions : null;
+  const spec = sampleSpec("niamh")!;
+  await api.coach.requestCoaching(code, spec.sharing, questions ? sampleAnswers(questions) : undefined);
+  return niamh.displayName;
+}
+
 let running: Promise<number> | null = null;
 
 /** One round: every sample client looks at its state and acts. Returns how many things they did. */
@@ -79,9 +95,8 @@ async function runOnce(now: number): Promise<number> {
   const clients = await sandboxApi.list();
   if (clients.length === 0) return 0;
   const needLinks = clients.some((c) => c.status === "None");
-  // Below Studio there are no invite links (403), so a waiting sample just keeps waiting.
-  const canLink = apiClient.getUser()?.tier === "Studio" || apiClient.isSelfHosted();
-  const activeLinkCodes = needLinks && canLink
+  // Trying Studio, links are real but not live: Niamh can still use them (canvas V3).
+  const activeLinkCodes = needLinks
     ? (await coachApi.listLinks().catch(() => [])).filter((l) => l.state === "active").map((l) => l.code)
     : [];
 

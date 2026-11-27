@@ -365,3 +365,97 @@ public class StopEmailLinkTests : IClassFixture<ApiFactory>
         Assert.Equal(HttpStatusCode.BadRequest, (await anon.PostAsJsonAsync("/email/stop-request-emails", new { })).StatusCode);
     }
 }
+
+/// Invite links pointing at asking (canvas L1, V3) and invites by username with an offer (K13).
+public class LinkAndInviteTests : IClassFixture<ApiFactory>
+{
+    private readonly ApiFactory _api;
+    public LinkAndInviteTests(ApiFactory api) => _api = api;
+
+    private static async Task<JsonElement> Json(HttpResponseMessage res)
+    {
+        var text = await res.Content.ReadAsStringAsync();
+        Assert.True(res.IsSuccessStatusCode, $"{(int)res.StatusCode} {text}");
+        return text.Length == 0 ? default : JsonDocument.Parse(text).RootElement.Clone();
+    }
+
+    private static readonly Dictionary<string, string> Answers = new()
+    {
+        ["goal"] = "Strength", ["experience"] = "3+ years", ["days"] = "3", ["food"] = "No",
+    };
+
+    [Fact]
+    public async Task A_link_can_pick_a_package_without_payments_and_asking_through_it_is_interested_in_it()
+    {
+        var (coach, coachId, _) = await _api.SignUpAsync("link_pick", UserTier.Studio);
+        Guid packageId = Guid.Empty;
+        await _api.WithDbAsync(async db =>
+        {
+            var k = new CoachPackage { CoachId = coachId, Name = "12-week block", AmountCents = 20000, Interval = "once", Weeks = 12 };
+            packageId = k.Id;
+            db.CoachPackages.Add(k);
+            await db.SaveChangesAsync();
+        });
+        // Paying through it needs payments; picking it doesn't.
+        Assert.Equal(HttpStatusCode.Conflict, (await coach.PostAsJsonAsync("/coach/links", new { name = "Poster", packageId, payAndStart = true })).StatusCode);
+        var link = await Json(await coach.PostAsJsonAsync("/coach/links", new { name = "Poster", packageId }));
+        Assert.False(link.GetProperty("payAndStart").GetBoolean());
+        var code = link.GetProperty("code").GetString()!;
+
+        var (client, _, _) = await _api.SignUpAsync("link_pick_client");
+        var info = await Json(await client.GetAsync($"/coach/links/code/{code}"));
+        Assert.Equal(JsonValueKind.Null, info.GetProperty("package").ValueKind); // nothing to pay
+        Assert.Equal(packageId, info.GetProperty("pickedPackageId").GetGuid());
+        await Json(await client.PostAsJsonAsync($"/coach/links/code/{code}/request", new { answers = Answers }));
+        var req = (await Json(await coach.GetAsync("/coach/requests"))).GetProperty("requests").EnumerateArray().Single();
+        Assert.Equal(packageId, req.GetProperty("interestedPackageId").GetGuid());
+
+        var listed = (await Json(await coach.GetAsync("/coach/links"))).GetProperty("links")[0];
+        Assert.Equal(1, listed.GetProperty("asked").GetInt32());
+
+        // Edit: switch it off and on again.
+        var linkId = link.GetProperty("id").GetGuid();
+        var off = await Json(await coach.PutAsJsonAsync($"/coach/links/{linkId}", new { name = "Gym poster", maxUses = 20, packageId, payAndStart = false, on = false }));
+        Assert.Equal("off", off.GetProperty("state").GetString());
+        var on = await Json(await coach.PutAsJsonAsync($"/coach/links/{linkId}", new { name = "Gym poster", maxUses = 20, packageId, payAndStart = false, on = true }));
+        Assert.Equal("active", on.GetProperty("state").GetString());
+        Assert.Equal("Gym poster", on.GetProperty("name").GetString());
+    }
+
+    [Fact]
+    public async Task Trying_Studio_a_link_is_real_but_not_live()
+    {
+        var (coach, _, _) = await _api.SignUpAsync("link_trial", UserTier.Pro);
+        await Json(await coach.PostAsJsonAsync("/coach/sandbox", new { clients = new object[] { new { key = "niamh", displayName = "Niamh", active = false } } }));
+        var link = await Json(await coach.PostAsJsonAsync("/coach/links", new { name = "Instagram bio" }));
+        Assert.False(link.GetProperty("live").GetBoolean());
+        var code = link.GetProperty("code").GetString()!;
+
+        var (stranger, _, _) = await _api.SignUpAsync("link_trial_stranger");
+        Assert.Equal("notlive", (await Json(await stranger.GetAsync($"/coach/links/code/{code}"))).GetProperty("state").GetString());
+        var res = await stranger.PostAsJsonAsync($"/coach/links/code/{code}/request", new { answers = Answers });
+        Assert.Equal(HttpStatusCode.Gone, res.StatusCode);
+        Assert.Contains("isn't taking clients through LogIt yet", await res.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task An_invite_by_username_can_carry_an_offer_taken_like_any_other()
+    {
+        var (coach, _, _) = await _api.SignUpAsync("invite_offer", UserTier.Studio);
+        var (client, _, clientName) = await _api.SignUpAsync("invite_offer_client");
+        var sent = await Json(await coach.PostAsJsonAsync($"/coach/clients/{clientName}/invite", new { offer = true, message = "Great chatting at the gym!" }));
+        var offerId = sent.GetProperty("offerId").GetGuid();
+
+        var received = (await Json(await client.GetAsync("/coach/invites/received")))[0];
+        Assert.Equal(offerId, received.GetProperty("offer").GetProperty("card").GetProperty("offerId").GetGuid());
+        await Json(await client.PostAsJsonAsync($"/coach/offers/{offerId}/take", new { }));
+        Assert.Equal(0, (await Json(await client.GetAsync("/coach/invites/received"))).GetArrayLength());
+        Assert.Single((await Json(await client.GetAsync("/coach/coaches"))).EnumerateArray());
+
+        // Older apps: a plain invite still works.
+        var (old, _, oldName) = await _api.SignUpAsync("invite_plain_client");
+        var plain = await coach.PostAsync($"/coach/clients/{oldName}/invite", null);
+        Assert.Equal(HttpStatusCode.Created, plain.StatusCode);
+        Assert.Equal(JsonValueKind.Null, (await Json(await old.GetAsync("/coach/invites/received")))[0].GetProperty("offer").ValueKind);
+    }
+}

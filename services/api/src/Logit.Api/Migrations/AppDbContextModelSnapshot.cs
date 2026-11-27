@@ -512,6 +512,9 @@ namespace Logit.Api.Migrations
                     b.Property<Guid?>("PackageId")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("PayAndStart")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime?>("RevokedAt")
                         .HasColumnType("TEXT");
 

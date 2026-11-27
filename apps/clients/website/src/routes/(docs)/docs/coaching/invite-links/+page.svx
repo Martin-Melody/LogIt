@@ -12,6 +12,20 @@ title: Invite links
 
 <HowTo id="studio.invite" />
 
+A link opens your profile with Ask to be coached, so make one per place (your bio, a poster, a
+chat) to know where people came from. Each shows how many asked through it and how many became
+clients. Pick a package for them if you like; it's chosen when they ask. **Pay and start straight
+away** skips asking and the conversation, for a set program you sell to anyone.
+
+Every link has a QR code: download it, print a poster, or show it full screen to someone in the gym.
+Edit a link, or switch it off and on again, from its ⋯ menu.
+
+Trying Studio with sample clients, your links are real but not live yet: Copy and QR switch on with
+Studio, and **Try it as Niamh** shows you what a request through the link looks like.
+
+To invite someone you've already talked to, use **Invite someone you know** on Clients: they get your
+offer in their messages and skip the questions.
+
 People who open a free link answer your questions and wait in Clients › Requests; see
 [Requests and your waiting list](/docs/coaching/clients#requests-and-your-waiting-list). You can also
 invite someone by username from Clients. A link with a package attached takes payment first; see

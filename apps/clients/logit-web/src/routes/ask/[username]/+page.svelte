@@ -23,9 +23,21 @@
   let interested = $state<string | null>(null);
   let sent = $state<{ relationshipId: string; waiting: boolean } | null>(null);
 
+  // Canvas L1: opened from one of the coach's links (?l=CODE). Asking goes through it, so the
+  // coach sees where they came from, with the link's package picked.
+  let linkCode = $state<string | null>(null);
+
   async function load() {
     try {
       info = await coachApi.askInfo(username);
+      const l = page.url.searchParams.get("l");
+      if (l) {
+        const link = await coachApi.openLink(l).catch(() => null);
+        if (link && link.state === "active" && link.coach.username === info.coach.username && !link.package) {
+          linkCode = l;
+          interested ??= link.pickedPackageId ?? null;
+        }
+      }
       error = null;
     } catch (e) {
       error = e instanceof ApiError && e.status === 404 ? `@${username} isn't coaching on LogIt.` : e instanceof Error ? e.message : "Couldn't open this page";
@@ -38,7 +50,7 @@
   const stopped = $derived(!!info?.full && info.whenFull === "stop");
 
   async function send(a: Record<string, string>, pkg: string | null) {
-    const r = await coachApi.ask(username, a, pkg, SHARE_ALL);
+    const r = linkCode ? await coachApi.requestCoaching(linkCode, SHARE_ALL, a, pkg) : await coachApi.ask(username, a, pkg, SHARE_ALL);
     sent = { relationshipId: r.relationshipId, waiting: r.stage === "waiting" };
   }
 

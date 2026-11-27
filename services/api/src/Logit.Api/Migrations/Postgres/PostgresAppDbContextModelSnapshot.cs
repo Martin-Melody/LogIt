@@ -517,6 +517,9 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<Guid?>("PackageId")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("PayAndStart")
+                        .HasColumnType("boolean");
+
                     b.Property<DateTime?>("RevokedAt")
                         .HasColumnType("timestamp with time zone");
 

@@ -40,7 +40,9 @@ public class SampleCoachTests : IClassFixture<ApiFactory>
         Assert.Equal(HttpStatusCode.OK, (await free.GetAsync("/coach/programs")).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await free.GetAsync("/coach/checkins/inbox")).StatusCode);
 
-        Assert.Equal(HttpStatusCode.Forbidden, (await free.PostAsJsonAsync("/coach/links", new { name = "bio" })).StatusCode);
+        // A link is real but not live (canvas V3): only their samples can use it.
+        var link = await Json(await free.PostAsJsonAsync("/coach/links", new { name = "bio" }));
+        Assert.False(link.GetProperty("live").GetBoolean());
         Assert.Equal(HttpStatusCode.Forbidden, (await free.GetAsync("/coach/requests")).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await free.GetAsync("/coach/payments")).StatusCode);
         var (_, _, someone) = await _api.SignUpAsync("sc_someone");

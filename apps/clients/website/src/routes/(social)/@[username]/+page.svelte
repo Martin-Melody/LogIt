@@ -12,6 +12,18 @@
 
   const { data } = $props();
   const p = $derived(data.profile);
+  // Canvas L1: a working link opens asking with it (so the coach knows where people came from),
+  // or straight to paying for a pay-and-start link. Anything else is the plain profile.
+  const linkAsk = $derived.by(() => {
+    const plain = { href: `${DASHBOARD_URL}/ask/${encodeURIComponent(p.username)}`, label: null as string | null };
+    const l = data.link;
+    if (!l || l.state !== "active") return plain;
+    if (l.pays) {
+      const price = new Intl.NumberFormat(undefined, { style: "currency", currency: l.pays.currency.toUpperCase(), maximumFractionDigits: 0 }).format(l.pays.amountCents / 100);
+      return { href: `${DASHBOARD_URL}/c/${encodeURIComponent(l.code)}`, label: `Start coaching · ${price}${l.pays.interval === "month" ? " a month" : ""}` };
+    }
+    return { href: `${plain.href}?l=${encodeURIComponent(l.code)}`, label: null };
+  });
   // Posts | Training tabs, as in the app (the page's 620 px column has no room for a side column).
   let view = $state<"posts" | "training">("posts");
   const hasCards = $derived(shownCards(parseProfileData(p.publicProfileJson)).length > 0);
@@ -38,7 +50,7 @@
   {#if p.coaching}
     <!-- Canvas P1: what a coach offers, and Ask to be coached (on the web app, where the ask happens). -->
     <CoachingSection section={p.coaching} name={p.displayName} class="rounded-2xl border border-border p-4"
-      askHref={`${DASHBOARD_URL}/ask/${encodeURIComponent(p.username)}`} />
+      askHref={linkAsk.href} askLabel={linkAsk.label} />
   {/if}
   <!-- Design canvas PR5: the same Training cards as the app. Both tabs are in the page for search engines. -->
   {#if hasCards}

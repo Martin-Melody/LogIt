@@ -360,18 +360,22 @@ public static class CoachPaymentEndpoints
         var coachId = caller.GetUserId();
         var link = await db.CoachInviteLinks.FirstOrDefaultAsync(l => l.Id == linkId && l.CoachId == coachId, ct);
         if (link is null) return Results.NotFound();
-        if (await CheckPackageForLink(db, coachId, req.PackageId, ct) is { } err) return err;
+        if (await CheckPackageForLink(db, coachId, req.PackageId, true, ct) is { } err) return err;
+        // This older call puts a package on to pay for (pay and start).
         link.PackageId = req.PackageId;
+        link.PayAndStart = req.PackageId is not null;
         await db.SaveChangesAsync(ct);
         return Results.NoContent();
     }
 
     /// Null when the package can go on a link (or none is given), else the error to answer.
-    public static async Task<IResult?> CheckPackageForLink(AppDbContext db, Guid coachId, Guid? packageId, CancellationToken ct)
+    public static async Task<IResult?> CheckPackageForLink(AppDbContext db, Guid coachId, Guid? packageId, bool payAndStart, CancellationToken ct)
     {
-        if (packageId is null) return null;
+        if (packageId is null) return payAndStart ? Results.BadRequest(new { error = "Pick the package they pay for." }) : null;
         var package = await db.CoachPackages.AsNoTracking().FirstOrDefaultAsync(p => p.Id == packageId && p.CoachId == coachId, ct);
         if (package is null || package.Hidden) return Results.BadRequest(new { error = "That package doesn't exist or is hidden." });
+        // A package only picked for them needs no payments; paying through the link does.
+        if (!payAndStart) return null;
         var account = await db.CoachPaymentAccounts.AsNoTracking().FirstOrDefaultAsync(a => a.CoachId == coachId, ct);
         if (account is not { CardPaymentsActive: true })
             return Error(409, "payments_not_ready", "Finish connecting Stripe before putting a package on a link.");
@@ -510,7 +514,7 @@ public static class CoachPaymentEndpoints
 
         var me = caller.GetUserId();
         if (link.CoachId == me) return Results.BadRequest(new { error = "This is your own link." });
-        if (link.Package is not { Hidden: false } package)
+        if (link.PaidPackage is not { } package)
             return Results.BadRequest(new { error = "This link is free: send a request instead.", code = "no_package" });
 
         var state = await LinkStateFor(db, link, config, ct);
@@ -554,7 +558,7 @@ public static class CoachPaymentEndpoints
 
     public static async Task<string> LinkStateFor(AppDbContext db, CoachInviteLink link, IConfiguration config, CancellationToken ct)
     {
-        if (!CoachingAccess.CanCoach(link.Coach, config)) return "off";
+        if (!CoachingAccess.CanCoach(link.Coach, config)) return "notlive";
         var used = await db.CoachClientRelationships.CountAsync(r => r.InviteLinkId == link.Id
             && (r.Status == CoachClientStatus.Active || r.Status == CoachClientStatus.Pending), ct);
         return CoachLinkEndpoints.LinkState(link, used, DateTime.UtcNow);

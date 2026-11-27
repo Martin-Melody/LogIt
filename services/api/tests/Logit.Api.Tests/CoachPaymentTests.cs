@@ -275,7 +275,7 @@ public class CoachPaymentTests : IAsyncLifetime
 
     [Theory]
     [InlineData(UserTier.Studio, false, "active")]
-    [InlineData(UserTier.Free, false, "off")]
+    [InlineData(UserTier.Free, false, "notlive")] // trying Studio: real, not live yet (canvas V3)
     [InlineData(UserTier.Free, true, "active")] // self-hosted servers need no plan to coach
     public async Task Paid_links_follow_who_can_coach(UserTier tier, bool selfHosted, string expected)
     {

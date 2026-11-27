@@ -11,6 +11,7 @@
     section,
     name,
     askHref = null,
+    askLabel = null,
     onask,
     otherCoach = null,
     mentionHref,
@@ -21,6 +22,8 @@
     /** The coach's display name. */
     name: string;
     askHref?: string | null;
+    /** The button's words when a link changes them ("Start coaching · €200" for pay and start). */
+    askLabel?: string | null;
     onask?: () => void;
     /** Canvas R1: the viewer is coached by someone else. One quiet line; the other coach is never told. */
     otherCoach?: string | null;
@@ -77,7 +80,7 @@
     {:else if onask}
       <button type="button" onclick={onask} class="{btn} bg-primary text-primary-foreground hover:opacity-90">{ask.label}</button>
     {:else}
-      <a href={askHref} class="{btn} bg-primary text-primary-foreground hover:opacity-90">{ask.label}</a>
+      <a href={askHref} class="{btn} bg-primary text-primary-foreground hover:opacity-90">{askLabel ?? ask.label}</a>
     {/if}
     <p class="text-xs text-muted-foreground">{ask.note}</p>
   {/if}

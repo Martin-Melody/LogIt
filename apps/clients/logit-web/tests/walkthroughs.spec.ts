@@ -40,8 +40,9 @@ const ACTIONS: Record<string, (page: Page) => Promise<void>> = {
   "social.discover-opened": (p) => p.locator('[data-guide="social-tabs"]').getByRole("tab", { name: "Discover" }).click(),
   "plugins.mine-opened": (p) => p.getByRole("tab", { name: /My plugins/ }).click(),
   "link.created": async (p) => {
-    await p.getByPlaceholder("Instagram bio").fill("Instagram bio");
-    await p.getByRole("button", { name: "Create link" }).click();
+    await p.locator('[data-guide="links-new"]').click();
+    await p.getByRole("dialog").getByPlaceholder("Instagram bio").fill("Instagram bio");
+    await p.getByRole("dialog").getByRole("button", { name: "Create link" }).click();
   },
   "request.offered": async (p) => {
     await p.locator('[data-guide="requests-pane"]').getByRole("button", { name: "Offer a spot" }).click();

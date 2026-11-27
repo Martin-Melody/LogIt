@@ -16,12 +16,25 @@ export type PublicProfile = {
   coaching?: CoachingSection | null;
 };
 
-export const load: PageServerLoad = async ({ params, fetch, setHeaders }) => {
+/** A coach's invite link, opened as ?l=CODE (canvas L1): which way the button goes. */
+export type ProfileLink = { code: string; state: string; pays: { amountCents: number; currency: string; interval: "month" | "once"; weeks: number | null } | null };
+
+export const load: PageServerLoad = async ({ params, fetch, setHeaders, url }) => {
   const api = publicApi();
-  const res = await fetch(`${api}/public/users/${encodeURIComponent(params.username)}`);
+  const code = url.searchParams.get("l");
+  const [res, linkRes] = await Promise.all([
+    fetch(`${api}/public/users/${encodeURIComponent(params.username)}`),
+    code && /^[A-Za-z0-9-]{4,16}$/.test(code) ? fetch(`${api}/coach/links/code/${encodeURIComponent(code)}`).catch(() => null) : Promise.resolve(null),
+  ]);
   if (res.status === 404) error(404, "This profile isn't on the web");
   if (!res.ok) error(502, "Couldn't load this profile. Try again in a moment.");
   setHeaders({ "cache-control": "public, max-age=300" });
   const page = (await res.json()) as { profile: PublicProfile; posts: ApiPost[]; forum: ForumPost[] };
-  return { ...page, api, appPath: `/social/${page.profile.username}` };
+  let link: ProfileLink | null = null;
+  if (linkRes?.ok) {
+    const info = (await linkRes.json()) as { state: string; coach: { username: string }; package: ProfileLink["pays"] };
+    // Only this coach's own link counts; a link of someone else's is ignored.
+    if (info.coach.username === page.profile.username) link = { code: code!, state: info.state, pays: info.package ?? null };
+  }
+  return { ...page, api, link, appPath: `/social/${page.profile.username}` };
 };

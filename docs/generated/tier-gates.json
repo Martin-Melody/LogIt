@@ -109,21 +109,28 @@
     "route": "/coach/links",
     "plan": "Studio",
     "orActivelyCoached": false,
-    "orSampleCoach": false
+    "orSampleCoach": true
   },
   {
     "method": "POST",
     "route": "/coach/links",
     "plan": "Studio",
     "orActivelyCoached": false,
-    "orSampleCoach": false
+    "orSampleCoach": true
   },
   {
     "method": "DELETE",
     "route": "/coach/links/{linkId:guid}",
     "plan": "Studio",
     "orActivelyCoached": false,
-    "orSampleCoach": false
+    "orSampleCoach": true
+  },
+  {
+    "method": "PUT",
+    "route": "/coach/links/{linkId:guid}",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": true
   },
   {
     "method": "PUT",

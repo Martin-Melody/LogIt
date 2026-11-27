@@ -84,7 +84,8 @@ export interface RosterEntry {
   since?: string;
 }
 
-export type InviteLinkState = "active" | "off" | "expired" | "full";
+/** "notlive": the coach is trying Studio; only their sample clients can use it (canvas V3). */
+export type InviteLinkState = "active" | "off" | "expired" | "full" | "notlive";
 
 export interface InviteLink {
   id: string;
@@ -97,9 +98,23 @@ export interface InviteLink {
   joined: number;
   waiting: number;
   state: InviteLinkState;
-  /** The package people pay for through this link; null = a free link. */
+  /** The link's package: paid for when payAndStart, else picked for them when they ask. */
   packageId?: string | null;
   packageName?: string | null;
+  /** "Pay and start straight away" (canvas L1). */
+  payAndStart?: boolean;
+  /** Everyone who asked or paid through it, whatever happened since. */
+  asked?: number;
+  /** False while trying Studio: real, not live yet (canvas V3). */
+  live?: boolean;
+}
+
+/** Where a link sends people: the coach's profile with the link (canvas L1), or straight to
+ * paying for a pay-and-start link. A self-hosted server has no getlogit.app: the web app's own ask page. */
+export function linkUrl(link: Pick<InviteLink, "code" | "payAndStart">, username: string, opts: { webOrigin: string; marketingUrl: string; selfHosted: boolean }): string {
+  const code = encodeURIComponent(link.code.replace("-", ""));
+  if (link.payAndStart) return `${opts.webOrigin}/c/${code}`;
+  return opts.selfHosted ? `${opts.webOrigin}/ask/${encodeURIComponent(username)}?l=${code}` : `${opts.marketingUrl}/@${encodeURIComponent(username)}?l=${code}`;
 }
 
 /** What someone opening a link sees. */
@@ -116,6 +131,8 @@ export interface InviteLinkInfo {
   paymentsReady?: boolean;
   /** I already pay this coach through LogIt. */
   paying?: boolean;
+  /** A link to ask with a package picked for them (canvas L1). */
+  pickedPackageId?: string | null;
   /** The coach's questions (a free link asks them; canvas P2). Missing on older servers. */
   questions?: AskQuestion[];
   spots?: { full: boolean; whenFull: "waitlist" | "stop"; expectSpots: string | null };
@@ -220,6 +237,8 @@ export interface ReceivedInvite {
   relationshipId: string;
   coach: CoachClientUser;
   createdAt: string;
+  /** An invite with an offer (canvas K13): take it on the take page. Older invites have none. */
+  offer?: { card: OfferCard; state: OfferState } | null;
 }
 
 export interface SentInvite {
@@ -231,8 +250,12 @@ export interface SentInvite {
 /** The same calls as `coachApi`, made with another identity (a sandbox sample client's token). */
 export function coachApiFor(api: ApiFetcher) {
   return {
-    async inviteClient(username: string): Promise<void> {
-      await api.fetch(`/coach/clients/${username}/invite`, { method: "POST" });
+    /** With an offer (canvas K13): a package, or null for no payment through LogIt. */
+    async inviteClient(username: string, offer?: { packageId: string | null; message?: string }): Promise<{ relationshipId: string; offerId?: string | null }> {
+      return api.fetch(`/coach/clients/${username}/invite`, {
+        method: "POST",
+        ...(offer ? { body: JSON.stringify({ offer: true, packageId: offer.packageId, message: offer.message }) } : {}),
+      });
     },
 
     async listClients(): Promise<ClientRelationship[]> {
@@ -277,8 +300,13 @@ export function coachApiFor(api: ApiFetcher) {
 
     // ── Invite links ──
 
-    async createLink(input: { name: string; expiresInDays?: number | null; maxUses?: number | null; packageId?: string | null }): Promise<InviteLink> {
+    async createLink(input: { name: string; expiresInDays?: number | null; maxUses?: number | null; packageId?: string | null; payAndStart?: boolean }): Promise<InviteLink> {
       return api.fetch("/coach/links", { method: "POST", body: JSON.stringify(input) });
+    },
+
+    /** Change a link, or switch it off (on: false) or on again. */
+    async editLink(id: string, input: { name: string; expiresAt: string | null; maxUses: number | null; packageId: string | null; payAndStart: boolean; on: boolean }): Promise<InviteLink> {
+      return api.fetch(`/coach/links/${id}`, { method: "PUT", body: JSON.stringify(input) });
     },
 
     async listLinks(): Promise<InviteLink[]> {

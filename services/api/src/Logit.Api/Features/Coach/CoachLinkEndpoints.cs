@@ -14,9 +14,11 @@ public static class CoachLinkEndpoints
 {
     public static void Map(RouteGroupBuilder group)
     {
-        group.MapPost("/links", CreateLink).RequireTier(UserTier.Studio);
-        group.MapGet("/links", GetLinks).RequireTier(UserTier.Studio);
-        group.MapDelete("/links/{linkId:guid}", TurnOffLink).RequireTier(UserTier.Studio);
+        // Trying Studio, links are real but not live yet (canvas V3): only samples can use them.
+        group.MapPost("/links", CreateLink).RequireCoaching();
+        group.MapGet("/links", GetLinks).RequireCoaching();
+        group.MapPut("/links/{linkId:guid}", EditLink).RequireCoaching();
+        group.MapDelete("/links/{linkId:guid}", TurnOffLink).RequireCoaching();
 
         // Anyone, signed in or not: the link page shows the coach and the package before sign-up.
         group.MapGet("/links/code/{code}", GetLinkByCode).AllowAnonymous();
@@ -55,8 +57,19 @@ public static class CoachLinkEndpoints
             rows.Where(r => r.InviteLinkId == id && r.Status == CoachClientStatus.Pending).Sum(r => r.N)));
     }
 
-    private static object LinkDto(CoachInviteLink l, (int Joined, int Waiting) use, DateTime now) => new
+    /// Everyone who ever asked or paid through each link (canvas L1 "14 asked"), whatever
+    /// happened since. LogIt doesn't count who opened a link, only who asked.
+    private static async Task<Dictionary<Guid, int>> LinkAsked(AppDbContext db, List<Guid> ids) =>
+        (await db.CoachClientRelationships.Where(r => r.InviteLinkId != null && ids.Contains(r.InviteLinkId.Value))
+            .GroupBy(r => r.InviteLinkId!.Value).Select(g => new { g.Key, N = g.Count() }).ToListAsync())
+            .ToDictionary(x => x.Key, x => x.N);
+
+    private static object LinkDto(CoachInviteLink l, (int Joined, int Waiting) use, DateTime now, int asked = 0, bool live = true) => new
     {
+        asked,
+        // Trying Studio: real but not live yet; only sample clients can use it (canvas V3).
+        live,
+        payAndStart = l.PayAndStart,
         id = l.Id,
         code = Registration.Format(l.Code),
         name = l.Name,
@@ -73,7 +86,7 @@ public static class CoachLinkEndpoints
     // ── Coach: manage links ──────────────────────────────────────────────────
 
     private static async Task<IResult> CreateLink(
-        [FromBody] CreateLinkRequest req, ClaimsPrincipal caller, AppDbContext db)
+        [FromBody] CreateLinkRequest req, ClaimsPrincipal caller, AppDbContext db, IConfiguration config)
     {
         var name = (req.Name ?? "").Trim();
         if (name.Length == 0) return Results.BadRequest(new { error = "Give the link a name." });
@@ -84,7 +97,7 @@ public static class CoachLinkEndpoints
         if (req.MaxUses is < 1 or > CoachInviteLinkLimits.MaxUses)
             return Results.BadRequest(new { error = $"Max people must be 1 to {CoachInviteLinkLimits.MaxUses}." });
 
-        if (await CoachPaymentEndpoints.CheckPackageForLink(db, caller.GetUserId(), req.PackageId, default) is { } packageError)
+        if (await CoachPaymentEndpoints.CheckPackageForLink(db, caller.GetUserId(), req.PackageId, req.PayAndStart, default) is { } packageError)
             return packageError;
 
         var now = DateTime.UtcNow;
@@ -101,14 +114,45 @@ public static class CoachLinkEndpoints
             ExpiresAt = req.ExpiresInDays is { } d ? now.AddDays(d) : null,
             MaxUses = req.MaxUses,
             PackageId = req.PackageId,
+            PayAndStart = req.PayAndStart && req.PackageId is not null,
         };
         db.CoachInviteLinks.Add(link);
         await db.SaveChangesAsync();
         if (link.PackageId is not null) await db.Entry(link).Reference(l => l.Package).LoadAsync();
-        return Results.Ok(LinkDto(link, (0, 0), now));
+        var me = await db.Users.FindAsync(caller.GetUserId());
+        return Results.Ok(LinkDto(link, (0, 0), now, 0, CoachingAccess.CanCoach(me!, config)));
     }
 
-    private static async Task<IResult> GetLinks(ClaimsPrincipal caller, AppDbContext db)
+    /// Change a link (canvas L1 "Edit…"), or switch it on again.
+    private static async Task<IResult> EditLink(Guid linkId, [FromBody] EditLinkRequest req, ClaimsPrincipal caller, AppDbContext db, IConfiguration config)
+    {
+        var coachId = caller.GetUserId();
+        var link = await db.CoachInviteLinks.Include(l => l.Package).FirstOrDefaultAsync(l => l.Id == linkId && l.CoachId == coachId);
+        if (link is null) return Results.NotFound();
+        var name = (req.Name ?? "").Trim();
+        if (name.Length == 0) return Results.BadRequest(new { error = "Give the link a name." });
+        if (name.Length > CoachInviteLinkLimits.MaxNameChars)
+            return Results.BadRequest(new { error = $"Keep the name under {CoachInviteLinkLimits.MaxNameChars} characters." });
+        if (req.MaxUses is < 1 or > CoachInviteLinkLimits.MaxUses)
+            return Results.BadRequest(new { error = $"Max people must be 1 to {CoachInviteLinkLimits.MaxUses}." });
+        if (await CoachPaymentEndpoints.CheckPackageForLink(db, coachId, req.PackageId, req.PayAndStart, default) is { } packageError)
+            return packageError;
+        link.Name = name;
+        link.ExpiresAt = req.ExpiresAt;
+        link.MaxUses = req.MaxUses;
+        link.PackageId = req.PackageId;
+        link.PayAndStart = req.PayAndStart && req.PackageId is not null;
+        if (req.On) link.RevokedAt = null;
+        else link.RevokedAt ??= DateTime.UtcNow;
+        await db.SaveChangesAsync();
+        await db.Entry(link).Reference(l => l.Package).LoadAsync();
+        var me = await db.Users.FindAsync(coachId);
+        var now = DateTime.UtcNow;
+        var asked = await LinkAsked(db, [link.Id]);
+        return Results.Ok(LinkDto(link, (await LinkUse(db, [link.Id]))[link.Id], now, asked.GetValueOrDefault(link.Id), CoachingAccess.CanCoach(me!, config)));
+    }
+
+    private static async Task<IResult> GetLinks(ClaimsPrincipal caller, AppDbContext db, IConfiguration config)
     {
         var coachId = caller.GetUserId();
         var links = await db.CoachInviteLinks.AsNoTracking()
@@ -117,8 +161,11 @@ public static class CoachLinkEndpoints
             .OrderByDescending(l => l.CreatedAt)
             .ToListAsync();
         var use = await LinkUse(db, links.Select(l => l.Id));
+        var asked = await LinkAsked(db, links.Select(l => l.Id).ToList());
         var now = DateTime.UtcNow;
-        return Results.Ok(new { links = links.Select(l => LinkDto(l, use[l.Id], now)) });
+        var me = await db.Users.FindAsync(coachId);
+        var live = CoachingAccess.CanCoach(me!, config);
+        return Results.Ok(new { links = links.Select(l => LinkDto(l, use[l.Id], now, asked.GetValueOrDefault(l.Id), live)) });
     }
 
     /// Turning a link off stops new requests. Requests already waiting stay for the coach to
@@ -144,7 +191,7 @@ public static class CoachLinkEndpoints
         var existing = me is null ? null : await db.CoachClientRelationships.AsNoTracking()
             .Include(r => r.Payment)
             .FirstOrDefaultAsync(r => r.CoachId == link.CoachId && r.ClientId == me);
-        var package = link.Package is { Hidden: false } p ? p : null;
+        var package = link.PaidPackage;
         var account = package is null ? null
             : await db.CoachPaymentAccounts.AsNoTracking().FirstOrDefaultAsync(a => a.CoachId == link.CoachId);
 
@@ -165,11 +212,14 @@ public static class CoachLinkEndpoints
             paying = existing is { Status: CoachClientStatus.Active, Payment: { Mode: PaymentModes.Stripe } ep }
                 && ep.State != PaymentStates.Ended,
             coach = link.Coach.ToProfileDto(false),
-            state = !CoachingAccess.CanCoach(link.Coach, config) ? "off" : LinkState(link, use.Joined + use.Waiting, DateTime.UtcNow),
+            // "notlive": the coach is trying Studio, so the link only works for their sample clients.
+            state = !CoachingAccess.CanCoach(link.Coach, config) ? "notlive" : LinkState(link, use.Joined + use.Waiting, DateTime.UtcNow),
             isSelf = link.CoachId == me,
             // "none", "invited" (the coach already invited you), "requested" or "active".
             relationship = RelationshipState(existing),
             relationshipId = existing is { Status: not CoachClientStatus.Revoked } ? existing.Id : (Guid?)null,
+            // A link to ask can have a package picked for them (canvas L1).
+            pickedPackageId = link.PayAndStart ? null : link.Package is { Hidden: false } pk ? pk.Id : (Guid?)null,
             // Asking through a free link answers the coach's questions (canvas P2, R1).
             questions = CoachIntake.QuestionsOf(link.Coach),
             spots = await CoachIntake.SpotsAsync(db, link.Coach, DateTime.UtcNow),
@@ -209,25 +259,28 @@ public static class CoachLinkEndpoints
             .FirstOrDefaultAsync(r => r.CoachId == link.CoachId && r.ClientId == me);
 
         var relState = RelationshipState(existing);
-        if (!isSample && relState is "none" or "requested" && link.Package is { Hidden: false })
+        if (!isSample && relState is "none" or "requested" && link.PaidPackage is not null)
             return Results.Json(new { error = "This link is paid: pay to start coaching.", code = "payment_required" },
                 statusCode: StatusCodes.Status402PaymentRequired);
 
         if (relState == "none")
         {
             var use = (await LinkUse(db, [link.Id]))[link.Id];
-            var state = !CoachingAccess.CanCoach(link.Coach, config) ? "off" : LinkState(link, use.Joined + use.Waiting, DateTime.UtcNow);
+            // A sample client can use a link that isn't live yet: that's how "Try it as Niamh" works.
+            var state = !isSample && !CoachingAccess.CanCoach(link.Coach, config) ? "notlive" : LinkState(link, use.Joined + use.Waiting, DateTime.UtcNow);
             if (state != "active")
                 return Results.Json(new { error = LinkStateMessage(state), code = state }, statusCode: StatusCodes.Status410Gone);
         }
 
         // New, waiting-list, already-asked and invited-by-the-coach requests all follow the same
         // rules as asking from the profile (CoachRequestEndpoints).
-        return await CoachRequestEndpoints.CreateOrUpdateAsync(db, link.Coach, me, req.Answers, req.InterestedPackageId, sharing, link.Id, isSample);
+        var interested = req.InterestedPackageId ?? (link.PayAndStart ? null : link.PackageId);
+        return await CoachRequestEndpoints.CreateOrUpdateAsync(db, link.Coach, me, req.Answers, interested, sharing, link.Id, isSample);
     }
 
     private static string LinkStateMessage(string state) => state switch
     {
+        "notlive" => "This coach isn't taking clients through LogIt yet.",
         "expired" => "This link has expired.",
         "full" => "This link has reached its limit.",
         _ => "This link has been turned off.",
@@ -362,6 +415,7 @@ public static class CoachLinkEndpoints
     }
 }
 
-public record CreateLinkRequest(string? Name, int? ExpiresInDays, int? MaxUses, Guid? PackageId = null);
+public record CreateLinkRequest(string? Name, int? ExpiresInDays, int? MaxUses, Guid? PackageId = null, bool PayAndStart = false);
+public record EditLinkRequest(string? Name, DateTime? ExpiresAt, int? MaxUses, Guid? PackageId, bool PayAndStart, bool On = true);
 /// Answers: the coach's questions (CoachIntake), keyed by question id; older apps send none.
 public record CoachingRequestBody(SharingDto? Sharing, Dictionary<string, string>? Answers = null, Guid? InterestedPackageId = null);

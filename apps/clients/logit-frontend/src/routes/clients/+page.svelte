@@ -1,4 +1,5 @@
 <script lang="ts">
+  const WEB_URL = import.meta.env.VITE_WEB_URL || "https://app.getlogit.app";
   import { replayTour } from "$lib/tour/index";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
@@ -158,7 +159,15 @@
             <li class="flex flex-col text-sm">
               <div class="flex items-center justify-between px-3 py-2.5">
                 <span>{inv.coach.displayName || inv.coach.username}</span>
-                {#if accepting !== inv.relationshipId}
+                {#if inv.offer && inv.offer.state === "open"}
+                  <!-- K13: an invite with an offer is taken on the web, like any offer. -->
+                  <div class="flex gap-2">
+                    <a href="{WEB_URL}/take/{inv.offer.card.offerId}" target="_blank" rel="noopener"
+                      class="inline-flex h-9 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground">See the offer</a>
+                    <Button size="sm" variant="outline" disabled={ui.busyId === inv.relationshipId}
+                      onclick={() => act(inv.relationshipId, () => coachApi.declineInvite(inv.relationshipId))}>Decline</Button>
+                  </div>
+                {:else if accepting !== inv.relationshipId}
                   <div class="flex gap-2">
                     <Button size="sm" disabled={ui.busyId === inv.relationshipId}
                       onclick={() => { accepting = inv.relationshipId; acceptSharing = { ...SHARE_ALL }; }}>Accept</Button>

@@ -36,6 +36,7 @@
   import type { CoachIntake } from "@logit/core/domain/coachRequest";
   import RequestsBoard from "$lib/features/coaching/requests/RequestsBoard.svelte";
   import IntakeDialog from "$lib/features/coaching/requests/IntakeDialog.svelte";
+  import InviteDialog from "$lib/features/coaching/requests/InviteDialog.svelte";
   import { coachTrial } from "$lib/workspace";
 
   type Tab = "clients" | "requests" | "waiting" | "invites";
@@ -68,8 +69,6 @@
 
   let overview = $state<CoachingOverview | null>(null);
   let error = $state<string | null>(null);
-  let inviteName = $state("");
-  let inviteError = $state<string | null>(null);
   let inviting = $state(false);
   let busy = $state<string | null>(null);
 
@@ -94,26 +93,6 @@
 
   // Practice view already decides which clients these are (samples or real ones).
   const shownClients = $derived(overview?.clients ?? []);
-
-  async function invite(e: Event) {
-    e.preventDefault();
-    const username = inviteName.trim().replace(/^@/, "");
-    if (!username) return;
-    inviting = true;
-    inviteError = null;
-    try {
-      await coachApi.inviteClient(username);
-      inviteName = "";
-      toast.success(`Invite sent to @${username}`);
-      await load();
-    } catch (err) {
-      inviteError = err instanceof ApiError
-        ? err.status === 404 ? `No one is called @${username}.` : err.message
-        : "Couldn't send the invite.";
-    } finally {
-      inviting = false;
-    }
-  }
 
   async function cancelInvite(relationshipId: string) {
     busy = relationshipId;
@@ -169,17 +148,10 @@
         {/if}
       {/if}
     </div>
-    <form class="flex flex-col gap-1" onsubmit={invite}>
-      <div class="flex gap-2">
-        <label for="invite-username" class="sr-only">Client's username</label>
-        <input id="invite-username" bind:value={inviteName} placeholder="Client's username" autocomplete="off" disabled={practice.on}
-          class="h-9 w-[220px] rounded-[10px] border border-input bg-card px-3 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50" />
-        <button type="submit" disabled={inviting || !inviteName.trim() || practice.on}
-          class="h-9 rounded-[10px] bg-primary px-3.5 text-[13px] font-semibold text-primary-foreground disabled:opacity-50">Invite</button>
-      </div>
+    <div class="flex flex-col items-end gap-1">
+      <Button disabled={practice.on} onclick={() => (inviting = true)}>Invite someone you know</Button>
       {#if practice.on}<span class="text-xs text-muted-foreground">Inviting reaches a real person: turn off Practice view first.</span>{/if}
-      {#if inviteError}<span class="text-xs text-destructive">{inviteError}</span>{/if}
-    </form>
+    </div>
   </header>
 
   {#if error}
@@ -296,6 +268,8 @@
     {/if}
   {/if}
 </div>
+
+<InviteDialog bind:open={inviting} onsent={async () => { await load(); setTab("invites"); }} />
 
 {#if intake}
   <IntakeDialog bind:open={editingIntake} {intake} onsaved={(i) => (intake = i)} />

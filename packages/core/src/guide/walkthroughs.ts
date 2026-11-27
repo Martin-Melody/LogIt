@@ -240,7 +240,7 @@ export const STUDIO_CHAPTERS: Chapter[] = [
       {
         id: "new", on: "web", route: "/coaching/links", target: "links-new", kind: "do", signal: "link.created",
         title: "Make an invite link",
-        body: "Open Coaching › Invite links. Give the link a name only you see, like \"Instagram bio\", choose when it stops working and how many people can use it, then Create link. It's copied, ready to paste anywhere.",
+        body: "Open Coaching › Invite links and choose New link. Give it a name only you see, like \"Instagram bio\", pick a package for them if you like, choose when it ends and how many people can use it, then Create link. Copy it or show its QR code.",
       },
       {
         id: "request", on: "web", route: "/clients?tab=requests", target: "requests-pane", kind: "do", signal: "request.offered",
@@ -251,7 +251,7 @@ export const STUDIO_CHAPTERS: Chapter[] = [
       {
         id: "links", on: "web", route: "/coaching/links", target: "links-table", kind: "look",
         title: "Your links",
-        body: "Each link shows how many people joined through it. Copy it again, or turn it off: people who already joined stay your clients.",
+        body: "Each link shows how many people asked through it and how many became clients. Copy it, show its QR code for a poster, edit it, or switch it off: people who asked through it stay.",
       },
     ],
   },

@@ -67,7 +67,11 @@ public static class CoachEndpoints
         CoachPaymentEndpoints.MapWebhook(app);
     }
 
-    private static async Task<IResult> Invite(string username, ClaimsPrincipal caller, AppDbContext db, IConfiguration config)
+    /// Offer: invite with an offer they take on the take page (canvas K13: a package or no
+    /// payment through LogIt). Older apps send no body: a plain invite they accept.
+    public record InviteBody(bool Offer = false, Guid? PackageId = null, string? Message = null);
+
+    private static async Task<IResult> Invite(string username, [FromBody] InviteBody? body, ClaimsPrincipal caller, AppDbContext db, IConfiguration config)
     {
         var coachId = caller.GetUserId();
         var coach = await db.Users.FindAsync(coachId);
@@ -117,11 +121,47 @@ public static class CoachEndpoints
             relationship.ApplySharing(SharingDto.All);
             relationship.UpdatedAt = DateTime.UtcNow;
         }
+        CoachOffer? offer = null;
+        if (body?.Offer == true)
+        {
+            CoachPackage? package = null;
+            if (body.PackageId is { } pid)
+            {
+                package = await db.CoachPackages.FirstOrDefaultAsync(k => k.Id == pid && k.CoachId == coachId && !k.Hidden);
+                if (package is null) return Results.BadRequest(new { error = "That package isn't available." });
+                if (!await db.CoachPaymentAccounts.AnyAsync(a => a.CoachId == coachId && a.CardPaymentsActive))
+                    return Results.BadRequest(new { error = "Paid packages need payments set up first.", code = "payments_not_ready" });
+            }
+            if (body.Message?.Length > CoachIntake.MaxMessage) return Results.BadRequest(new { error = "That message is too long." });
+            var now = DateTime.UtcNow;
+            // An invite is someone you know: the offer holds for two weeks.
+            offer = new CoachOffer
+            {
+                Relationship = relationship,
+                PackageId = package?.Id,
+                PackageName = package?.Name ?? "Coaching",
+                PackageDescription = package?.Description ?? "",
+                AmountCents = package?.AmountCents ?? 0,
+                Currency = package?.Currency ?? "eur",
+                Interval = package?.Interval ?? PaymentIntervals.Once,
+                Weeks = package?.Weeks,
+                HoldUntil = now.AddDays(14),
+                CreatedAt = now,
+            };
+            db.CoachOffers.Add(offer);
+        }
         // Otherwise nothing tells them: the invite only shows on their Coaching page.
         db.Notifications.Add(new Notification { UserId = client.Id, ActorId = coachId, Type = NotificationType.CoachInvite });
         await db.SaveChangesAsync();
+        if (offer is not null)
+        {
+            CoachIntake.Post(db, relationship, coachId, CoachIntake.Events.Offer,
+                $"{CoachIntake.NameOf(coach)} invited you to be coached: {offer.PackageName}, {CoachIntake.PriceText(offer)}.",
+                CoachIntake.CardOf(offer), body!.Message, DateTime.UtcNow);
+            await db.SaveChangesAsync();
+        }
 
-        return Results.Created($"/coach/invites/{relationship.Id}", new { relationshipId = relationship.Id });
+        return Results.Created($"/coach/invites/{relationship.Id}", new { relationshipId = relationship.Id, offerId = offer?.Id });
     }
 
     private static async Task<IResult> GetClients(ClaimsPrincipal caller, AppDbContext db)
@@ -295,11 +335,17 @@ public static class CoachEndpoints
             .OrderByDescending(r => r.CreatedAt)
             .ToListAsync();
 
+        var ids = relationships.Select(r => r.Id).ToList();
+        var offers = (await db.CoachOffers.AsNoTracking().Where(o => ids.Contains(o.RelationshipId)).ToListAsync())
+            .GroupBy(o => o.RelationshipId).ToDictionary(g => g.Key, g => g.OrderByDescending(o => o.CreatedAt).First());
+        var now = DateTime.UtcNow;
         return Results.Ok(relationships.Select(r => new
         {
             relationshipId = r.Id,
             coach = r.Coach.ToProfileDto(false),
             createdAt = r.CreatedAt,
+            // Canvas K13: take it on the take page (agreement, sharing, paying).
+            offer = offers.TryGetValue(r.Id, out var o) ? new { card = CoachIntake.CardOf(o), state = CoachIntake.StateOf(o, now) } : null,
         }));
     }
 
