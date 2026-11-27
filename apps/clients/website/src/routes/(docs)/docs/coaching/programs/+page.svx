@@ -51,25 +51,27 @@ a note in their workout and the rule's exercises repeating last time's numbers; 
 program works. Their Training tab tells you which: not asked yet, not allowed, or removed from
 their phone.
 
-## Rules
+## Progressions
 
-A rule decides how the numbers move from week to week. Pick one for the whole program at the
-top of the builder, and a different one for any exercise from its settings. LogIt Adaptive,
-Linear, the 4-week wave and Fixed are built in. Programs › Rules is where you make your own,
+A progression decides how the numbers move from week to week. Pick one for the whole program at
+the top of the builder, and a different one for any exercise from its settings. LogIt Adaptive,
+Linear, the 4-week wave and Fixed are built in. Programs › Progressions lists them all with what
+each does in a lighter week, and is where you make your own,
 with the same builder lifters have on the phone: where the weight comes from (strength estimate,
 last session or a wave), the rep range, reps left, the set layout, the step, what happens on a
 stall, the number of sets and whether to hold in a calorie deficit. "What it would do" shows the
 numbers on a client's lift, and "In words" is what clients see under "Why this weight?". Your
-programs follow changes to a rule; clients' copies follow when you update them.
+programs follow changes to a progression; clients' copies follow when you update them.
 
-A client's copy can follow its own rule: ⋯ › Change their rule… on their Training tab. Clients'
-phones work out each week's numbers from their own lifts when they start the day. Programs ›
-Rules also has what clients can swap to.
+A client's copy can follow its own progression: ⋯ on their Training tab. Clients' phones work out
+each week's numbers from their own lifts when they start the day.
 
 ## Swaps
 
-What clients can swap to is in Programs › Rules: any exercise, the same main muscles, or only the
-swaps you list on each exercise. On the phone, after a swap they choose just today or for the rest
+What clients can swap to is in Programs › Swaps: any exercise, the same main muscles, or only the
+swaps you list for each exercise. The same page has every exercise's swap list: adding a swap
+there adds it to that exercise in every program it's in (the builder shows the same list under the
+exercise). On the phone, after a swap they choose just today or for the rest
 of the program, with a reason if they like; the rest of the program tells you, and later days start
 with the swap. On their Training tab, Keep it changes their copy to match, and Put it back… puts the
 original back and tells them. A message asking about a swap has "Swap an exercise in their

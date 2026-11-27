@@ -545,7 +545,7 @@
   <!-- Rule, length, lighter weeks, start -->
   <section class="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-[10px] bg-muted/60 px-4 py-3 text-[13px]">
     <span class="flex items-center gap-2">
-      <span class="text-muted-foreground">Rule for every exercise</span>
+      <span class="text-muted-foreground">Progression for every exercise</span>
       <b class="font-semibold">{P.ruleLabel(prog.rule)}</b>
       <Button variant="outline" size="sm" onclick={() => { pickingFor = null; picking = true; }}>Change</Button>
     </span>
@@ -723,10 +723,10 @@
               </table>
             </details>
             <div class="flex items-center justify-between gap-2">
-              <span class="flex flex-col"><Label>Rule</Label><span class="text-[13px]">{b.rule ? P.ruleLabel(b.rule) : `The program's · ${P.ruleLabel(prog.rule)}`}</span></span>
+              <span class="flex flex-col"><Label>Progression</Label><span class="text-[13px]">{b.rule ? P.ruleLabel(b.rule) : `The program's · ${P.ruleLabel(prog.rule)}`}</span></span>
               <Button variant="outline" size="sm" onclick={() => { pickingFor = b; picking = true; }}>Change</Button>
             </div>
-            <div data-guide="program-swaps" class="flex flex-col gap-1.5">
+            <div class="flex flex-col gap-1.5">
               <Label>Swaps they can use</Label>
               <div class="flex flex-wrap gap-1.5">
                 {#each b.alternatives ?? [] as a (a.exerciseName)}

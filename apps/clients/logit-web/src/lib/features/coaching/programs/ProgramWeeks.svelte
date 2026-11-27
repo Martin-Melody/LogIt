@@ -130,7 +130,7 @@
     const t = textOf(b, week);
     return [
       { id: "type", label: "Type over…", run: () => startEdit(b.id, week) },
-      { id: "clear", label: "Clear (back to the rule)", run: () => edit((p) => unpinWeek(p, week, b.id)), disabled: cell?.source !== "pinned" ? "Not typed over" : undefined },
+      { id: "clear", label: "Clear (back to the progression)", run: () => edit((p) => unpinWeek(p, week, b.id)), disabled: cell?.source !== "pinned" ? "Not typed over" : undefined },
       { id: "copy", label: "Copy", run: () => { clipboard = t; toast.message(`Copied ${t}`); }, separatorBefore: true, disabled: cell?.source === "words" ? "No numbers to copy" : undefined },
       { id: "paste", label: clipboard ? `Paste ${clipboard}` : "Paste", run: () => { if (clipboard) commit(b.id, week, clipboard.split(" · ")[0]!); }, disabled: clipboard ? undefined : "Nothing copied" },
       {
@@ -178,7 +178,7 @@
       <label class="flex items-center gap-2 text-[13px]">
         <span class="text-muted-foreground">Showing</span>
         <OptionSelect size="sm" bind:value={showing} aria-label="Showing" class="w-56"
-          options={[{ value: "", label: "The rule, in words" }, ...preview.map((c) => ({ value: c.clientId, label: `With ${c.label}'s lifts` }))]} />
+          options={[{ value: "", label: "The progression, in words" }, ...preview.map((c) => ({ value: c.clientId, label: `With ${c.label}'s lifts` }))]} />
       </label>
     {:else}
       <span class="text-xs text-muted-foreground">Their copy{nowWeek ? ` · week ${nowWeek} of ${weeks.length} now` : ""} · numbers from their strength estimates</span>
@@ -246,7 +246,7 @@
   </div>
   <p class="flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted-foreground">
     {#if mode === "copy"}<span>Grey: done</span>{/if}
-    <span><span class="text-info">Blue</span>: planned by the rule; it moves if they beat or miss it</span>
+    <span><span class="text-info">Blue</span>: planned by the progression; it moves if they beat or miss it</span>
     <span><span class="rounded-[3px] px-1 font-semibold ring-2 ring-info/60 ring-inset">Blue edge</span>: typed by you; stays put</span>
     <span>Double-click or Enter to type over a cell; ⋯ or right-click to copy, paste, clear or fill to the end of the block.</span>
   </p>

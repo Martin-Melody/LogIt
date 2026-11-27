@@ -453,15 +453,14 @@ export const STUDIO_CHAPTERS: Chapter[] = [
     feature: "coach-swaps",
     steps: [
       {
-        id: "default", on: "web", route: "/coaching/programs?tab=rules", target: "swap-default", kind: "look",
+        id: "default", on: "web", route: "/coaching/programs?tab=swaps", target: "swap-default", kind: "look",
         title: "Your swap rule",
-        body: "Programs › Rules: choose what clients may swap in your programs: any exercise, the same muscles only, or only the swaps you list under each exercise. Set it for everyone here and change it for one client on their page. A swap that isn't allowed becomes a message asking you.",
+        body: "Programs › Swaps: choose what clients may swap in your programs: any exercise, the same muscles only, or only the swaps you list for each exercise. Set it for everyone here and change it for one client on their page. A swap that isn't allowed becomes a message asking you.",
       },
       {
-        id: "list", on: "web", route: "/coaching/programs", target: "program-swaps", kind: "do", signal: "swap.added",
-        title: "An exercise's swap list",
-        body: "Each exercise in a program has its own list, under Swaps they can use. Add one with + Swap or tap a suggestion. With \"Only my list\" these are the only swaps a client sees; with \"Same muscles only\" they come first.",
-        arrives: "Open one of your programs and click an exercise to see its swaps.",
+        id: "list", on: "web", route: "/coaching/programs?tab=swaps", target: "swap-lists", kind: "do", signal: "swap.added",
+        title: "Each exercise's swap list",
+        body: "Every exercise in your programs, with its swaps. + Swap adds one to that exercise in every program it's in (the builder shows the same list under the exercise). With \"Only my list\" these are the only swaps a client sees; with \"Same muscles only\" they come first.",
       },
     ],
   },

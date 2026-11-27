@@ -78,7 +78,7 @@
   const MOVES = [
     { value: "same", label: "Same every week" },
     { value: "add-round", label: "+1 round every 2 weeks" },
-    { value: "each", label: "Each exercise's own rule" },
+    { value: "each", label: "Each exercise's own progression" },
   ] as const;
 </script>
 

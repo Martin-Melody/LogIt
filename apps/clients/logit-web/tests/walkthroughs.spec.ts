@@ -19,24 +19,21 @@ const PREPARE: Record<string, (page: Page) => Promise<void>> = {
     if (!(await p.locator('[data-guide="plan-save"]').isVisible())) await p.getByRole("button", { name: "+ New split" }).click();
   },
   "program.saved": (p) => p.locator('[data-guide="program-editor"] input').first().fill("Beginner full body"),
-  // An exercise's swap list shows once a program is open and an exercise picked (adding one to an empty day).
+  // Swap lists show the exercises in your programs: a new coach's program may be empty, so add one.
   "swap.added": async (p) => {
-    if (!/[?&]id=/.test(p.url())) {
-      // The step before is on another tab: go to the list, then open the first program.
-      await p.goto("/coaching/programs");
-      await p.locator('[data-guide="programs-assign"]').first().click();
-      await p.waitForURL(/[?&]id=/);
-    }
+    const lists = p.locator('[data-guide="swap-lists"]');
+    await expect(lists).toBeVisible();
+    if (await lists.getByRole("button", { name: "+ Swap" }).count()) return;
+    await p.goto("/coaching/programs");
+    await p.locator('[data-guide="programs-library"] a, [data-guide="programs-assign"]').first().click();
+    await p.waitForURL(/[?&]id=/);
     const editor = p.locator('[data-guide="program-editor"]');
-    await expect(editor).toBeVisible();
-    const blocks = editor.locator("ul li button.text-left");
-    if (await blocks.count()) await blocks.first().click();
-    else {
-      await editor.getByRole("button", { name: "+ Exercise" }).click();
-      await p.locator("#add-exercise").fill("Bench");
-      await p.locator("#add-exercise").press("Enter");
-      await editor.locator("ul li button.text-left").first().click();
-    }
+    await editor.getByRole("button", { name: "+ Exercise" }).click();
+    await p.locator("#add-exercise").fill("Bench");
+    await p.locator("#add-exercise").press("Enter");
+    await expect(editor.locator("ul li button.text-left").first()).toBeVisible();
+    await p.goto("/coaching/programs?tab=swaps");
+    await expect(lists.getByRole("button", { name: "+ Swap" }).first()).toBeVisible();
   },
 };
 
@@ -105,9 +102,9 @@ const ACTIONS: Record<string, (page: Page) => Promise<void>> = {
     await dialog.getByRole("button", { name: "Assign", exact: true }).click();
   },
   "swap.added": async (p) => {
-    await p.locator('[data-guide="program-swaps"]').getByRole("button", { name: "+ Swap" }).click();
-    await p.locator("#add-swap").fill("Dumbbell");
-    await p.locator("#add-swap").press("Enter");
+    await p.locator('[data-guide="swap-lists"]').getByRole("button", { name: "+ Swap" }).first().click();
+    await p.locator("#swap-list-add").fill("Dumbbell");
+    await p.locator("#swap-list-add").press("Enter");
   },
   "message.sent": async (p) => {
     await p.locator('[data-guide="message-compose"] textarea').fill("How's the knee this week?");
