@@ -216,6 +216,17 @@ public static class CoachEndpoints
             })
             .ToListAsync()).ToDictionary(x => x.UserId);
 
+        // Canvas W1: on how many of the last 7 days each client logged any food (nutrition sharers only).
+        var nutritionIds = rels.Where(r => r.ShareNutrition).Select(r => r.ClientId).ToList();
+        var fromDay = "nday_" + DateTime.UtcNow.Date.AddDays(-6).ToString("yyyy-MM-dd");
+        var foodDays = (await db.SyncedNutritionDays
+            .Where(d => nutritionIds.Contains(d.UserId) && d.DeletedAtMs == null && string.Compare(d.ClientId, fromDay) >= 0)
+            .Select(d => new { d.UserId, d.DataJson })
+            .ToListAsync())
+            .Where(d => d.DataJson.Contains("\"items\":[{"))
+            .GroupBy(d => d.UserId)
+            .ToDictionary(g => g.Key, g => g.Count());
+
         var programCounts = (await db.CoachPrograms
             .Where(p => p.CoachId == coachId && p.DeletedAtMs == null && p.RecipientUserId != null
                 && clientIds.Contains(p.RecipientUserId.Value))
@@ -307,6 +318,7 @@ public static class CoachEndpoints
                 lastSessionAtMs = s?.Last,
                 sessions7d = s?.C7 ?? 0,
                 sessions28d = s?.C28 ?? 0,
+                foodDays7d = r.ShareNutrition ? foodDays.GetValueOrDefault(r.ClientId, 0) : (int?)null,
                 programCount = programCounts.GetValueOrDefault(r.ClientId, 0),
                 checkinScheduleCount = scheduleCounts.GetValueOrDefault(r.ClientId, 0),
                 assignedHabitCount = habitCounts.GetValueOrDefault(r.ClientId, 0),

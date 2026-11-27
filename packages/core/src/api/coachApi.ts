@@ -103,6 +103,8 @@ export interface RosterEntry {
   lastSessionAtMs: number | null;
   sessions7d: number;
   sessions28d: number;
+  /** Days of the last 7 with any food logged; null when they don't share food. */
+  foodDays7d?: number | null;
   programCount: number;
   checkinScheduleCount: number;
   assignedHabitCount: number;

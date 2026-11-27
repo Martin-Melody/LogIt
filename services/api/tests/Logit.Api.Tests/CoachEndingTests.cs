@@ -222,6 +222,23 @@ public class CoachEndingTests
     }
 
     [Fact]
+    public async Task The_roster_counts_days_with_food_logged_this_week()
+    {
+        await using var w = await CoachedAsync("food", paying: false);
+        object Day(int ago, bool food)
+        {
+            var date = DateTime.UtcNow.Date.AddDays(-ago).ToString("yyyy-MM-dd");
+            var items = food ? new object[] { new { id = $"i{ago}", name = "Oats", grams = 80 } } : Array.Empty<object>();
+            return new { id = $"nday_{date}", createdAtMs = 1, updatedAtMs = 1, dataJson = JsonSerializer.Serialize(new { id = $"nday_{date}", dateIso = date, items }) };
+        }
+        // Two days with food this week, one empty day, one with food from too long ago.
+        var days = new[] { Day(0, true), Day(3, true), Day(4, false), Day(9, true) };
+        (await w.Client.PostAsJsonAsync("/sync/nutrition/days", new { days })).EnsureSuccessStatusCode();
+        var row = (await Json(await w.Coach.GetAsync("/coach/roster"))).GetProperty("roster")[0];
+        Assert.Equal(2, row.GetProperty("foodDays7d").GetInt32());
+    }
+
+    [Fact]
     public async Task Saved_replies_are_the_coachs_own_and_checked()
     {
         await using var w = await CoachedAsync("replies", paying: false);

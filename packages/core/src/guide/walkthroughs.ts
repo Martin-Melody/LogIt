@@ -464,12 +464,17 @@ export const STUDIO_CHAPTERS: Chapter[] = [
       {
         id: "needs", on: "web", route: "/coaching", target: "today-needs-you", kind: "look",
         title: "What needs you",
-        body: "Coaching › Today lists requests to answer, new check-ins, messages waiting for a reply, missed check-ins, programs about to end and payment problems. Start your day here.",
+        body: "Coaching › Today lists what needs you, grouped by what you'll do: check-ins to review (a batch is one Start reviewing button), messages to reply to and missed check-ins to nudge, then things to decide: requests, programs about to end, changed exercises and payment problems. Start your day here.",
+      },
+      {
+        id: "ahead", on: "web", route: "/coaching", target: "today-ahead", kind: "look",
+        title: "The week ahead",
+        body: "What's coming in the next 7 days: programs ending, check-ins due, paid-until dates and payment rules about to act.",
       },
       {
         id: "week", on: "web", route: "/coaching", target: "today-week", kind: "look",
-        title: "This week",
-        body: "How your clients' training is going this week, from what they've logged.",
+        title: "This week, or last week on a Monday",
+        body: "How your clients' training is going this week, from what they've logged. On Mondays: last week in numbers, sessions done against planned, check-ins in, who logged food on 5 or more days, and who's gone quiet.",
       },
     ],
   },
