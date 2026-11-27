@@ -9,6 +9,7 @@
   import { apiClient, ApiError } from "@logit/core/api/client";
   import {
     coachApi,
+    isRealClient,
     SHARE_ALL,
     type ClientRelationship,
     type CoachRelationship,
@@ -57,11 +58,11 @@
     try {
       const [r, c, s, mine, reqs, asks] = await Promise.all([
         coachApi.listReceivedInvites(),
-        isStudio ? coachApi.listClients() : Promise.resolve([]),
+        isStudio ? coachApi.listClients().then((xs) => xs.filter(isRealClient)) : Promise.resolve([]),
         isStudio ? coachApi.listSentInvites() : Promise.resolve([]),
         coachApi.listCoaches().catch(() => []),
         coachApi.listMyRequests().catch(() => []),
-        isStudio ? coachApi.listRequests().catch(() => []) : Promise.resolve([]),
+        isStudio ? coachApi.listRequests().then((xs) => xs.filter(isRealClient)).catch(() => []) : Promise.resolve([]),
       ]);
       clientRequests = asks;
       if (isStudio) void loadCoachToday(WEB_URL).then((x) => (today = x)).catch(() => {});

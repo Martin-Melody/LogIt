@@ -13,6 +13,10 @@ export interface CoachClientUser {
   isSample?: boolean;
 }
 
+/** Not a sample client. Sample clients belong to Practice view on the web dashboard, so the
+ * phone never lists them (it has no Practice view). */
+export const isRealClient = (x: { client: { isSample?: boolean } }): boolean => !x.client.isSample;
+
 /** What a client lets one coach read. The server enforces it on every coach read; a
  * switched-off area answers 403 with `code: "not_shared"`. */
 export interface Sharing {

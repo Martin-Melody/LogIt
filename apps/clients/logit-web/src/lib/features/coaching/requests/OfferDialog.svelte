@@ -10,7 +10,7 @@
   import * as RadioGroup from "$lib/components/ui/radio-group";
   import { Button } from "$lib/components/ui/button";
   import { Label } from "$lib/components/ui/label";
-  import { Textarea } from "$lib/components/ui/textarea";
+  import ReplyBox from "./ReplyBox.svelte";
   import { DateField } from "$lib/components/ui/date-field";
   import OptionSelect from "$lib/components/option-select.svelte";
   import { toast } from "$lib/components/ui/sonner";
@@ -173,7 +173,7 @@
 
       <div class="flex flex-col gap-1.5">
         <Label for="offer-message">Message <span class="font-normal text-muted-foreground">optional</span></Label>
-        <Textarea id="offer-message" rows={3} maxlength={4000} bind:value={message} />
+        <ReplyBox id="offer-message" bind:value={message} {name} />
       </div>
       {#if error}<p class="text-[13px] text-destructive" role="alert">{error}</p>{/if}
     </div>

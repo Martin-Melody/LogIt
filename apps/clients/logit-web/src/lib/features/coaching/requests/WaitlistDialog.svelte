@@ -7,7 +7,7 @@
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
   import { Label } from "$lib/components/ui/label";
-  import { Textarea } from "$lib/components/ui/textarea";
+  import ReplyBox from "./ReplyBox.svelte";
   import { toast } from "$lib/components/ui/sonner";
 
   let { open = $bindable(false), relationshipId, name, onsent }: { open?: boolean; relationshipId: string; name: string; onsent: () => Promise<void> | void } = $props();
@@ -51,7 +51,7 @@
     <div class="flex flex-col gap-4">
       <div class="flex flex-col gap-1.5">
         <Label for="wait-message">Message <span class="font-normal text-muted-foreground">optional</span></Label>
-        <Textarea id="wait-message" rows={3} maxlength={4000} bind:value={message} />
+        <ReplyBox id="wait-message" bind:value={message} {name} />
       </div>
       <div class="flex flex-col gap-1.5">
         <Label for="wait-expect">"Expect spots" shown to {p}</Label>

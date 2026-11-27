@@ -7,7 +7,7 @@
   import { Button } from "$lib/components/ui/button";
   import { Checkbox } from "$lib/components/ui/checkbox";
   import { Label } from "$lib/components/ui/label";
-  import { Textarea } from "$lib/components/ui/textarea";
+  import ReplyBox from "./ReplyBox.svelte";
   import { toast } from "$lib/components/ui/sonner";
 
   let {
@@ -57,7 +57,7 @@
     <div class="flex flex-col gap-4">
       <div class="flex flex-col gap-1.5">
         <Label for="nofit-message">Message <span class="font-normal text-muted-foreground">optional</span></Label>
-        <Textarea id="nofit-message" rows={3} maxlength={4000} bind:value={message} />
+        <ReplyBox id="nofit-message" bind:value={message} {name} />
       </div>
       <label class="flex items-start gap-2.5">
         <Checkbox bind:checked={block} class="mt-0.5" />

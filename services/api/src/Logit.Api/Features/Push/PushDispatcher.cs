@@ -129,7 +129,8 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
             var wanted = new List<CoachMessage>();
             foreach (var m in group)
             {
-                if (settings.Messages && !(settings.PausedUntil > now) && m.ReadAtMs is null) wanted.Add(m);
+                // Sample clients are played by the coach's own web app (Practice view): never a push.
+                if (settings.Messages && !(settings.PausedUntil > now) && m.ReadAtMs is null && !m.Sender.IsSample) wanted.Add(m);
                 else m.PushedAt = now;
             }
             if (wanted.Count == 0 || InQuiet(settings, now)) continue;

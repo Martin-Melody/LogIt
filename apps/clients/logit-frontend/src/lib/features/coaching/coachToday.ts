@@ -2,7 +2,7 @@
 // look at a check-in happen here; building programs, meal plans, forms and payments stay on
 // the web, and the phone says so.
 
-import { coachApi, type CheckinInboxItem, type CoachingRequest, type RosterEntry } from "@logit/core/api/coachApi";
+import { coachApi, isRealClient, type CheckinInboxItem, type CoachingRequest, type RosterEntry } from "@logit/core/api/coachApi";
 import { getProgramProgress, getProgramStartMs, type CoachProgram } from "@logit/core/domain/CoachProgram";
 import { questionsFor, type CheckinSchedule, type CheckinSubmission } from "@logit/core/domain/Checkin";
 import { answerText } from "@logit/core/domain/coachCards";
@@ -33,9 +33,9 @@ export function checkinGlance(s: CheckinSubmission, schedule: CheckinSchedule | 
 
 export async function loadCoachToday(webUrl: string, now = Date.now()): Promise<CoachToday> {
   const [roster, inbox, requests, programs, schedules] = await Promise.all([
-    coachApi.getRoster(),
+    coachApi.getRoster().then((xs) => xs.filter(isRealClient)),
     coachApi.checkinInbox().catch(() => [] as CheckinInboxItem[]),
-    coachApi.listRequests().catch(() => [] as CoachingRequest[]),
+    coachApi.listRequests().then((xs) => xs.filter(isRealClient)).catch(() => [] as CoachingRequest[]),
     // From the server: programs made on the web aren't kept on the phone.
     createRemoteCoachProgramRepo().listMyPrograms().catch(() => []),
     createRemoteCheckinRepo().listMySchedules().catch(() => []),

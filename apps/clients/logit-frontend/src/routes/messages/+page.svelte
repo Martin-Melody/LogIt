@@ -19,7 +19,7 @@
   import GroupAvatar from "$lib/components/social/GroupAvatar.svelte";
   import GroupFormSheet from "$lib/components/social/GroupFormSheet.svelte";
   import { back } from "$lib/navigation";
-  import { coachApi } from "@logit/core/api/coachApi";
+  import { coachApi, isRealClient } from "@logit/core/api/coachApi";
   import { dmApi } from "@logit/core/api/dmApi";
   import { groupsApi } from "@logit/core/api/groupsApi";
   import { requestLine } from "@logit/core/domain/coachRequest";
@@ -91,8 +91,8 @@
     await pullAndMergeMessages().catch(() => {});
     const [coaches, clients, asking] = await Promise.all([
       coachApi.listCoaches().catch(() => []),
-      coachApi.listClients().catch(() => []),
-      coachApi.listRequests().catch(() => []),
+      coachApi.listClients().then((xs) => xs.filter(isRealClient)).catch(() => []),
+      coachApi.listRequests().then((xs) => xs.filter(isRealClient)).catch(() => []),
     ]);
     // Canvas R3/Z8: people asking you to coach them, as conversations with a label.
     const requestRows: Row[] = asking.map((q) => {

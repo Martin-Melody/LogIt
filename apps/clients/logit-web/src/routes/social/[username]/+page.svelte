@@ -1,4 +1,5 @@
 <script lang="ts">
+  import AskDialog from "$lib/features/coaching/ask/AskDialog.svelte";
   import { Button } from "$lib/components/ui/button";
   import CoachingSection from "@logit/ui/CoachingSection.svelte";
   import * as Tabs from "$lib/components/ui/tabs/index.js";
@@ -136,6 +137,8 @@
   function setTab(t: Tab) {
     void goto(t === "posts" ? `/social/${username}` : `/social/${username}?tab=${t}`, { noScroll: true, keepFocus: true });
   }
+  // "Ask to be coached" opens here: you're signed in already (getlogit.app links to /ask/…).
+  let asking = $state(false);
 </script>
 
 <div class="mx-auto flex max-w-[1060px] flex-col gap-4">
@@ -199,10 +202,11 @@
       <!-- Canvas P1: the Coaching section, the same as on getlogit.app and the phone. -->
       <section class="rounded-[10px] border border-border bg-card p-4">
         <CoachingSection section={profile.coaching} name={profile.displayName}
-          askHref={profile.isSelf ? null : `/ask/${encodeURIComponent(profile.username)}`}
+          onask={profile.isSelf ? undefined : () => (asking = true)}
           mentionHref={(u) => `/social/${u}`} tagHref={(t) => `/social/tag/${encodeURIComponent(t)}`} />
         {#if profile.isSelf}<Button variant="outline" size="sm" class="mt-3" href="/coaching/profile">Edit your coaching profile</Button>{/if}
       </section>
+      {#if !profile.isSelf}<AskDialog bind:open={asking} username={profile.username} name={profile.displayName} />{/if}
     {/if}
 
     {#if locked}
