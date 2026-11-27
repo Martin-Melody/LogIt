@@ -18,6 +18,8 @@
   import type { CoachProgram } from "@logit/core/domain/CoachProgram";
   import { plugins } from "$lib/features/plugins/pluginData.svelte";
   import InstallDialog from "$lib/features/plugins/InstallDialog.svelte";
+  import ActionMenu from "$lib/features/commands/ActionMenu.svelte";
+  import type { RowAction } from "$lib/features/commands/commands.svelte";
   import { getWebCoachProgramRepo } from "$lib/deps";
 
   const KINDS: [string, string][] = [
@@ -86,6 +88,14 @@
       removing = null;
     }
   }
+  // Canvas X4: a plugin's menu.
+  const rowActions = (r: Row): RowAction[] => [
+    { id: "open", label: "Details", run: () => (selectedId = r.id) },
+    ...(USE_AT[r.family] ? [{ id: "use", label: "Copy from it", href: USE_AT[r.family] }]
+      : !r.installed ? [{ id: "install", label: "Install…", run: () => void install(r) }] : []),
+    { id: "source", label: "Open the source", run: () => void openSource(r) },
+    ...(r.installed && !USE_AT[r.family] ? [{ id: "uninstall", label: "Uninstall…", danger: true, separatorBefore: true, run: () => (removing = { id: r.id, name: r.name, uses: usedIn(r.id) }) }] : []),
+  ];
   async function openSource(r: Row) {
     try {
       const m = (await pluginsApi.listed(r.id)).manifest;
@@ -123,8 +133,11 @@
     <div class="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
       <section aria-label="Plugins" class="flex flex-col rounded-[10px] border border-border bg-card">
         {#each rows as r (r.id)}
+          <ActionMenu actions={rowActions(r)} label="More for {r.name}">
+          {#snippet children({ props, more })}
+          <div {...props} class="group flex items-center border-t border-border first:border-t-0 {selected?.id === r.id ? 'bg-muted/60' : 'hover:bg-muted/30'}">
           <button type="button" onclick={() => (selectedId = r.id)} aria-current={selected?.id === r.id ? "true" : undefined}
-            class="flex items-center gap-3 border-t border-border px-4 py-3 text-left first:border-t-0 {selected?.id === r.id ? 'bg-muted/60' : 'hover:bg-muted/30'}">
+            class="flex min-w-0 flex-1 items-center gap-3 px-4 py-3 text-left">
             <span class="flex min-w-0 flex-1 flex-col gap-0.5">
               <span class="flex flex-wrap items-center gap-1.5 text-[14px] font-semibold">{r.name}
                 <span class="rounded-md bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">{familyLabel(r.family)}</span>
@@ -133,6 +146,10 @@
               <span class="text-xs text-muted-foreground">{r.author ? `by ${r.author.startsWith("@") ? "" : "@"}${r.author}` : "by LogIt"}{r.reviewedAt ? ` · updated ${new Date(r.reviewedAt).toLocaleDateString(undefined, { day: "numeric", month: "short" })}` : ""}{r.installed ? " · installed" : ""}</span>
             </span>
           </button>
+          {@render more("mr-2 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100")}
+          </div>
+          {/snippet}
+          </ActionMenu>
         {:else}
           <p class="px-4 py-6 text-[13px] text-muted-foreground">{tab === "installed" ? "Nothing installed for coaching yet. Look in Community." : "Nothing matches."}</p>
         {/each}

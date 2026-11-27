@@ -84,6 +84,7 @@
               <span class="line-clamp-2 text-muted-foreground">{r.body}</span>
             </span>
             <Button variant="outline" size="sm" onclick={() => { editing = { ...r }; error = null; }}>Edit</Button>
+            <Button variant="ghost" size="sm" onclick={() => { editing = { ...r, id: createId("reply"), shortcut: `${r.shortcut}2` }; error = null; }}>Duplicate</Button>
             <Button variant="ghost" size="sm" onclick={() => void remove(r)}>Delete</Button>
           </li>
         {:else}

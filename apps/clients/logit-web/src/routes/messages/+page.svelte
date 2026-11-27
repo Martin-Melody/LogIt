@@ -18,6 +18,8 @@
   import { Button } from "$lib/components/ui/button";
   import { Skeleton } from "$lib/components/ui/skeleton";
   import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
+  import ActionMenu from "$lib/features/commands/ActionMenu.svelte";
+  import { conversationActions } from "$lib/features/commands/commands.svelte";
   import { apiClient } from "@logit/core/api/client";
   import { coachApi, type CoachingRequest } from "@logit/core/api/coachApi";
   import { dmApi, type DmThread } from "@logit/core/api/dmApi";
@@ -40,7 +42,9 @@
   let error = $state<string | null>(null);
   let search = $state("");
   let filter = $state<"all" | "unread" | "requests">("all");
-  let managing = $state(false);
+  // ?saved=1 (⌘K): Saved replies.
+  // svelte-ignore state_referenced_locally
+  let managing = $state(page.url.searchParams.get("saved") === "1");
 
   const activeKey = $derived(page.url.searchParams.get("c") ? `c:${page.url.searchParams.get("c")}` : page.url.searchParams.get("dm") ? `dm:${page.url.searchParams.get("dm")}` : (rows.find((r) => r.kind !== "request")?.key ?? null));
   const active = $derived(rows.find((r) => r.key === activeKey) ?? null);
@@ -124,7 +128,9 @@
     const last = active.line.startsWith("You: ") ? "" : active.line.toLowerCase();
     return panel.exercises.find((e) => last.includes(e.toLowerCase())) ?? null;
   });
-  let swapping = $state(false);
+  // ?swap=1 (a conversation's menu): swap an exercise in their program.
+  // svelte-ignore state_referenced_locally
+  let swapping = $state(page.url.searchParams.get("swap") === "1");
   let swapHint = $state("");
 </script>
 
@@ -161,8 +167,11 @@
         <input bind:value={search} placeholder="Find someone" aria-label="Find someone"
           class="mx-0.5 mb-1.5 h-[34px] rounded-lg border border-input bg-background px-2.5 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring" />
         {#each shown as r (r.key)}
+          <ActionMenu actions={conversationActions(r.kind === "client" ? { kind: "client", name: r.name, clientId: r.client.id, relationshipId: r.client.relationshipId } : r.kind === "dm" ? { kind: "dm", name: r.name, username: r.thread.other?.username, threadId: r.thread.id } : { kind: "request", name: r.name, relationshipId: r.request.relationshipId, stage: r.request.stage ?? "asked" })} label="More for {r.name}">
+          {#snippet children({ props, more })}
+          <div {...props} class="group relative flex items-center rounded-lg {r.key === activeKey ? 'bg-muted ring-1 ring-border' : 'hover:bg-muted/50'}">
           <button type="button" onclick={() => open(r)} aria-current={r.key === activeKey ? "true" : undefined}
-            class="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-left {r.key === activeKey ? 'bg-muted ring-1 ring-border' : 'hover:bg-muted/50'}">
+            class="flex min-w-0 flex-1 items-center gap-2.5 px-3 py-2.5 text-left">
             <Avatar name={r.name} url={r.avatarUrl} />
             <span class="flex min-w-0 flex-1 flex-col gap-0.5">
               <span class="flex justify-between gap-2">
@@ -173,6 +182,10 @@
             </span>
             {#if r.unread}<span class="size-2 shrink-0 rounded-full bg-primary" aria-label="Unread"></span>{/if}
           </button>
+          {@render more("mr-1 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100")}
+          </div>
+          {/snippet}
+          </ActionMenu>
         {:else}
           <p class="px-3 py-4 text-[13px] text-muted-foreground">{filter === "unread" ? "Nothing unread." : filter === "requests" ? "No one's asking right now." : "Nobody by that name."}</p>
         {/each}

@@ -49,7 +49,9 @@
   let data = $state<ClientCardData | null>(null);
   let layout = $state<CardLayout | null>(null);
   let pkg = $state<{ id: string | null; name: string | null }>({ id: null, name: null });
-  let picking = $state(false);
+  // ?cards=1 (⌘K / a client row's menu): + Card.
+  // svelte-ignore state_referenced_locally
+  let picking = $state(page.url.searchParams.get("cards") === "1");
   let kind = $state<"week" | "month" | "block">("week");
   let monthsBack = $state(0);
   let days = $state<DiaryDay[]>([]);

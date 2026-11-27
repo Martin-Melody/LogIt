@@ -6,10 +6,14 @@
   import ArrowUpIcon from "@lucide/svelte/icons/arrow-up";
   import ArrowDownIcon from "@lucide/svelte/icons/arrow-down";
   import XIcon from "@lucide/svelte/icons/x";
+  import ActionMenu from "$lib/features/commands/ActionMenu.svelte";
+  import type { RowAction } from "$lib/features/commands/commands.svelte";
 
-  let { editing, name, fixed = false, first, last, onmove, onremove, ondragstart, ondragover, children }: {
+  let { editing, name, fixed = false, first, last, onmove, onremove, ondragstart, ondragover, children, menu = null }: {
     editing: boolean; name: string; fixed?: boolean; first: boolean; last: boolean;
     onmove: (by: -1 | 1) => void; onremove: () => void; ondragstart: () => void; ondragover: () => void; children: Snippet;
+    /** Canvas X4: the card's menu outside edit mode (right-click, ⋯, "."). */
+    menu?: RowAction[] | null;
   } = $props();
 </script>
 
@@ -27,6 +31,17 @@
     </div>
     <div class="pointer-events-none select-none">{@render children()}</div>
   </div>
+{:else if menu}
+  <ActionMenu actions={menu} label="More for {name}">
+    {#snippet children({ props, more })}
+      <div {...props} class="group relative">
+        {@render inner()}
+        {@render more("absolute right-2 top-2 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100")}
+      </div>
+    {/snippet}
+  </ActionMenu>
 {:else}
   {@render children()}
 {/if}
+
+{#snippet inner()}{@render children()}{/snippet}

@@ -5,7 +5,7 @@
   import { onSampleActivity } from "$lib/features/guide/sampleActivity";
   import { practice } from "$lib/features/guide/sandbox.svelte";
   import CoachStart from "$lib/features/onboarding/CoachStart.svelte";
-  import { onMount } from "svelte";
+  import { onMount, untrack } from "svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import * as Alert from "$lib/components/ui/alert";
@@ -18,6 +18,7 @@
   import { coachApi } from "@logit/core/api/coachApi";
   import { coachPaymentsApi } from "@logit/core/api/coachPaymentsApi";
   import { needsCoach, type PaymentClient } from "@logit/core/domain/coachPayments";
+  import { cardActions } from "$lib/features/commands/commands.svelte";
   import { PAGE_CARDS, STANDARD_LAYOUT, pageCards, type PageCard, type PageId } from "@logit/core/domain/coachMonth";
   import { parseCardPackCardId } from "@logit/core/plugins/cardPack";
   import CardPackCard from "$lib/features/coaching/today/CardPackCard.svelte";
@@ -94,6 +95,8 @@
   let dragFrom = $state<number | null>(null);
   const cards = $derived(editing ? draft : pageCards(view === "today" ? layout?.today : layout?.month, view));
   $effect(() => { void view; editing = false; });
+  // ?edit=1 (⌘K "Edit Today's cards").
+  $effect(() => { if (layout && page.url.searchParams.get("edit") === "1") untrack(() => { startEditing(); go({ edit: null }); }); });
   function startEditing() { draft = [...cards]; editing = true; }
   function move(i: number, by: number) {
     const j = i + by;
@@ -119,6 +122,22 @@
   };
   $effect(() => { if (cards.some((c) => c.startsWith("plugin:"))) void cardPacks.load(); });
   const monday = new Date().getDay() === 1;
+
+  // Canvas X4: a card's menu outside edit mode. Moving and removing save straight away.
+  async function saveCards(next: PageCard[]) {
+    try { layout = await coachApi.saveCards({ ...(layout ?? {}), [view]: next }); } catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't save your cards"); }
+  }
+  function cardMenu(id: PageCard, i: number) {
+    const all = cards;
+    return cardActions({
+      fixed: id === "needs",
+      first: view === "today" ? i <= 1 : i === 0,
+      last: i === all.length - 1,
+      move: (by) => { const j = i + by; if (j < (view === "today" ? 1 : 0) || j >= all.length) return; const next = [...all]; [next[i], next[j]] = [next[j]!, next[i]!]; void saveCards(next); },
+      remove: () => { const before = [...all]; void saveCards(all.filter((x) => x !== id)).then(() => toast.success(`Removed ${nameOf(id)}`, { action: { label: "Undo", onClick: () => void saveCards(before) } })); },
+      about: () => { const pack = parseCardPackCardId(id); toast(pack ? `${nameOf(id)}: from a card pack you installed. It sees your roster only (first names, months with you, sessions and program week for clients who share workouts, check-ins waiting).` : `${nameOf(id)}: ${PAGE_CARDS.find((c) => c.id === id)?.hint ?? ""}. Made by LogIt, from what your clients share.`); },
+    });
+  }
 </script>
 
 <div class="flex flex-col gap-4">
@@ -170,7 +189,7 @@
 {#snippet frame(i: number)}
   {@const id = cards[i]}
   {#if id}
-    <CardFrame {editing} name={nameOf(id)} fixed={id === "needs"} first={view === "today" ? i <= 1 : i === 0} last={i === cards.length - 1}
+    <CardFrame {editing} menu={editing ? null : cardMenu(id, i)} name={nameOf(id)} fixed={id === "needs"} first={view === "today" ? i <= 1 : i === 0} last={i === cards.length - 1}
       onmove={(by) => move(i, by)} onremove={() => (draft = draft.filter((x) => x !== id))}
       ondragstart={() => (dragFrom = i)} ondragover={() => { if (dragFrom !== null && dragFrom !== i && !(view === "today" && (i === 0 || dragFrom === 0))) { const next = [...draft]; const [c] = next.splice(dragFrom, 1); next.splice(i, 0, c!); draft = next; dragFrom = i; } }}>
       {@render card(id)}

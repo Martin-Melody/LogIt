@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ClientSummary } from "$lib/features/coaching/coachingData";
 import type { PersonRow } from "$lib/features/admin/adminApi";
-import { actionListProblems, clientActions, isMenuKey, personActions, requestActions, type RowAction } from "./commands.svelte";
+import { actionListProblems, cardActions, checkinActions, conversationActions, needsActions, clientActions, isMenuKey, personActions, requestActions, type RowAction } from "./commands.svelte";
 import type { RequestOffer } from "@logit/core/domain/coachRequest";
 
 const noop = { offer: () => {}, waitlist: () => {}, notAFit: () => {}, withdrawOffer: () => {}, reopen: () => {} };
@@ -29,6 +29,13 @@ const person = (over: Partial<PersonRow> = {}): PersonRow => ({
 describe("every action list follows the menu rules (canvas X4)", () => {
   const lists: [string, RowAction[]][] = [
     ["client", clientActions(client())],
+    ["client conversation", conversationActions({ kind: "client", name: "Dara Kelly", clientId: "c", relationshipId: "r" })],
+    ["direct message", conversationActions({ kind: "dm", name: "Ava", username: "ava", threadId: "t" })],
+    ["request in Messages", conversationActions({ kind: "request", name: "Niamh", relationshipId: "r", stage: "asked" })],
+    ["needs you", needsActions({ name: "Dara Kelly", clientId: "c", relationshipId: "r", openHref: "/x" })],
+    ["check-in", checkinActions({ name: "Dara", relationshipId: "r", open: () => {}, copy: () => {}, markReviewed: () => {} })],
+    ["card", cardActions({ first: true, last: false, move: () => {}, remove: () => {}, about: () => {} })],
+    ["needs you card", cardActions({ first: true, last: true, move: () => {}, remove: () => {}, about: () => {}, fixed: true })],
     ["client sharing nothing", clientActions(client({ sharing: { workouts: false, nutrition: false, bodyweight: false, habits: false, checkins: false } }))],
     ["client with no check-in form", clientActions(client({ scheduleCount: 0 }))],
     ["sample client", clientActions(client({ isSample: true }))],

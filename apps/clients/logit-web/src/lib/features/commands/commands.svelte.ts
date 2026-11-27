@@ -36,10 +36,15 @@ export function clientActions(c: ClientSummary): RowAction[] {
       href: review ? `/coaching/checkins?id=${encodeURIComponent(review.id)}&client=${c.id}` : `${page}?tab=checkins`,
       disabled: review ? undefined : !c.sharing.checkins ? "Not shared" : c.scheduleCount ? "Nothing to review" : "No check-in form",
     },
+    // Canvas X4: the rest of a client's list.
+    { id: "send-form", label: "Send a form…", href: `${page}?tab=checkins&send=1`, disabled: c.sharing.checkins ? undefined : "Not shared" },
+    { id: "change-package", label: "Change package…", href: `${page}?change=1`, disabled: c.isSample ? "A sample client" : undefined },
+    { id: "cards", label: "Cards on their Overview…", href: `${page}?cards=1` },
     // Canvas V2: a sample can be answered for, to try a reply or a conversation.
     ...(c.isSample ? [{ id: "answer-as", label: `Answer as ${c.name}…`, href: `${page}?answer=1` }] : []),
-    // Canvas E1: last, in red.
-    { id: "end", label: "Pause or end coaching…", href: `${page}?end=1`, danger: true, separatorBefore: true, disabled: c.isSample ? "A sample client" : undefined },
+    // Canvas E1/X4: last, End in red.
+    { id: "pause", label: "Pause coaching…", href: `${page}?pause=1`, separatorBefore: true, disabled: c.isSample ? "A sample client" : c.pausedUntil ? "Already paused" : undefined },
+    { id: "end", label: "End coaching…", href: `${page}?end=1`, danger: true, separatorBefore: true, disabled: c.isSample ? "A sample client" : undefined },
   ];
 }
 
@@ -136,5 +141,51 @@ export function personActions(p: PersonRow, meId: string | undefined): RowAction
       separatorBefore: true,
     },
     { id: "delete", label: "Delete account…", href: `${page}&do=delete`, danger: true, separatorBefore: true },
+  ];
+}
+
+/** A conversation in Coaching › Messages (canvas W2, X4): a client's, a direct message, or a request. */
+export function conversationActions(r: { kind: "client" | "dm" | "request"; name: string; clientId?: string; username?: string; relationshipId?: string; threadId?: string; stage?: string }): RowAction[] {
+  if (r.kind === "request") return [
+    { id: "open", label: `Open ${r.name}'s request`, href: `/clients?tab=${r.stage === "waiting" ? "waiting" : "requests"}&r=${r.relationshipId}` },
+  ];
+  if (r.kind === "dm") return [
+    { id: "open", label: "Open", href: `/messages?dm=${r.threadId}` },
+    { id: "profile", label: `Open ${r.name}'s profile`, href: `/social/${r.username}` },
+  ];
+  return [
+    { id: "open", label: "Open", href: `/messages?c=${r.relationshipId}` },
+    { id: "client", label: "Open client page", href: `/clients/${r.clientId}` },
+    { id: "swap", label: "Swap an exercise in their program…", href: `/messages?c=${r.relationshipId}&swap=1`, separatorBefore: true },
+  ];
+}
+
+/** A "Needs you" item on Today (canvas T2, X4). */
+export function needsActions(n: { name: string; clientId?: string; relationshipId?: string; openHref: string }): RowAction[] {
+  return [
+    { id: "open", label: "Open", href: n.openHref },
+    ...(n.clientId ? [{ id: "client", label: "Open client", href: `/clients/${n.clientId}` }] : []),
+    ...(n.relationshipId ? [{ id: "message", label: `Message ${n.name.split(" ")[0]}`, href: `/messages?c=${n.relationshipId}` }] : []),
+  ];
+}
+
+/** A check-in in the review queue (canvas K4, X4). */
+export function checkinActions(c: { name: string; relationshipId: string; open: () => void; copy: () => void; markReviewed?: () => void }): RowAction[] {
+  return [
+    { id: "review", label: "Review", run: c.open },
+    { id: "message", label: `Message ${c.name.split(" ")[0]}`, href: `/messages?c=${c.relationshipId}` },
+    { id: "copy", label: "Copy answers", run: c.copy },
+    ...(c.markReviewed ? [{ id: "reviewed", label: "Mark reviewed, no reply", run: c.markReviewed, separatorBefore: true }] : []),
+  ];
+}
+
+/** A card on Today, Your month or a client's Overview (canvas W13, X4). */
+export function cardActions(c: { first: boolean; last: boolean; move: (by: -1 | 1) => void; remove: () => void; about: () => void; fixed?: boolean }): RowAction[] {
+  if (c.fixed) return [{ id: "about", label: "About this card", run: c.about }];
+  return [
+    { id: "up", label: "Move up", run: () => c.move(-1), disabled: c.first ? "Already first" : undefined },
+    { id: "down", label: "Move down", run: () => c.move(1), disabled: c.last ? "Already last" : undefined },
+    { id: "remove", label: "Remove from page", run: c.remove },
+    { id: "about", label: "About this card", run: c.about, separatorBefore: true },
   ];
 }

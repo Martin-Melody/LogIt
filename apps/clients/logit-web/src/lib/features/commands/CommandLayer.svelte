@@ -278,6 +278,10 @@
             <Command.Shortcut class="tracking-normal">{coachBadges.checkins ? `${coachBadges.checkins} waiting` : "None waiting"}</Command.Shortcut>
           </Command.Item>
           <Command.Item value="Invite a client invite link" onSelect={() => go("/coaching/links")}><LinkIcon class="text-muted-foreground" />Invite a client</Command.Item>
+          <!-- Added with the coaching overhaul (canvas W5, W10, W13, X4). -->
+          <Command.Item value="Your month income clients wins" onSelect={() => go("/coaching?view=month")}>Your month</Command.Item>
+          <Command.Item value="Edit cards Today arrange" onSelect={() => go("/coaching?edit=1")}>Edit Today's cards</Command.Item>
+          <Command.Item value="Saved replies snippets" onSelect={() => go("/messages?saved=1")}>Saved replies</Command.Item>
           <Command.Item value="Set away holiday out of office back on" onSelect={() => { commands.palette = false; void coachAway.load().then(() => (coachAway.dialogOpen = true)); }}>
             <PlaneIcon class="text-muted-foreground" />{coachAway.value ? "Away…" : "Set away…"}
           </Command.Item>
@@ -412,6 +416,16 @@
         <dt class="mt-2 text-[11px] tracking-wider text-muted-foreground uppercase">On a row with ⋯</dt>
         <div class="flex justify-between"><dd>Its menu</dd><span class="text-muted-foreground">Right-click</span></div>
         <div class="flex justify-between"><dd>Its menu, from the keyboard</dd><span class="flex gap-1"><Kbd>.</Kbd><span class="text-muted-foreground">or</span><Kbd>Shift</Kbd><Kbd>F10</Kbd></span></div>
+        {#if ws === "coaching"}
+          <!-- Canvas X3. -->
+          <dt class="mt-2 text-[11px] tracking-wider text-muted-foreground uppercase">Reviewing check-ins</dt>
+          <div class="flex justify-between"><dd>Send reply, go to next</dd><span class="flex gap-1"><Kbd>{modKey}</Kbd><Kbd>Enter</Kbd></span></div>
+          <div class="flex justify-between"><dd>Next / previous check-in</dd><span class="flex gap-1"><Kbd>J</Kbd><Kbd>K</Kbd></span></div>
+          <div class="flex justify-between"><dd>Jump to the reply box</dd><Kbd>R</Kbd></div>
+          <dt class="mt-2 text-[11px] tracking-wider text-muted-foreground uppercase">Messages</dt>
+          <div class="flex justify-between"><dd>A saved reply</dd><Kbd>/</Kbd></div>
+          <div class="flex justify-between"><dd>New line</dd><span class="flex gap-1"><Kbd>Shift</Kbd><Kbd>Enter</Kbd></span></div>
+        {/if}
       </dl>
       <dl class="flex flex-col gap-2">
         <dt class="text-[11px] tracking-wider text-muted-foreground uppercase">Go to</dt>

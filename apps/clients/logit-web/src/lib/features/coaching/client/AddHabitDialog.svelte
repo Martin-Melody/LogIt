@@ -14,7 +14,11 @@
   import { getWebCoachHabitRepo } from "$lib/deps";
   import { practice } from "$lib/features/guide/sandbox.svelte";
 
-  let { open = $bindable(false), clientId, onsaved }: { open?: boolean; clientId: string; onsaved: () => void } = $props();
+  let { open = $bindable(false), clientId, onsaved, preset = null }: {
+    open?: boolean; clientId: string; onsaved: () => void;
+    /** Give a habit you already gave to other clients too (canvas X4). */
+    preset?: { name: string; cadence: HabitCadence } | null;
+  } = $props();
 
   type Person = { id: string; username: string; name: string };
   let people = $state<Person[]>([]);
@@ -31,7 +35,10 @@
 
   $effect(() => {
     if (!open) return;
-    name = ""; how = "daily"; times = 3; weekdays = ["1", "3", "5"]; to = [clientId]; error = null;
+    name = preset?.name ?? ""; how = preset ? (preset.cadence.kind === "weekly" ? "weekly" : preset.cadence.kind === "days" ? "days" : "daily") : "daily";
+    times = preset?.cadence.kind === "weekly" ? preset.cadence.timesPerWeek : 3;
+    weekdays = preset?.cadence.kind === "days" ? preset.cadence.days.map(String) : ["1", "3", "5"];
+    to = preset ? [] : [clientId]; error = null;
     void coachApi.getRoster().then((r) => {
       people = r.filter((x) => practice.shows(x.client.isSample)).map((x) => ({ id: x.client.id, username: x.client.username, name: x.client.displayName || x.client.username }));
     }).catch(() => {});

@@ -1,6 +1,8 @@
 <!-- Today's Needs you (canvas T2, W1): what needs you, grouped by what you'll do. Always first
      on Today. -->
 <script lang="ts">
+  import ActionMenu from "$lib/features/commands/ActionMenu.svelte";
+  import { needsActions } from "$lib/features/commands/commands.svelte";
   import { toast } from "$lib/components/ui/sonner";
   import { Button } from "$lib/components/ui/button";
   import { coachAway } from "../away.svelte";
@@ -16,6 +18,18 @@
   const review = $derived(items.filter((i) => i.kind === "checkin").sort((a, b) => a.at - b.at));
   const reply = $derived(items.filter((i) => i.kind === "message" || i.kind === "waiting" || i.kind === "missed"));
   const decide = $derived(items.filter((i) => i.kind === "request" || i.kind === "ending" || i.kind === "lasting-swap"));
+
+  /** Where a Needs you item's main button goes (its menu's Open). */
+  function openHrefOf(i: NeedsYou): string {
+    switch (i.kind) {
+      case "checkin": return `/coaching/checkins?id=${encodeURIComponent(i.item.id)}&client=${i.client.id}`;
+      case "lasting-swap": return `/clients/${i.client.id}?tab=training`;
+      case "message": case "waiting": return `/messages?c=${i.client.relationshipId}`;
+      case "missed": return `/messages?c=${i.client.relationshipId}&draft=${encodeURIComponent(NUDGE)}`;
+      case "ending": return `/clients/${i.client.id}/next-block`;
+      case "request": return `/clients?tab=requests&r=${i.request.relationshipId}`;
+    }
+  }
 
   const NUDGE = "Hi! Just a reminder your check-in is waiting. Fill it in when you get a minute.";
 
@@ -116,7 +130,9 @@
 
 {#snippet row(i: NeedsYou)}
   {@const who = i.kind === "request" ? (i.request.client.displayName || i.request.client.username) : i.client.name}
-  <div class="flex items-center gap-3 border-t border-border py-3">
+  <ActionMenu actions={needsActions({ name: who, clientId: i.kind === "request" ? undefined : i.client.id, relationshipId: i.kind === "request" ? undefined : i.client.relationshipId, openHref: openHrefOf(i) })} label="More for {who}">
+  {#snippet children({ props, more })}
+  <div {...props} class="group flex items-center gap-3 border-t border-border py-3">
     <Avatar name={who} url={i.kind === "request" ? i.request.client.avatarUrl : i.client.avatarUrl} />
     <span class="flex min-w-0 flex-1 flex-col">
       <span class="text-[13px] font-medium">{title(i)}</span>
@@ -135,5 +151,8 @@
     {:else}
       <a href="/clients?tab=requests&r={i.request.relationshipId}" class="h-8 shrink-0 rounded-[9px] bg-primary px-3 text-xs font-semibold leading-8 text-primary-foreground">{i.request.stage === "offered" ? "Offer again" : "Answer"}</a>
     {/if}
+    {@render more("opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100")}
   </div>
+  {/snippet}
+  </ActionMenu>
 {/snippet}

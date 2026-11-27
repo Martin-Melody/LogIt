@@ -1,4 +1,8 @@
 <script lang="ts">
+  import ActionMenu from "$lib/features/commands/ActionMenu.svelte";
+  import { checkinActions, isTyping } from "$lib/features/commands/commands.svelte";
+  import { questionsFor, type CheckinSchedule } from "@logit/core/domain/Checkin";
+  import { answerText } from "@logit/core/domain/coachCards";
   import ClientHoverCard from "$lib/features/coaching/ClientHoverCard.svelte";
   import * as Tabs from "$lib/components/ui/tabs/index.js";
   import { guideSignal } from "$lib/features/guide/signal";
@@ -107,7 +111,8 @@
     void goto(u, { replaceState: true, noScroll: true, keepFocus: true });
   }
 
-  async function markReviewed(sendReply: boolean, reviewedNow = true) {
+  async function markReviewed(sendReply: boolean, reviewedNow = true, item: CheckinInboxItem | null = selected) {
+    const selected = item;
     if (!selected || !overview || busy) return;
     busy = true;
     try {
@@ -142,6 +147,26 @@
     }
   }
 
+  // Canvas X4: Copy answers (as plain text, prompt then answer).
+  function copyAnswers(i: CheckinInboxItem, schedule: CheckinSchedule | null) {
+    const sub = parseSubmission(i);
+    if (!sub) return;
+    const text = questionsFor(sub, schedule).filter((q) => q.type !== "heading").map((q) => `${q.prompt}\n${answerText(q, sub.answers.find((a) => a.questionId === q.id))}`).join("\n\n");
+    void navigator.clipboard.writeText(text).then(() => toast.success("Answers copied"), () => toast.error("Couldn't copy"));
+  }
+
+  // Canvas X3: J / K for the next and previous check-in, R for the reply box.
+  function listKey(e: KeyboardEvent) {
+    if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey || isTyping(e) || document.querySelector('[role="dialog"], [role="menu"]')) return;
+    if (filter === "missed" || filter === "forms") return;
+    const k = e.key.toLowerCase();
+    if (k === "r") { e.preventDefault(); document.getElementById("reply")?.focus(); return; }
+    if (k !== "j" && k !== "k") return;
+    const at = selected ? list.indexOf(selected) : -1;
+    const next = list[Math.min(list.length - 1, Math.max(0, at + (k === "j" ? 1 : -1)))];
+    if (next && next !== selected) { e.preventDefault(); select(next); }
+  }
+
   // Canvas K4: Ctrl/⌘ Enter sends and goes on to the next one.
   function replyKey(e: KeyboardEvent) {
     if (picker?.key(e)) return;
@@ -153,6 +178,8 @@
 
   const NUDGE = "Hi! Just a reminder your check-in is waiting. Fill it in when you get a minute.";
 </script>
+
+<svelte:window onkeydown={listKey} />
 
 <div class="flex flex-col gap-4">
   <header class="flex flex-wrap items-end justify-between gap-3">
@@ -197,8 +224,11 @@
         {#each list as i (i.clientUserId + i.id)}
           {@const c = clientOf(i.clientUserId)}
           {@const s = overview.schedules.find((x) => x.schedule.id === i.scheduleId)?.schedule}
+          <ActionMenu actions={checkinActions({ name: c?.name ?? "them", relationshipId: i.relationshipId, open: () => select(i), copy: () => copyAnswers(i, s ?? null), markReviewed: i.reviewedAtMs == null ? () => void markReviewed(false, true, i) : undefined })} label="More for {c?.name ?? 'this check-in'}">
+          {#snippet children({ props, more })}
+          <div {...props} class="group flex items-center rounded-lg {selected === i ? 'bg-muted ring-1 ring-border' : 'hover:bg-muted/50'}">
           <button type="button" onclick={() => select(i)} aria-current={selected === i ? "true" : undefined}
-            class="flex items-center gap-2.5 rounded-lg p-3 text-left {selected === i ? 'bg-muted ring-1 ring-border' : 'hover:bg-muted/50'}">
+            class="flex min-w-0 flex-1 items-center gap-2.5 p-3 text-left">
             <Avatar name={c?.name ?? "?"} url={c?.avatarUrl ?? null} size={30} />
             <span class="flex min-w-0 flex-1 flex-col gap-0.5">
               <span class="text-[13px] font-semibold">{c?.name ?? "Client"}</span>
@@ -206,6 +236,10 @@
             </span>
             {#if i.reviewedAtMs == null}<span class="rounded-full bg-warning/12 px-2 py-0.5 text-[11px] font-semibold text-warning">New</span>{/if}
           </button>
+          {@render more("mr-1 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100")}
+          </div>
+          {/snippet}
+          </ActionMenu>
         {:else}
           <p class="p-3 text-[13px] text-muted-foreground">{filter === "reviewed" ? "Nothing reviewed in the last 4 months." : "All caught up."}</p>
         {/each}

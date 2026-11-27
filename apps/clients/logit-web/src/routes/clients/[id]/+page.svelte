@@ -68,7 +68,7 @@
   // "Assign program" from another tab: the Programs tab opens its dialog when it mounts.
   let assignOnOpen = $state(false);
   // Canvas E1: "Pause or end coaching…" (?end=1 from the clients list or ⌘K opens it).
-  let ending = $state(page.url.searchParams.get("end") === "1");
+  let ending = $state(page.url.searchParams.get("end") === "1" || page.url.searchParams.get("pause") === "1");
   // Canvas V2: "Answer as Niamh…" on a sample client (?answer=1 from the list's menu or ⌘K).
   let answering = $state(page.url.searchParams.get("answer") === "1");
 
@@ -134,7 +134,10 @@
   });
 
   const firstOf = (n: string) => n.split(" ")[0] || n;
-  let endStart = $state<"pause" | "end">("pause");
+  // svelte-ignore state_referenced_locally
+  let endStart = $state<"pause" | "end">(page.url.searchParams.get("end") === "1" ? "end" : "pause");
+  // ?change=1 (⌘K / a client row's menu): Change package…
+  $effect(() => { if (c && page.url.searchParams.get("change") === "1") untrack(() => { void openChangePackage(); const u = new URL(page.url); u.searchParams.delete("change"); void goto(u, { replaceState: true, noScroll: true, keepFocus: true }); }); });
   let showAnswers = $state(false);
 
   // Canvas K3: a Yes to a health question on a form not yet reviewed.
