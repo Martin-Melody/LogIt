@@ -24,6 +24,11 @@
   import PluginBlockDialog from "./PluginBlockDialog.svelte";
   import type { RowAction } from "$lib/features/commands/commands.svelte";
   import NamePicker from "$lib/features/plan/NamePicker.svelte";
+  import AddToDayDialog, { type AddPick } from "./AddToDayDialog.svelte";
+  import GripVerticalIcon from "@lucide/svelte/icons/grip-vertical";
+  import { flip } from "svelte/animate";
+  import { slide } from "svelte/transition";
+  import { createReorder, SLIDE_MS } from "$lib/reorder.svelte";
   import { loadExerciseIndex, type ExerciseIndex } from "$lib/features/plan/exerciseIndex";
   import { guideSignal } from "$lib/features/guide/signal";
   import { getWebCoachProgramRepo } from "$lib/deps";
@@ -225,7 +230,20 @@
     return s ? ACTIVITIES.filter((a) => a.toLowerCase().includes(s)).map((name) => ({ name })) : [];
   };
 
-  let adding = $state<null | "exercise" | "superset" | "cardio" | "mobility">(null);
+  // One Add dialog for the day (canvas PB4).
+  let addOpen = $state(false);
+  function addPicks(picks: AddPick[], as: "one" | "group" | "circuit") {
+    if (!day || !picks.length) return;
+    if (as === "circuit") {
+      putBlock(null, { name: "Circuit", rounds: 3, roundRestSec: 90, members: picks.map((pk) => ({ id: createId("cm"), exerciseName: pk.name, exerciseId: index?.get(pk.name)?.id, ...(pk.kind === "strength" ? { reps: 10 } : { durationSec: 40 }) })) }, "circuit");
+      return;
+    }
+    picks.forEach((pk, i) => {
+      if (pk.kind === "strength") addExercise(pk.name, as === "group" && i > 0);
+      else if (pk.kind === "cardio") addCardio(pk.name);
+      else addMobility(pk.name);
+    });
+  }
 
   function addExercise(name: string, superset: boolean) {
     if (!day) return;
@@ -239,7 +257,6 @@
       blockId = nb.id;
       return next;
     });
-    adding = null;
   }
 
   function addCardio(name: string) {
@@ -250,7 +267,6 @@
       blockId = templateOf(next).days.find((x) => x.id === d)!.blocks.at(-1)!.id;
       return next;
     });
-    adding = null;
   }
 
   function addMobility(name: string) {
@@ -266,7 +282,6 @@
       }],
     })));
     blockId = id;
-    adding = null;
   }
 
   // ── Circuits and plugin blocks (canvas Q4) ──
@@ -510,6 +525,32 @@
     return "";
   }
   const labels = $derived(day ? P.supersetLabels(day) : new Map<string, string>());
+  // Drag to reorder (canvas PB1): a superset moves as one.
+  type Run = { key: string; blocks: ProgramBlock[] };
+  const runs = $derived.by(() => {
+    const out: Run[] = [];
+    for (const b of blocks) {
+      const last = out.at(-1);
+      if (b.supersetGroup && last?.blocks[0]?.supersetGroup === b.supersetGroup) last.blocks.push(b);
+      else out.push({ key: b.supersetGroup ?? b.id, blocks: [b] });
+    }
+    return out;
+  });
+  const runOrder = createReorder<string>("y");
+  function orderRuns(keys: string[]) {
+    if (!day) return;
+    const byKey = new Map(runs.map((x) => [x.key, x]));
+    const ids = keys.flatMap((k) => byKey.get(k)?.blocks.map((b) => b.id) ?? []);
+    const d = day.id;
+    edit((p) => mapTemplateDay(p, d, (dd) => ({ ...dd, blocks: dd.blocks.map((b) => ({ ...b, orderIndex: ids.indexOf(b.id) })) })));
+  }
+  function moveRun(from: number, to: number) {
+    if (to < 0 || to >= runs.length) return;
+    const keys = runs.map((x) => x.key);
+    const [k] = keys.splice(from, 1);
+    keys.splice(to, 0, k!);
+    orderRuns(keys);
+  }
   const sameMuscle = (b: ProgramStrength): string[] => {
     const main = index?.get(b.exerciseName)?.primaryMuscles[0];
     if (!main || !index) return [];
@@ -632,58 +673,44 @@
             class="h-8 rounded-full border px-3 text-xs transition-colors {day.weekday == null ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:text-foreground'}">Any day</button>
         </div>
 
-        <ul class="flex flex-col gap-1.5" aria-label="Blocks">
-          {#each blocks as b, i (b.id)}
-            {@const grouped = b.supersetGroup && labels.get(b.id)}
-            <li>
-              <ActionMenu actions={blockActions(b, i)} label="More for {blockMain(b)}">
-                {#snippet children({ props, more })}
-                  <div {...props} class="flex items-center gap-2 rounded-[9px] border px-3 py-2 transition-colors {b.id === blockId ? 'border-primary/60 bg-primary/5' : 'border-border hover:bg-muted/40'} {grouped ? 'ml-3 border-l-4 border-l-muted-foreground/40' : ''}">
-                    {#if grouped}<span class="rounded-[5px] bg-muted-foreground px-1.5 text-[11px] font-bold text-background">{labels.get(b.id)}</span>{/if}
-                    <button type="button" onclick={() => (blockId = b.id)} class="flex min-w-0 flex-1 flex-col text-left">
-                      <span class="truncate text-[13px] font-semibold">{#if b.type !== "strength"}<span class="mr-1.5 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{b.type === "cardio" ? "Cardio" : b.type === "mobility" ? "Mobility" : b.type === "plugin" ? "Plugin" : b.type === "circuit" ? "Circuit" : ""}</span>{/if}{blockMain(b)}</span>
-                      <span class="truncate text-xs text-muted-foreground">{blockSub(b)}</span>
-                    </button>
-                    {@render more()}
-                  </div>
-                {/snippet}
-              </ActionMenu>
-            </li>
-          {:else}
-            <li class="rounded-[9px] border border-dashed border-border px-3 py-6 text-center text-[13px] text-muted-foreground">No exercises yet. Add the first one below.</li>
-          {/each}
-        </ul>
+        <ul class="flex flex-col gap-1.5" aria-label="Blocks" ondragenter={(e) => runOrder.allow(e)} ondragover={(e) => runOrder.allow(e)} ondrop={(e) => { const k = runOrder.drop(e); if (k) orderRuns(k); }}>
+          {#each runOrder.arrange(runs, (x) => x.key) as run, ri (run.key)}
+            <li animate:flip={{ duration: SLIDE_MS }} ondragover={(e) => runOrder.over(run.key, e)}
+              class="flex items-start gap-1 rounded-[10px] {runOrder.held === run.key ? 'bg-primary/10 outline-dashed outline-[1.5px] -outline-offset-2 outline-primary [&>*]:invisible' : ''}">
+              <button type="button" draggable="true" aria-label="Move {run.blocks.map(blockMain).join(' and ')} (arrow keys)"
+                ondragstart={(e) => runOrder.start(runs.map((x) => x.key), run.key, e, (e.currentTarget as HTMLElement).closest("li"))}
+                ondragend={() => runOrder.end()}
+                onkeydown={(e) => { if (e.key === "ArrowUp") { e.preventDefault(); moveRun(ri, ri - 1); } else if (e.key === "ArrowDown") { e.preventDefault(); moveRun(ri, ri + 1); } }}
+                class="mt-2 flex h-8 w-6 shrink-0 cursor-grab items-center justify-center rounded text-muted-foreground hover:text-foreground focus:outline-none focus:ring-1 focus:ring-ring">
+                <GripVerticalIcon class="size-4" />
+              </button>
+              <div class="flex min-w-0 flex-1 flex-col gap-1.5">
+                {#each run.blocks as b (b.id)}
+                  {@const i = blocks.indexOf(b)}
+                  {@const grouped = b.supersetGroup && labels.get(b.id)}
+                  {@const isOpen = b.id === blockId}
+                  <div class="rounded-[9px] border transition-colors {isOpen ? 'border-primary/60' : 'border-border'} {grouped ? 'border-l-4 border-l-muted-foreground/40' : ''}">
+                    <ActionMenu actions={blockActions(b, i)} label="More for {blockMain(b)}">
+                      {#snippet children({ props, more })}
+                        <div {...props} class="flex items-center gap-2 rounded-[9px] px-3 py-2 {isOpen ? 'bg-primary/5' : 'hover:bg-muted/40'}">
+                          {#if grouped}<span class="rounded-[5px] bg-muted-foreground px-1.5 text-[11px] font-bold text-background">{labels.get(b.id)}</span>{/if}
+                          <button type="button" aria-expanded={isOpen} onclick={() => (blockId = isOpen ? null : b.id)} class="flex min-w-0 flex-1 flex-col text-left">
+                            <span class="truncate text-[13px] font-semibold">{#if b.type !== "strength"}<span class="mr-1.5 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{b.type === "cardio" ? "Cardio" : b.type === "mobility" ? "Mobility" : b.type === "plugin" ? "Plugin" : b.type === "circuit" ? "Circuit" : ""}</span>{/if}{blockMain(b)}</span>
+                            <span class="truncate text-xs text-muted-foreground">{blockSub(b)}</span>
+                          </button>
+                          {@render more()}
+                        </div>
+                      {/snippet}
+                    </ActionMenu>
+                    {#if isOpen && block}
+                      <!-- The exercise opens in place (canvas PB1). -->
+                      <div transition:slide={{ duration: 180 }} class="flex flex-col gap-3.5 border-t border-border px-3.5 py-3.5" aria-label="{blockMain(block)} settings" role="group">
 
-        {#if adding}
-          <div class="rounded-[9px] border border-border p-2">
-            {#if adding === "exercise" || adding === "superset"}
-              <NamePicker id="add-exercise" label={adding === "superset" ? "Exercise in a superset with the last one" : "Exercise"} placeholder="Search exercises" autofocus search={searchExercises} onPick={(n) => addExercise(n, adding === "superset")} onCancel={() => (adding = null)} />
-            {:else if adding === "cardio"}
-              <NamePicker id="add-cardio" label="Cardio" placeholder="Walk, bike, rower…" autofocus search={searchActivities} onPick={addCardio} onCancel={() => (adding = null)} />
-            {:else}
-              <NamePicker id="add-mobility" label="Mobility drill" placeholder="Search drills" autofocus search={searchDrills} onPick={addMobility} onCancel={() => (adding = null)} />
-            {/if}
-          </div>
-        {/if}
-        <div class="flex flex-wrap gap-1.5">
-          <Button variant="outline" size="sm" onclick={() => (adding = "exercise")}>+ Exercise</Button>
-          <Button variant="outline" size="sm" disabled={!blocks.length} onclick={() => (adding = "superset")}>+ Superset</Button>
-          <Button variant="outline" size="sm" onclick={() => (adding = "cardio")}>+ Cardio</Button>
-          <Button variant="outline" size="sm" onclick={() => (adding = "mobility")}>+ Mobility</Button>
-          <Button variant="outline" size="sm" onclick={() => openCircuit(null)}>+ Circuit</Button>
-          <Button variant="outline" size="sm" onclick={() => openPluginBlock(null)}>+ From a plugin</Button>
-        </div>
-      </section>
-    {/if}
-
-    <!-- The selected block -->
-    {#if block}
-      <aside class="flex w-full flex-col gap-3.5 rounded-[10px] border border-border bg-card px-4 py-3.5 lg:w-80" aria-label="{blockMain(block)} settings">
         {#if block.type === "strength"}
           {@const b = block}
           {@const first = b.sets.find((s) => s.setType !== "warmup") ?? b.sets[0]}
           <div class="flex items-start justify-between gap-2">
-            <h3 class="text-[15px] font-bold">{b.exerciseName}</h3>
+            <span class="text-xs font-medium text-muted-foreground">Exercise</span>
             <Button variant="ghost" size="sm" onclick={() => (renaming = !renaming)}>Change</Button>
           </div>
           {#if renaming}
@@ -751,7 +778,6 @@
           {/key}
         {:else if block.type === "cardio"}
           {@const b = block}
-          <h3 class="text-[15px] font-bold">{b.activityName}</h3>
           {#key b.id}
             <div class="grid grid-cols-2 gap-3">
               <div class="flex flex-col gap-1.5"><Label for="cd-min">Minutes</Label><input id="cd-min" class={fieldCls} inputmode="numeric" value={b.targetDurationSec ? Math.round(b.targetDurationSec / 60) : ""} onchange={(e) => { const n = Number(e.currentTarget.value); patchBlock(b.id, { targetDurationSec: n > 0 ? Math.round(n * 60) : undefined } as Partial<ProgramBlock>); }} /></div>
@@ -760,7 +786,6 @@
           {/key}
         {:else if block.type === "mobility"}
           {@const b = block}
-          <h3 class="text-[15px] font-bold">{b.drillName}</h3>
           {#key b.id}
             <div class="grid grid-cols-2 gap-3">
               <div class="flex flex-col gap-1.5"><Label for="mo-sets">Sets</Label><input id="mo-sets" class={fieldCls} inputmode="numeric" value={b.sets ?? ""} onchange={(e) => { const n = Number(e.currentTarget.value); patchBlock(b.id, { sets: n > 0 ? Math.min(10, Math.round(n)) : undefined } as Partial<ProgramBlock>); }} /></div>
@@ -772,7 +797,7 @@
         {:else if block.type === "circuit"}
           {@const b = block}
           <div class="flex items-start justify-between gap-2">
-            <h3 class="text-[15px] font-bold">Circuit · {b.rounds} {b.rounds === 1 ? "round" : "rounds"}</h3>
+            <span class="text-xs font-medium text-muted-foreground">{b.rounds} {b.rounds === 1 ? "round" : "rounds"}</span>
             <Button variant="outline" size="sm" onclick={() => openCircuit(b)}>Edit…</Button>
           </div>
           <ul class="flex flex-col gap-1 text-[13px]">
@@ -782,13 +807,12 @@
         {:else if block.type === "plugin"}
           {@const b = block}
           <div class="flex items-start justify-between gap-2">
-            <h3 class="text-[15px] font-bold">{b.name}</h3>
+            <span class="text-xs font-medium text-muted-foreground">Plugin block</span>
             <Button variant="outline" size="sm" onclick={() => openPluginBlock(b)}>Edit…</Button>
           </div>
           <p class="text-[13px]">{blockSub(b)}</p>
           <p class="text-xs text-muted-foreground">From a plugin. Clients are asked to allow it; until they do, it's a note in their workout.</p>
         {:else}
-          <h3 class="text-[15px] font-bold">{blockMain(block)}</h3>
           <p class="text-xs text-muted-foreground">{blockSub(block)}</p>
         {/if}
         {#key block.id}
@@ -797,8 +821,22 @@
             <Textarea id="blk-note" rows={2} value={block.note ?? ""} placeholder={block.type === "strength" ? "Pause 1 second on the chest" : "Anything they should know"} onchange={(e) => { const v = e.currentTarget.value.trim() || undefined; patchBlock(block.id, { note: v } as Partial<ProgramBlock>); }} />
           </div>
         {/key}
-      </aside>
+      
+                      </div>
+                    {/if}
+                  </div>
+                {/each}
+              </div>
+            </li>
+          {:else}
+            <li class="rounded-[9px] border border-dashed border-border px-3 py-6 text-center text-[13px] text-muted-foreground">No exercises yet. Add the first one below.</li>
+          {/each}
+        </ul>
+        <Button variant="outline" class="self-start" onclick={() => (addOpen = true)}>+ Add to {day.name ?? "this day"}</Button>
+      </section>
     {/if}
+
+
   </div>
   {/if}
   <p class="text-xs text-muted-foreground">You're building one week; it applies to all {prog.weeks.length} {prog.weeks.length === 1 ? "week" : "weeks"}. Changes save as you go. Ctrl Z undoes.</p>
@@ -859,3 +897,5 @@
 <RulePickerDialog bind:open={picking} current={pickingFor ? (pickingFor.rule ?? null) : (prog.rule ?? null)} exercise={pickingFor?.exerciseName ?? null} onpick={pickRule} />
 
 <WeeksDialog bind:open={weeksOpen} program={prog} onset={(n, type) => edit((p) => setWeekType(p, n, type))} />
+
+<AddToDayDialog bind:open={addOpen} dayName={day?.name ?? "this day"} {searchExercises} {searchActivities} {searchDrills} onadd={addPicks} onplugin={() => openPluginBlock(null)} />

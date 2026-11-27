@@ -28,10 +28,11 @@ const PREPARE: Record<string, (page: Page) => Promise<void>> = {
     await p.locator('[data-guide="programs-library"] a, [data-guide="programs-assign"]').first().click();
     await p.waitForURL(/[?&]id=/);
     const editor = p.locator('[data-guide="program-editor"]');
-    await editor.getByRole("button", { name: "+ Exercise" }).click();
-    await p.locator("#add-exercise").fill("Bench");
-    await p.locator("#add-exercise").press("Enter");
-    await expect(editor.locator("ul li button.text-left").first()).toBeVisible();
+    await editor.getByRole("button", { name: /^\+ Add to/ }).click();
+    await p.locator("#add-to-day-search").fill("Bench");
+    await p.getByRole("dialog").getByRole("checkbox").first().click();
+    await p.getByRole("dialog").getByRole("button", { name: "Add", exact: true }).click();
+    await expect(editor.getByRole("list", { name: "Blocks" }).locator("button[aria-expanded]").first()).toBeVisible();
     await p.goto("/coaching/programs?tab=swaps");
     await expect(lists.getByRole("button", { name: "+ Swap" }).first()).toBeVisible();
   },

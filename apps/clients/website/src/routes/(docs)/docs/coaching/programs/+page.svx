@@ -22,6 +22,11 @@ copy, or your clients'.
 
 <HowTo id="studio.program" />
 
+Each day is a list you can drag (or move with the arrow keys on its grip); a superset moves as one.
+Click an exercise to open its settings right there. **+ Add to** the day opens one search over
+exercises, cardio and mobility drills: pick one and Add, or pick several and add them one after
+another, as a superset (two), tri-set (three) or giant set (four or more), or as a circuit.
+
 Changes save as you go, so leaving the page loses nothing. If the same program is open on another
 device, changes to different things come across by themselves with a note; only when both changed
 the same exercise does LogIt ask which to keep. Programs made before the builder whose weeks have
@@ -29,12 +34,12 @@ different exercises are still edited week by week.
 
 ## Circuits and blocks from plugins
 
-**+ Circuit** adds exercises done one after another, round after round: how many rounds, the
+**As a circuit** (in + Add) makes exercises done one after another, round after round: how many rounds, the
 rest between exercises and between rounds, and reps or a time for each exercise. It moves up the
 same every week, by a round every two weeks, or by each exercise's own rule. Clients run it
 with the circuit timer on their phone.
 
-**+ From a plugin** adds a block from a workout-block plugin you've added, like timed rounds of
+**Plugin blocks** (in + Add) adds a block from a workout-block plugin you've added, like timed rounds of
 rolling or hangboard hangs. Each plugin asks for its own settings, plus how many rounds (or
 hangs) it starts with. Find more in Plugins › Workout blocks.
 
@@ -56,7 +61,7 @@ their phone.
 A progression decides how the numbers move from week to week. Pick one for the whole program at
 the top of the builder, and a different one for any exercise from its settings. LogIt Adaptive,
 Linear, the 4-week wave and Fixed are built in. Programs › Progressions lists them all with what
-each does in a lighter week, and is where you make your own,
+each does in a deload week, and is where you make your own,
 with the same builder lifters have on the phone: where the weight comes from (strength estimate,
 last session or a wave), the rep range, reps left, the set layout, the step, what happens on a
 stall, the number of sets and whether to hold in a calorie deficit. "What it would do" shows the
@@ -89,11 +94,28 @@ under Showing to preview it with their lifts.
 - **Linear** adds a rep a week through the range, then the step (+2.5 kg) and back to the bottom.
 - **4-week wave** runs 5s, 3s and 5/3/1 off a training max, then a light week.
 - **Fixed** keeps the numbers as you typed them.
-- **Lighter weeks** have about half the sets, at the bottom of the range and the same weight.
+
+## Week types
+
+The Weeks strip in the builder shows each week's type; **Edit weeks** sets them. A week's change
+is on top of what the progression works out:
+
+- **Normal**: the progression decides.
+- **Intro**: an easier start, load −10%.
+- **Deload**: half the sets, same weights. The progression pauses, and the week after carries on
+  from the week before.
+- **Heavy**: load +5%, two fewer reps.
+- **Test**: the last set is as many as they can; it sets the next estimate.
+- **Find your weights**: they work up to the weights that fit; the progression pauses.
+- **Your own**: a name, and ± sets, ± load %, ± reps, a last set as many as they can, and whether
+  the progression pauses. Once made, it's offered for every week of the program.
+
+The client's Home shows the week's type with one line on what it means. A progression from a
+plugin is told the week's type; if it doesn't handle it, LogIt applies the change to its numbers.
 
 Double-click a cell, or press Enter, to type over it, like `62.5 × 7`; it stays put whatever the
 rule does, with a blue edge. Clear gives it back to the rule. Copy, paste and Fill to the end of
-the block (up to the next lighter week) are on the cell's menu.
+the block (up to the next week with a type) are on the cell's menu.
 
 ## Give it to a client
 
@@ -109,7 +131,7 @@ says so: without the plugin on their phone, that block shows as a note and the r
 works.
 
 On a client's Training tab, their program is at the top: which week they're in, its rule, the
-next lighter week, this week's days and what they've done, and any swaps. Their main lifts show
+next week with a type, this week's days and what they've done, and any swaps. Their main lifts show
 their best set this week, their strength estimate then and four weeks ago, and what the program
 plans next time. ⋯ on the program has Change program…, Plan the next block… and Stop the
 program.
