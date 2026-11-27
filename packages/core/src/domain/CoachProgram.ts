@@ -39,6 +39,9 @@ export type CoachProgram = {
   /** On a client's copy: the coach it came from, so the phone applies that coach's swap
    * rule. Set by the client's app from the assigned-programs pull, never by the coach. */
   coachId?: string;
+  /** Copied from LogIt's programs or a community pack (canvas PG1 "From LogIt: …"). The
+   * original never changes, so a pack update can't change a client's program. */
+  origin?: { kind: "logit" | "community"; id: string; name: string; author?: string };
   weeks: ProgramWeek[];
   archived: boolean;
   createdAtMs: number;
@@ -184,6 +187,8 @@ export type ProgramSet = {
 export function createCoachProgram(name: string = "New Program"): CoachProgram {
   const now = nowMs();
   return {
+    schemaVersion: 2,
+    rule: { kind: "fixed" },
     id: createId("cprog"),
     name: name.trim() || "New Program",
     lengthWeeks: 1,
@@ -266,6 +271,8 @@ export function updateCopyFromTemplate(copy: CoachProgram, template: CoachProgra
     name: template.name,
     description: template.description,
     lengthWeeks: template.lengthWeeks,
+    schemaVersion: template.schemaVersion,
+    rule: template.rule,
     weeks: template.weeks.map(cloneWeek),
   });
 }
@@ -857,3 +864,59 @@ export function blockLine(block: ProgramBlock | { type: string; id: string }): s
 }
 
 export const UPDATE_LINE = "Update LogIt to see this part";
+
+
+// ── Lists and previews (canvas PG1, PG5) ───────────────────────────────────────
+
+/** A LogIt or community program, copied into the coach's own programs: new ids, its origin
+ * kept for "From LogIt: …". The original stays as it was. */
+export function copyToMyPrograms(source: CoachProgram, origin: NonNullable<CoachProgram["origin"]>): CoachProgram {
+  const now = nowMs();
+  const { sourceProgramId: _s, startDateMs: _d, clientStartedAtMs: _c, coachId: _k, ...rest } = upgradeProgram(source);
+  return { ...rest, id: createId("cprog"), origin, archived: false, startMode: "manual", weeks: source.weeks.map(cloneWeek), createdAtMs: now, updatedAtMs: now };
+}
+
+/** "LogIt Adaptive", "Linear, +2.5 kg", "4-week wave", "Fixed", or the rule's own name. */
+export function ruleLabel(rule: ProgramRule | undefined): string {
+  switch (rule?.kind) {
+    case "adaptive": return "LogIt Adaptive";
+    case "linear": return rule.stepKg ? `Linear, +${rule.stepKg} kg` : "Linear";
+    case "wave": return "4-week wave";
+    case "own": case "plugin": return rule.name;
+    default: return "Fixed";
+  }
+}
+
+/** Most days any week has. */
+export function daysPerWeek(program: Pick<CoachProgram, "weeks">): number {
+  return Math.max(0, ...program.weeks.map((w) => w.days.length));
+}
+
+/** "8 weeks · 4 days a week · LogIt Adaptive · lighter weeks 4 and 8". */
+export function programSummary(program: CoachProgram): string {
+  const weeks = program.weeks.length;
+  const days = daysPerWeek(program);
+  const lighter = program.weeks.filter((w) => w.lighter).map((w) => w.weekNumber);
+  const bits = [`${weeks} ${weeks === 1 ? "week" : "weeks"}`, `${days} ${days === 1 ? "day" : "days"} a week`, ruleLabel(program.rule)];
+  if (lighter.length) bits.push(`lighter ${lighter.length === 1 ? "week" : "weeks"} ${lighter.length === 1 ? lighter[0] : `${lighter.slice(0, -1).join(", ")} and ${lighter.at(-1)}`}`);
+  return bits.join(" · ");
+}
+
+/** "3 × 6–8": working sets and their reps. */
+export function strengthSummary(block: ProgramStrength): string {
+  const work = [...block.sets].filter((s) => s.setType !== "warmup").sort((a, b) => a.orderIndex - b.orderIndex);
+  if (!work.length) return "";
+  const first = work[0]!;
+  const reps = first.setType === "amrap" ? "AMRAP"
+    : first.reps != null ? String(first.reps)
+    : first.repsMin != null ? (first.repsMax != null && first.repsMax !== first.repsMin ? `${first.repsMin}–${first.repsMax}` : String(first.repsMin))
+    : "";
+  return reps ? `${work.length} × ${reps}` : `${work.length} ${work.length === 1 ? "set" : "sets"}`;
+}
+
+/** A day in one line: "Bench Press 3 × 6–8 · Barbell Row 3 × 8–10 · …". */
+export function dayPreview(day: ProgramDay): string {
+  return [...day.blocks].sort((a, b) => a.orderIndex - b.orderIndex)
+    .map((b) => (b.type === "strength" ? [b.exerciseName, strengthSummary(b)].filter(Boolean).join(" ") : blockLine(b)))
+    .join(" · ");
+}

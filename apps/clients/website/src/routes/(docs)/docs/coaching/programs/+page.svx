@@ -10,6 +10,14 @@ title: Programs for clients
 
 <FeatureFacts id="coach-programs" />
 
+## Your programs, LogIt's and the community's
+
+Coaching › Programs has three lists. **Yours** are the programs you made or copied, each with
+how many clients have it. **LogIt** has LogIt's own programs, and **Community** has program packs
+from the plugin directory. Those two are read-only: Start from a program shows one with its days,
+and Copy to my programs makes it yours to change. A newer version of a pack never changes your
+copy, or your clients'.
+
 ## Build a program
 
 <HowTo id="studio.program" />
@@ -17,5 +25,16 @@ title: Programs for clients
 ## Give it to a client
 
 <HowTo id="studio.assign" />
+
+From a program, or from a client's page, Assign gives one or several clients their own copy. It
+starts when they tap Start on their phone, or on a date you choose. Someone already on a program
+can switch now, or start the new one the day theirs ends. A program with a block from a plugin
+says so: without the plugin on their phone, that block shows as a note and the rest of the day
+works.
+
+On a client's Training tab, their program is at the top: which week they're in, its rule, the
+next lighter week, this week's days and what they've done, and any swaps. Their main lifts show
+their best set this week, their strength estimate then and four weeks ago, and what the program
+plans next time. ⋯ on the program has Change program… and Stop the program.
 
 <CanCant ids={["coach-programs"]} />

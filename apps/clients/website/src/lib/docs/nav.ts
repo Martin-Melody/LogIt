@@ -26,6 +26,7 @@ export const docsNav: DocSection[] = [
       { title: "Trust & the sandbox", href: "/docs/plugins/trust" },
       { title: "Exercise packs", href: "/docs/plugins/exercise-packs" },
       { title: "Mobility packs", href: "/docs/plugins/mobility-packs" },
+      { title: "Program packs", href: "/docs/plugins/program-packs" },
       { title: "Progression algorithms", href: "/docs/plugins/progression" },
       { title: "Mobility progression", href: "/docs/plugins/mobility-progression" },
       { title: "Analytics", href: "/docs/plugins/analytics" },

@@ -193,6 +193,33 @@ export const analytics = {
         null,
         2,
       ) + "\n";
+    case "program-pack":
+      return JSON.stringify(
+        {
+          formatVersion: 1,
+          pluginId,
+          programs: [
+            {
+              name: "Upper / lower",
+              description: "4 days a week for lifters with a year or more behind them.",
+              rule: { kind: "adaptive" },
+              weeks: [
+                {
+                  id: "w1", weekNumber: 1,
+                  days: [
+                    { id: "d1", orderIndex: 0, name: "Upper A", blocks: [
+                      { type: "strength", id: "b1", orderIndex: 0, exerciseName: "Bench Press", sets: [1, 2, 3].map((n) => ({ id: `s${n}`, orderIndex: n - 1, setType: "normal", repsMin: 6, repsMax: 8 })) },
+                      { type: "strength", id: "b2", orderIndex: 1, exerciseName: "Barbell Row", sets: [1, 2, 3].map((n) => ({ id: `r${n}`, orderIndex: n - 1, setType: "normal", repsMin: 8, repsMax: 10 })) },
+                    ] },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        null,
+        2,
+      ) + "\n";
     default:
       return "";
   }
@@ -200,7 +227,7 @@ export const analytics = {
 
 /** File name the builder shows for the source. */
 export function sourceFileName(family: string): string {
-  return isCodeFamily(family) ? "bundle.js" : family === "mobility-pack" ? "drills.json" : "exercises.json";
+  return isCodeFamily(family) ? "bundle.js" : family === "mobility-pack" ? "drills.json" : family === "program-pack" ? "programs.json" : "exercises.json";
 }
 
 /** Turn a name into the last part of an id: "Weekly swings" -> "weekly-swings". */

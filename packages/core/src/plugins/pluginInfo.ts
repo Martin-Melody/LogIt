@@ -15,6 +15,7 @@ export const PLUGIN_FAMILIES = [
   "nutrition-analytics",
   "exercise-pack",
   "mobility-pack",
+  "program-pack",
 ] as const;
 export type BuildablePluginFamily = (typeof PLUGIN_FAMILIES)[number];
 
@@ -40,6 +41,7 @@ export const FAMILY_LABELS: Record<string, string> = {
   "nutrition-analytics": "Nutrition analytics",
   "exercise-pack": "Exercise pack",
   "mobility-pack": "Mobility pack",
+  "program-pack": "Program pack",
   "muscle-group-insight": "Muscle insight",
 };
 
@@ -140,6 +142,8 @@ export function pluginCan(family: string): string[] {
       return ["Add exercises to your library"];
     case "mobility-pack":
       return ["Add mobility drills to your library"];
+    case "program-pack":
+      return ["Offer programs coaches can copy into their own"];
     default:
       return [];
   }

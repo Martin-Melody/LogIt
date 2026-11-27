@@ -307,7 +307,7 @@ export const STUDIO_CHAPTERS: Chapter[] = [
       {
         id: "new", on: "web", route: "/coaching/programs", target: "programs-new", kind: "do", signal: "program.created",
         title: "Start a program",
-        body: "Open Coaching › Programs and choose New program. It starts with one week and one day.",
+        body: "Open Coaching › Programs and choose New program, or Start from a program to copy one of LogIt's (or a community pack's) and change it. A new one starts with one week and one day.",
       },
       {
         id: "editor", on: "web", route: "/coaching/programs", target: "program-editor", kind: "look",
@@ -334,12 +334,12 @@ export const STUDIO_CHAPTERS: Chapter[] = [
       {
         id: "assign", on: "web", route: "/coaching/programs", target: "programs-assign", kind: "do", signal: "program.assigned",
         title: "Assign to a client",
-        body: "Pick the program, choose Assign to client, pick who gets it (Niamh, if you're using the sample clients) and when it starts: a date you choose, or when they tap Start. They get their own copy.",
+        body: "Open the program and choose Assign…. Pick who gets it (Niamh, if you're using the sample clients; you can pick several) and when it starts: when they tap Start, or a date you choose. Someone already on a program can switch now or start this one when theirs ends. Each gets their own copy.",
       },
       {
         id: "library", on: "web", route: "/coaching/programs", target: "programs-library", kind: "look",
         title: "Who uses what",
-        body: "Your library shows who has each program. Edit the original and Save offers to update their copies too.",
+        body: "Back in Programs, each of yours shows how many clients have it. Edit the original and Save offers to update their copies too. LogIt's and the community's programs are read-only until you copy one.",
       },
       {
         id: "started", on: "web", route: "/clients", target: "clients-list", kind: "look",

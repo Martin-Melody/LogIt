@@ -371,7 +371,7 @@
           <span class="flex items-center gap-2 pb-1.5">
             <label for="b-upload" class="inline-flex h-7 cursor-pointer items-center rounded-[8px] border border-border px-2.5 text-xs">Upload files…</label>
             <input id="b-upload" type="file" multiple accept=".js,.mjs,.json" class="sr-only" onchange={upload} />
-            <a href="https://getlogit.app/docs/plugins/{family === 'widget' ? 'widgets' : family.includes('pack') ? (family === 'mobility-pack' ? 'mobility-packs' : 'exercise-packs') : family === 'analytics' ? 'analytics' : family.startsWith('nutrition') ? 'nutrition' : family === 'mobility-progression' ? 'mobility-progression' : 'progression'}" target="_blank" rel="noopener" class="inline-flex h-7 items-center rounded-[8px] border border-border px-2.5 text-xs">Docs</a>
+            <a href="https://getlogit.app/docs/plugins/{family === 'widget' ? 'widgets' : family.includes('pack') ? (family === 'mobility-pack' ? 'mobility-packs' : family === 'program-pack' ? 'program-packs' : 'exercise-packs') : family === 'analytics' ? 'analytics' : family.startsWith('nutrition') ? 'nutrition' : family === 'mobility-progression' ? 'mobility-progression' : 'progression'}" target="_blank" rel="noopener" class="inline-flex h-7 items-center rounded-[8px] border border-border px-2.5 text-xs">Docs</a>
           </span>
         </div>
         {#if view === "code"}

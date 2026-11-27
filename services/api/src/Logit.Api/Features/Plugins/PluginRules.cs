@@ -21,7 +21,7 @@ public static partial class PluginRules
     public static readonly string[] Families =
     [
         "widget", "progression-algorithm", "mobility-progression", "analytics",
-        "nutrition-algorithm", "nutrition-analytics", "exercise-pack", "mobility-pack",
+        "nutrition-algorithm", "nutrition-analytics", "exercise-pack", "mobility-pack", "program-pack",
     ];
 
     public static readonly HashSet<string> CodeFamilies =
@@ -113,6 +113,8 @@ public static partial class PluginRules
         "analytics" or "nutrition-analytics" => new JsonObject { ["family"] = family, ["analyticsId"] = pluginId },
         "exercise-pack" => new JsonObject { ["family"] = family, ["exercisePackId"] = pluginId },
         "mobility-pack" => new JsonObject { ["family"] = family, ["mobilityPackId"] = pluginId },
+        // Programs coaches copy into their own (canvas PG1/PG5 "Community").
+        "program-pack" => new JsonObject { ["family"] = family, ["programPackId"] = pluginId },
         _ => new JsonObject { ["family"] = family, ["algorithmId"] = pluginId },
     };
 

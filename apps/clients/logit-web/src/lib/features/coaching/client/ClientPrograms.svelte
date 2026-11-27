@@ -1,11 +1,8 @@
 <script lang="ts">
+  import AssignProgramDialog from "../programs/AssignProgramDialog.svelte";
   import * as Table from "$lib/components/ui/table/index.js";
-  import { DateField } from "$lib/components/ui/date-field/index.js";
-  import * as RadioGroup from "$lib/components/ui/radio-group";
   import OptionSelect from "$lib/components/option-select.svelte";
   import { onMount } from "svelte";
-  import { goto } from "$app/navigation";
-  import * as Dialog from "$lib/components/ui/dialog";
   import * as AlertDialog from "$lib/components/ui/alert-dialog";
   import { Skeleton } from "$lib/components/ui/skeleton";
   import { toast } from "$lib/components/ui/sonner";
@@ -14,12 +11,7 @@
   import { loadWebLibrary } from "$lib/features/library/libraryData";
   import {
     archiveCoachProgram,
-    copyProgramForClient,
-    createCoachProgram,
-    fromDateInputValue,
     getProgramStartMs,
-    startOfLocalDayMs,
-    toDateInputValue,
     type CoachProgram,
   } from "@logit/core/domain/CoachProgram";
   import type { WorkoutSession } from "@logit/core/domain/workout";
@@ -49,24 +41,12 @@
   // Assign dialog
   // svelte-ignore state_referenced_locally
   let assignOpen = $state(openAssign);
-  let pick = $state<string>("");
-  let startMode = $state<"date" | "manual">("date");
-  let startDate = $state(toDateInputValue(nextMonday()));
-  let assigning = $state(false);
-
-  function nextMonday(): number {
-    const d = new Date(startOfLocalDayMs());
-    d.setDate(d.getDate() + ((8 - d.getDay()) % 7 || 7));
-    return d.getTime();
-  }
-
   async function load() {
     try {
       const repo = getWebCoachProgramRepo();
       const [mine, templates] = await Promise.all([repo.listMyPrograms({ recipientId: clientId }), repo.listMyPrograms({ templates: true })]);
       copies = mine.map((m) => m.program).sort((a, b) => b.updatedAtMs - a.updatedAtMs);
       library = templates.map((m) => m.program).filter((p) => !p.archived).sort((a, b) => a.name.localeCompare(b.name));
-      if (!pick && library[0]) pick = library[0].id;
       error = null;
     } catch (e) {
       error = e instanceof Error ? e.message : "Couldn't load programs";
@@ -129,8 +109,6 @@
   const statuses = $derived(copies.map((p) => ({ p, s: programStatus(p) })));
   const current = $derived(statuses.filter((x) => !x.p.archived && x.s.state !== "finished"));
   const past = $derived(statuses.filter((x) => x.p.archived || x.s.state === "finished"));
-  // When the latest current program ends: a new one starting then follows straight on.
-  const lastEnd = $derived(Math.max(0, ...current.map((x) => x.s.endsAtMs ?? 0)));
 
   /** Sessions done in each program week, when workouts are shared. */
   function weekBars(p: CoachProgram, s: ProgramStatus): { done: number; planned: number; now: boolean }[] {
@@ -154,36 +132,6 @@
     return `Started ${start ? weekdayDate(start) : ""}${how} · week ${s.week} of ${s.totalWeeks}${ends}`;
   }
 
-  async function assign() {
-    assigning = true;
-    try {
-      const repo = getWebCoachProgramRepo();
-      const start = startMode === "manual"
-        ? ({ mode: "manual" } as const)
-        : ({ mode: "fixed-date", startDateMs: fromDateInputValue(startDate) ?? startOfLocalDayMs() } as const);
-      let program: CoachProgram;
-      if (pick === "__blank") {
-        program = createCoachProgram(`${name}'s program`);
-      } else {
-        const template = library.find((p) => p.id === pick);
-        if (!template) return;
-        program = copyProgramForClient(template, start);
-      }
-      await repo.saveProgram(program, username);
-      assignOpen = false;
-      if (pick === "__blank") {
-        await goto(`/clients/${clientId}/programs/${program.id}?u=${username}`);
-        return;
-      }
-      toast.success(`${program.name} assigned to ${name}`);
-      await load();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't assign");
-    } finally {
-      assigning = false;
-    }
-  }
-
   async function endProgram() {
     const p = ending;
     ending = null;
@@ -198,7 +146,6 @@
   }
 
   export function openAssignDialog() {
-    if (lastEnd) startDate = toDateInputValue(startOfLocalDayMs(lastEnd));
     assignOpen = true;
   }
 </script>
@@ -293,52 +240,7 @@
   </div>
 {/if}
 
-<Dialog.Root bind:open={assignOpen}>
-  <Dialog.Content class="max-h-[90svh] overflow-y-auto sm:max-w-[520px]">
-    <Dialog.Header>
-      <Dialog.Title>Assign a program to {name}</Dialog.Title>
-      <Dialog.Description>They get their own copy, which you can change for them without touching your library.</Dialog.Description>
-    </Dialog.Header>
-    <span id="cp-pick" class="text-xs font-medium text-muted-foreground">From your library</span>
-    <RadioGroup.Root bind:value={pick} aria-labelledby="cp-pick" class="flex flex-col gap-1.5">
-      {#each library as t (t.id)}
-        {@const now = current.some((x) => x.p.sourceProgramId === t.id)}
-        {@const before = !now && copies.some((c) => c.sourceProgramId === t.id)}
-        {@const d = t.weeks[0]?.days.length ?? 0}
-        <label class="flex cursor-pointer items-start gap-2.5 rounded-[9px] border px-3 py-2.5 text-[13px] {pick === t.id ? 'border-primary bg-muted' : 'border-border'}">
-          <RadioGroup.Item value={t.id} />
-          <span><span class="block font-semibold">{t.name}</span><span class="text-xs text-muted-foreground">{t.weeks.length} week{t.weeks.length === 1 ? "" : "s"} · {d} day{d === 1 ? "" : "s"}{now ? ` · ${name} is on this now` : before ? ` · ${name} has had this before` : ""}</span></span>
-        </label>
-      {:else}
-        <p class="text-[13px] text-muted-foreground">Your library is empty. <a href="/coaching/programs" class="text-primary hover:underline">Build a program</a> to reuse it, or start one just for {name}:</p>
-      {/each}
-      <label class="flex cursor-pointer items-start gap-2.5 rounded-[9px] border px-3 py-2.5 text-[13px] {pick === '__blank' ? 'border-primary bg-muted' : 'border-border'}">
-        <RadioGroup.Item value="__blank" />
-        <span><span class="block font-semibold">Start from scratch</span><span class="text-xs text-muted-foreground">A new program just for {name}</span></span>
-      </label>
-    </RadioGroup.Root>
-    {#if pick !== "__blank"}
-      <span id="cp-start" class="text-xs font-medium text-muted-foreground">Starts</span>
-      <RadioGroup.Root bind:value={startMode} aria-labelledby="cp-start" class="flex flex-col gap-1.5">
-        <label class="flex items-center gap-2.5 rounded-[9px] border px-3 py-2 text-[13px] {startMode === 'date' ? 'border-primary bg-muted' : 'border-border'}">
-          <RadioGroup.Item value="date" />
-          <span class="flex-1">On a date</span>
-          <DateField bind:value={startDate} aria-label="Start date" disabled={startMode !== "date"} class="h-8 w-auto text-[13px]" />
-        </label>
-        <label class="flex items-center gap-2.5 rounded-[9px] border px-3 py-2.5 text-[13px] {startMode === 'manual' ? 'border-primary bg-muted' : 'border-border'}">
-          <RadioGroup.Item value="manual" />
-          <span>When they tap Start on their phone</span>
-        </label>
-      </RadioGroup.Root>
-      {#if lastEnd}<p class="text-xs text-muted-foreground">Their current program ends {weekdayDate(lastEnd - DAY)}. Starting on {weekdayDate(lastEnd)} follows straight on.</p>{/if}
-      <p class="text-xs text-muted-foreground">Percent loads turn into kilos from {name}'s own lifts.</p>
-    {/if}
-    <Dialog.Footer>
-      <button type="button" onclick={() => (assignOpen = false)} class="h-9 rounded-[9px] border border-border px-3.5 text-[13px] hover:bg-muted">Cancel</button>
-      <button type="button" disabled={assigning || !pick} onclick={assign} class="h-9 rounded-[9px] bg-primary px-3.5 text-[13px] font-semibold text-primary-foreground disabled:opacity-50">{pick === "__blank" ? "Create" : "Assign"}</button>
-    </Dialog.Footer>
-  </Dialog.Content>
-</Dialog.Root>
+<AssignProgramDialog bind:open={assignOpen} clientIds={[clientId]} onassigned={load} />
 
 <AlertDialog.Root open={ending !== null} onOpenChange={(o) => { if (!o) ending = null; }}>
   <AlertDialog.Content>

@@ -1,3 +1,4 @@
+import { parseProgramPack } from "./programPack";
 import { parseExercisePack } from "./exercisePack";
 import { parseMobilityPack } from "./mobilityPack";
 import { FAMILY_ENTRY, isCodeFamily, isWidgetNeed } from "./pluginInfo";
@@ -169,8 +170,11 @@ function checkPack(family: string, pluginId: string, source: string): CheckResul
     const count =
       family === "mobility-pack"
         ? parseMobilityPack(raw, pluginId).drills.length
-        : parseExercisePack(raw, pluginId).exercises.length;
-    checks.push({ id: "pack", label: `${count} ${family === "mobility-pack" ? "drills" : "exercises"}, all readable`, ok: true });
+        : family === "program-pack"
+          ? parseProgramPack(raw, pluginId).programs.length
+          : parseExercisePack(raw, pluginId).exercises.length;
+    const what = family === "mobility-pack" ? "drills" : family === "program-pack" ? "programs" : "exercises";
+    checks.push({ id: "pack", label: `${count} ${what}, all readable`, ok: true });
   } catch (e) {
     checks.push({ id: "pack", label: "Every entry is readable", ok: false, detail: message(e) });
   }

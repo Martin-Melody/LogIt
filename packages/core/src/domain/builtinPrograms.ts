@@ -45,7 +45,8 @@ function buildProgram(id: string, name: string, description: string, days: DaySp
     }
   }
 
-  return { ...program, id, createdAtMs: 0, updatedAtMs: 0 };
+  // Each says to add weight once you reach the top of the range: linear, +2.5 kg.
+  return { ...program, id, rule: { kind: "linear", stepKg: 2.5 }, createdAtMs: 0, updatedAtMs: 0 };
 }
 
 export const BUILTIN_PROGRAM_IDS = [

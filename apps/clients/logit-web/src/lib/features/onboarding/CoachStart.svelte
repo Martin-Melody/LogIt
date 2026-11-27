@@ -146,7 +146,7 @@
         <span class="min-w-0 flex-[1_1_260px]"><b class="block text-sm font-semibold">A program to start from</b>
           <span class="text-[13px] text-muted-foreground">Start from one of LogIt's programs and change it, or build your own.</span></span>
         <span class="flex gap-2">
-          <Button size="sm" variant="outline" href="/coaching/programs">Browse programs</Button>
+          <Button size="sm" variant="outline" href="/coaching/programs?start=logit">Browse programs</Button>
           {#if !steps[2]}<Button size="sm" href="/coaching/programs?new=1">Build one</Button>{/if}
         </span>
       </li>

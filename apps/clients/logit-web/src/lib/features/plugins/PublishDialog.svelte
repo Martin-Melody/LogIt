@@ -89,6 +89,7 @@
       case "nutrition-analytics": return { family: plugin.family, analyticsId: id };
       case "exercise-pack": return { family: plugin.family, exercisePackId: id };
       case "mobility-pack": return { family: plugin.family, mobilityPackId: id };
+      case "program-pack": return { family: plugin.family, programPackId: id };
       default: return { family: plugin.family, algorithmId: id };
     }
   }
