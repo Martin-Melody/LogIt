@@ -194,7 +194,10 @@
     const ex = { id: data.exerciseId, name: data.exerciseName };
     void hasStartingLift(ex).then((has) => (fromBestLift = has)).catch(() => (fromBestLift = false));
   });
-  const firstEver = $derived(prevLoaded && prevSets === null && !fromBestLift);
+  // Planned from another lift (Phase 6.2: "From your deadlift 200 × 5"): not a blank first time;
+  // the plan and its reason show, and the first set checks it.
+  const fromEstimate = $derived(suggestion?.change?.kind === "first" && /^From your /.test(suggestion.change.text ?? ""));
+  const firstEver = $derived(prevLoaded && prevSets === null && !fromBestLift && !fromEstimate);
   const showFirstSetHint = $derived(firstEver && !data.sets.some((s) => s.completed));
   // A beginner's first barbell lift is planned on the empty bar (decision D3): say so plainly
   // instead of "pick a weight you could lift 8 times", which means nothing on day one.

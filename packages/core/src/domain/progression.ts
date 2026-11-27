@@ -90,6 +90,10 @@ export type ProgressionInput = {
   /** The lifter's current strength for this exercise: the best estimated 1RM from the last
    * few sessions (see LogIt Adaptive), with the set it came from. */
   strengthEstimate?: { kg: number; fromWeightKg: number; fromReps: number; performedAtMs: number };
+  /** Where this exercise's numbers come from and how sure they are (Phase 6.2): "logged" (their own
+   * sets), "typed" (a best lift they entered), "related" (worked out from another lift: a guess),
+   * or "none". Plugins read it to stay further from failure while it's a guess. */
+  estimate?: { kg: number | null; source: "logged" | "typed" | "related" | "none"; confidence: "sure" | "rough" | "guess"; basis?: string };
   /** This week's hard sets for the exercise's main muscle against that muscle's target
    * (Progress › Sets this week). */
   muscleWeek?: { muscle: MuscleGroup; done: number; lo: number; hi: number };
