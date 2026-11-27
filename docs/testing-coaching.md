@@ -13,8 +13,10 @@ went wrong under the line.
 | **Client** | a demo account (`ava_demo`; passwords in `~/.secrets/logit-lab-demo-accounts.txt`) | a second phone, or the web app in a private window |
 | **Sample clients** | Coaching › Practise on sample clients | the coach's web app, Practice view |
 
-- The lab has **no Stripe**. Offers use "No payment through LogIt"; paying, refunds and
-  receipts are checked separately once Stripe test keys are on the lab.
+- The lab runs Stripe in **test mode** (a `stripe-listen` container forwards payment events).
+  Pay with card `4242 4242 4242 4242`, any future date, any CVC; `4000 0000 0000 0341` attaches
+  and then fails on renewal. Connecting your Stripe account is your step (Stripe shows a captcha);
+  in test mode, use test data where Stripe offers it.
 - The phone shares the lab account, so whatever the web changes shows on the phone after a sync.
 - Everywhere: real buttons, everything animates, sheets swipe down, back goes to the previous
   screen, right-click or ⋯ on every row, ⌘K reaches every page. A screen that breaks one of
@@ -98,6 +100,16 @@ went wrong under the line.
 - [ ] End coaching → the client sees an ended card; Manage coaching on their side goes.
 - [ ] Client stops coaching from their side → the coach sees it in the thread.
 - [ ] Do **not** delete your own account on the lab; deleting with clients is covered by tests.
+
+## 9b. Payments, Stripe test mode (#143, #152, #156)
+
+- [ ] Coach: Payments → connect Stripe (test data) → make a package with a price.
+- [ ] Offer a spot with that package → client takes it → Stripe Checkout (test card) → back in
+      LogIt as a paying client; the coach gets "paid".
+- [ ] Payments › Clients: the client's plan, next payment, Manage.
+- [ ] Client: Manage coaching → update card / receipts open Stripe's page; Stop paying → runs
+      to the end of the paid period.
+- [ ] End coaching with a refund of the unused days → the refund shows in the client's receipts.
 
 ## 10. Plugins (#181, #182, #185)
 
