@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { Button } from "$lib/components/ui/button";
+  import CoachingSection from "@logit/ui/CoachingSection.svelte";
   import * as Tabs from "$lib/components/ui/tabs/index.js";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
@@ -192,6 +194,16 @@
         {/if}
       </div>
     </section>
+
+    {#if profile.coaching && !locked}
+      <!-- Canvas P1: the Coaching section, the same as on getlogit.app and the phone. -->
+      <section class="rounded-[10px] border border-border bg-card p-4">
+        <CoachingSection section={profile.coaching} name={profile.displayName}
+          askHref={profile.coaching.askCode && !profile.isSelf ? `/c/${profile.coaching.askCode}` : null}
+          mentionHref={(u) => `/social/${u}`} tagHref={(t) => `/social/tag/${encodeURIComponent(t)}`} />
+        {#if profile.isSelf}<Button variant="outline" size="sm" class="mt-3" href="/coaching/profile">Edit your coaching profile</Button>{/if}
+      </section>
+    {/if}
 
     {#if locked}
       <section class="flex flex-col items-center gap-2 rounded-[10px] border border-border bg-card px-5 py-12 text-center">

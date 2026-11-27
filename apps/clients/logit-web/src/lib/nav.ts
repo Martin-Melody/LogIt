@@ -25,6 +25,7 @@ import WalletIcon from "@lucide/svelte/icons/wallet";
 import { isCoachingPath } from "$lib/workspace";
 import { adminState } from "$lib/features/admin/adminState.svelte";
 import { coachBadges } from "$lib/features/coaching/badges.svelte";
+import IdCardIcon from "@lucide/svelte/icons/id-card";
 import { dmBadge, socialBadge } from "$lib/features/social/socialData.svelte";
 
 // The dashboard's pages, per workspace: the sidebar draws them, and ⌘K and the G-key
@@ -74,15 +75,18 @@ export const coachGroups: NavGroup[] = [
     items: [
       { label: "Today", href: "/coaching", icon: SunriseIcon, key: "T", badge: () => coachBadges.today },
       { label: "Clients", href: "/clients", icon: ContactIcon, key: "C" },
+      // Next to Clients: ordered by how often coaches use them (canvas N).
+      { label: "Messages", href: "/messages", icon: MessageSquareIcon, key: "M", badge: () => coachBadges.messages },
       { label: "Programs", href: "/coaching/programs", icon: ClipboardListIcon, key: "P" },
       { label: "Library", href: "/coaching/library", icon: LibraryIcon, key: "L" },
       { label: "Check-ins", href: "/coaching/checkins", icon: ClipboardCheckIcon, key: "K", badge: () => coachBadges.checkins },
-      { label: "Messages", href: "/messages", icon: MessageSquareIcon, key: "M", badge: () => coachBadges.messages },
     ],
   },
   {
-    label: "Studio",
+    // What people outside see: the profile, the links that open it, and what they pay.
+    label: "Your coaching",
     items: [
+      { label: "Profile", href: "/coaching/profile", icon: IdCardIcon },
       { label: "Invite links", href: "/coaching/links", icon: LinkIcon, badge: () => coachBadges.links },
       { label: "Payments", href: "/coaching/payments", icon: WalletIcon, badge: () => coachBadges.payments },
     ],

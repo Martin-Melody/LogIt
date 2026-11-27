@@ -1,5 +1,4 @@
 <script lang="ts">
-  import OptionSelect from "$lib/components/option-select.svelte";
   import { Switch } from "$lib/components/ui/switch";
   import { practice, sandbox } from "$lib/features/guide/sandbox.svelte";
   import { photoSrc } from "@logit/core/api/photosApi";
@@ -79,12 +78,6 @@
     onNavClick();
   }
 
-  function viewClientTraining(value: string) {
-    if (!value) return;
-    viewingClient.set(value);
-    void goto("/progress");
-    onNavClick();
-  }
 
   const segBase = "h-[30px] rounded-[7px] text-xs transition-colors";
   const segOn = "bg-primary text-primary-foreground font-semibold";
@@ -145,16 +138,6 @@
       </Sidebar.Group>
     {/each}
 
-    {#if coaching && viewingClient.clients.length > 0}
-      <Sidebar.Group class="group-data-[collapsible=icon]:hidden">
-        <Sidebar.GroupLabel class="uppercase tracking-wider text-[11px]">A client's training</Sidebar.GroupLabel>
-        <Sidebar.GroupContent>
-          <label for="client-training" class="sr-only">Open a client's training</label>
-          <OptionSelect size="sm" id="client-training" class="w-full" value="" onValueChange={viewClientTraining} placeholder="Choose a client…"
-            options={viewingClient.clients.map((c) => ({ value: c.client.id, label: c.client.displayName || c.client.username }))} />
-        </Sidebar.GroupContent>
-      </Sidebar.Group>
-    {/if}
   </Sidebar.Content>
 
   <Sidebar.Footer>

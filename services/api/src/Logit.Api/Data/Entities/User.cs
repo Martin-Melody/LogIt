@@ -35,6 +35,10 @@ public class User
     public string? StripeCustomerId { get; set; }
     /// As a coach: the swap rule for every client without their own (see SwapRules). Null = "any".
     public string? CoachSwapRule { get; set; }
+    /// The Coaching section of this coach's profile (CoachProfileEndpoints.CoachProfile as JSON):
+    /// headline, where they coach, About (Markdown), who they're a good fit for. Shown publicly
+    /// once they coach for real (Studio, or any account on a self-hosted server).
+    public string? CoachProfileJson { get; set; }
     /// Social privacy (see Features/Social/Privacy.cs). A private account's follows need its
     /// approval, and only accepted followers see its posts, profile cards and follow lists.
     public bool IsPrivate { get; set; }

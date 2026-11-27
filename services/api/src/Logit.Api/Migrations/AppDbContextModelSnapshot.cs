@@ -661,6 +661,9 @@ namespace Logit.Api.Migrations
                         .HasMaxLength(80)
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("ShowOnProfile")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");
 
@@ -2969,6 +2972,9 @@ namespace Logit.Api.Migrations
 
                     b.Property<int>("CheersFrom")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("CoachProfileJson")
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("CoachSwapRule")
                         .HasColumnType("TEXT");

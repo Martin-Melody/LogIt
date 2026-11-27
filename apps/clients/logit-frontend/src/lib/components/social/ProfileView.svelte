@@ -1,4 +1,5 @@
 <script lang="ts">
+  import CoachingSection from "@logit/ui/CoachingSection.svelte";
   import * as Tabs from "$lib/components/ui/tabs/index.js";
   import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { photoSrc } from "@logit/core/api/photosApi";
@@ -335,6 +336,13 @@
       <button type="button" class="h-10 rounded-lg bg-muted text-sm font-semibold" onclick={() => goto(`/messages/chat?u=${encodeURIComponent(profile!.username)}`)}>Message</button>
     {/if}
   </div>
+
+  {#if profile.coaching && !locked}
+    <!-- Canvas P1: the Coaching section, the same as on the web and getlogit.app. -->
+    <CoachingSection section={profile.coaching} name={shownName} class="border-t border-border px-4 py-4"
+      askHref={profile.coaching.askCode && !isSelf ? `/onboarding/coach?code=${encodeURIComponent(profile.coaching.askCode)}` : null}
+      mentionHref={(u) => `/social/${u}`} tagHref={(t) => `/social/tag/${encodeURIComponent(t)}`} />
+  {/if}
 
   {#if locked}
     <div class="flex flex-col items-center gap-2 border-t border-border px-8 py-10 text-center">

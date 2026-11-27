@@ -49,6 +49,8 @@ public class CoachPackage
     public int? Weeks { get; set; }
     /// Hidden packages can't be put on links; clients already on them stay.
     public bool Hidden { get; set; }
+    /// Listed in the Coaching section of the coach's profile, with its price.
+    public bool ShowOnProfile { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

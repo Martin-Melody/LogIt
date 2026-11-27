@@ -342,6 +342,7 @@ api.MapAdminEndpoints(builder.Configuration, app.Services.GetRequiredService<ILo
 api.MapSyncEndpoints();
 api.MapBillingEndpoints();
 api.MapCoachEndpoints();
+api.MapCoachProfileEndpoints();
 api.MapDiagnosticsEndpoints();
 api.MapPluginEndpoints();
 api.MapSandboxEndpoints();

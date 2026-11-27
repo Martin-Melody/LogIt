@@ -1,6 +1,7 @@
 import { ApiError, apiClient, type ApiFetcher } from "./client";
 import type { SwapRule } from "../domain/swaps";
 import type { ClientPayment, LinkPackage } from "../domain/coachPayments";
+import type { CoachProfile, MyCoachProfile } from "../domain/coachProfile";
 
 export interface CoachClientUser {
   id: string;
@@ -274,6 +275,16 @@ export function coachApiFor(api: ApiFetcher) {
     },
 
     // ── Exercise swaps ──
+
+    /** Coach: the Coaching section of my profile, my packages, and whether it's public yet. */
+    async getCoachProfile(): Promise<MyCoachProfile> {
+      return api.fetch("/coach/profile");
+    },
+
+    /** Saves the Coaching section; `packagesOnProfile` lists the packages shown on it. */
+    async saveCoachProfile(profile: CoachProfile, packagesOnProfile: string[]): Promise<MyCoachProfile> {
+      return api.fetch("/coach/profile", { method: "PUT", body: JSON.stringify({ profile, packagesOnProfile }) });
+    },
 
     /** Coach: my default swap rule for every client. */
     async getCoachSettings(): Promise<{ swapRule: SwapRule }> {

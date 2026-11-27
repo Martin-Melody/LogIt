@@ -183,6 +183,20 @@
   },
   {
     "method": "GET",
+    "route": "/coach/profile/",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": true
+  },
+  {
+    "method": "PUT",
+    "route": "/coach/profile/",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": true
+  },
+  {
+    "method": "GET",
     "route": "/coach/programs",
     "plan": "Studio",
     "orActivelyCoached": false,

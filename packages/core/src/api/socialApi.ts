@@ -1,5 +1,6 @@
 import type { ForumPost } from "./forumApi";
 import { apiClient } from "./client";
+import type { CoachingSection } from "../domain/coachProfile";
 
 export interface PublicWidgetSlot {
   id: string;
@@ -116,6 +117,8 @@ export interface ApiProfile {
   /** Up to two people you follow who follow them, and how many in all ("Followed by …"). */
   followedBy?: string[];
   followedByCount?: number;
+  /** A coach's Coaching section (only on GET /users/{username}; null when they show none). */
+  coaching?: CoachingSection | null;
 }
 
 export type FollowStatus = "none" | "requested" | "following";

@@ -3,12 +3,18 @@
 import { error } from "@sveltejs/kit";
 import type { ApiPost } from "@logit/core/api/socialApi";
 import type { ForumPost } from "@logit/core/api/forumApi";
+import type { CoachingSection } from "@logit/core/domain/coachProfile";
 import { publicApi } from "$lib/social/publicApi";
 import type { PageServerLoad } from "./$types";
 
 export const prerender = false;
 
-export type PublicProfile = { username: string; displayName: string; bio: string | null; avatarUrl: string | null; posts: number; followers: number; following: number; publicProfileJson?: string | null };
+export type PublicProfile = {
+  username: string; displayName: string; bio: string | null; avatarUrl: string | null; posts: number; followers: number; following: number;
+  publicProfileJson?: string | null;
+  /** A coach's Coaching section (canvas P1); null or missing for everyone else. */
+  coaching?: CoachingSection | null;
+};
 
 export const load: PageServerLoad = async ({ params, fetch, setHeaders }) => {
   const api = publicApi();

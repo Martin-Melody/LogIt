@@ -1,10 +1,7 @@
 <script lang="ts">
   import ClientHoverCard from "$lib/features/coaching/ClientHoverCard.svelte";
   import { onSampleActivity } from "$lib/features/guide/sandbox.svelte";
-  import { apiClient } from "@logit/core/api/client";
-  import WelcomeCard from "$lib/features/guide/WelcomeCard.svelte";
   import CoachStart from "$lib/features/onboarding/CoachStart.svelte";
-  import { coachTrial } from "$lib/workspace";
   import { onMount } from "svelte";
   import * as Alert from "$lib/components/ui/alert";
   import { Skeleton } from "$lib/components/ui/skeleton";
@@ -106,7 +103,7 @@
     <h1 class="text-[26px] font-bold tracking-tight">Today</h1>
   </header>
 
-  {#if !coachTrial()}<WelcomeCard walkthrough="studio" name={(apiClient.getUser()?.displayName || apiClient.getUser()?.username || "").split(" ")[0]} />{/if}
+  <!-- The Set up coaching card (CoachStart) replaces the Studio welcome card: it has Take the walkthrough (canvas T1). -->
 
   {#if overview}<CoachStart {overview} />{/if}
 

@@ -30,6 +30,16 @@ Keep them as a sandbox to try programs and forms on. Manage them in Practice vie
 to fresh puts back their starting four weeks, Remove deletes them and everything they sent, and Add
 sample clients brings them back.
 
+## Your coaching profile
+
+Your profile gets a Coaching section: a headline, whether you coach online, in person or both, About
+you (with formatting), who you're a good fit for, and the packages you choose to show, with their
+prices. Write it in Coaching › Profile; the preview beside it is what people see. It shows on your
+profile in the app, on the web and at getlogit.app/@you once you have Studio, with a button that opens
+your newest invite link.
+
+<CanCant ids={["coach-profile"]} />
+
 ## Your Today page
 
 <HowTo id="studio.today" />

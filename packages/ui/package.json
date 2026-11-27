@@ -21,6 +21,11 @@
       "types": "./src/RichText.svelte",
       "svelte": "./src/RichText.svelte",
       "default": "./src/RichText.svelte"
+    },
+    "./CoachingSection.svelte": {
+      "types": "./src/CoachingSection.svelte",
+      "svelte": "./src/CoachingSection.svelte",
+      "default": "./src/CoachingSection.svelte"
     }
   },
   "files": [

@@ -317,7 +317,8 @@ public static class CoachPaymentEndpoints
             return Results.BadRequest(new { error = $"You can have up to {PaymentLimits.MaxPackages} packages." });
         var account = await db.CoachPaymentAccounts.AsNoTracking().FirstOrDefaultAsync(a => a.CoachId == coachId, ct);
         var now = clock.GetUtcNow().UtcDateTime;
-        var p = new CoachPackage { CoachId = coachId, Currency = account?.Currency ?? "eur", CreatedAt = now };
+        // A new package shows on the coach's profile; they can take it off in Coaching › Profile.
+        var p = new CoachPackage { CoachId = coachId, Currency = account?.Currency ?? "eur", CreatedAt = now, ShowOnProfile = true };
         Apply(p, req, now);
         db.CoachPackages.Add(p);
         await db.SaveChangesAsync(ct);

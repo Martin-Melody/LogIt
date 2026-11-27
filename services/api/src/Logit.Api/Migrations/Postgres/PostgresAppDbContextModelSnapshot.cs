@@ -666,6 +666,9 @@ namespace Logit.Api.Migrations.Postgres
                         .HasMaxLength(80)
                         .HasColumnType("character varying(80)");
 
+                    b.Property<bool>("ShowOnProfile")
+                        .HasColumnType("boolean");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -2974,6 +2977,9 @@ namespace Logit.Api.Migrations.Postgres
 
                     b.Property<int>("CheersFrom")
                         .HasColumnType("integer");
+
+                    b.Property<string>("CoachProfileJson")
+                        .HasColumnType("text");
 
                     b.Property<string>("CoachSwapRule")
                         .HasColumnType("text");
