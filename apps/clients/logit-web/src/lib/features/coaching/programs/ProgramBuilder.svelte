@@ -28,8 +28,10 @@
   import { guideSignal } from "$lib/features/guide/signal";
   import { getWebCoachProgramRepo } from "$lib/deps";
   import * as P from "@logit/core/domain/CoachProgram";
+  import WeeksDialog from "./WeeksDialog.svelte";
+  import { weekTypeOf, weekTypeLabel, weekTypeText } from "@logit/core/domain/weekTypes";
   import type { CoachProgram, ProgramBlock, ProgramDay, ProgramRule, ProgramSet, ProgramStrength } from "@logit/core/domain/CoachProgram";
-  import { applyTemplate, copyOwnChanges, forBuilder, libraryChanges, mergePrograms, setLength, setLighterWeeks, takeTheirs, templateOf, type MergeConflict } from "@logit/core/domain/programBuilder";
+  import { applyTemplate, copyOwnChanges, forBuilder, libraryChanges, mergePrograms, setLength, setWeekType, takeTheirs, templateOf, type MergeConflict } from "@logit/core/domain/programBuilder";
   import { BUILTIN_MOBILITY_DRILLS } from "@logit/core/domain/mobilityDrill";
   import { createId } from "@logit/core/domain/ids";
   import { SET_TYPE_META, type SetType } from "@logit/core/domain/workout";
@@ -441,12 +443,8 @@
       patchBlock(b.id, (x) => { if (x.type !== "strength") return x; const { rule: _r, ...rest } = x; return rule ? { ...rest, rule } : rest; });
     }
   }
-  const lighter = $derived(new Set(prog.weeks.filter((w) => w.lighter).map((w) => w.weekNumber)));
-  function toggleLighter(n: number) {
-    const next = new Set(lighter);
-    if (next.has(n)) next.delete(n); else next.add(n);
-    edit((p) => setLighterWeeks(p, [...next]));
-  }
+  // Week types (canvas PB5): each week's chip shows its type; Edit weeks sets them.
+  let weeksOpen = $state(false);
 
   // ── Copies (library, canvas Q6) ──
   let copiesOpen = $state(false);
@@ -557,12 +555,13 @@
     </span>
     {#if prog.weeks.length > 1}
       <span class="flex flex-wrap items-center gap-1.5">
-        <span class="text-muted-foreground">Lighter weeks</span>
-        {#each prog.weeks.map((w) => w.weekNumber).sort((a, b) => a - b) as n (n)}
-          <button type="button" aria-pressed={lighter.has(n)} onclick={() => toggleLighter(n)}
-            class="h-7 min-w-7 rounded-full border px-2 text-xs tabular-nums transition-colors {lighter.has(n) ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background text-muted-foreground hover:text-foreground'}">{n}</button>
+        <span class="text-muted-foreground">Weeks</span>
+        {#each [...prog.weeks].sort((a, b) => a.weekNumber - b.weekNumber) as w (w.id)}
+          {@const wt = weekTypeOf(w)}
+          <button type="button" onclick={() => (weeksOpen = true)} title={wt ? weekTypeText(wt) : "Normal"}
+            class="h-7 rounded-full border px-2.5 text-xs tabular-nums transition-colors {wt?.kind === 'deload' ? 'border-warning/50 text-warning' : wt?.kind === 'find' ? 'border-info/50 text-info' : wt ? 'border-foreground/40 text-foreground' : 'border-border bg-background text-muted-foreground hover:text-foreground'}">{w.weekNumber}{wt ? ` · ${weekTypeLabel(wt)}` : ""}</button>
         {/each}
-        <span class="text-xs text-muted-foreground">fewer sets, same weight</span>
+        <Button variant="ghost" size="sm" onclick={() => (weeksOpen = true)}>Edit weeks</Button>
       </span>
     {/if}
     {#if mode === "copy"}
@@ -858,3 +857,5 @@
 <PluginBlockDialog bind:open={pluginOpen} dayName={day?.name || "this day"} editing={editingPlugin} onsave={(b) => putBlock(editingPlugin, b, "plugin")} />
 
 <RulePickerDialog bind:open={picking} current={pickingFor ? (pickingFor.rule ?? null) : (prog.rule ?? null)} exercise={pickingFor?.exerciseName ?? null} onpick={pickRule} />
+
+<WeeksDialog bind:open={weeksOpen} program={prog} onset={(n, type) => edit((p) => setWeekType(p, n, type))} />

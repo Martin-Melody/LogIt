@@ -1,3 +1,4 @@
+import { weekTypeOf, weekTypeLabel, weekSets, weekWeight, weekReps } from "@logit/core/domain/weekTypes";
 import { withStartingPlace } from "$lib/features/places/sessionPlace";
 import { getCoachProgramRepo, getWorkoutRepo } from "$lib/data/repoProvider";
 import { getProgramProgress, PROGRAM_BLOCKS_THIS_APP_RUNS, ruleFor, type CoachProgram, type ProgramDay } from "@logit/core/domain/CoachProgram";
@@ -15,7 +16,7 @@ import { sourceFromProgramDay } from "@logit/core/domain/sessionHistory";
  * With the program, the session keeps where it came from and the plan, for the history.
  */
 async function weekPlan(full: CoachProgram, day: ProgramDay, weekNumber: number) {
-  const ruled = (full.rule?.kind ?? "fixed") !== "fixed" || full.weeks.some((w) => w.lighter)
+  const ruled = (full.rule?.kind ?? "fixed") !== "fixed" || full.weeks.some((w) => w.lighter || w.type)
     || day.blocks.some((b) => b.type === "strength" && b.rule && b.rule.kind !== "fixed");
   if (!ruled) return undefined;
   const sessions = await repo().listAllSessions();
@@ -30,10 +31,16 @@ async function weekPlan(full: CoachProgram, day: ProgramDay, weekNumber: number)
     const sets = b.sets.filter((s) => s.setType !== "warmup").length || b.sets.length;
     const deps = getProgressionDeps();
     const algorithm = await deps.algorithmRegistry.get(rule.pluginId).catch(() => null);
+    // The week's type goes to the plugin (Phase 6.4); one that doesn't handle it gets it applied.
+    const wt = weekTypeOf(full.weeks.find((w) => w.weekNumber === weekNumber) ?? {});
+    const week = { number: weekNumber, kind: wt?.kind ?? "normal", name: weekTypeLabel(wt), progression: wt?.progression ?? "moves" } as const;
     const out = algorithm
-      ? await getSuggestion({ id: b.exerciseId, name: b.exerciseName }, deps, undefined, undefined, undefined, algorithm).catch(() => null)
+      ? await getSuggestion({ id: b.exerciseId, name: b.exerciseName }, deps, undefined, undefined, undefined, algorithm, { week }).catch(() => null)
       : null;
-    fromPlugins.set(b.id, cellFromSuggestion(out) ?? lastTimeCell(b.exerciseName, sessions, sets));
+    const cell = cellFromSuggestion(out) ?? lastTimeCell(b.exerciseName, sessions, sets);
+    fromPlugins.set(b.id, cell && wt && !algorithm?.readsWeekTypes
+      ? { ...cell, sets: weekSets(wt, cell.sets), weight: weekWeight(wt, cell.weight), reps: weekReps(wt, cell.reps) }
+      : cell);
   }
   return (blockId: string) => (fromPlugins.has(blockId) ? fromPlugins.get(blockId)! : base(blockId));
 }

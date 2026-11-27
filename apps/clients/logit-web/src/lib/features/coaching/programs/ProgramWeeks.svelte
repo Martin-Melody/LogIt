@@ -3,6 +3,7 @@
      paste, and fill to the end of the block (up to the next lighter week). On your program the
      rule is said in words until you pick a client to preview it with their lifts. -->
 <script lang="ts">
+  import { weekTypeOf, weekTypeLabel } from "@logit/core/domain/weekTypes";
   import { onMount } from "svelte";
   import * as Tabs from "$lib/components/ui/tabs/index.js";
   import OptionSelect from "$lib/components/option-select.svelte";
@@ -120,7 +121,7 @@
     const out: number[] = [];
     for (const w of weeks) {
       if (w.weekNumber <= week) continue;
-      if (w.lighter) break;
+      if (weekTypeOf(w)) break;
       out.push(w.weekNumber);
     }
     return out;
@@ -195,7 +196,7 @@
               Wk {w.weekNumber}
               {#if nowWeek != null && w.weekNumber < nowWeek}<span class="block text-[10px] font-normal">done</span>
               {:else if w.weekNumber === nowWeek}<span class="block text-[10px] font-semibold text-primary">now</span>
-              {:else if w.lighter}<span class="block text-[10px] font-normal">lighter</span>{/if}
+              {:else if weekTypeOf(w)}<span class="block text-[10px] font-normal">{weekTypeLabel(weekTypeOf(w))}</span>{/if}
             </th>
           {/each}
         </tr>
@@ -226,7 +227,7 @@
                           onclick={() => (selected = { blockId: b.id, week: w.weekNumber })}
                           ondblclick={() => startEdit(b.id, w.weekNumber)}
                           onkeydown={(e) => onKey(e, b, w.weekNumber)}
-                          class="flex h-9 w-full min-w-24 items-center whitespace-nowrap rounded-[6px] px-2 text-left tabular-nums hover:bg-muted {cellClass(c)} {selected?.blockId === b.id && selected.week === w.weekNumber ? 'bg-muted outline outline-1 outline-border' : ''} {w.lighter ? 'bg-muted/40' : ''}">
+                          class="flex h-9 w-full min-w-24 items-center whitespace-nowrap rounded-[6px] px-2 text-left tabular-nums hover:bg-muted {cellClass(c)} {selected?.blockId === b.id && selected.week === w.weekNumber ? 'bg-muted outline outline-1 outline-border' : ''} {weekTypeOf(w)?.progression === "pauses" ? 'bg-muted/40' : ''}">
                           {c ? cellText(c, usual(b)) : "–"}{#if c?.source === "done"}<span class="ml-1 text-[10px]">done</span>{/if}
                         </button>
                       {/snippet}

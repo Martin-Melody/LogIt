@@ -236,6 +236,7 @@ async function installedAlgorithmById(id: string): Promise<ProgressionAlgorithm 
     defaultState: meta.defaultState ?? {},
     defaultPreferences: meta.defaultPreferences,
     preferencesSchema: meta.preferencesSchema as ProgressionAlgorithm["preferencesSchema"],
+    ...((meta as { readsWeekTypes?: boolean }).readsWeekTypes ? { readsWeekTypes: true } : {}),
     suggest: (input) => suggest(input),
   };
 }

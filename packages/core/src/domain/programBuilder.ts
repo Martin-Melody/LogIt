@@ -4,6 +4,7 @@
 // built week. Saved as you go, with undo, and changes from another device merged in.
 
 import { createId } from "./ids";
+import type { WeekType } from "./weekTypes";
 import { libraryBaseOf, touchCoachProgram, updateCopyFromTemplate, type CoachProgram, type ProgramBlock, type ProgramDay, type ProgramSet, type ProgramWeek } from "./CoachProgram";
 
 const byOrder = <T extends { orderIndex: number }>(xs: T[]) => [...xs].sort((a, b) => a.orderIndex - b.orderIndex);
@@ -64,7 +65,10 @@ export function applyTemplate(program: CoachProgram, template: ProgramWeek): Coa
   return touchCoachProgram({
     ...program,
     weeks: weeks.map((w, i) => {
-      if (i === 0) return { ...template, weekNumber: w.weekNumber, id: w.id, ...(w.lighter ? { lighter: true } : {}) };
+      if (i === 0) {
+        const { lighter: _l, type: _t, ...rest } = template;
+        return { ...rest, weekNumber: w.weekNumber, id: w.id, ...(w.lighter ? { lighter: true } : {}), ...(w.type ? { type: w.type } : {}) };
+      }
       return { ...w, days: template.days.map((td) => mergeDay(td, w.days.find((d) => d.id === td.id))) };
     }),
   });
@@ -101,6 +105,19 @@ export function setLength(program: CoachProgram, weeks: number): CoachProgram {
 
 function unpin(b: ProgramBlock): ProgramBlock {
   return b.type === "strength" ? { ...b, sets: b.sets.map(({ pinned: _p, ...s }) => s) } : b;
+}
+
+/** A week's type (Phase 6.4): Deload, Test, the coach's own; null or normal = a normal week.
+ * Replaces the old lighter flag on that week. */
+export function setWeekType(program: CoachProgram, weekNumber: number, type: WeekType | null): CoachProgram {
+  return touchCoachProgram({
+    ...program,
+    weeks: program.weeks.map((w) => {
+      if (w.weekNumber !== weekNumber) return w;
+      const { lighter: _l, type: _t, ...rest } = w;
+      return type && type.kind !== "normal" ? { ...rest, type } : rest;
+    }),
+  });
 }
 
 /** Lighter weeks: fewer sets, same weight (canvas PG2). */
@@ -182,6 +199,11 @@ export function mergePrograms(base: CoachProgram, mine: CoachProgram, theirs: Co
   }
   const lighter = (p: CoachProgram) => p.weeks.filter((w) => w.lighter).map((w) => w.weekNumber).sort();
   if (j(lighter(theirs)) !== j(lighter(base)) && j(lighter(mine)) === j(lighter(base))) out = setLighterWeeks(out, lighter(theirs));
+  // Week types the same way: theirs when only they changed them.
+  const types = (p: CoachProgram) => byWeek(p.weeks).map((w) => w.type ?? null);
+  if (j(types(theirs)) !== j(types(base)) && j(types(out)) === j(types(base))) {
+    for (const w of theirs.weeks) out = setWeekType(out, w.weekNumber, w.type ?? null);
+  }
 
   const tB = templateOf(base), tM = templateOf(out), tT = templateOf(theirs);
   const dayIn = (w: ProgramWeek, id: string) => w.days.find((d) => d.id === id);

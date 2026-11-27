@@ -1,3 +1,4 @@
+import { weekTypeOf, weekTypeLabel, weekSets, weekWeight, weekReps } from "./weekTypes";
 // What a program's rule plans for each exercise, week by week (canvas PG3 "Every week").
 // On a client's copy the numbers come from their own strength estimates and what they've done;
 // on one of your programs there are no numbers until it's someone's, so the rule is said in
@@ -70,7 +71,9 @@ export function planExercise(program: CoachProgram, blockId: string, ctx: PlanCo
   for (const w of weeks) {
     const block = findBlock(w, blockId);
     if (!block) { out.push(null); continue; }
-    const cell = planWeek(program, w, block, ctx, w.lighter ? k : ++k, lastWeight);
+    // A week whose type pauses the progression (a deload) plans from where it was; the next carries on.
+    const wt = weekTypeOf(w);
+    const cell = planWeek(program, w, block, ctx, wt?.progression === "pauses" ? k : ++k, lastWeight);
     if (cell.weight != null) lastWeight = cell.weight;
     out.push(cell);
   }
@@ -95,13 +98,17 @@ function planWeek(program: CoachProgram, week: ProgramWeek, block: ProgramStreng
   const rule = ruleFor(program, block);
   // A rule built from blocks can set its own rep range; it wins over the exercise's.
   const r = (rule.kind === "own" && rule.recipe?.repRange) || range(first);
-  if (week.lighter) {
-    const lighterSets = Math.max(1, Math.round(count / 2));
+  // The week's type changes what the progression planned (canvas PB5): sets, load, reps, a test set.
+  const wt = weekTypeOf(week);
+  if (wt?.progression === "pauses") {
+    const sets = weekSets(wt, count);
     return lastWeight != null
-      ? { source: "rule", weight: lastWeight, reps: String(r?.[0] ?? repsText(first) ?? ""), sets: lighterSets }
-      : { source: "words", sets: lighterSets, words: `${lighterSets} ${lighterSets === 1 ? "set" : "sets"}, lighter week` };
+      ? { source: "rule", weight: weekWeight(wt, lastWeight), reps: weekReps(wt, String(r?.[0] ?? repsText(first) ?? "")), sets }
+      : { source: "words", sets, words: `${sets} ${sets === 1 ? "set" : "sets"}, ${weekTypeLabel(wt).toLowerCase()} week` };
   }
-  return planByRule(rule, block, first, r, k, ctx, count);
+  const cell = planByRule(rule, block, first, r, k, ctx, count);
+  if (!wt) return cell;
+  return { ...cell, sets: weekSets(wt, cell.sets), weight: weekWeight(wt, cell.weight), reps: weekReps(wt, cell.reps), ...(cell.words ? { words: `${cell.words} · ${weekTypeLabel(wt)}` } : {}) };
 }
 
 function planByRule(rule: ProgramRule, block: ProgramStrength, first: ProgramSet, r: [number, number] | null, k: number, ctx: PlanContext, count: number): PlanCell {

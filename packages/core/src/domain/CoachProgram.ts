@@ -1,3 +1,4 @@
+import { weekTypeOf, weekTypeLabel } from "./weekTypes";
 import { copyData } from "./copyData";
 import type { MobilityMetric, SetType } from "./workout";
 import type { BlockValue } from "./blockPlugin";
@@ -62,8 +63,10 @@ export type ProgramWeek = {
   id: string;
   weekNumber: number;
   name?: string;
-  /** v2: a lighter (deload) week: fewer sets, same weight (canvas PG2). */
+  /** v2: a lighter (deload) week: fewer sets, same weight (canvas PG2). Read as a Deload week type. */
   lighter?: boolean;
+  /** Its type (Phase 6.4): Deload, Test, the coach's own… Absent = normal. */
+  type?: import("./weekTypes").WeekType;
   days: ProgramDay[];
 };
 
@@ -931,9 +934,14 @@ export function daysPerWeek(program: Pick<CoachProgram, "weeks">): number {
 export function programSummary(program: CoachProgram): string {
   const weeks = program.weeks.length;
   const days = daysPerWeek(program);
-  const lighter = program.weeks.filter((w) => w.lighter).map((w) => w.weekNumber);
   const bits = [`${weeks} ${weeks === 1 ? "week" : "weeks"}`, `${days} ${days === 1 ? "day" : "days"} a week`, ruleLabel(program.rule)];
-  if (lighter.length) bits.push(`lighter ${lighter.length === 1 ? "week" : "weeks"} ${lighter.length === 1 ? lighter[0] : `${lighter.slice(0, -1).join(", ")} and ${lighter.at(-1)}`}`);
+  // Week types (Phase 6.4): "deload weeks 4 and 8 · test week 6".
+  const by = new Map<string, number[]>();
+  for (const w of [...program.weeks].sort((a, b) => a.weekNumber - b.weekNumber)) {
+    const t = weekTypeOf(w);
+    if (t) by.set(weekTypeLabel(t).toLowerCase(), [...(by.get(weekTypeLabel(t).toLowerCase()) ?? []), w.weekNumber]);
+  }
+  for (const [label, ns] of by) bits.push(`${label} ${ns.length === 1 ? "week" : "weeks"} ${ns.length === 1 ? ns[0] : `${ns.slice(0, -1).join(", ")} and ${ns.at(-1)}`}`);
   return bits.join(" · ");
 }
 

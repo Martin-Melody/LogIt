@@ -34,7 +34,7 @@ export async function getSuggestion(
   algorithmOverride?: ProgressionAlgorithm,
   /** The machine this is done on today (from the place you're at), when known. Weights are
    * rounded to its settings and start from the last time on it (rebaseForMachine). */
-  options?: { machine?: Machine },
+  options?: { machine?: Machine; week?: ProgressionInput["week"] },
 ): Promise<ProgressionOutput | null> {
   const { progressionRepo, workoutRepo, exerciseRepo, algorithmRegistry: registry } = deps;
 
@@ -234,6 +234,7 @@ export async function getSuggestion(
           : { kg: null, source: "none", confidence: "guess" },
     muscleWeek,
     food: food ?? undefined,
+    ...(options?.week ? { week: options.week } : {}),
   });
 
   if (related) {

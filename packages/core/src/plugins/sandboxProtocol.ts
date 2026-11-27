@@ -102,7 +102,8 @@ export function buildRunnerCode(
            preferencesSchema: __e.preferencesSchema,
            metricDefinitions: __e.metricDefinitions,
            needs: __e.needs,
-           cards: __e.cards
+           cards: __e.cards,
+           readsWeekTypes: __e.readsWeekTypes === true
          } };`
       : `var __fn = __e[${JSON.stringify(op.method)}];
          if (typeof __fn !== "function") return { __error: "plugin has no ${op.method}()" };
