@@ -6,6 +6,8 @@
   import { back } from "$lib/navigation";
   import {
     checkinPeriodLabel,
+    questionsFor,
+    type AskedQuestion,
     type CheckinAnswer,
     type CheckinQuestion,
     type CheckinReviewInfo,
@@ -48,12 +50,14 @@
   const date = (ms: number) => new Date(ms).toLocaleDateString(undefined, { month: "short", day: "numeric" });
   const weekday = (ms: number) => new Date(ms).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
 
-  type Row = { q: CheckinQuestion; a: CheckinAnswer | undefined };
-  const SHORT = ["number", "scale", "boolean", "weight"];
+  type Row = { q: AskedQuestion & { scaleMax?: number }; a: CheckinAnswer | undefined };
+  const SHORT = ["number", "scale", "boolean", "weight", "measurement"];
+  // The questions as they were asked when it was sent (the coach may have changed the form since).
   const rows = $derived.by((): Row[] => {
     if (!sub) return [];
-    const qs: CheckinQuestion[] = form?.questions ?? sub.answers.map((a) => ({ id: a.questionId, prompt: "Answer", type: "text" as const }));
-    return qs.map((q) => ({ q, a: sub!.answers.find((x) => x.questionId === q.id) }));
+    const asked = questionsFor(sub, form);
+    const qs = asked.length ? asked : sub.answers.map((a) => ({ id: a.questionId, prompt: "Answer", type: "text" as const }));
+    return qs.map((q) => ({ q: { ...q, scaleMax: form?.questions.find((x) => x.id === q.id)?.scaleMax }, a: sub!.answers.find((x) => x.questionId === q.id) }));
   });
 
   function value(r: Row): string | null {
@@ -62,6 +66,8 @@
     switch (r.q.type) {
       case "boolean": return a.bool === undefined ? null : a.bool ? "Yes" : "No";
       case "weight": return a.number === undefined ? null : `${a.number} kg`;
+      case "measurement": return a.number === undefined ? null : `${a.number} cm`;
+      case "choice": return a.choices?.join(", ") || a.text?.trim() || null;
       case "scale": return a.number === undefined ? null : `${a.number} / ${r.q.scaleMax ?? 10}`;
       case "photo": return null;
       default: return a.number !== undefined ? String(a.number) : (a.text?.trim() || null);
@@ -104,7 +110,15 @@
       {#each rows.filter((r) => !SHORT.includes(r.q.type)) as r (r.q.id)}
         <div class="flex flex-col gap-1 border-t border-border px-4 py-3.5">
           <span class="text-[13px] text-muted-foreground">{r.q.prompt}</span>
-          {#if r.q.type === "photo"}
+          {#if r.q.type === "photo" && r.q.poses?.length}
+            {#if r.a?.photoDataUrls?.some(Boolean)}
+              <div class="grid grid-cols-3 gap-2">
+                {#each r.q.poses as pose, k (pose)}
+                  {#if r.a.photoDataUrls[k]}<img src={r.a.photoDataUrls[k]} alt="{pose} photo" class="aspect-[3/4] w-full rounded-md border border-border object-cover" />{/if}
+                {/each}
+              </div>
+            {:else}<span class="text-[15px] text-muted-foreground">No photos</span>{/if}
+          {:else if r.q.type === "photo"}
             {#if r.a?.photoDataUrl}<img src={r.a.photoDataUrl} alt={r.q.prompt} class="max-h-56 w-fit rounded-md border border-border" />{:else}<span class="text-[15px] text-muted-foreground">No photo</span>{/if}
           {:else}
             <span class="whitespace-pre-wrap text-[15px] leading-normal {value(r) ? '' : 'text-muted-foreground'}">{value(r) ?? "No answer"}</span>

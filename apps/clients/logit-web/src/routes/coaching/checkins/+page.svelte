@@ -14,6 +14,7 @@
   import { createId } from "@logit/core/domain/ids";
   import Avatar from "$lib/features/coaching/Avatar.svelte";
   import CheckinAnswers from "$lib/features/coaching/CheckinAnswers.svelte";
+  import FormsList from "$lib/features/coaching/forms/FormsList.svelte";
   import { coachBadges } from "$lib/features/coaching/badges.svelte";
   import {
     loadCoachingOverview,
@@ -164,23 +165,7 @@
       {/each}
     </section>
   {:else if filter === "forms"}
-    <section class="flex flex-col rounded-[10px] border border-border bg-card px-[18px] py-2">
-      <p class="py-2 text-xs text-muted-foreground">Each client has their own forms. Add one from their Check-ins tab.</p>
-      {#each overview.clients as c (c.id)}
-        {@const forms = overview.schedules.filter((s) => s.recipientUserId === c.id)}
-        <div class="flex flex-col gap-1 border-t border-border py-3">
-          <ClientHoverCard clientId={c.id} href="/clients/{c.id}?tab=checkins" class="w-fit text-[13px] font-semibold hover:underline">{c.name}</ClientHoverCard>
-          {#each forms as f (f.schedule.id)}
-            <a href="/clients/{c.id}/checkins/{f.schedule.id}?u={c.username}" class="flex justify-between gap-3 text-[13px] text-muted-foreground hover:text-foreground">
-              <span>{f.schedule.name}{f.schedule.archived ? " (archived)" : ""}</span>
-              <span class="capitalize">{f.schedule.cadence} · {f.schedule.questions.length} question{f.schedule.questions.length === 1 ? "" : "s"}</span>
-            </a>
-          {:else}
-            <span class="text-xs text-muted-foreground">No forms yet.</span>
-          {/each}
-        </div>
-      {/each}
-    </section>
+    <FormsList clients={overview.clients} />
   {:else}
     <div class="flex flex-wrap items-start gap-4">
       <section aria-label="Check-ins" class="flex flex-[1_1_280px] flex-col gap-0.5 rounded-[10px] border border-border bg-card p-1.5">

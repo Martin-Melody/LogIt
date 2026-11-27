@@ -53,7 +53,13 @@ const ACTIONS: Record<string, (page: Page) => Promise<void>> = {
     await ((await conor.count()) ? conor.first() : list.getByRole("link").first()).click();
   },
   "client.tab-checkins": (p) => p.locator('[data-guide="client-tabs"]').getByRole("tab", { name: /Check-ins/ }).click(),
-  "checkin-form.added": (p) => p.locator('[data-guide="client-forms"]').getByRole("button", { name: "Add form" }).click(),
+  "checkin-form.added": async (p) => {
+    const box = p.locator('[data-guide="client-forms"]');
+    const first = box.getByRole("button", { name: "Send LogIt's weekly check-in" });
+    if (await first.count()) return first.click();
+    await box.getByRole("button", { name: "Send a form" }).click();
+    await p.getByRole("dialog").getByRole("button", { name: /^Send to / }).click();
+  },
   "checkin.reviewed": async (p) => {
     await p.locator("#reply").fill("Good week. Swap squats for leg press until the knee settles.");
     await p.getByRole("button", { name: "Send and mark reviewed" }).click();

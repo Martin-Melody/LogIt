@@ -369,13 +369,13 @@ export const STUDIO_CHAPTERS: Chapter[] = [
       },
       {
         id: "add", on: "web", route: "/clients/[id]", target: "client-forms", kind: "do", signal: "checkin-form.added",
-        title: "Add a form",
-        body: "Choose Add form. It starts as a weekly form with three questions.",
+        title: "Send a form",
+        body: "Choose Send a form, pick one of your forms and how often. The first time, send LogIt's weekly check-in: it becomes a shared form you can change for everyone at once.",
       },
       {
-        id: "edit", on: "web", route: "/clients/[id]/checkins/[scheduleId]", target: "checkin-form-editor", kind: "look",
+        id: "edit", on: "web", route: "/coaching/checkins/forms/[id]", target: "checkin-form-editor", kind: "look",
         title: "Your questions",
-        body: "Change the questions (text, a number, a scale, bodyweight, yes or no, a photo), how often it's due, or archive it. Changes save as you go.",
+        body: "One editor for every form: written answers, numbers, scales, yes or no, choices, body weight, measurements and progress photos, with what the client sees beside it. Changes save as you go and reach everyone on the shared form; \"Change for … only\" makes one client's own version.",
       },
       {
         id: "review", on: "web", route: "/coaching/checkins", target: "checkin-review", kind: "do", signal: "checkin.reviewed",

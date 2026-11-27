@@ -38,6 +38,8 @@
   const onIphone = typeof navigator !== "undefined" && /iPhone|iPad|iPod/.test(navigator.userAgent);
 
   const coach = $derived(info ? info.coach.displayName || info.coach.username : "");
+  const regularForms = $derived(forms.filter((f) => f.kind !== "startup"));
+  const startupForm = $derived(forms.find((f) => f.kind === "startup" && !f.archived) ?? null);
   const c = $derived(firstName(coach));
   const o = $derived(info?.offer ?? null);
   const pays = $derived(!!o?.pays);
@@ -155,6 +157,16 @@
           </p>
         </div>
       </div>
+      {#if startupForm}
+        <!-- J3: the coach needs it before the program starts. -->
+        <div class="flex flex-wrap items-center gap-3 rounded-[10px] border border-primary/40 bg-primary/5 px-4 py-3">
+          <span class="flex min-w-0 flex-[1_1_200px] flex-col gap-0.5">
+            <span class="text-sm font-semibold">{c}'s start-up form</span>
+            <span class="text-xs text-muted-foreground">{startupForm.questions.filter((q) => q.type !== "heading").length} questions. {c} needs it before your program starts.</span>
+          </span>
+          <Button href="/my-coach/checkin/{startupForm.id}">Fill it in</Button>
+        </div>
+      {/if}
       <div class="flex flex-col gap-2">
         <h2 class="text-sm font-semibold">What happens next</h2>
         <ul class="flex flex-col divide-y divide-border rounded-[10px] border border-border text-[13px]">
@@ -164,7 +176,7 @@
           </li>
           <li class="flex flex-col gap-0.5 px-3.5 py-2.5">
             <span class="font-medium">Check-ins</span>
-            <span class="text-muted-foreground">{forms.length ? `${forms[0]!.name}: ${c} set it up for you.` : `${c} hasn't set one up yet.`}</span>
+            <span class="text-muted-foreground">{regularForms.length ? `${regularForms[0]!.name}: ${c} set it up for you.` : `${c} hasn't set one up yet.`}</span>
           </li>
         </ul>
       </div>

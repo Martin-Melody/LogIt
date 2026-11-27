@@ -492,6 +492,7 @@ public static class CoachRequestEndpoints
         rel.UpdatedAt = now; // "client since"
         Post(db, rel, me, Events.Joined, $"{NameOf(rel.Client)} took the spot. Coaching has started.", new { offerId = offer.Id }, null, now);
         await payments.SwitchCoachesAsync(me, rel.CoachId, now, ct);
+        await CoachForms.StartAsync(db, rel, now, ct);
         await db.SaveChangesAsync(ct);
         return Results.Ok(new { relationshipId = rel.Id, status = "active" });
     }

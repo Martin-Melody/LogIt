@@ -6,7 +6,14 @@ import { nowMs } from "./time";
 // client's answers are CheckinSubmission rows that sync back the normal client→coach
 // direction (like workout sessions).
 
-export type CheckinQuestionType = "text" | "number" | "scale" | "weight" | "boolean" | "photo";
+export type CheckinQuestionType =
+  | "text" | "number" | "scale" | "weight" | "boolean" | "photo"
+  // Forms overhaul (canvas F2): choose one or several, a measurement, and a heading.
+  | "choice" | "measurement" | "heading";
+
+/** Measurements a form can ask for; they save into the client's own history. */
+export const MEASUREMENTS = ["waist", "hips", "chest", "arm", "thigh"] as const;
+export type Measurement = (typeof MEASUREMENTS)[number];
 
 export type CheckinCadence = "weekly" | "biweekly" | "monthly" | "manual";
 
@@ -18,11 +25,35 @@ export type CheckinQuestion = {
   /** For "scale": the endpoints (default 1–10). */
   scaleMin?: number;
   scaleMax?: number;
+  /** Shown under the question: how to measure, what to include. */
+  help?: string;
+  /** "text": a long answer box. */
+  long?: boolean;
+  /** "choice": the answers to pick from; `multi` = choose several. */
+  options?: string[];
+  multi?: boolean;
+  /** "measurement": which one (in cm). */
+  measure?: Measurement;
+  /** "photo": one photo per pose, e.g. front, side, back (none = one photo). */
+  poses?: string[];
 };
+
+/**
+ * What a form is for (canvas F1): a check-in on a schedule, or the start-up form new clients
+ * fill in once after taking a spot. Missing on older forms = "checkin".
+ */
+export type CheckinFormKind = "checkin" | "startup";
 
 export type CheckinSchedule = {
   id: string;
   name: string;
+  kind?: CheckinFormKind;
+  /** A client's copy: the shared form it came from (a template's id). */
+  sourceId?: string;
+  /** A client's own version ("Change for Aoife only"): the shared form's changes skip it. */
+  own?: boolean;
+  /** A shared check-in form every new client gets when they take a spot (canvas J4). */
+  autoStart?: boolean;
   cadence: CheckinCadence;
   /** Epoch ms anchoring period 0. Occurrences count forward from here by the cadence. */
   anchorMs: number;
@@ -38,7 +69,14 @@ export type CheckinAnswer = {
   number?: number;
   bool?: boolean;
   photoDataUrl?: string;
+  /** "choice" with several picked. One pick is `text`. */
+  choices?: string[];
+  /** "photo" with poses: one per pose, in the question's order ("" = not taken). */
+  photoDataUrls?: string[];
 };
+
+/** A question as it was when the answers were sent (the form may change later). */
+export type AskedQuestion = Pick<CheckinQuestion, "id" | "prompt" | "type" | "measure" | "poses" | "options">;
 
 export type CheckinSubmission = {
   id: string;
@@ -49,6 +87,8 @@ export type CheckinSubmission = {
   answers: CheckinAnswer[];
   /** Set when the client submits; undefined while still a draft. */
   submittedAtMs?: number;
+  /** The questions as they were asked, kept when it's sent (canvas F2). */
+  asked?: AskedQuestion[];
   createdAtMs: number;
   updatedAtMs: number;
 };
@@ -178,8 +218,104 @@ export function setAnswer(
   return { ...submission, answers: next, updatedAtMs: nowMs() };
 }
 
-export function markSubmitted(submission: CheckinSubmission): CheckinSubmission {
-  return { ...submission, submittedAtMs: nowMs(), updatedAtMs: nowMs() };
+/** Sends it; with the form, the questions are kept as they were asked. */
+export function markSubmitted(submission: CheckinSubmission, schedule?: CheckinSchedule): CheckinSubmission {
+  const asked = schedule?.questions
+    .filter((q) => q.type !== "heading")
+    .map(({ id, prompt, type, measure, poses, options }) => ({ id, prompt, type, ...(measure ? { measure } : {}), ...(poses ? { poses } : {}), ...(options ? { options } : {}) }));
+  return { ...submission, submittedAtMs: nowMs(), updatedAtMs: nowMs(), ...(asked ? { asked } : {}) };
+}
+
+/** The questions to show next to a sent check-in: as asked, else the form as it is now. */
+export function questionsFor(submission: CheckinSubmission, schedule: CheckinSchedule | null): AskedQuestion[] {
+  return submission.asked ?? schedule?.questions.filter((q) => q.type !== "heading") ?? [];
+}
+
+/** Required questions not answered yet (headings ask nothing). */
+export function missingAnswers(schedule: CheckinSchedule, submission: CheckinSubmission): CheckinQuestion[] {
+  return schedule.questions.filter((q) => {
+    if (!q.required || q.type === "heading") return false;
+    const a = submission.answers.find((x) => x.questionId === q.id);
+    if (!a) return true;
+    if (q.type === "photo" && q.poses?.length) return !a.photoDataUrls?.some(Boolean);
+    return a.text === undefined && a.number === undefined && a.bool === undefined && !a.photoDataUrl && !a.choices?.length;
+  });
+}
+
+// ── Shared forms and clients' copies (canvas F1, K11, K15) ───────────────────────
+
+/** A client's copy of a shared form: same questions, its own id and schedule. */
+export function copyForClient(template: CheckinSchedule, cadence: CheckinCadence, anchorMs: number): CheckinSchedule {
+  const now = nowMs();
+  return {
+    ...template,
+    id: createId("ckin"),
+    sourceId: template.id,
+    own: false,
+    autoStart: undefined,
+    cadence: template.kind === "startup" ? "manual" : cadence,
+    anchorMs,
+    archived: false,
+    createdAtMs: now,
+    updatedAtMs: now,
+  };
+}
+
+/** A shared form changed: a copy that follows it takes its name and questions, keeping its own schedule. */
+export function followTemplate(copy: CheckinSchedule, template: CheckinSchedule): CheckinSchedule {
+  if (copy.own || copy.sourceId !== template.id) return copy;
+  return touchCheckinSchedule({ ...copy, name: template.name, questions: template.questions });
+}
+
+/** "Change for Aoife only": the copy stops following the shared form. */
+export function makeOwn(copy: CheckinSchedule): CheckinSchedule {
+  return touchCheckinSchedule({ ...copy, own: true });
+}
+
+/** "Back to shared": the shared form's questions again, following it from now on. */
+export function backToShared(copy: CheckinSchedule, template: CheckinSchedule): CheckinSchedule {
+  return touchCheckinSchedule({ ...copy, own: false, sourceId: template.id, name: template.name, questions: template.questions });
+}
+
+/** LogIt's ready-made forms (canvas F1 "From LogIt"). */
+export function readyMadeForm(which: "weekly" | "health" | "monthly" | "startup"): CheckinSchedule {
+  const base = createCheckinSchedule();
+  const q = (p: Omit<CheckinQuestion, "id">): CheckinQuestion => ({ ...p, id: createId("ckq") });
+  const health: CheckinQuestion[] = [
+    q({ prompt: "Has a doctor ever said you have a heart condition?", type: "boolean", required: true }),
+    q({ prompt: "Chest pain or dizziness when you exercise?", type: "boolean", required: true }),
+    q({ prompt: "Any medication your coach should know about?", type: "text" }),
+    q({ prompt: "Injuries, now or in the past", type: "text", long: true }),
+  ];
+  switch (which) {
+    case "weekly":
+      return { ...base, name: "Weekly check-in" };
+    case "health":
+      return { ...base, name: "Health questions", cadence: "manual", questions: health };
+    case "monthly":
+      return {
+        ...base, name: "Monthly review", cadence: "monthly",
+        questions: [
+          q({ prompt: "How did this month go?", type: "text", long: true, required: true }),
+          q({ prompt: "Bodyweight", type: "weight" }),
+          q({ prompt: "Waist", type: "measurement", measure: "waist", help: "At the belly button, relaxed, first thing in the morning" }),
+          q({ prompt: "Progress photos", type: "photo", poses: ["Front", "Side", "Back"] }),
+          q({ prompt: "What do you want to focus on next month?", type: "text" }),
+        ],
+      };
+    case "startup":
+      return {
+        ...base, name: "Start-up form", kind: "startup", cadence: "manual",
+        questions: [
+          ...health.slice(0, 3),
+          q({ prompt: "Body weight", type: "weight", required: true }),
+          q({ prompt: "Waist", type: "measurement", measure: "waist", help: "At the belly button, relaxed, first thing in the morning" }),
+          q({ prompt: "Progress photos", type: "photo", poses: ["Front", "Side", "Back"] }),
+          q({ prompt: "Foods you don't eat", type: "choice", multi: true, options: ["Vegetarian", "Vegan", "Dairy-free", "Gluten-free", "Nut allergy"] }),
+          q({ prompt: "When do you usually train?", type: "choice", options: ["Morning", "Lunch", "Evening"] }),
+        ],
+      };
+  }
 }
 
 // ── Due and missed ────────────────────────────────────────────────────────────

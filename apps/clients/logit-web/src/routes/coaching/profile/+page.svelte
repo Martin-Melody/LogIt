@@ -24,6 +24,9 @@
   import { Switch } from "$lib/components/ui/switch";
   import { toast } from "$lib/components/ui/sonner";
   import { coachTrial } from "$lib/workspace";
+  import { goto } from "$app/navigation";
+  import { getWebCheckinRepo } from "$lib/deps";
+  import { readyMadeForm, touchCheckinSchedule, type CheckinSchedule } from "@logit/core/domain/Checkin";
 
   const user = apiClient.getUser();
   const name = user?.displayName || user?.username || "you";
@@ -40,6 +43,31 @@
   let agreement = $state("");
   let savedAgreement = "";
   let agreementChanged = $state<string | null>(null);
+  // Canvas J4: the start-up form, and check-ins every new client starts with.
+  let sharedForms = $state<CheckinSchedule[]>([]);
+  const startupForm = $derived(sharedForms.find((f) => f.kind === "startup") ?? null);
+  const checkinForms = $derived(sharedForms.filter((f) => f.kind !== "startup"));
+
+  async function loadForms() {
+    sharedForms = (await getWebCheckinRepo().listMySchedules()).filter((r) => !r.recipientUserId && !r.schedule.archived).map((r) => r.schedule);
+  }
+
+  async function makeStartup() {
+    const f = readyMadeForm("startup");
+    await getWebCheckinRepo().saveSchedule(f);
+    await goto(`/coaching/checkins/forms/${f.id}`);
+  }
+
+  async function setAutoStart(f: CheckinSchedule, on: boolean) {
+    const next = touchCheckinSchedule({ ...f, autoStart: on || undefined });
+    sharedForms = sharedForms.map((x) => (x.id === f.id ? next : x));
+    try {
+      await getWebCheckinRepo().saveSchedule(next);
+    } catch (e) {
+      sharedForms = sharedForms.map((x) => (x.id === f.id ? f : x));
+      toast.error(e instanceof Error ? e.message : "Couldn't save");
+    }
+  }
   let error = $state<string | null>(null);
 
   onMount(async () => {
@@ -52,6 +80,7 @@
       const a = await coachApi.getAgreement().catch(() => null);
       agreement = savedAgreement = a?.text ?? "";
       agreementChanged = a?.changedAt ?? null;
+      await loadForms().catch(() => {});
     } catch (e) {
       loadError = e instanceof ApiError ? e.message : "Couldn't load your profile.";
     } finally {
@@ -212,6 +241,28 @@
           <p class="text-xs text-muted-foreground">
             {agreementChanged ? `Last changed ${new Date(agreementChanged).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}. ` : ""}If you change it, current clients see the new words but aren't asked to agree again.
           </p>
+
+          <div class="mt-3 flex flex-wrap items-center gap-3 rounded-[10px] border border-border px-4 py-3">
+            <span class="flex min-w-0 flex-[1_1_260px] flex-col gap-0.5">
+              <span class="text-sm font-medium">Start-up form</span>
+              <span class="text-xs text-muted-foreground">{startupForm ? `${startupForm.questions.length} questions · they fill it in once, after taking a spot. You see it on their Check-ins tab.` : "None yet: health questions, body weight, measurements, progress photos, foods they don't eat."}</span>
+            </span>
+            {#if startupForm}<Button variant="outline" size="sm" href="/coaching/checkins/forms/{startupForm.id}">Edit form</Button>
+            {:else}<Button size="sm" onclick={() => void makeStartup()}>Make one</Button>{/if}
+          </div>
+
+          <div class="flex flex-col gap-1.5 rounded-[10px] border border-border px-4 py-3">
+            <span class="text-sm font-medium">Start them with</span>
+            {#each checkinForms as f (f.id)}
+              <label class="flex items-center justify-between gap-3 text-[13px]">
+                <span>{f.name} <span class="text-muted-foreground">· {f.cadence === "monthly" ? "monthly" : f.cadence === "manual" ? "once" : "weekly"}</span></span>
+                <Switch checked={!!f.autoStart} onCheckedChange={(v) => void setAutoStart(f, v)} aria-label="New clients get {f.name}" />
+              </label>
+            {:else}
+              <span class="text-xs text-muted-foreground">Make a check-in form in Check-ins › Forms, then switch it on here.</span>
+            {/each}
+            <span class="text-xs text-muted-foreground">The program and meal plan stay a choice per client: give them their own after the start-up form.</span>
+          </div>
         </section>
 
         {#if error}<Alert.Root variant="destructive"><Alert.Description>{error}</Alert.Description></Alert.Root>{/if}

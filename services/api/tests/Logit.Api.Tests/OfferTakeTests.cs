@@ -158,4 +158,27 @@ public class OfferTakeTests
         await w.Api.WithServicesAsync(async sp => await sp.GetRequiredService<CoachPaymentService>().SweepAsync(paidUntil.AddMinutes(1), default));
         Assert.Equal(CoachClientStatus.Revoked, await w.Api.WithDbAsync(db => db.CoachClientRelationships.Where(r => r.Id == paidRel).Select(r => r.Status).SingleAsync()));
     }
+
+    [Fact]
+    public async Task A_new_client_gets_the_start_up_form_and_the_start_them_with_check_ins()
+    {
+        await using var w = await AskedAsync("forms");
+        async Task Template(string id, string json) => await Json(await w.Coach.PostAsJsonAsync("/coach/checkins",
+            new { scheduleId = id, dataJson = json, updatedAtMs = 1 }));
+        await Template("ckin_start", """{"id":"ckin_start","name":"Start-up form","kind":"startup","cadence":"manual","anchorMs":0,"questions":[],"archived":false}""");
+        await Template("ckin_weekly", """{"id":"ckin_weekly","name":"Weekly check-in","autoStart":true,"cadence":"weekly","anchorMs":0,"questions":[],"archived":false}""");
+        await Template("ckin_other", """{"id":"ckin_other","name":"Monthly review","cadence":"monthly","anchorMs":0,"questions":[],"archived":false}""");
+
+        var offerId = (await Json(await w.Coach.PostAsJsonAsync($"/coach/requests/{w.RelId}/offer", new { }))).GetProperty("offerId").GetGuid();
+        await Json(await w.Client.PostAsJsonAsync($"/coach/offers/{offerId}/take", new { }));
+
+        var mine = await w.Api.WithDbAsync(db => db.CheckinSchedules.Where(s => s.RecipientUserId == w.ClientId).Select(s => s.DataJson).ToListAsync());
+        var forms = mine.Select(j => JsonDocument.Parse(j).RootElement).ToList();
+        Assert.Equal(2, forms.Count);
+        Assert.Contains(forms, f => f.GetProperty("sourceId").GetString() == "ckin_start" && f.GetProperty("cadence").GetString() == "manual");
+        Assert.Contains(forms, f => f.GetProperty("sourceId").GetString() == "ckin_weekly" && !f.TryGetProperty("autoStart", out _));
+        // She pulls them like any form her coach gives her.
+        var pulled = await Json(await w.Client.GetAsync("/coach/checkins/assigned?since=0"));
+        Assert.Equal(2, pulled.GetProperty("schedules").GetArrayLength());
+    }
 }

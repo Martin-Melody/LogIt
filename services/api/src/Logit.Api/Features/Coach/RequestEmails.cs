@@ -70,15 +70,17 @@ public static class RequestEmails
         return Convert.ToHexString(mac, 0, 16).ToLowerInvariant();
     }
 
-    public record StopBody(Guid UserId, string Token);
+    // UserId as text: a link copied without it must say so, not fail to read the body.
+    public record StopBody(string? UserId, string? Token);
 
     /// The web page /stop-emails posts here: the link in the email is the only key.
     public static void MapRequestEmailEndpoints(this IEndpointRouteBuilder app) =>
         app.MapPost("/email/stop-request-emails", async (StopBody body, AppDbContext db, IConfiguration config) =>
         {
-            if (!CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(body.Token ?? ""), Encoding.ASCII.GetBytes(Token(config, body.UserId))))
+            if (!Guid.TryParse(body.UserId, out var userId)
+                || !CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(body.Token ?? ""), Encoding.ASCII.GetBytes(Token(config, userId))))
                 return Results.BadRequest(new { error = "This link isn't right. Copy the whole link from the email." });
-            var user = await db.Users.FirstOrDefaultAsync(x => x.Id == body.UserId);
+            var user = await db.Users.FirstOrDefaultAsync(x => x.Id == userId);
             if (user is not null && !user.RequestEmailsOff)
             {
                 user.RequestEmailsOff = true;

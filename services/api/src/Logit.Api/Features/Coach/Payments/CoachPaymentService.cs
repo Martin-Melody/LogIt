@@ -163,6 +163,7 @@ public class CoachPaymentService(
                     $"{CoachIntake.NameOf(client)} paid and took the spot. Coaching has started.", new { offerId }, null, now);
             }
             await SwitchCoachesAsync(meta.ClientId, meta.CoachId, now, ct);
+            await CoachForms.StartAsync(db, rel, now, ct);
         }
 
         await db.SaveChangesAsync(ct);

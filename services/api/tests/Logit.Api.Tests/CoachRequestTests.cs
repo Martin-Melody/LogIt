@@ -351,3 +351,17 @@ public class RequestEmailTests
         Assert.Equal("full_coach", other.GetProperty("otherCoach").GetString());
     }
 }
+
+public class StopEmailLinkTests : IClassFixture<ApiFactory>
+{
+    private readonly ApiFactory _api;
+    public StopEmailLinkTests(ApiFactory api) => _api = api;
+
+    [Fact]
+    public async Task A_link_without_its_parts_is_refused_not_an_error()
+    {
+        var anon = _api.CreateClient();
+        Assert.Equal(HttpStatusCode.BadRequest, (await anon.PostAsJsonAsync("/email/stop-request-emails", new { userId = "", token = "" })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await anon.PostAsJsonAsync("/email/stop-request-emails", new { })).StatusCode);
+    }
+}
