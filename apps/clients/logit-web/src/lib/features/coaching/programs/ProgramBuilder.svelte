@@ -25,6 +25,8 @@
   import type { RowAction } from "$lib/features/commands/commands.svelte";
   import NamePicker from "$lib/features/plan/NamePicker.svelte";
   import AddToDayDialog, { type AddPick } from "./AddToDayDialog.svelte";
+  import GroupDialog from "./GroupDialog.svelte";
+  import { cardioPlanned } from "@logit/core/domain/programDaySession";
   import GripVerticalIcon from "@lucide/svelte/icons/grip-vertical";
   import { flip } from "svelte/animate";
   import { slide } from "svelte/transition";
@@ -232,8 +234,24 @@
 
   // One Add dialog for the day (canvas PB4).
   let addOpen = $state(false);
+  /** "+ Exercise to this superset": what's picked joins that group (canvas PB2). */
+  let addTo = $state<string | null>(null);
+  $effect(() => { if (!addOpen) addTo = null; });
   function addPicks(picks: AddPick[], as: "one" | "group" | "circuit") {
     if (!day || !picks.length) return;
+    const into = addTo;
+    addTo = null;
+    if (into) {
+      const d = day.id;
+      for (const pk of picks) {
+        if (pk.kind === "strength") addExercise(pk.name, false);
+        else if (pk.kind === "cardio") addCardio(pk.name);
+        else addMobility(pk.name);
+        const nid = blockId;
+        if (nid) edit((p, w) => P.addToGroup(p, w, d, nid, into));
+      }
+      return;
+    }
     if (as === "circuit") {
       putBlock(null, { name: "Circuit", rounds: 3, roundRestSec: 90, members: picks.map((pk) => ({ id: createId("cm"), exerciseName: pk.name, exerciseId: index?.get(pk.name)?.id, ...(pk.kind === "strength" ? { reps: 10 } : { durationSec: 40 }) })) }, "circuit");
       return;
@@ -325,15 +343,17 @@
   }
 
   /** The same targets on every working set of an exercise. */
-  function setAll(b: ProgramStrength, field: "reps" | "load" | "rest" | "tempo", text: string, el: HTMLInputElement) {
+  function setAll(b: ProgramStrength, field: "reps" | "load" | "rest" | "tempo" | "hold" | "distance", text: string, el: HTMLInputElement) {
     let patch: Partial<ProgramSet> | null = null;
     const first = b.sets.find((s) => s.setType !== "warmup") ?? b.sets[0];
-    if (field === "reps") patch = P.parseRepsText(text, first?.setType);
+    if (field === "hold") { const r = P.parseRestText(text); patch = r === null ? null : { durationSec: r }; }
+    else if (field === "distance") { const m = text.trim() === "" ? undefined : Number(text.replace(/m$/i, "").trim()); patch = m === undefined || (Number.isFinite(m) && m > 0) ? { distanceM: m } : null; }
+    else if (field === "reps") patch = P.parseRepsText(text, first?.setType);
     else if (field === "load") patch = P.parseLoadText(text);
     else if (field === "rest") { const r = P.parseRestText(text); patch = r === null ? null : { restSec: r }; }
     else patch = { tempo: text.trim() || undefined };
     if (!patch) {
-      el.setCustomValidity(field === "reps" ? "Use 8, 8-10 or AMRAP" : field === "load" ? "Use kilos (60) or a percent (72%)" : "Use 2:30 or 90");
+      el.setCustomValidity(field === "reps" ? "Use 8, 8-10 or AMRAP" : field === "load" ? "Use kilos (60) or a percent (72%)" : field === "distance" ? "Use metres, like 40" : "Use 2:30 or 90");
       el.reportValidity();
       return;
     }
@@ -518,8 +538,8 @@
       if (b.alternatives?.length) bits.push(`swaps: ${b.alternatives.map((a) => a.exerciseName).join(", ")}`);
       return bits.filter(Boolean).join(" · ");
     }
-    if (b.type === "cardio") return [b.targetDurationSec ? `${Math.round(b.targetDurationSec / 60)} min` : "", b.targetDistanceM ? `${b.targetDistanceM / 1000} km` : ""].filter(Boolean).join(" · ") || "Cardio";
-    if (b.type === "mobility") return [b.sets ? `${b.sets} × ${b.targetSec ?? 30} s` : "", b.perSide ? "each side" : ""].filter(Boolean).join(" · ");
+    if (b.type === "cardio") return cardioPlanned(b) || "Cardio";
+    if (b.type === "mobility") return [b.sets ? `${b.sets} × ${b.targetSec ?? 30}${b.metric === "reps" ? "" : " s"}` : "", b.perSide ? "each side" : ""].filter(Boolean).join(" · ");
     if (b.type === "plugin") return b.settingsText ?? (Object.values(b.values ?? {}).filter((v) => v != null && v !== "").slice(0, 3).map((v) => (Array.isArray(v) ? v.join(", ") : String(v))).join(" · ") || "Block from a plugin");
     if (b.type === "circuit") return [`${b.rounds} rounds`, b.members.map((m) => `${m.exerciseName} ${m.durationSec ? P.restText(m.durationSec) : `× ${m.reps ?? ""}`}`).join(", "), b.progression === "add-round" ? "+1 round every 2 weeks" : ""].filter(Boolean).join(" · ");
     return "";
@@ -537,6 +557,25 @@
     return out;
   });
   const runOrder = createReorder<string>("y");
+  let groupOpen = $state(false);
+  let groupEditing = $state<string | null>(null);
+  const editingGroup = $derived(groupEditing ? (day?.groups?.find((g) => g.id === groupEditing) ?? { id: groupEditing }) : null);
+  function groupActions(gid: string): RowAction[] {
+    if (!day) return [];
+    const d = day.id;
+    return [
+      { id: "settings", label: "Settings…", run: () => { groupEditing = gid; groupOpen = true; } },
+      { id: "add", label: "+ Exercise to this group", run: () => { addTo = gid; addOpen = true; } },
+      { id: "ungroup", label: "Ungroup", separatorBefore: true, run: () => edit((p, w) => P.ungroup(p, w, d, gid)) },
+    ];
+  }
+  function groupSub(gid: string): string {
+    const g = day?.groups?.find((x) => x.id === gid);
+    const bits = [g?.kind === "circuit" ? "circuit timer" : "back to back"];
+    if (g?.memberRestSec) bits.push(`${P.restText(g.memberRestSec)} between`);
+    if (g?.roundRestSec) bits.push(`rest ${P.restText(g.roundRestSec)} after the round`);
+    return bits.join(" · ");
+  }
   function orderRuns(keys: string[]) {
     if (!day) return;
     const byKey = new Map(runs.map((x) => [x.key, x]));
@@ -685,6 +724,21 @@
                 <GripVerticalIcon class="size-4" />
               </button>
               <div class="flex min-w-0 flex-1 flex-col gap-1.5">
+                {#if run.blocks.length > 1 && run.blocks[0]?.supersetGroup}
+                  {@const gid = run.blocks[0].supersetGroup}
+                  <ActionMenu actions={groupActions(gid)} label="More for {P.groupLabel(day, gid)}">
+                    {#snippet children({ props, more })}
+                      <div {...props} class="flex items-center gap-2 rounded-[9px] bg-muted/60 px-3 py-1.5">
+                        <button type="button" onclick={() => { groupEditing = gid; groupOpen = true; }} class="flex min-w-0 flex-1 items-baseline gap-2 text-left">
+                          <span class="text-[11px] font-bold uppercase tracking-wide">{P.groupLabel(day, gid)}</span>
+                          <span class="truncate text-xs text-muted-foreground">{groupSub(gid)}</span>
+                        </button>
+                        <Button variant="ghost" size="sm" onclick={() => { addTo = gid; addOpen = true; }}>+ Exercise</Button>
+                        {@render more()}
+                      </div>
+                    {/snippet}
+                  </ActionMenu>
+                {/if}
                 {#each run.blocks as b (b.id)}
                   {@const i = blocks.indexOf(b)}
                   {@const grouped = b.supersetGroup && labels.get(b.id)}
@@ -718,6 +772,15 @@
               onPick={(n) => { patchBlock(b.id, { exerciseName: n, exerciseId: index?.get(n)?.id } as Partial<ProgramBlock>); renaming = false; }} onCancel={() => (renaming = false)} />
           {/if}
           {#key b.id}
+            {@const m = b.measure ?? "weight"}
+            <!-- What it measures (canvas PB3): the set fields follow it. -->
+            <div class="grid grid-cols-2 gap-3">
+              <div class="flex flex-col gap-1.5"><Label>Measures</Label>
+                <OptionSelect size="sm" value={m} aria-label="Measures" options={P.MEASURES.map((x) => ({ value: x.value, label: x.label }))}
+                  onValueChange={(v) => patchBlock(b.id, { measure: v === "weight" ? undefined : v } as Partial<ProgramBlock>)} />
+              </div>
+              <label class="flex items-center justify-between gap-3 self-end pb-1.5 text-[13px]"><span>Each side</span><Switch checked={!!b.perSide} onCheckedChange={(v) => patchBlock(b.id, { perSide: v || undefined } as Partial<ProgramBlock>)} /></label>
+            </div>
             <div class="grid grid-cols-2 gap-3">
               <div class="flex flex-col gap-1.5"><Label>Sets</Label>
                 <span class="flex items-center gap-1.5">
@@ -726,11 +789,22 @@
                   <Button variant="outline" size="icon" class="size-8" aria-label="One set more" onclick={() => setCount(b, b.sets.length + 1)}>+</Button>
                 </span>
               </div>
-              <div class="flex flex-col gap-1.5"><Label for="ex-reps">Reps</Label><input id="ex-reps" class={fieldCls} value={first ? P.repsText(first) : ""} placeholder="6-8" onchange={(e) => setAll(b, "reps", e.currentTarget.value, e.currentTarget)} /></div>
-              <div class="flex flex-col gap-1.5"><Label for="ex-load">Load</Label><input id="ex-load" class={fieldCls} value={first ? P.loadText(first) : ""} placeholder="60 or 72%" onchange={(e) => setAll(b, "load", e.currentTarget.value, e.currentTarget)} /></div>
+              {#if m === "time"}
+                <div class="flex flex-col gap-1.5"><Label for="ex-hold">Hold</Label><input id="ex-hold" class={fieldCls} value={first?.durationSec ? P.restText(first.durationSec) : ""} placeholder="0:45" onchange={(e) => setAll(b, "hold", e.currentTarget.value, e.currentTarget)} /></div>
+              {:else if m === "distance"}
+                <div class="flex flex-col gap-1.5"><Label for="ex-dist">Metres</Label><input id="ex-dist" class={fieldCls} inputmode="numeric" value={first?.distanceM ?? ""} placeholder="40" onchange={(e) => setAll(b, "distance", e.currentTarget.value, e.currentTarget)} /></div>
+              {:else}
+                <div class="flex flex-col gap-1.5"><Label for="ex-reps">Reps</Label><input id="ex-reps" class={fieldCls} value={first ? P.repsText(first) : ""} placeholder="6-8" onchange={(e) => setAll(b, "reps", e.currentTarget.value, e.currentTarget)} /></div>
+              {/if}
+              {#if m === "weight" || m === "added"}
+                <div class="flex flex-col gap-1.5"><Label for="ex-load">{m === "added" ? "Added weight" : "Load"}</Label><input id="ex-load" class={fieldCls} value={first ? P.loadText(first) : ""} placeholder={m === "added" ? "10" : "60 or 72%"} onchange={(e) => setAll(b, "load", e.currentTarget.value, e.currentTarget)} /></div>
+              {/if}
               <div class="flex flex-col gap-1.5"><Label for="ex-rest">Rest</Label><input id="ex-rest" class={fieldCls} value={P.restText(first?.restSec)} placeholder="2:30" onchange={(e) => setAll(b, "rest", e.currentTarget.value, e.currentTarget)} /></div>
               <div class="col-span-2 flex flex-col gap-1.5"><Label for="ex-tempo">Tempo <span class="font-normal text-muted-foreground">optional</span></Label><input id="ex-tempo" class={fieldCls} value={first?.tempo ?? ""} placeholder="3-1-1-0" onchange={(e) => setAll(b, "tempo", e.currentTarget.value, e.currentTarget)} /></div>
             </div>
+            {#if m === "time" || m === "distance"}
+              <p class="text-xs text-muted-foreground">{m === "time" ? "Runs as a timed hold on their phone" : "Logged as distance on their phone"}; progressions leave it as you set it.</p>
+            {/if}
             <details class="text-[13px]">
               <summary class="cursor-pointer text-xs font-medium text-muted-foreground">Each set (warm-ups, drop sets, RPE)</summary>
               <table class="mt-2 w-full text-xs">
@@ -783,13 +857,27 @@
               <div class="flex flex-col gap-1.5"><Label for="cd-min">Minutes</Label><input id="cd-min" class={fieldCls} inputmode="numeric" value={b.targetDurationSec ? Math.round(b.targetDurationSec / 60) : ""} onchange={(e) => { const n = Number(e.currentTarget.value); patchBlock(b.id, { targetDurationSec: n > 0 ? Math.round(n * 60) : undefined } as Partial<ProgramBlock>); }} /></div>
               <div class="flex flex-col gap-1.5"><Label for="cd-km">Kilometres</Label><input id="cd-km" class={fieldCls} inputmode="decimal" value={b.targetDistanceM ? b.targetDistanceM / 1000 : ""} onchange={(e) => { const n = Number(e.currentTarget.value.replace(",", ".")); patchBlock(b.id, { targetDistanceM: n > 0 ? Math.round(n * 1000) : undefined } as Partial<ProgramBlock>); }} /></div>
             </div>
+            <!-- Intervals and effort (canvas PB3); the phone shows them as "Planned". -->
+            <label class="flex items-center justify-between gap-3 text-[13px]"><span>Intervals</span><Switch checked={!!b.intervals} onCheckedChange={(v) => patchBlock(b.id, { intervals: v ? { workSec: 60, easySec: 120, repeat: 6 } : undefined } as Partial<ProgramBlock>)} /></label>
+            {#if b.intervals}
+              {@const iv = b.intervals}
+              <div class="grid grid-cols-3 gap-3">
+                <div class="flex flex-col gap-1.5"><Label for="cd-work">Work</Label><input id="cd-work" class={fieldCls} value={P.restText(iv.workSec)} placeholder="1:00" onchange={(e) => { const s = P.parseRestText(e.currentTarget.value); if (s) patchBlock(b.id, { intervals: { ...iv, workSec: s } } as Partial<ProgramBlock>); }} /></div>
+                <div class="flex flex-col gap-1.5"><Label for="cd-easy">Easy</Label><input id="cd-easy" class={fieldCls} value={iv.easySec ? P.restText(iv.easySec) : ""} placeholder="2:00" onchange={(e) => { const s = P.parseRestText(e.currentTarget.value); if (s !== null) patchBlock(b.id, { intervals: { ...iv, easySec: s } } as Partial<ProgramBlock>); }} /></div>
+                <div class="flex flex-col gap-1.5"><Label for="cd-rep">Repeat</Label><input id="cd-rep" class={fieldCls} inputmode="numeric" value={iv.repeat} onchange={(e) => { const n = Math.round(Number(e.currentTarget.value)); if (n >= 1 && n <= 50) patchBlock(b.id, { intervals: { ...iv, repeat: n } } as Partial<ProgramBlock>); }} /></div>
+              </div>
+            {/if}
+            <div class="flex flex-col gap-1.5"><Label for="cd-effort">Effort <span class="font-normal text-muted-foreground">optional</span></Label><input id="cd-effort" class={fieldCls} value={b.effort ?? ""} placeholder="Zone 2, or hard, about 8/10" onchange={(e) => patchBlock(b.id, { effort: e.currentTarget.value.trim() || undefined } as Partial<ProgramBlock>)} /></div>
           {/key}
         {:else if block.type === "mobility"}
           {@const b = block}
           {#key b.id}
             <div class="grid grid-cols-2 gap-3">
               <div class="flex flex-col gap-1.5"><Label for="mo-sets">Sets</Label><input id="mo-sets" class={fieldCls} inputmode="numeric" value={b.sets ?? ""} onchange={(e) => { const n = Number(e.currentTarget.value); patchBlock(b.id, { sets: n > 0 ? Math.min(10, Math.round(n)) : undefined } as Partial<ProgramBlock>); }} /></div>
-              <div class="flex flex-col gap-1.5"><Label for="mo-hold">Hold (seconds)</Label><input id="mo-hold" class={fieldCls} inputmode="numeric" value={b.targetSec ?? ""} onchange={(e) => { const n = Number(e.currentTarget.value); patchBlock(b.id, { targetSec: n > 0 ? Math.round(n) : undefined } as Partial<ProgramBlock>); }} /></div>
+              <div class="col-span-2 flex flex-col gap-1.5"><Label>Measures</Label>
+                <OptionSelect size="sm" value={b.metric ?? "hold"} aria-label="Measures" options={[{ value: "hold", label: "Hold" }, { value: "reps", label: "Reps" }]} onValueChange={(v) => patchBlock(b.id, { metric: v } as Partial<ProgramBlock>)} />
+              </div>
+              <div class="flex flex-col gap-1.5"><Label for="mo-hold">{b.metric === "reps" ? "Reps" : "Hold (seconds)"}</Label><input id="mo-hold" class={fieldCls} inputmode="numeric" value={b.targetSec ?? ""} onchange={(e) => { const n = Number(e.currentTarget.value); patchBlock(b.id, { targetSec: n > 0 ? Math.round(n) : undefined } as Partial<ProgramBlock>); }} /></div>
             </div>
             <label class="flex items-center justify-between gap-3 text-[13px]"><span>Each side</span><Switch checked={!!b.perSide} onCheckedChange={(v) => patchBlock(b.id, { perSide: v } as Partial<ProgramBlock>)} /></label>
             <p class="text-xs text-muted-foreground">Progresses like their own mobility drills. Needs LogIt {P.V2_BLOCKS_APP_VERSION} or newer on their phone.</p>
@@ -898,4 +986,9 @@
 
 <WeeksDialog bind:open={weeksOpen} program={prog} onset={(n, type) => edit((p) => setWeekType(p, n, type))} />
 
-<AddToDayDialog bind:open={addOpen} dayName={day?.name ?? "this day"} {searchExercises} {searchActivities} {searchDrills} onadd={addPicks} onplugin={() => openPluginBlock(null)} />
+<AddToDayDialog bind:open={addOpen} dayName={addTo && day ? `${P.groupLabel(day, addTo)} in ${day.name ?? "this day"}` : (day?.name ?? "this day")} {searchExercises} {searchActivities} {searchDrills} onadd={addPicks} onplugin={() => openPluginBlock(null)} />
+
+{#if editingGroup && day}
+  <GroupDialog bind:open={groupOpen} group={editingGroup} fallback={P.groupLabel({ blocks: day.blocks }, editingGroup.id)}
+    onsave={(patch) => { const d = day!.id, gid = editingGroup!.id; edit((p, w) => P.setGroup(p, w, d, gid, patch)); }} />
+{/if}

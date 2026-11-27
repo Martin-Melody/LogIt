@@ -200,6 +200,8 @@ export type CardioInterval = {
 export type CardioBlockData = {
   activityName: string;
   intervals: CardioInterval[];
+  /** What a coach's program planned, in words: "20 min · zone 2", "6 × 1:00 hard, 2:00 easy". */
+  planned?: string;
   superset?: SupersetInfo;
 };
 

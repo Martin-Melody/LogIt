@@ -1,14 +1,14 @@
 // The workout a coach program day starts: one exercise per strength block, one
 // (uncompleted) set per prescribed set with the target reps/weight already entered so the
 // user just confirms or adjusts. Cardio blocks are added empty. Blocks the coach gave the
-// same `supersetGroup` become one superset (two) or circuit (more).
+// same `supersetGroup` become one superset, whatever its size, unless the coach made it a circuit.
 //
 // Program data v2 adds circuits (their members, run with the circuit timer), mobility drills
 // and plugin blocks. A block this app can't run (a newer type, or one needing a newer app, or a
 // plugin that isn't there) is left out, and the day's list says "Update LogIt to see this
 // part" (unrunnableBlocks); the rest of the day works.
 
-import { canRunBlock, type ProgramBlock, type ProgramDay } from "./CoachProgram";
+import { canRunBlock, restText, type ProgramBlock, type ProgramDay } from "./CoachProgram";
 import { circuitRounds, type PlanCell } from "./programPlan";
 import { addPluginBlock, repeatLastEntry, setBlockFieldValue, updatePluginBlock, type BlockDeclaration } from "./blockPlugin";
 import {
@@ -83,7 +83,17 @@ export function programDaySession(day: ProgramDay, opts: ProgramDayOptions = {})
       if (block.type === "plugin" && canRunBlock(block, opts.appVersion)) notes.push(pluginNote(block));
       continue;
     }
-    if (block.type === "strength") {
+    if (block.type === "strength" && (block.measure === "time" || block.measure === "distance")) {
+      // A hold runs as a timed drill and a carry as distance, the way the workout logs them (6.6).
+      const work = sortByOrderIndex(block.sets).filter((s) => s.setType !== "warmup");
+      const count = Math.max(1, opts.plan?.(block.id)?.sets ?? work.length);
+      const first = work[0];
+      if (block.measure === "time") {
+        session = addDrill(session, { drillName: block.exerciseName, metric: "hold", perSide: block.perSide }, count, first?.durationSec).session;
+      } else {
+        session = withPlanned(addCardioBlock(session, block.exerciseName), `${count} × ${first?.distanceM ?? "?"} m${block.perSide ? " each side" : ""}`);
+      }
+    } else if (block.type === "strength") {
       session = addExercise(session, {
         exerciseName: block.exerciseName,
         exerciseId: block.exerciseId,
@@ -96,19 +106,23 @@ export function programDaySession(day: ProgramDay, opts: ProgramDayOptions = {})
       const working = ordered.filter((s) => s.setType !== "warmup");
       const keep = planned?.sets ? new Set(working.slice(0, planned.sets).map((s) => s.id)) : null;
       const plannedReps = planned?.reps ? Number.parseInt(planned.reps, 10) : NaN;
+      // A week that adds sets (a week type with + sets) repeats the last working set.
+      const extra = planned?.sets && working.length ? Math.max(0, planned.sets - working.length) : 0;
+      const sets = [...ordered, ...Array.from({ length: extra }, () => working.at(-1)!)];
       if (entryId) {
-        for (const set of ordered) {
+        for (const set of sets) {
           if (keep && set.setType !== "warmup" && !keep.has(set.id)) continue;
           const usePlan = planned && set.setType !== "warmup";
           session = addSet(session, entryId, {
             reps: usePlan && Number.isFinite(plannedReps) ? plannedReps : targetReps(set),
-            weight: usePlan && planned!.weight != null ? planned!.weight : (set.weight ?? 0),
+            // A bodyweight exercise ("Reps") carries no weight; "+ added weight" is the belt's.
+            weight: block.measure === "reps" ? 0 : usePlan && planned!.weight != null ? planned!.weight : (set.weight ?? 0),
             setType: set.setType,
           });
         }
       }
     } else if (block.type === "cardio") {
-      session = addCardioBlock(session, block.activityName);
+      session = withPlanned(addCardioBlock(session, block.activityName), cardioPlanned(block));
     } else if (block.type === "mobility") {
       session = addDrill(session, block, Math.max(1, block.sets ?? 1), block.targetSec).session;
     } else if (block.type === "plugin") {
@@ -152,10 +166,38 @@ export function programDaySession(day: ProgramDay, opts: ProgramDayOptions = {})
     if (group) groups.set(group, [...(groups.get(group) ?? []), session.blocks.at(-1)!.id]);
   }
 
-  for (const ids of groups.values()) {
-    if (ids.length >= 2) session = groupIntoSuperset(session, ids);
+  // A group stays a superset whatever its size unless the coach made it a circuit (6.6).
+  for (const [gid, ids] of groups) {
+    if (ids.length < 2) continue;
+    const g = day.groups?.find((x) => x.id === gid);
+    session = groupIntoSuperset(session, ids, g?.name, g?.kind ?? "superset");
+    const first = session.blocks.find((b) => b.id === ids[0]);
+    const sid = first ? blockSuperset(first)?.id : undefined;
+    if (sid && g && (g.memberRestSec != null || g.roundRestSec != null)) {
+      session = setGroupSettings(session, sid, {
+        ...(g.memberRestSec != null ? { memberRestMs: g.memberRestSec * 1000 } : {}),
+        ...(g.roundRestSec != null ? { roundRestMs: g.roundRestSec * 1000 } : {}),
+      });
+    }
   }
   return notes.length ? { ...session, note: notes.join("\n") } : session;
+}
+
+/** The last block added, with what the program planned for it in words. */
+function withPlanned(session: WorkoutSession, planned: string): WorkoutSession {
+  if (!planned) return session;
+  const last = session.blocks.at(-1)!;
+  return { ...session, blocks: [...session.blocks.slice(0, -1), { ...last, data: { ...(last.data as object), planned } } as typeof last] };
+}
+
+/** "20 min · 5 km", "6 × 1:00 hard, 2:00 easy · zone 2". */
+export function cardioPlanned(b: Extract<ProgramBlock, { type: "cardio" }>): string {
+  const bits: string[] = [];
+  if (b.intervals) bits.push(`${b.intervals.repeat} × ${restText(b.intervals.workSec)}${b.intervals.easySec ? `, ${restText(b.intervals.easySec)} easy` : ""}`);
+  if (b.targetDurationSec) bits.push(`${Math.round(b.targetDurationSec / 60)} min`);
+  if (b.targetDistanceM) bits.push(`${b.targetDistanceM / 1000} km`);
+  if (b.effort?.trim()) bits.push(b.effort.trim());
+  return bits.join(" · ");
 }
 
 /** "From your program: EMOM timer · Minutes 10, Exercise Push-up, Reps 8" */

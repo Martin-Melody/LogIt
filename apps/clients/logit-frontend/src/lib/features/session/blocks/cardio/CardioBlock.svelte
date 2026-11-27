@@ -316,6 +316,7 @@
     {:else}
       <button type="button" class="flex-1 min-w-0 h-11 pl-1 pr-2 text-left" onclick={startEdit} disabled={saving} aria-label="{data.activityName} — rename">
         <span class="block truncate font-semibold {stage === 'current' ? 'text-[17px]' : 'text-[15px]'}">{data.activityName}</span>
+        {#if data.planned && !collapsed}<span class="block truncate text-xs font-normal text-info tabular-nums">Planned: {data.planned}</span>{/if}
         {#if collapsed}<span class="block truncate text-xs font-normal text-muted-foreground tabular-nums">Cardio{totalDuration > 0 ? ` · ${formatDuration(totalDuration)}` : ""}{totalDistance > 0 ? ` · ${formatDistance(totalDistance, unit)}` : ""}</span>{/if}
       </button>
     {/if}

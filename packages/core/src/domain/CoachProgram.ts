@@ -80,7 +80,24 @@ export type ProgramDay = {
    * follow it). The client can set their own on the phone. */
   sessionTime?: string;
   blocks: ProgramBlock[];
+  /** Phase 6.6: settings of the day's supersets, by supersetGroup id. Without one, a group is
+   * a superset (any size: a tri-set stays a superset) with no timer between exercises. */
+  groups?: ProgramGroup[];
 };
+
+/** A superset, tri-set, giant set or circuit made of the blocks sharing its id (canvas PB2). */
+export type ProgramGroup = {
+  id: string;
+  /** The coach's name; else "Superset" / "Tri-set" / "Giant set" / "Circuit". */
+  name?: string;
+  kind?: "superset" | "circuit";
+  /** Rest between one exercise and the next, and after each round. */
+  memberRestSec?: number;
+  roundRestSec?: number;
+};
+
+/** What an exercise measures (canvas PB3), the kinds the workout logs. Absent = weight × reps. */
+export type ExerciseMeasure = "weight" | "reps" | "added" | "time" | "distance";
 
 /**
  * v2: a progression rule (canvas PG4). Built in: LogIt Adaptive (weight from the client's
@@ -167,6 +184,9 @@ export type ProgramStrength = {
   alternatives?: SwapAlternative[];
   /** v2: this exercise's own rule, over the program's. */
   rule?: ProgramRule;
+  /** Phase 6.6: what it measures (absent = weight × reps), and left and right logged apart. */
+  measure?: ExerciseMeasure;
+  perSide?: boolean;
 };
 
 export type SwapAlternative = { exerciseName: string; exerciseId?: string };
@@ -181,6 +201,10 @@ export type ProgramCardio = {
   activityName: string;
   targetDurationSec?: number;
   targetDistanceM?: number;
+  /** Phase 6.6: intervals, e.g. 1:00 hard, 2:00 easy, × 6. */
+  intervals?: { workSec: number; easySec?: number; repeat: number };
+  /** "Zone 2", "about 8/10". */
+  effort?: string;
   note?: string;
 };
 
@@ -199,6 +223,9 @@ export type ProgramSet = {
   restSec?: number;
   /** Tempo notation, e.g. "3-1-1-0" (eccentric-pause-concentric-pause). */
   tempo?: string;
+  /** Phase 6.6: a hold's time, or a carry's distance, when the exercise measures those. */
+  durationSec?: number;
+  distanceM?: number;
   /** v2: the coach typed this week's numbers over the rule's (canvas PG3); they stay put. */
   pinned?: boolean;
 };
@@ -752,6 +779,57 @@ export function supersetLabels(day: ProgramDay): Map<string, string> {
   return out;
 }
 
+// ── Groups (Phase 6.6, canvas PB2) ────────────────────────────────────────────
+
+/** "Superset" (2), "Tri-set" (3), "Giant set" (4+), "Circuit", or the coach's name. */
+export function groupLabel(day: Pick<ProgramDay, "blocks" | "groups">, groupId: string): string {
+  const g = day.groups?.find((x) => x.id === groupId);
+  if (g?.name?.trim()) return g.name.trim();
+  if (g?.kind === "circuit") return "Circuit";
+  const n = day.blocks.filter((b) => b.supersetGroup === groupId).length;
+  return n >= 4 ? "Giant set" : n === 3 ? "Tri-set" : "Superset";
+}
+
+/** Changes a group's settings; null fields go back to the default. */
+export function setGroup(program: CoachProgram, weekId: string, dayId: string, groupId: string, patch: Partial<Omit<ProgramGroup, "id">>): CoachProgram {
+  return mapDay(program, weekId, dayId, (day) => {
+    const cur = day.groups?.find((g) => g.id === groupId) ?? { id: groupId };
+    const next = Object.fromEntries(Object.entries({ ...cur, ...patch }).filter(([, v]) => v != null && v !== "")) as ProgramGroup;
+    return { ...day, groups: [...(day.groups ?? []).filter((g) => g.id !== groupId), next] };
+  });
+}
+
+/** Puts a block into a group, right after its last member. */
+export function addToGroup(program: CoachProgram, weekId: string, dayId: string, blockId: string, groupId: string): CoachProgram {
+  return mapDay(program, weekId, dayId, (day) => {
+    const ordered = [...day.blocks].sort((a, b) => a.orderIndex - b.orderIndex);
+    const moving = ordered.find((b) => b.id === blockId);
+    if (!moving) return day;
+    const rest = ordered.filter((b) => b.id !== blockId);
+    const at = rest.map((b) => b.supersetGroup).lastIndexOf(groupId) + 1;
+    rest.splice(at > 0 ? at : rest.length, 0, { ...moving, supersetGroup: groupId });
+    return { ...day, blocks: rest.map((b, i) => ({ ...b, orderIndex: i })) };
+  });
+}
+
+/** Every block of the group stands alone again, and its settings go. */
+export function ungroup(program: CoachProgram, weekId: string, dayId: string, groupId: string): CoachProgram {
+  return mapDay(program, weekId, dayId, (day) => ({
+    ...day,
+    blocks: day.blocks.map((b) => (b.supersetGroup === groupId ? ({ ...b, supersetGroup: undefined } as ProgramBlock) : b)),
+    groups: day.groups?.filter((g) => g.id !== groupId),
+  }));
+}
+
+/** "Weight × reps", "Reps", "Reps + added weight", "Time", "Distance". */
+export const MEASURES: { value: ExerciseMeasure; label: string; detail: string }[] = [
+  { value: "weight", label: "Weight × reps", detail: "Barbell, dumbbell, machine" },
+  { value: "reps", label: "Reps", detail: "Bodyweight: push-ups, pull-ups" },
+  { value: "added", label: "Reps + added weight", detail: "Weighted pull-ups, dips (belt)" },
+  { value: "time", label: "Time", detail: "Holds: plank, dead hang, wall sit" },
+  { value: "distance", label: "Distance", detail: "Carries, sled" },
+];
+
 // ── Set targets as text (the web editor's fields) ─────────────────────────────
 
 type RepsFields = Pick<ProgramSet, "reps" | "repsMin" | "repsMax" | "setType">;
@@ -950,11 +1028,15 @@ export function strengthSummary(block: ProgramStrength): string {
   const work = [...block.sets].filter((s) => s.setType !== "warmup").sort((a, b) => a.orderIndex - b.orderIndex);
   if (!work.length) return "";
   const first = work[0]!;
+  // A hold or a carry says its time or distance: "3 × 0:45", "3 × 40 m" (Phase 6.6).
+  const side = block.perSide ? " each side" : "";
+  if (block.measure === "time" && first.durationSec) return `${work.length} × ${restText(first.durationSec)}${side}`;
+  if (block.measure === "distance" && first.distanceM) return `${work.length} × ${first.distanceM} m${side}`;
   const reps = first.setType === "amrap" ? "AMRAP"
     : first.reps != null ? String(first.reps)
     : first.repsMin != null ? (first.repsMax != null && first.repsMax !== first.repsMin ? `${first.repsMin}–${first.repsMax}` : String(first.repsMin))
     : "";
-  return reps ? `${work.length} × ${reps}` : `${work.length} ${work.length === 1 ? "set" : "sets"}`;
+  return reps ? `${work.length} × ${reps}${side}` : `${work.length} ${work.length === 1 ? "set" : "sets"}`;
 }
 
 /** A day in one line: "Bench Press 3 × 6–8 · Barbell Row 3 × 8–10 · …". */

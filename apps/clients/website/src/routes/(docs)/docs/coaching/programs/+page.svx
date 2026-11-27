@@ -27,6 +27,16 @@ Click an exercise to open its settings right there. **+ Add to** the day opens o
 exercises, cardio and mobility drills: pick one and Add, or pick several and add them one after
 another, as a superset (two), tri-set (three) or giant set (four or more), or as a circuit.
 
+A superset shows a header with its name ("Superset", "Tri-set", "Giant set" or yours) and how it
+runs. It stays a superset, back to back with no timer, whatever its size; click the header to make
+it a circuit, name it, or set the rest between exercises and after the round, the same settings
+the client has in the workout. **+ Exercise** on the header adds to it, and ⋯ has Ungroup.
+
+Each exercise says what it **measures**: weight × reps, reps (bodyweight), reps + added weight,
+time (holds like a plank) or distance (carries), and whether left and right are logged apart. The
+set fields follow it. Holds run as a timed hold on the client's phone and carries as distance.
+Cardio can have intervals (work, easy, repeat) and an effort, shown on their phone as "Planned".
+
 Changes save as you go, so leaving the page loses nothing. If the same program is open on another
 device, changes to different things come across by themselves with a note; only when both changed
 the same exercise does LogIt ask which to keep. Programs made before the builder whose weeks have
