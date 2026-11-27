@@ -57,7 +57,7 @@ export const meGroups: NavGroup[] = [
     label: "People",
     items: [
       { label: "Social", href: "/social", icon: UsersRoundIcon, key: "F", badge: () => socialBadge.count },
-      { label: "Messages", href: "/social/messages", icon: MessageCircleIcon, key: "M", badge: () => dmBadge.count },
+      { label: "Messages", href: "/social/messages", icon: MessageCircleIcon, key: "M", badge: () => dmBadge.count + coachBadges.myCoachMessages },
     ],
   },
   {

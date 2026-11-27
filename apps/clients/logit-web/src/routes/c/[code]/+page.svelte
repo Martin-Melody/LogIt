@@ -296,7 +296,7 @@
         <p class="text-xs text-muted-foreground">Changing package is a conversation with {first}.</p>
       {:else if info.relationship === "requested" && !pkg && info.relationshipId}
         <p class="text-[14px]">You've asked {first} already{info.stage === "waiting" ? ", and you're on the waiting list" : ""}.</p>
-        <Button href="/my-coach?request={info.relationshipId}">Open the conversation</Button>
+        <Button href="/social/messages?c={info.relationshipId}">Open the conversation</Button>
       {:else if done === "active" || done === "requested"}
         {@const connected = done === "active" || info.relationship === "active"}
         <!-- W6: what happens next, with the app as the next step. -->

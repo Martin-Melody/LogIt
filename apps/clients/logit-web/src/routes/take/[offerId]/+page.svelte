@@ -196,7 +196,7 @@
           : info.state === "replaced" ? `${c} changed the offer. Open the new one from your conversation.`
           : info.state === "taken" ? `You've taken it already.` : `${c} withdrew it. Your request is still open.`}
       </p>
-      <Button variant="outline" href="/my-coach?request={info.relationshipId}" class="self-start">Open the conversation</Button>
+      <Button variant="outline" href="/social/messages?c={info.relationshipId}" class="self-start">Open the conversation</Button>
     </section>
   {:else}
     <section class="flex flex-col gap-5 rounded-[12px] border border-border bg-card p-5">

@@ -18,7 +18,13 @@
   import { shortDate } from "$lib/features/coaching/format";
   import RequestEventCard from "./RequestEventCard.svelte";
 
-  let { request, open = true, onchange }: { request: MyCoachingRequest; open?: boolean; onchange: () => Promise<void> | void } = $props();
+  let { request, open = true, onchange, chat = true }: {
+    request: MyCoachingRequest;
+    open?: boolean;
+    onchange: () => Promise<void> | void;
+    /** False on My coach: the conversation lives in Me › Messages (canvas MS4); a button opens it. */
+    chat?: boolean;
+  } = $props();
 
   const name = $derived(request.coach.displayName || request.coach.username);
   const c = $derived(firstName(name));
@@ -152,7 +158,9 @@
     </div>
   </div>
 
-  {#if open || expanded}
+  {#if !chat}
+    <Button variant="outline" size="sm" class="self-start" href="/social/messages?c={request.relationshipId}">Message {c}</Button>
+  {:else if open || expanded}
     <MessageThread bind:this={thread} relationshipId={request.relationshipId} otherName={c}
       closedNote={request.closed ? (stage === "withdrawn" ? "You withdrew this request, so it can't be replied to." : `${c} closed this request, so you can't reply here.`) : null}>
       {#snippet card(m)}

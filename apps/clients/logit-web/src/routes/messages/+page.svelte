@@ -22,7 +22,6 @@
   import { conversationActions } from "$lib/features/commands/commands.svelte";
   import { apiClient } from "@logit/core/api/client";
   import { coachApi, type CoachingRequest } from "@logit/core/api/coachApi";
-  import { dmApi, type DmThread } from "@logit/core/api/dmApi";
   import { requestLine } from "@logit/core/domain/coachRequest";
   import { messagesApi } from "@logit/core/api/messagesApi";
   import { getWebCoachProgramRepo, getWebNutritionDeps } from "$lib/deps";
@@ -30,12 +29,10 @@
   import Avatar from "$lib/features/coaching/Avatar.svelte";
   import MessageThread from "$lib/features/coaching/MessageThread.svelte";
   import RequestEventCard from "$lib/features/coaching/requests/RequestEventCard.svelte";
-  import DmChat from "$lib/features/social/DmChat.svelte";
   import { when, weekdayDate } from "$lib/features/coaching/format";
 
   type Row =
     | { kind: "client"; key: string; name: string; avatarUrl: string | null; at: number; unread: boolean; line: string; client: ClientSummary }
-    | { kind: "dm"; key: string; name: string; avatarUrl: string | null; at: number; unread: boolean; line: string; thread: DmThread }
     | { kind: "request"; key: string; name: string; avatarUrl: string | null; at: number; unread: boolean; line: string; request: CoachingRequest };
 
   let rows = $state<Row[]>([]);
@@ -47,7 +44,7 @@
   // svelte-ignore state_referenced_locally
   let managing = $state(page.url.searchParams.get("saved") === "1");
 
-  const activeKey = $derived(page.url.searchParams.get("c") ? `c:${page.url.searchParams.get("c")}` : page.url.searchParams.get("dm") ? `dm:${page.url.searchParams.get("dm")}` : (rows.find((r) => r.kind !== "request")?.key ?? null));
+  const activeKey = $derived(page.url.searchParams.get("c") ? `c:${page.url.searchParams.get("c")}` : (rows.find((r) => r.kind !== "request")?.key ?? null));
   const active = $derived(rows.find((r) => r.key === activeKey) ?? null);
   const draft = $derived(page.url.searchParams.get("draft") ?? "");
   const shown = $derived(rows.filter((r) => (filter === "unread" ? r.unread : filter === "requests" ? r.kind === "request" : true) && (!search.trim() || r.name.toLowerCase().includes(search.trim().toLowerCase()))));
@@ -56,20 +53,19 @@
 
   async function load() {
     try {
-      const [overview, all, reqs, dms] = await Promise.all([
+      const [overview, all, reqs] = await Promise.all([
         loadCoachingOverview(),
         messagesApi.listAll(0).catch(() => []),
         coachApi.listRequests().catch(() => [] as CoachingRequest[]),
-        dmApi.threads("chats").catch(() => [] as DmThread[]),
       ]);
       const clientRows: Row[] = overview.clients.map((c) => {
         const last = all.filter((m) => m.relationshipId === c.relationshipId).sort((a, b) => b.createdAtMs - a.createdAtMs)[0];
         const body = last ? last.body || (last.photoUrl ? "Photo" : last.voiceUrl ? "Voice message" : "") : "";
         return { kind: "client", key: `c:${c.relationshipId}`, name: c.name, avatarUrl: c.avatarUrl, at: last?.createdAtMs ?? 0, unread: c.unread > 0, line: last ? `${last.mine ? "You: " : ""}${body}` : "No messages yet", client: c };
       });
-      const dmRows: Row[] = dms.filter((t) => t.other).map((t) => ({ kind: "dm", key: `dm:${t.id}`, name: t.other!.displayName || t.other!.username, avatarUrl: t.other!.avatarUrl, at: t.lastAtMs, unread: t.unread, line: `${t.lastMine ? "You: " : ""}${t.lastBody}`, thread: t }));
       const reqRows: Row[] = inView(reqs).map((r) => ({ kind: "request", key: `r:${r.relationshipId}`, name: r.client.displayName || r.client.username, avatarUrl: r.client.avatarUrl, at: Date.parse(r.requestedAt) || 0, unread: (r.stage ?? "asked") === "asked", line: requestLine(r.stage ?? "asked", r.offer ?? null, Date.now()), request: r }));
-      rows = [...clientRows, ...dmRows, ...reqRows].sort((a, b) => b.at - a.at);
+      // Only conversations where you're the coach; your own chats (and your own coaches) are in Me › Messages.
+      rows = [...clientRows, ...reqRows].sort((a, b) => b.at - a.at);
       error = null;
     } catch (e) {
       error = e instanceof Error ? e.message : "Couldn't load conversations";
@@ -79,6 +75,9 @@
   }
   onMount(() => onSampleActivity(() => void load()));
   onMount(() => {
+    // Old links to a chat with a friend here: it lives in Me › Messages now.
+    const dm = page.url.searchParams.get("dm");
+    if (dm) return void goto(`/social/messages?t=${dm}`, { replaceState: true });
     if (!canCoach()) void goto("/my-coach", { replaceState: true });
     else void load();
   });
@@ -87,10 +86,8 @@
     if (r.kind === "request") return void goto(`/clients?tab=${r.request.stage === "waiting" ? "waiting" : "requests"}&r=${r.request.relationshipId}`);
     const u = new URL(page.url);
     u.searchParams.delete("c");
-    u.searchParams.delete("dm");
     u.searchParams.delete("draft");
-    if (r.kind === "client") u.searchParams.set("c", r.client.relationshipId);
-    else u.searchParams.set("dm", r.thread.id);
+    u.searchParams.set("c", r.client.relationshipId);
     void goto(u, { replaceState: true, noScroll: true, keepFocus: true });
   }
   function sentInOpen(body: string, at: number) {
@@ -168,7 +165,7 @@
         <input bind:value={search} placeholder="Find someone" aria-label="Find someone"
           class="mx-0.5 mb-1.5 h-[34px] rounded-lg border border-input bg-background px-2.5 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring" />
         {#each shown as r (r.key)}
-          <ActionMenu actions={conversationActions(r.kind === "client" ? { kind: "client", name: r.name, clientId: r.client.id, relationshipId: r.client.relationshipId } : r.kind === "dm" ? { kind: "dm", name: r.name, username: r.thread.other?.username, threadId: r.thread.id } : { kind: "request", name: r.name, relationshipId: r.request.relationshipId, stage: r.request.stage ?? "asked" })} label="More for {r.name}">
+          <ActionMenu actions={conversationActions(r.kind === "client" ? { kind: "client", name: r.name, clientId: r.client.id, relationshipId: r.client.relationshipId } : { kind: "request", name: r.name, relationshipId: r.request.relationshipId, stage: r.request.stage ?? "asked" })} label="More for {r.name}">
           {#snippet children({ props, more })}
           <div {...props} class="group relative flex items-center rounded-lg {r.key === activeKey ? 'bg-muted ring-1 ring-border' : 'hover:bg-muted/50'}">
           <button type="button" onclick={() => open(r)} aria-current={r.key === activeKey ? "true" : undefined}
@@ -176,7 +173,7 @@
             <Avatar name={r.name} url={r.avatarUrl} />
             <span class="flex min-w-0 flex-1 flex-col gap-0.5">
               <span class="flex justify-between gap-2">
-                <span class="flex items-center gap-1.5 text-[13px] font-semibold">{r.name}{#if r.kind === "request"}<span class="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium">{r.request.stage === "waiting" ? "Waiting list" : "Request"}</span>{:else if r.kind === "dm"}<span class="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">Direct</span>{/if}</span>
+                <span class="flex items-center gap-1.5 text-[13px] font-semibold">{r.name}{#if r.kind === "request"}<span class="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium">{r.request.stage === "waiting" ? "Waiting list" : "Request"}</span>{/if}</span>
                 {#if r.at}<span class="text-[11px] text-muted-foreground">{when(r.at)}</span>{/if}
               </span>
               <span class="truncate text-xs {r.unread ? 'font-medium text-foreground' : 'text-muted-foreground'}">{r.line}</span>
@@ -226,12 +223,6 @@
             {#if c.program}<Button variant="outline" size="sm" href="/clients/{c.id}/programs/{c.program.program.id}?u={c.username}">Edit their program</Button>{/if}
           </span>
         </aside>
-      {:else if active?.kind === "dm"}
-        <section aria-label="Conversation with {active.name}" class="flex h-[max(480px,calc(100svh-11rem))] min-w-0 flex-col overflow-hidden rounded-[10px] xl:col-span-2 border border-border bg-card">
-          {#key active.thread.id}
-            <DmChat to={{ threadId: active.thread.id }} onchange={() => void load()} ondelete={() => { void goto("/messages"); void load(); }} />
-          {/key}
-        </section>
       {/if}
     </div>
   {/if}

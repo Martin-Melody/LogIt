@@ -17,5 +17,5 @@
       ? `${first} reads your answers when a spot opens and offers it to you in your conversation. Nothing is shared until you take it.`
       : `${first} reads your answers and replies in your conversation: a question, an offer of a spot, or a waiting list. Nothing is shared and nothing is paid until you take a spot.`}
   </p>
-  <Button href="/my-coach?request={relationshipId}" size="lg" class="h-11">Open the conversation</Button>
+  <Button href="/social/messages?c={relationshipId}" size="lg" class="h-11">Open the conversation</Button>
 </div>

@@ -5,7 +5,7 @@ import { coachPaymentsApi } from "@logit/core/api/coachPaymentsApi";
 import { loadCoachingOverview, needsYou, type CoachingOverview } from "./coachingData";
 
 /** The counts on the sidebar: what's waiting for you as a coach, and from your own coach. */
-const counts = $state({ today: 0, checkins: 0, messages: 0, requests: 0, myCoach: 0, payments: 0 });
+const counts = $state({ today: 0, checkins: 0, messages: 0, requests: 0, myCoach: 0, myCoachMessages: 0, payments: 0 });
 
 let lastLoad = 0;
 let studio = false;
@@ -16,7 +16,10 @@ export const coachBadges = {
   get messages() { return counts.messages; },
   /** Requests waiting for an answer (asked, or the offer ran out): Clients › Requests. */
   get requests() { return counts.requests; },
+  /** Coaches inviting you (My coach). */
   get myCoach() { return counts.myCoach; },
+  /** Unread from your own coaches and coaches you asked: counted in Me › Messages, where those chats are. */
+  get myCoachMessages() { return counts.myCoachMessages; },
   get payments() { return counts.payments; },
 
   /** The Payments page passes its count of clients who aren't paid up. */
@@ -38,19 +41,20 @@ export const coachBadges = {
     if (!force && Date.now() - lastLoad < 30_000) return;
     lastLoad = Date.now();
     try {
-      const [overview, unread, coaches, invites, payments] = await Promise.all([
+      const [overview, unread, coaches, invites, payments, asked] = await Promise.all([
         studio ? loadCoachingOverview().catch(() => null) : Promise.resolve(null),
         messagesApi.unreadCounts().catch(() => []),
         coachApi.listCoaches().catch(() => []),
         coachApi.listReceivedInvites().catch(() => []),
         // Payments are Studio-only: an account trying coaching with samples doesn't ask.
         studio && !coachTrial() ? coachPaymentsApi.overview().catch(() => null) : Promise.resolve(null),
+        coachApi.listMyRequests().catch(() => []),
       ]);
       if (overview) this.fromOverview(overview);
       if (payments) counts.payments = payments.summary.problems;
-      const coachThreads = new Set(coaches.map((c) => c.relationshipId));
-      counts.myCoach =
-        unread.filter((u) => coachThreads.has(u.relationshipId)).reduce((n, u) => n + u.unread, 0) + invites.length;
+      const mine = new Set([...coaches.map((c) => c.relationshipId), ...asked.map((r) => r.relationshipId)]);
+      counts.myCoachMessages = unread.filter((u) => mine.has(u.relationshipId)).reduce((n, u) => n + u.unread, 0);
+      counts.myCoach = invites.length;
     } catch {
       /* keep the old counts */
     }
