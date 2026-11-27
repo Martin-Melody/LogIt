@@ -85,6 +85,15 @@ export async function sampleAsksThrough(code: string): Promise<string | null> {
 let running: Promise<number> | null = null;
 
 /** One round: every sample client looks at its state and acts. Returns how many things they did. */
+/**
+ * "Answer as Niamh" (canvas V2): the coach writes what a sample client says, sent with the
+ * sample's own token, so it arrives as a message from them like a real client's would.
+ */
+export async function sampleSays(userId: string, relationshipId: string, body: string, now = Date.now()): Promise<void> {
+  const api = await as(userId);
+  await api.messages.send({ relationshipId, messageId: createId("msg"), body, createdAtMs: now });
+}
+
 export function runSampleClients(now = Date.now()): Promise<number> {
   // Never two rounds at once, or a sample could answer the same message twice.
   running ??= runOnce(now).finally(() => { running = null; });

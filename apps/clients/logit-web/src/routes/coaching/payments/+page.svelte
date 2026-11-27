@@ -10,6 +10,7 @@
   import { formatMoney, type PaymentsOverview } from "@logit/core/domain/coachPayments";
   import { Button } from "$lib/components/ui/button";
   import { coachBadges } from "$lib/features/coaching/badges.svelte";
+  import { practice } from "$lib/features/guide/sandbox.svelte";
   import PaymentClients from "$lib/features/coaching/payments/PaymentClients.svelte";
   import PaymentPackages from "$lib/features/coaching/payments/PaymentPackages.svelte";
   import PaymentSettings from "$lib/features/coaching/payments/PaymentSettings.svelte";
@@ -85,6 +86,11 @@
       <Button variant="outline" href="https://dashboard.stripe.com/" target="_blank" rel="noopener">Open Stripe dashboard ↗</Button>
     {/if}
   </header>
+
+  {#if practice.on}
+    <!-- Canvas V1: money is always real; samples never pay. -->
+    <p class="rounded-[10px] bg-muted px-4 py-2.5 text-[13px]">Sample clients don't pay. This is your real Payments page.</p>
+  {/if}
 
   <Tabs.Root value={tab} onValueChange={(v) => setTab(v as Tab)}>
     <Tabs.List variant="line" aria-label="Payments" data-guide="payments-tabs">

@@ -26,9 +26,15 @@ picker. Your programs, check-in forms, invite links and packages are the same in
 the bottom of the sidebar, with Turn off on the band, or from ⌘K. Adding sample clients turns it on,
 and so does a walkthrough chapter you do with them.
 
-Keep them as a sandbox to try programs and forms on. Manage them in Practice view, on Clients: Reset
-to fresh puts back their starting four weeks, Remove deletes them and everything they sent, and Add
-sample clients brings them back.
+Keep them to try programs, forms and replies on. Manage them in Practice view, on Clients: Reset
+samples to fresh puts back their starting four weeks, Remove samples deletes them and everything they
+sent, and Add sample clients brings them back. On a sample's page, Answer as Niamh lets you write what
+she says, to try a conversation. Samples never take one of your spots, and never pay: Payments is
+always your real page.
+
+Trying Studio without it, sample clients are your only clients, so Practice view stays on and the
+band has Get Studio. Everything you build is kept: when you get Studio your links go live and your
+profile's Coaching section goes public, and you choose when to switch to real clients.
 
 ## Your coaching profile
 

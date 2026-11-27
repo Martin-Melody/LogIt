@@ -27,6 +27,7 @@
   import { toast } from "$lib/components/ui/sonner";
   import { coachApi } from "@logit/core/api/coachApi";
   import EndCoachingDialog from "$lib/features/coaching/client/EndCoachingDialog.svelte";
+  import AnswerAsDialog from "$lib/features/guide/AnswerAsDialog.svelte";
   import {
     loadCoachingOverview,
     parseSubmission,
@@ -57,6 +58,8 @@
   let assignOnOpen = $state(false);
   // Canvas E1: "Pause or end coaching…" (?end=1 from the clients list or ⌘K opens it).
   let ending = $state(page.url.searchParams.get("end") === "1");
+  // Canvas V2: "Answer as Niamh…" on a sample client (?answer=1 from the list's menu or ⌘K).
+  let answering = $state(page.url.searchParams.get("answer") === "1");
 
   async function resume(relationshipId: string) {
     try {
@@ -154,7 +157,9 @@
       <div class="flex items-center gap-2" data-guide="client-actions">
         <button type="button" onclick={() => setTab("messages")} class="h-[34px] rounded-[9px] border border-border px-3 text-[13px] font-medium hover:bg-muted">Message</button>
         <button type="button" onclick={assign} class="h-[34px] rounded-[9px] bg-primary px-3 text-[13px] font-semibold text-primary-foreground">Assign program</button>
-        {#if !c.isSample}
+        {#if c.isSample}
+          <Button variant="outline" size="sm" class="h-[34px]" onclick={() => (answering = true)}>Answer as {c.name.split(" ")[0]}</Button>
+        {:else}
           <DropdownMenu.Root>
             <DropdownMenu.Trigger>
               {#snippet child({ props })}<Button {...props} variant="ghost" size="icon" aria-label="More for {c.name}"><EllipsisIcon class="size-4" /></Button>{/snippet}
@@ -265,6 +270,9 @@
   {/if}
 </div>
 
+{#if c?.isSample}
+  <AnswerAsDialog bind:open={answering} userId={c.id} relationshipId={c.relationshipId} name={c.name} />
+{/if}
 {#if c && !c.isSample}
   <EndCoachingDialog bind:open={ending} relationshipId={c.relationshipId} name={c.name} ondone={async () => {
     const rid = c?.relationshipId;

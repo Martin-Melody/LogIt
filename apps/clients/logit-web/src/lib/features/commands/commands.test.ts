@@ -31,6 +31,7 @@ describe("every action list follows the menu rules (canvas X4)", () => {
     ["client", clientActions(client())],
     ["client sharing nothing", clientActions(client({ sharing: { workouts: false, nutrition: false, bodyweight: false, habits: false, checkins: false } }))],
     ["client with no check-in form", clientActions(client({ scheduleCount: 0 }))],
+    ["sample client", clientActions(client({ isSample: true }))],
     ["person", personActions(person(), "me")],
     ["admin person", personActions(person({ isAdmin: true }), "me")],
     ["myself as admin", personActions(person({ id: "me", isAdmin: true }), "me")],

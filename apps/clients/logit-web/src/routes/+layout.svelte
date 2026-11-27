@@ -20,6 +20,7 @@
   import GuidePanel from "$lib/features/guide/GuidePanel.svelte";
   import StudioModeDialog from "$lib/features/guide/StudioModeDialog.svelte";
   import StudioFinishDialog from "$lib/features/guide/StudioFinishDialog.svelte";
+  import StudioOnDialog from "$lib/features/guide/StudioOnDialog.svelte";
   import SandboxBanner from "$lib/features/guide/SandboxBanner.svelte";
   import StudioNeeded from "$lib/features/onboarding/StudioNeeded.svelte";
   import { guide, walkthroughsFor } from "$lib/features/guide/guide.svelte";
@@ -272,4 +273,5 @@
   <GuideLayer />
   <StudioModeDialog />
   <StudioFinishDialog />
+  <StudioOnDialog />
 {/if}

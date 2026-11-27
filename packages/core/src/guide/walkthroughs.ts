@@ -231,27 +231,32 @@ export const STUDIO_CHAPTERS: Chapter[] = [
   {
     id: "studio.invite",
     walkthrough: "studio",
-    title: "Invite a client",
-    blurb: "Make an invite link and accept a request",
-    minutes: 3,
+    title: "Get asked to coach",
+    blurb: "Your profile, an invite link, and answering a request",
+    minutes: 4,
     feature: "invite-links",
     usesSamples: true,
     steps: [
       {
+        id: "profile", on: "web", route: "/coaching/profile", target: "profile-coaching", kind: "look",
+        title: "Your coaching profile",
+        body: "Your coaching › Profile is what people see before they ask: what you coach, who it suits, your packages and your questions for them. Their answers come with the request. Your coaching agreement lives here too.",
+      },
+      {
         id: "new", on: "web", route: "/coaching/links", target: "links-new", kind: "do", signal: "link.created",
         title: "Make an invite link",
-        body: "Open Coaching › Invite links and choose New link. Give it a name only you see, like \"Instagram bio\", pick a package for them if you like, choose when it ends and how many people can use it, then Create link. Copy it or show its QR code.",
+        body: "Open Your coaching › Invite links and choose New link. Give it a name only you see, like \"Instagram bio\", so you know where people came from. It opens your profile with Ask to be coached; pick a package if you like, or let people pay and start straight away. Copy it or show its QR code.",
       },
       {
         id: "request", on: "web", route: "/clients?tab=requests", target: "requests-pane", kind: "do", signal: "request.offered",
         title: "Someone asks to be coached",
-        body: "People who open your link answer your questions and wait in Clients › Requests. You see their answers and nothing else. Talk it over in the conversation, then Offer a spot: pick a package, or no payment through LogIt. Niamh takes it straight away.",
+        body: "People who ask answer your questions and wait in Clients › Requests. You see their answers and nothing else. Talk it over in the conversation, then Offer a spot: pick a package, or no payment through LogIt, and how long you hold it. Full? Put them on your waiting list instead. Niamh takes the spot within a few seconds.",
         arrives: "Waiting for Niamh, a sample client, to use your link. It takes a few seconds.",
       },
       {
         id: "links", on: "web", route: "/coaching/links", target: "links-table", kind: "look",
         title: "Your links",
-        body: "Each link shows how many people asked through it and how many became clients. Copy it, show its QR code for a poster, edit it, or switch it off: people who asked through it stay.",
+        body: "Each link shows how many people asked through it and how many became clients. LogIt doesn't count clicks. Copy it, show its QR code for a poster, edit it, or switch it off: people who asked through it stay.",
       },
     ],
   },
@@ -266,12 +271,12 @@ export const STUDIO_CHAPTERS: Chapter[] = [
       {
         id: "list", on: "web", route: "/clients", target: "clients-list", kind: "look",
         title: "Every client at a glance",
-        body: "Open Coaching › Clients. Each row shows the last 7 days, their last workout, check-ins, program and messages. Sample clients are marked Sample.",
+        body: "Open Coaching › Clients. Each row shows the last 7 days, their last workout, check-ins, program and messages. In Practice view the list shows only your sample clients; outside it, only real ones.",
       },
       {
         id: "sandbox", on: "web", route: "/clients", target: "clients-sandbox", kind: "look",
-        title: "Your sandbox",
-        body: "Sample clients live here. Try a new program or check-in form on them before a real client sees it, reset them to their starting four weeks, or remove them. You can add them back any time.",
+        title: "Your sample clients",
+        body: "In Practice view, reset the samples to their starting four weeks or remove them; you can add them back any time. On a sample's page, Answer as Niamh lets you write what she says, to try a conversation.",
       },
       {
         id: "open", on: "web", route: "/clients", target: "clients-list", kind: "do", signal: "client.opened",
@@ -286,8 +291,8 @@ export const STUDIO_CHAPTERS: Chapter[] = [
       },
       {
         id: "actions", on: "web", route: "/clients/[id]", target: "client-actions", kind: "look",
-        title: "Message or give a program",
-        body: "Message them, or give them a program, from the top of their page.",
+        title: "Message, give a program, or pause",
+        body: "Message them or give them a program from the top of their page. ⋯ has Pause or end coaching: away, ill or injured, or ending with a refund and another coach to suggest.",
       },
     ],
   },
@@ -459,7 +464,7 @@ export const STUDIO_CHAPTERS: Chapter[] = [
       {
         id: "needs", on: "web", route: "/coaching", target: "today-needs-you", kind: "look",
         title: "What needs you",
-        body: "Coaching › Today lists new check-ins, unread messages, missed check-ins and programs about to end, newest first. Start your day here.",
+        body: "Coaching › Today lists requests to answer, new check-ins, messages waiting for a reply, missed check-ins, programs about to end and payment problems. Start your day here.",
       },
       {
         id: "week", on: "web", route: "/coaching", target: "today-week", kind: "look",

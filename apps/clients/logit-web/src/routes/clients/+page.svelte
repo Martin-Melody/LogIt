@@ -134,14 +134,17 @@
       <h1 class="text-[26px] font-bold tracking-tight">Clients</h1>
       {#if overview}
         <p class="mt-1 flex flex-wrap items-center gap-x-2 text-[13px] text-muted-foreground">
-          {#if intake?.spots}
+          {#if practice.on}
+            <!-- Canvas V4: samples never take a spot. -->
+            <span>{overview.clients.length} sample {overview.clients.length === 1 ? "client" : "clients"}{intake?.spots ? ` · not counted against your ${intake.spots} ${intake.spots === 1 ? "spot" : "spots"}` : ""}</span>
+          {:else if intake?.spots}
             <span><b class="font-semibold text-foreground">{intake.taken} of your {intake.spots} {intake.spots === 1 ? "spot" : "spots"}</b> taken{intake.full ? ` · full, ${intake.whenFull === "stop" ? "not taking requests" : "new requests join the waiting list"}` : ""}</span>
           {:else}
             <span>{overview.clients.length} active{#if waiting.length}{` · ${waiting.length} need${waiting.length === 1 ? "s" : ""} you`}{/if}</span>
           {/if}
-          {#if intake}<Button variant="ghost" size="sm" class="h-7 px-2" onclick={() => (editingIntake = true)}>{intake.spots ? "Change" : "Set a client limit"}</Button>{/if}
+          {#if intake && !practice.on}<Button variant="ghost" size="sm" class="h-7 px-2" onclick={() => (editingIntake = true)}>{intake.spots ? "Change" : "Set a client limit"}</Button>{/if}
         </p>
-        {#if intake?.spots}
+        {#if intake?.spots && !practice.on}
           <div class="mt-1.5 h-1.5 w-56 overflow-hidden rounded-full bg-muted" role="meter" aria-label="Spots taken" aria-valuemin={0} aria-valuemax={intake.spots} aria-valuenow={intake.taken}>
             <div class="h-full rounded-full bg-primary transition-[width] duration-500" style="width: {Math.min(100, (intake.taken / intake.spots) * 100)}%"></div>
           </div>
@@ -210,7 +213,7 @@
       </section>
     {/if}
 
-    <div id="sandbox" class="scroll-mt-16"><SandboxCard /></div>
+    <div id="sandbox" class="scroll-mt-16"><SandboxCard realClients={practice.on ? null : overview.clients.length} /></div>
 
 
     <section data-guide="clients-list" class="rounded-[10px] border border-border bg-card px-1.5 py-2">

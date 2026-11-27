@@ -165,7 +165,7 @@
       </Alert.Root>
     {/if}
     <div class="flex flex-wrap items-start gap-6">
-      <form class="flex min-w-0 flex-[2_1_480px] flex-col gap-6" onsubmit={save}>
+      <form data-guide="profile-coaching" class="flex min-w-0 flex-[2_1_480px] flex-col gap-6" onsubmit={save}>
         <section class="flex flex-col gap-1.5">
           <Label for="cp-headline" class="text-sm font-semibold">Headline</Label>
           <span class="text-xs text-muted-foreground">One line under your name: what you coach.</span>
