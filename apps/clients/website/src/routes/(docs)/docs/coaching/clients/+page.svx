@@ -83,4 +83,8 @@ show you appear under Insights on their Training tab, and you can build charts f
 
 <HowTo id="phone.clients" />
 
+On the phone you reply (with your saved replies), look at a check-in and mark it reviewed with a
+reply, answer requests (offer a spot, waiting list, not a fit) and swap an exercise in a client's
+program. Building programs and meal plans, forms, packages and payments stay on the web.
+
 <CanCant ids={["coach-clients", "coach-requests"]} />

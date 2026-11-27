@@ -586,6 +586,7 @@ export const PHONE_CHAPTERS: Chapter[] = [
   {
     id: "phone.clients", walkthrough: "studio", title: "Your clients", blurb: "Coaching from your phone", minutes: 1, feature: "coach-clients",
     steps: [
+      ph("needs", "/clients", "phone-needs-you", "What needs you", "At the top of Coaching: messages to reply to, check-ins to look at (reply and mark them reviewed right there), and requests to answer. In a client's conversation, type / for a saved reply, or swap an exercise in their program."),
       ph("list", "/clients", "phone-clients-list", "The same clients as on the web", "Tap one to see their training, check-ins and programs. Programs and check-in forms are built on the web dashboard; here you follow along."),
     ],
   },

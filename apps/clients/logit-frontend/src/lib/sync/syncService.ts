@@ -743,7 +743,7 @@ export async function pullAndMergeMessages(): Promise<boolean> {
 /** Send one message: optimistic local insert already done by the caller; this pushes it. */
 /** Messages that are also a card (a swap, a goal answer), kept when sent later. */
 type SendableKind = NonNullable<import("@logit/core/api/messagesApi").SendMessageInput["kind"]>;
-const SENDABLE_KINDS: ReadonlySet<string> = new Set<SendableKind>(["lasting-swap", "program-swap", "goal-suggestion", "goal-answer"]);
+const SENDABLE_KINDS: ReadonlySet<string> = new Set<SendableKind>(["lasting-swap", "program-swap", "goal-suggestion", "goal-answer", "checkin-reply", "month-report"]);
 
 export function pushMessage(message: CoachMessage): void {
   if (!apiClient.isAuthenticated()) return;

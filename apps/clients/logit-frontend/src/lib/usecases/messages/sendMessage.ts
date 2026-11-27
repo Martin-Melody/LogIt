@@ -6,8 +6,9 @@ import { createOutgoingMessage, type CoachMessage, type MessagePhoto, type Messa
  * is uploaded before this, so only its address waits in the queue. */
 export async function sendMessage(
   relationshipId: string, body: string, photo?: MessagePhoto, voice?: MessageVoice,
-  /** A program swap (canvas SW1): the message is also a card the coach can act on. */
-  card?: { kind: "lasting-swap" | "goal-answer"; json: string },
+  /** A card with the message: a client's lasting swap (SW1) or goal answer (GL1); a coach's
+   * program swap (W6) or reply to a check-in (K4). */
+  card?: { kind: "lasting-swap" | "goal-answer" | "program-swap" | "checkin-reply"; json: string },
 ): Promise<CoachMessage | null> {
   const msg = { ...createOutgoingMessage(relationshipId, body, undefined, photo, voice), ...(card ? { kind: card.kind, cardJson: card.json } : {}) };
   if (!msg.body && !msg.photo && !msg.voice) return null;

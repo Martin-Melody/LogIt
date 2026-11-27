@@ -24,6 +24,8 @@
   import { Button } from "$lib/components/ui/button";
   import LockCard from "$lib/components/billing/LockCard.svelte";
   import { authStore } from "$lib/api/authStore.svelte";
+  import { loadCoachToday, type CoachToday, type CheckinRow } from "$lib/features/coaching/coachToday";
+  import CheckinQuickSheet from "$lib/features/coaching/CheckinQuickSheet.svelte";
   import { requestLine, sentLine } from "@logit/core/domain/coachRequest";
   import { coachPaymentsApi } from "@logit/core/api/coachPaymentsApi";
   import { clientPaymentNote } from "@logit/core/domain/coachPayments";
@@ -62,6 +64,7 @@
         isStudio ? coachApi.listRequests().catch(() => []) : Promise.resolve([]),
       ]);
       clientRequests = asks;
+      if (isStudio) void loadCoachToday(WEB_URL).then((x) => (today = x)).catch(() => {});
       received = r;
       coaches = mine;
       requests = reqs;
@@ -140,6 +143,10 @@
   }
 
   onMount(() => void load());
+
+  // Canvas W6: what needs you, on the phone. Replying and a quick check-in here; the rest on the web.
+  let today = $state<CoachToday | null>(null);
+  let looking = $state<CheckinRow | null>(null);
   onMount(() => setTimeout(() => replayTour("phone.clients"), 600));
 </script>
 
@@ -156,6 +163,49 @@
   {#if ui.loading}
     <p class="px-3 py-4 text-sm text-muted-foreground">Loading…</p>
   {:else}
+    {#if isStudio && today && (today.reply.length || today.checkins.length || today.decide.length)}
+      <section class="border-b border-border pb-2" aria-label="Needs you" data-guide="phone-needs-you">
+        <p class="px-3 pt-3 text-[13px] text-muted-foreground">{new Date().toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })}</p>
+        {#if today.reply.length}
+          <p class="px-3 pt-3 pb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">Reply</p>
+          <ul class="divide-y divide-border">
+            {#each today.reply as x (x.relationshipId)}
+              <li><a href="/messages/{x.relationshipId}" class="flex min-h-14 items-center gap-3 px-3 py-2.5 text-inherit no-underline active:bg-muted/40">
+                <span class="min-w-0 flex-1"><span class="block text-[15px] font-medium">{x.name}</span><span class="block truncate text-[13px] text-muted-foreground">{x.line}</span></span>
+                <span class="text-muted-foreground">›</span>
+              </a></li>
+            {/each}
+          </ul>
+        {/if}
+        {#if today.checkins.length}
+          <p class="px-3 pt-3 pb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">Check-ins · {today.checkins.length}</p>
+          <ul class="divide-y divide-border">
+            {#each today.checkins as x (x.item.clientUserId + x.item.id)}
+              <li class="flex min-h-14 items-center gap-3 px-3 py-2.5">
+                <span class="min-w-0 flex-1"><span class="block text-[15px] font-medium">{x.name}</span><span class="block truncate text-[13px] text-muted-foreground">{x.line}</span></span>
+                <Button size="sm" variant="outline" class="h-9" onclick={() => (looking = x)}>Look</Button>
+              </li>
+            {/each}
+          </ul>
+        {/if}
+        {#if today.decide.length}
+          <p class="px-3 pt-3 pb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">Decide</p>
+          <ul class="divide-y divide-border">
+            {#each today.decide as x (x.key)}
+              <li class="flex min-h-14 items-center gap-3 px-3 py-2.5">
+                <span class="min-w-0 flex-1 text-[15px]">{x.line}</span>
+                {#if x.web}<Button size="sm" variant="outline" class="h-9" href={x.href} target="_blank" rel="noopener">Plan it on the web</Button>
+                {:else}<Button size="sm" class="h-9" href={x.href}>Open</Button>{/if}
+              </li>
+            {/each}
+          </ul>
+        {/if}
+        <div class="flex flex-col gap-2 px-3 pt-3">
+          <p class="text-[13px] text-muted-foreground">Programs, meal plans, forms and payments are on the web.</p>
+          <Button variant="outline" class="h-11" href={WEB_URL} target="_blank" rel="noopener">Sign in on a computer</Button>
+        </div>
+      </section>
+    {/if}
     {#if received.length > 0}
       <div class="border-b border-border">
         <p class="px-3 pt-3 pb-1 text-xs font-medium text-muted-foreground uppercase tracking-wide">Coach invites</p>
@@ -398,3 +448,5 @@
     {/if}
   {/if}
 </div>
+
+<CheckinQuickSheet row={looking} webUrl={WEB_URL} onclose={() => (looking = null)} ondone={() => { looking = null; void loadCoachToday(WEB_URL).then((x) => (today = x)); }} />

@@ -32,6 +32,15 @@
   import { getMessagesRepo } from "$lib/data/repoProvider";
   import { pullAndMergeMessages, markThreadRead } from "$lib/sync/syncService";
   import { sendMessage } from "$lib/usecases/messages/sendMessage";
+  import { coachApi } from "@logit/core/api/coachApi";
+  import { getProgramProgress } from "@logit/core/domain/CoachProgram";
+  import { createRemoteCoachProgramRepo } from "@logit/core/data/remote/remoteCoachProgramRepo";
+  import { authStore } from "$lib/api/authStore.svelte";
+  import { Button } from "$lib/components/ui/button";
+  import { Repeat } from "lucide-svelte";
+  import { clientLine } from "$lib/features/coaching/coachToday";
+  import SavedReplyPicker from "$lib/features/coaching/SavedReplyPicker.svelte";
+  import SwapInProgramSheet from "$lib/features/coaching/SwapInProgramSheet.svelte";
 
   const props = $props<{ params: { relationshipId: string } }>();
   const relationshipId = $derived(props.params.relationshipId);
@@ -39,6 +48,19 @@
 
   const ui = $state({ loading: true, sending: false, error: null as string | null });
   let messages = $state<CoachMessage[]>([]);
+  // Canvas W6: when you're the coach here, their program week, saved replies and a swap.
+  let coachOf = $state<{ id: string; username: string; name: string; line: string } | null>(null);
+  let repliesOpen = $state(false);
+  let swapping = $state(false);
+  let swapHint = $state("");
+  onMount(async () => {
+    const roster = await coachApi.getRoster().catch(() => []);
+    const r = roster.find((x) => x.relationshipId === relationshipId);
+    if (!r) return;
+    const programs = (await createRemoteCoachProgramRepo().listMyPrograms({ recipientId: r.client.id }).catch(() => [])).map((m) => m.program);
+    const program = programs.filter((p) => !p.archived && getProgramProgress(p).status !== "finished").sort((a, b) => b.updatedAtMs - a.updatedAtMs)[0] ?? null;
+    coachOf = { id: r.client.id, username: r.client.username, name: r.client.displayName || r.client.username, line: clientLine(r, program) };
+  });
   let draft = $state("");
   let attachOpen = $state(false);
   // A picked photo waits above the box so a caption can go with it (canvas boards 18 and 20).
@@ -142,7 +164,10 @@
 <div class="flex h-full flex-col">
   <PageHeader>
     <BackButton onclick={() => back("/messages")} />
-    <h1 class="page-title">{name}</h1>
+    <span class="flex min-w-0 flex-col">
+      <h1 class="page-title">{coachOf?.name ?? name}</h1>
+      {#if coachOf?.line}<span class="truncate text-[12px] text-muted-foreground">{coachOf.line}</span>{/if}
+    </span>
   </PageHeader>
 
   {#if ui.error}<p class="px-3 py-2 text-sm text-destructive shrink-0">{ui.error}</p>{/if}
@@ -205,6 +230,13 @@
     <VoiceRecorderBar onsend={sendVoice} oncancel={() => (recording = false)} />
   {:else}
   <StagedPhotoCard {staged} />
+  {#if coachOf}
+    <SavedReplyPicker bind:draft bind:open={repliesOpen} fill={{ firstName: coachOf.name.split(" ")[0], coachName: authStore.user?.displayName || authStore.user?.username || null }} />
+    <div class="flex shrink-0 gap-2 overflow-x-auto px-3 pt-2">
+      <Button variant="outline" size="sm" class="h-9 rounded-full" aria-expanded={repliesOpen} onclick={() => (repliesOpen = !repliesOpen)}>Saved replies</Button>
+      <Button variant="outline" size="sm" class="h-9 rounded-full" onclick={() => { swapHint = messages.filter((m) => !m.mine).at(-1)?.body ?? ""; swapping = true; }}>Swap it in {coachOf.name.split(" ")[0]}'s program</Button>
+    </div>
+  {/if}
   <form class="flex shrink-0 items-end gap-2 {staged.current ? '' : 'border-t'} border-border px-3 py-2" onsubmit={(e) => { e.preventDefault(); void send(); }}>
     <InputGroup.Root class="min-h-11 flex-1 rounded-[22px] dark:bg-transparent">
       <InputGroup.Addon align="inline-start" class="self-end pb-0.5">
@@ -248,7 +280,10 @@
   open={!!picked}
   onOpenChange={(v) => { if (!v) picked = null; }}
   title={picked?.mine ? "Your message" : `${name}'s message`}
-  items={picked?.body ? [{ icon: Copy, label: "Copy text", onSelect: () => { const b = picked?.body ?? ""; void navigator.clipboard?.writeText(b).then(() => toast.success("Copied")); } }] : []}
+  items={picked?.body ? [
+    { icon: Copy, label: "Copy text", onSelect: () => { const b = picked?.body ?? ""; void navigator.clipboard?.writeText(b).then(() => toast.success("Copied")); } },
+    ...(coachOf && !picked.mine ? [{ icon: Repeat, label: `Swap it in ${coachOf.name.split(" ")[0]}'s program`, onSelect: () => { swapHint = picked?.body ?? ""; swapping = true; } }] : []),
+  ] : []}
 >
   {#snippet header()}
     {#if picked && !picked.mine}
@@ -263,3 +298,6 @@
     {/if}
   {/snippet}
 </ActionSheet>
+{#if coachOf}
+  <SwapInProgramSheet bind:open={swapping} {relationshipId} clientId={coachOf.id} username={coachOf.username} name={coachOf.name} hint={swapHint} />
+{/if}
