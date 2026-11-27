@@ -132,6 +132,24 @@ export function weekProgress(
   return { done, target: habit.cadence.timesPerWeek };
 }
 
+/** This week (Mon–Sun) as day squares, the same as the habit cards in the client's app (canvas
+ * K12), and done against what the cadence asks for. Days after today are never done. */
+export function weekSquares(
+  habit: Habit,
+  entries: HabitEntry[],
+  todayIso: string,
+): { days: { dateIso: string; due: boolean; done: boolean; future: boolean }[]; done: number; target: number } {
+  const start = weekStartIso(todayIso);
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = addDays(start, i);
+    const future = d > todayIso;
+    return { dateIso: d, due: dueOn(habit, d), done: !future && isSatisfied(habit, entryFor(entries, habit.id, d)), future };
+  });
+  const c = habit.cadence;
+  const target = c.kind === "weekly" ? c.timesPerWeek : c.kind === "days" ? c.days.length : 7;
+  return { days, done: days.filter((d) => d.done).length, target };
+}
+
 /**
  * Current streak.
  * - daily / specific-days: consecutive *due* days ending today (or yesterday, if

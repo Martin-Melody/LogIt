@@ -11,6 +11,11 @@
   import { toast } from "$lib/components/ui/sonner";
   import { coachApi, type CheckinInboxItem } from "@logit/core/api/coachApi";
   import { messagesApi } from "@logit/core/api/messagesApi";
+  import { apiClient } from "@logit/core/api/client";
+  import type { CheckinReplyCard } from "@logit/core/domain/savedReplies";
+  import CheckinWeekPanel from "$lib/features/coaching/CheckinWeekPanel.svelte";
+  import SavedReplyPicker from "$lib/features/coaching/SavedReplyPicker.svelte";
+  import MessageSquareQuoteIcon from "@lucide/svelte/icons/message-square-quote";
   import { createId } from "@logit/core/domain/ids";
   import Avatar from "$lib/features/coaching/Avatar.svelte";
   import CheckinAnswers from "$lib/features/coaching/CheckinAnswers.svelte";
@@ -48,7 +53,8 @@
   onMount(() => onSampleActivity(() => void load()));
 
   const clientOf = (id: string): ClientSummary | undefined => overview?.clients.find((c) => c.id === id);
-  const toReview = $derived(overview?.inbox.filter((i) => i.reviewedAtMs == null) ?? []);
+  // Canvas K4: a queue, oldest first, so a Sunday's check-ins are one sitting.
+  const toReview = $derived(overview?.inbox.filter((i) => i.reviewedAtMs == null).sort((a, b) => a.submittedAtMs - b.submittedAtMs) ?? []);
   const reviewed = $derived(overview?.inbox.filter((i) => i.reviewedAtMs != null) ?? []);
   const missed = $derived(overview?.clients.filter((c) => c.missed) ?? []);
   const list = $derived(filter === "reviewed" ? reviewed : toReview);
@@ -59,6 +65,13 @@
     return hit ?? list[0] ?? null;
   });
   const selClient = $derived(selected ? clientOf(selected.clientUserId) : undefined);
+  const firstName = (n: string | undefined) => (n ?? "").split(" ")[0] || n || "them";
+  /** Who's after this one in the queue. */
+  const nextUp = $derived(selected && selected.reviewedAtMs == null ? toReview.find((i) => i !== selected) ?? null : null);
+  const nextName = $derived(nextUp ? firstName(clientOf(nextUp.clientUserId)?.name) : null);
+  const me = apiClient.getUser()?.displayName || apiClient.getUser()?.username || null;
+  let picker = $state<SavedReplyPicker | null>(null);
+  let repliesOpen = $state(false);
   const selSubmission = $derived(selected ? parseSubmission(selected) : null);
   const selSchedule = $derived(selected ? overview?.schedules.find((s) => s.schedule.id === selected.scheduleId)?.schedule ?? null : null);
   const previous = $derived.by(() => {
@@ -100,7 +113,9 @@
     try {
       const text = sendReply ? reply.trim() : "";
       if (text) {
-        await messagesApi.send({ relationshipId: selected.relationshipId, messageId: createId("msg"), body: text, createdAtMs: Date.now() });
+        // Canvas K4: it goes into your conversation, saying which check-in it answers.
+        const card: CheckinReplyCard = { scheduleName: selSchedule?.name ?? "Check-in", periodStartMs: selSubmission?.periodStartMs ?? selected.submittedAtMs, submissionId: selected.id };
+        await messagesApi.send({ relationshipId: selected.relationshipId, messageId: createId("msg"), body: text, createdAtMs: Date.now(), kind: "checkin-reply", cardJson: JSON.stringify(card) });
       }
       // The reply is kept with the review too, so the client sees it with this check-in.
       const at = await coachApi.setCheckinReviewed(selected.clientUserId, selected.id, reviewedNow, text || undefined);
@@ -114,6 +129,7 @@
       reply = "";
       if (reviewedNow) guideSignal("checkin.reviewed");
       toast.success(reviewedNow ? (sendReply ? "Reply sent, marked as reviewed" : "Marked as reviewed") : "Moved back to review");
+      if (reviewedNow && !toReview.length) toast.success("That's every check-in reviewed");
       // Go on to the next one waiting.
       const u = new URL(page.url);
       u.searchParams.delete("id");
@@ -167,8 +183,8 @@
   {:else if filter === "forms"}
     <FormsList clients={overview.clients} />
   {:else}
-    <div class="flex flex-wrap items-start gap-4">
-      <section aria-label="Check-ins" class="flex flex-[1_1_280px] flex-col gap-0.5 rounded-[10px] border border-border bg-card p-1.5">
+    <div class="grid items-start gap-4 lg:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[260px_minmax(0,1fr)_260px]">
+      <section aria-label="Check-ins" class="flex flex-col gap-0.5 rounded-[10px] border border-border bg-card p-1.5">
         {#each list as i (i.clientUserId + i.id)}
           {@const c = clientOf(i.clientUserId)}
           {@const s = overview.schedules.find((x) => x.schedule.id === i.scheduleId)?.schedule}
@@ -187,15 +203,14 @@
       </section>
 
       {#if selected && selSubmission}
-        <section data-guide="checkin-review" class="flex min-w-0 flex-[999_1_560px] flex-col gap-1 rounded-[10px] border border-border bg-card px-[22px] py-5">
+        <section data-guide="checkin-review" class="flex min-w-0 flex-col gap-1 rounded-[10px] border border-border bg-card px-[22px] py-5">
           <div class="flex flex-wrap justify-between gap-2.5 pb-2">
             <div class="flex items-center gap-3">
               <Avatar name={selClient?.name ?? "?"} url={selClient?.avatarUrl ?? null} size={40} />
               <div>
                 <h2 class="text-lg font-bold">{selClient?.name ?? "Client"} · {selSchedule?.name ?? "Check-in"}</h2>
                 <p class="mt-0.5 text-xs text-muted-foreground">
-                  Week of {shortDate(selSubmission.periodStartMs)} · sent {when(selected.submittedAtMs, Date.now(), true)} ·
-                  <a href="/clients/{selected.clientUserId}" class="underline hover:text-foreground">open client</a>
+                  Week of {shortDate(selSubmission.periodStartMs)} · sent {when(selected.submittedAtMs, Date.now(), true)}{previous?.submittedAtMs ? ` · compared with ${weekdayDate(previous.submittedAtMs)}` : " · their first one"}
                 </p>
               </div>
             </div>
@@ -206,35 +221,24 @@
             {/if}
           </div>
 
-          {#if selClient}
-            <div class="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2.5 pb-2">
-              <div class="rounded-lg bg-muted px-3 py-2.5">
-                <div class="text-xs text-muted-foreground">Sessions, last 7 days</div>
-                <div class="text-[15px] font-semibold">{selClient.sharing.workouts ? `${selClient.sessions7d}${selClient.program?.state === "running" ? ` of ${selClient.program.daysPerWeek}` : ""}` : "Not shared"}</div>
-              </div>
-              <div class="rounded-lg bg-muted px-3 py-2.5">
-                <div class="text-xs text-muted-foreground">Program</div>
-                <div class="truncate text-[15px] font-semibold">{selClient.program?.state === "running" ? `Week ${selClient.program.week} of ${selClient.program.totalWeeks}` : selClient.program ? "Not started" : "Own plan"}</div>
-              </div>
-              <div class="rounded-lg bg-muted px-3 py-2.5">
-                <div class="text-xs text-muted-foreground">Previous check-in</div>
-                <div class="text-[15px] font-semibold">{previous?.submittedAtMs ? shortDate(previous.submittedAtMs) : "First one"}</div>
-              </div>
-            </div>
-          {/if}
 
           <CheckinAnswers schedule={selSchedule} submission={selSubmission} {previous} />
 
           <div class="flex flex-col gap-2 border-t border-border pt-3">
-            <label for="reply" class="text-xs font-medium text-muted-foreground">Reply to {selClient?.name ?? "them"}</label>
-            <textarea id="reply" rows="3" bind:value={reply} placeholder="Goes to your messages with them."
-              class="w-full resize-y rounded-[10px] border border-input bg-background px-3 py-2.5 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring"></textarea>
-            <div class="flex flex-wrap gap-2">
+            <label for="reply" class="text-xs font-medium text-muted-foreground">Reply to {firstName(selClient?.name)}</label>
+            <SavedReplyPicker bind:this={picker} bind:draft={reply} bind:open={repliesOpen} fill={{ firstName: firstName(selClient?.name), coachName: me }} />
+            <div class="relative">
+              <textarea id="reply" rows="3" bind:value={reply} onkeydown={(e) => picker?.key(e)} placeholder="Type / for a saved reply"
+                class="w-full resize-y rounded-[10px] border border-input bg-background py-2.5 pl-3 pr-10 text-[13px] focus:outline-none focus:ring-1 focus:ring-ring"></textarea>
+              <button type="button" onclick={() => (repliesOpen = !repliesOpen)} aria-label="Saved replies" aria-expanded={repliesOpen}
+                class="absolute right-2 top-2 flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"><MessageSquareQuoteIcon class="size-4" /></button>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
               {#if selected.reviewedAtMs == null}
                 <button type="button" disabled={busy || !reply.trim()} onclick={() => markReviewed(true)}
-                  class="h-[34px] rounded-[9px] bg-primary px-3 text-[13px] font-semibold text-primary-foreground disabled:opacity-50">Send and mark reviewed</button>
+                  class="h-[34px] rounded-[9px] bg-primary px-3 text-[13px] font-semibold text-primary-foreground disabled:opacity-50">{nextName ? `Send and go to ${nextName}` : "Send and mark reviewed"}</button>
                 <button type="button" disabled={busy} onclick={() => markReviewed(false)}
-                  class="h-[34px] rounded-[9px] border border-border px-3 text-[13px] font-medium hover:bg-muted disabled:opacity-50">Mark reviewed</button>
+                  class="h-[34px] rounded-[9px] border border-border px-3 text-[13px] font-medium hover:bg-muted disabled:opacity-50">Mark reviewed, no reply</button>
               {:else}
                 <button type="button" disabled={busy || !reply.trim()} onclick={() => markReviewed(true)}
                   class="h-[34px] rounded-[9px] bg-primary px-3 text-[13px] font-semibold text-primary-foreground disabled:opacity-50">Send reply</button>
@@ -242,8 +246,10 @@
                   class="h-[34px] rounded-[9px] border border-border px-3 text-[13px] font-medium hover:bg-muted disabled:opacity-50">Move back to review</button>
               {/if}
             </div>
+            <p class="text-[11px] text-muted-foreground">The reply goes into your conversation with {firstName(selClient?.name)}, saying which check-in it answers.</p>
           </div>
         </section>
+        {#if selClient}<div class="lg:col-start-2 xl:col-start-auto">{#key selected.id}<CheckinWeekPanel client={selClient} untilMs={selected.submittedAtMs} />{/key}</div>{/if}
       {/if}
     </div>
   {/if}

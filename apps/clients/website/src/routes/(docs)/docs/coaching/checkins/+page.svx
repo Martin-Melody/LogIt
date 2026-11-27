@@ -12,6 +12,18 @@ title: Check-ins
 
 <HowTo id="studio.checkins" />
 
+## Reviewing
+
+Check-ins › To review is a queue, oldest first, so a Sunday's check-ins are one sitting. Each one
+shows the answers next to their previous check-in ("was" values), and beside them the client's
+week as plain numbers: sessions against their program, the best set of their main lifts against the
+week before, their 7-day average weight, average calories and protein against their targets, and
+how they did on your habits. A row they don't share says "Not shared".
+
+Write a reply (type **/** for a saved reply) and **Send and go to …** moves on to the next person, or
+**Mark reviewed, no reply**. The reply also goes into your conversation with them, marked with the
+check-in it answers.
+
 ## Your forms
 
 Check-ins › Forms lists every form you send, with one editor for all of them: the questions people

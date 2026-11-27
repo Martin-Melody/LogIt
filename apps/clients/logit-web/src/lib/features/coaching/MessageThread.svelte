@@ -20,8 +20,8 @@
   import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
   import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
   import MessageSquareQuoteIcon from "@lucide/svelte/icons/message-square-quote";
-  import { fillReply, matchReplies, slashQuery, type SavedReply } from "@logit/core/domain/savedReplies";
-  import { savedReplies } from "./savedReplies.svelte";
+  import SavedReplyPicker from "./SavedReplyPicker.svelte";
+  import { checkinReplyLabel, parseCheckinReply } from "@logit/core/domain/savedReplies";
   import SmilePlusIcon from "@lucide/svelte/icons/smile-plus";
   import { DM_REACTIONS } from "@logit/core/api/dmApi";
   import { StagedPhoto, imageFrom } from "$lib/features/chat/stagedPhoto.svelte";
@@ -64,16 +64,8 @@
   // svelte-ignore state_referenced_locally
   let draft = $state(initialDraft);
   // Saved replies (canvas W10): "/" at the start of the box, or the button.
-  let replyIndex = $state(0);
   let repliesOpen = $state(false);
-  const slash = $derived(fill ? slashQuery(draft) : null);
-  const replyMatches = $derived(fill && (slash !== null || repliesOpen) ? matchReplies(savedReplies.list, slash ?? "").slice(0, 6) : []);
-  $effect(() => { if (fill) void savedReplies.load(); });
-  $effect(() => { void slash; replyIndex = 0; });
-  function useReply(r: SavedReply) {
-    draft = fillReply(r.body, fill ?? {});
-    repliesOpen = false;
-  }
+  let picker = $state<SavedReplyPicker | null>(null);
   let sending = $state(false);
   let listEl = $state<HTMLDivElement | null>(null);
   let currentId = "";
@@ -181,12 +173,7 @@
   }
 
   function onKey(e: KeyboardEvent) {
-    if (replyMatches.length) {
-      if (e.key === "ArrowDown") { e.preventDefault(); replyIndex = (replyIndex + 1) % replyMatches.length; return; }
-      if (e.key === "ArrowUp") { e.preventDefault(); replyIndex = (replyIndex - 1 + replyMatches.length) % replyMatches.length; return; }
-      if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); useReply(replyMatches[replyIndex]!); return; }
-      if (e.key === "Escape") { e.preventDefault(); repliesOpen = false; if (slash !== null) draft = ""; return; }
-    }
+    if (picker?.key(e)) return;
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       void send();
@@ -211,8 +198,8 @@
     const out: { key: string; mine: boolean; day: boolean; event: boolean; items: RemoteMessage[] }[] = [];
     shown.forEach((m, i) => {
       const day = !compact && (i === 0 || dayLabel(m.createdAtMs) !== dayLabel(shown[i - 1]!.createdAtMs));
-      // Swap messages ("lasting-swap", "program-swap") are ordinary bubbles; only request steps are cards.
-      const event = !!m.kind && !m.kind.endsWith("swap") && !!card;
+      // Swap messages ("lasting-swap", "program-swap") and check-in replies are ordinary bubbles; only request steps are cards.
+      const event = !!m.kind && !m.kind.endsWith("swap") && m.kind !== "checkin-reply" && !!card;
       const prev = out.at(-1);
       if (prev && !day && !event && !prev.event && prev.mine === m.mine && m.createdAtMs - prev.items.at(-1)!.createdAtMs < 3_600_000) prev.items.push(m);
       else out.push({ key: m.messageId, mine: m.mine, day, event, items: [m] });
@@ -264,11 +251,15 @@
               {:else}
                 {#if m.photoUrl}<div class={joinedKids(m.mine, first, end)}><ChatPhoto url={m.photoUrl} width={m.photoWidth ?? 0} height={m.photoHeight ?? 0} mine={m.mine} /></div>{/if}
                 {#if m.voiceUrl}<div class={joinedKids(m.mine, first, end)}><ChatVoice voice={{ url: m.voiceUrl, ms: m.voiceMs ?? 0, peaks: m.voicePeaks ?? "" }} mine={m.mine} /></div>{/if}
+                {@const replyTo = m.kind === "checkin-reply" ? parseCheckinReply(m.cardJson) : null}
                 {#if m.body || m.contextDateIso}
                   <Bubble.Root variant={m.mine ? "default" : "muted"} {align} class="max-w-full">
                     <Bubble.Content class="rounded-[18px] px-3 py-2 text-[13px] leading-relaxed {joined(m.mine, first, end)}">
                       {#if m.contextDateIso}
                         <span class="mb-1 inline-block rounded-md bg-background/60 px-1.5 py-0.5 text-[11px] font-semibold text-muted-foreground">Diary · {contextLabel(m.contextDateIso)}</span><br />
+                      {/if}
+                      {#if replyTo}
+                        <span class="mb-1 inline-block rounded-md bg-background/60 px-1.5 py-0.5 text-[11px] font-semibold text-muted-foreground">Check-in · {checkinReplyLabel(replyTo)}</span><br />
                       {/if}
                       <span class="whitespace-pre-wrap break-words">{m.body}</span>
                     </Bubble.Content>
@@ -338,19 +329,7 @@
       <VoiceRecorder onsend={sendVoice} oncancel={() => (recording = false)} onerror={(m) => (error = m)} />
     {:else}
     <StagedPhotoCard {staged} />
-    {#if replyMatches.length}
-      <ul class="flex flex-col rounded-[10px] border border-border bg-popover p-1 shadow-sm" role="listbox" aria-label="Saved replies">
-        {#each replyMatches as r, i (r.id)}
-          <li role="option" aria-selected={i === replyIndex}>
-            <button type="button" class="flex w-full items-baseline gap-2 rounded-[7px] px-2.5 py-1.5 text-left text-[13px] {i === replyIndex ? 'bg-muted' : 'hover:bg-muted/60'}" onmousedown={(e) => { e.preventDefault(); useReply(r); }}>
-              <b class="font-semibold">/{r.shortcut}</b><span class="text-muted-foreground">{r.title}</span><span class="ml-auto truncate text-xs text-muted-foreground">{fillReply(r.body, fill ?? {})}</span>
-            </button>
-          </li>
-        {/each}
-      </ul>
-    {:else if fill && (slash !== null || repliesOpen) && savedReplies.loaded}
-      <p class="rounded-[10px] border border-dashed border-border px-3 py-2 text-xs text-muted-foreground">No saved replies match. Make them in Messages › ⋯ › Saved replies.</p>
-    {/if}
+    {#if fill}<SavedReplyPicker bind:this={picker} bind:draft bind:open={repliesOpen} {fill} />{/if}
     <div class="flex items-end gap-2">
       <!-- One box (shadcn Input Group): photo inside, mic beside. Paste or drop a photo too. -->
       <InputGroup.Root class="flex-1 rounded-[12px]">

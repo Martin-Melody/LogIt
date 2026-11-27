@@ -33,3 +33,20 @@ export const STARTER_REPLIES: Omit<SavedReply, "id">[] = [
   { shortcut: "protein", title: "Protein tips", body: "Easy wins: a protein main at every meal, a shake after training, Greek yogurt or cottage cheese as a snack." },
   { shortcut: "welcome", title: "Welcome", body: "Welcome aboard {first name}! Fill in the start-up form when you get a minute and I'll have your program ready in a day or two." },
 ];
+
+/** Canvas K4: a coach's reply to a check-in carries which one, so the bubble can say so. */
+export type CheckinReplyCard = { scheduleName: string; periodStartMs: number; submissionId: string };
+
+export function parseCheckinReply(json: string | null | undefined): CheckinReplyCard | null {
+  try {
+    const c = json ? (JSON.parse(json) as Partial<CheckinReplyCard>) : null;
+    return c && typeof c.scheduleName === "string" && typeof c.periodStartMs === "number" ? (c as CheckinReplyCard) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** "Weekly check-in, 23 Nov" (the start of the week it covers; a one-off form's day). */
+export function checkinReplyLabel(c: CheckinReplyCard): string {
+  return `${c.scheduleName}, ${new Date(c.periodStartMs).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`;
+}

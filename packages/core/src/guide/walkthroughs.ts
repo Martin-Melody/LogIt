@@ -434,7 +434,7 @@ export const STUDIO_CHAPTERS: Chapter[] = [
       {
         id: "tabs", on: "web", route: "/clients/[id]", target: "client-tabs", kind: "look",
         title: "Habits and Nutrition",
-        body: "On the Habits tab, give them daily habits to tick off, like 8,000 steps or 3 litres of water; you see how often they hit them. On the Nutrition tab, set calorie and macro targets that show in their food diary.",
+        body: "On the Habits tab, Add a habit gives them something to tick off, like 8,000 steps or 3 litres of water, every day, a few times a week or on set days, to one client or several at once. You see this week as the same day squares their app shows. On the Nutrition tab, set calorie and macro targets that show in their food diary.",
       },
     ],
   },

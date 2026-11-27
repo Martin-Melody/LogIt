@@ -1,5 +1,6 @@
 <script lang="ts">
   import GoalSuggestionCard from "$lib/features/coaching/GoalSuggestionCard.svelte";
+  import { checkinReplyLabel, parseCheckinReply } from "@logit/core/domain/savedReplies";
   import { parseGoalSuggestion } from "@logit/core/domain/goalSuggestion";
   import { Spinner } from "$lib/components/ui/spinner/index.js";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
@@ -116,7 +117,7 @@
     messages.forEach((m, i) => {
       const time = i === 0 || m.createdAtMs - messages[i - 1]!.createdAtMs > 3_600_000;
       // A step from before coaching started (an offer, the waiting list…): a line of its own.
-      const event = !!m.kind;
+      const event = !!m.kind && m.kind !== "checkin-reply";
       const prev = out.at(-1);
       if (prev && !time && !event && !prev.event && prev.mine === m.mine) prev.items.push(m);
       else out.push({ key: m.id, mine: m.mine, time, event, items: [m] });
@@ -179,8 +180,9 @@
                   {#if m.photo}<div class={joinedKids(m.mine, first, end)}><MessagePhoto url={m.photo.url} width={m.photo.width} height={m.photo.height} mine={m.mine} /></div>{/if}
                   {#if m.voice}<div class={joinedKids(m.mine, first, end)}><VoiceMessage voice={m.voice} mine={m.mine} /></div>{/if}
                   {#if m.body}
+                    {@const replyTo = m.kind === "checkin-reply" ? parseCheckinReply(m.cardJson) : null}
                     <Bubble.Root variant={m.mine ? "default" : "muted"} align={m.mine ? "end" : "start"} class="max-w-[78%]">
-                      <Bubble.Content class="rounded-[20px] px-3.5 py-2 text-[15px] leading-snug {joined(m.mine, first, end)}"><ChatText text={m.body} /></Bubble.Content>
+                      <Bubble.Content class="rounded-[20px] px-3.5 py-2 text-[15px] leading-snug {joined(m.mine, first, end)}">{#if replyTo}<span class="mb-1 inline-block rounded-md bg-background/60 px-1.5 py-0.5 text-[12px] font-semibold text-muted-foreground">Check-in · {checkinReplyLabel(replyTo)}</span><br />{/if}<ChatText text={m.body} /></Bubble.Content>
                     </Bubble.Root>
                   {/if}
                 {/if}
