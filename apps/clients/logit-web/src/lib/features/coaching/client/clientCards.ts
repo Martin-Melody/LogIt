@@ -53,7 +53,7 @@ export async function loadClientCardData(c: ClientSummary, o: CoachingOverview):
 /** The share area each widget data need comes from. */
 const NEED_AREA: Record<WidgetDataNeed, ShareArea | null> = {
   workouts: "workouts", exercises: null, session: "workouts", todaysPlan: "workouts", progressionTargets: "workouts",
-  nutrition: "nutrition", bodyweight: "bodyweight", habits: "habits", mobility: "workouts",
+  nutrition: "nutrition", bodyweight: "bodyweight", habits: "habits", mobility: "workouts", nutritionDays: "nutrition",
 };
 export function missingShares(needs: readonly WidgetDataNeed[], sharing: Sharing): ShareArea[] {
   return [...new Set(needs.map((n) => NEED_AREA[n]).filter((a): a is ShareArea => !!a && !sharing[a]))];

@@ -232,6 +232,24 @@ export async function gatherWidgetInputFrom(
     );
   }
 
+  if (want.has("nutritionDays") && src.nutritionDeps) {
+    const deps = src.nutritionDeps;
+    tasks.push(
+      slice("nutritionDays", async () => {
+        const from = localDateIso(new Date(now - 27 * DAY_MS));
+        const [days, nut] = await Promise.all([
+          deps.nutritionRepo.listDaysInRange(from, localDateIso(new Date(now))),
+          getNutritionTargets(deps, { fallbackWeightKg: src.fallbackWeightKg, now }).catch(() => null),
+        ]);
+        input.nutritionDays = {
+          days: days.filter((d) => d.items.length > 0).map((d) => { const t = dayTotals(d); return { dateIso: d.dateIso, kcal: Math.round(t.kcal), proteinG: Math.round(t.proteinG) }; }).sort((a, b) => a.dateIso.localeCompare(b.dateIso)),
+          targetKcal: nut?.targets?.kcal,
+          targetProteinG: nut?.targets?.macros.proteinG,
+        };
+      }),
+    );
+  }
+
   if ((want.has("nutrition") || want.has("bodyweight")) && src.nutritionDeps) {
     const deps = src.nutritionDeps;
     tasks.push(

@@ -84,8 +84,9 @@ export const cards = {
 ```
 
 `input` is `{ card, page, now, clients }`, and each client is only:
-`firstName`, `monthsWithYou`, `joinedThisMonth`, `checkinsToReview`, and, for clients who share
-workouts, `sessions7d` and `program` (`name`, `week`, `totalWeeks`, `endsInDays`). Never payments,
+`firstName`, `monthsWithYou`, `joinedThisMonth`, `checkinsToReview`; `checkinLateDays` for clients
+who share check-ins; and, for clients who share workouts, `sessions7d`, `plannedPerWeek` and
+`program` (`name`, `week`, `totalWeeks`, `endsInDays`). Never payments,
 messages, food, weight or photos.
 
 ## Cards on a client's page

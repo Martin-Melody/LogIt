@@ -163,6 +163,7 @@ const WIDGET_NEEDS: ReadonlySet<WidgetDataNeed> = new Set([
   "nutrition",
   "bodyweight",
   "mobility",
+  "nutritionDays",
 ]);
 
 async function installedWidgetDefinitions(): Promise<RuntimeWidgetDefinition[]> {

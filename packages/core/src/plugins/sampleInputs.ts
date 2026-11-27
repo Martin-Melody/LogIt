@@ -67,6 +67,13 @@ export function sampleWidgetInput(needs: readonly string[], now: number, empty =
       { exerciseName: "Bench press", target: "3×6 @ 80kg" },
     ];
   }
+  if (want.has("nutritionDays")) {
+    input.nutritionDays = empty ? { days: [] } : {
+      days: Array.from({ length: 14 }, (_, i) => ({ dateIso: new Date(now - (13 - i) * 86_400_000).toISOString().slice(0, 10), kcal: 2300 + ((i * 137) % 400), proteinG: 140 + ((i * 23) % 60) })),
+      targetKcal: 2600,
+      targetProteinG: 170,
+    };
+  }
   if (want.has("nutrition")) {
     input.nutrition = empty
       ? { hasGoal: false }
@@ -127,8 +134,9 @@ export function sampleFamilyInput(family: string, now: number, empty = false): u
         page: "today",
         now,
         clients: empty ? [] : [
-          { firstName: "Aoife", monthsWithYou: 11, joinedThisMonth: false, sessions7d: 4, program: { name: "Hypertrophy A", week: 7, totalWeeks: 8, endsInDays: 9 }, checkinsToReview: 1 },
-          { firstName: "Liam", monthsWithYou: 1, joinedThisMonth: true, sessions7d: null, program: null, checkinsToReview: 0 },
+          { firstName: "Aoife", monthsWithYou: 11, joinedThisMonth: false, sessions7d: 4, plannedPerWeek: 4, program: { name: "Hypertrophy A", week: 7, totalWeeks: 8, endsInDays: 9 }, checkinsToReview: 1, checkinLateDays: 0 },
+          { firstName: "Dara", monthsWithYou: 3, joinedThisMonth: false, sessions7d: 1, plannedPerWeek: 3, program: { name: "Upper/Lower", week: 2, totalWeeks: 6, endsInDays: 30 }, checkinsToReview: 0, checkinLateDays: 2 },
+          { firstName: "Liam", monthsWithYou: 1, joinedThisMonth: true, sessions7d: null, plannedPerWeek: null, program: null, checkinsToReview: 0, checkinLateDays: null },
         ],
       };
     case "progression-algorithm":
@@ -160,10 +168,11 @@ export function sampleFamilyInput(family: string, now: number, empty = false): u
       return {
         goal: { sex: "male", heightCm: 180, activityLevel: "moderate", goalType: "lose", targetRateKgPerWeek: 0.4, proteinGPerKg: 2, fatPct: 0.25, adaptiveEnabled: false },
         currentWeightKg: empty ? undefined : 82.4,
-        weightEntries: empty ? [] : [{ dateIso: new Date(now - 7 * DAY).toISOString().slice(0, 10), kg: 82.8 }, { dateIso: new Date(now).toISOString().slice(0, 10), kg: 82.4 }],
+        weightEntries: empty ? [] : [{ dateIso: new Date(now - 7 * DAY).toISOString().slice(0, 10), weightKg: 82.8, kg: 82.8 }, { dateIso: new Date(now).toISOString().slice(0, 10), weightKg: 82.4, kg: 82.4 }],
         dailyIntakeKcal: empty ? [] : [{ dateIso: new Date(now - DAY).toISOString().slice(0, 10), kcal: 2450 }],
         userPreferences: {},
         now,
+        day: { dateIso: new Date(now).toISOString().slice(0, 10), trainingDay: empty ? null : true },
       };
     case "nutrition-analytics": {
       const iso = (d: number) => new Date(now - d * DAY).toISOString().slice(0, 10);

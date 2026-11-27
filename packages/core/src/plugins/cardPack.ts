@@ -15,6 +15,10 @@ export type CardPackClient = {
   joinedThisMonth: boolean;
   /** Only when they share workouts. */
   sessions7d: number | null;
+  /** Sessions a week their program plans, when they're on one and share workouts. */
+  plannedPerWeek: number | null;
+  /** Days their last check-in is late (0: on time or none due); null when they don't share check-ins. */
+  checkinLateDays: number | null;
   /** Their program from you, when they're on one. */
   program: { name: string; week: number | null; totalWeeks: number; endsInDays: number | null } | null;
   checkinsToReview: number;

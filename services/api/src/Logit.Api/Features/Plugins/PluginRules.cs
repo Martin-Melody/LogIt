@@ -37,7 +37,7 @@ public static partial class PluginRules
     /// What a widget can ask for (core plugins/widgetView WidgetDataNeed).
     public static readonly HashSet<string> WidgetNeeds =
     [
-        "workouts", "exercises", "session", "todaysPlan", "progressionTargets", "nutrition", "bodyweight", "habits", "mobility",
+        "workouts", "exercises", "session", "todaysPlan", "progressionTargets", "nutrition", "bodyweight", "habits", "mobility", "nutritionDays",
     ];
 
     // Prefixes for LogIt's own and built-in plugins. app.getlogit. is LogIt's published ones

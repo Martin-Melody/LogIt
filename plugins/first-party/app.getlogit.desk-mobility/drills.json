@@ -1,0 +1,133 @@
+{
+  "formatVersion": 1,
+  "pluginId": "app.getlogit.desk-mobility",
+  "drills": [
+    {
+      "name": "Chin tucks",
+      "area": "neck",
+      "defaultMetric": "reps",
+      "perSide": false,
+      "cues": [
+        "Slide the head straight back, as if making a double chin",
+        "Hold each for a second"
+      ]
+    },
+    {
+      "name": "Upper trap stretch",
+      "area": "neck",
+      "defaultMetric": "hold",
+      "perSide": true,
+      "cues": [
+        "Ear towards the shoulder, other hand sits on the chair"
+      ]
+    },
+    {
+      "name": "Doorway pec stretch",
+      "area": "shoulders",
+      "defaultMetric": "hold",
+      "perSide": true,
+      "cues": [
+        "Elbow at shoulder height, step through slowly"
+      ]
+    },
+    {
+      "name": "Wall slides",
+      "area": "shoulders",
+      "defaultMetric": "reps",
+      "perSide": false,
+      "cues": [
+        "Back, head and arms touch the wall the whole way"
+      ]
+    },
+    {
+      "name": "Thoracic extension over a chair",
+      "area": "t-spine",
+      "defaultMetric": "reps",
+      "perSide": false,
+      "cues": [
+        "Hands behind the head, lean back over the chair back"
+      ]
+    },
+    {
+      "name": "Open books",
+      "area": "t-spine",
+      "defaultMetric": "reps",
+      "perSide": true,
+      "cues": [
+        "Knees stacked; follow the top hand with your eyes"
+      ]
+    },
+    {
+      "name": "Cat-cow",
+      "area": "lower-back",
+      "defaultMetric": "reps",
+      "perSide": false,
+      "cues": [
+        "Move one segment at a time"
+      ]
+    },
+    {
+      "name": "Half-kneeling hip flexor stretch",
+      "area": "hip-flexors",
+      "defaultMetric": "hold",
+      "perSide": true,
+      "cues": [
+        "Squeeze the glute of the back leg; tuck the pelvis under"
+      ]
+    },
+    {
+      "name": "Couch stretch",
+      "area": "hip-flexors",
+      "defaultMetric": "hold",
+      "perSide": true,
+      "cues": [
+        "Back knee against the wall or sofa; stay tall"
+      ]
+    },
+    {
+      "name": "90/90 hip switches",
+      "area": "hips",
+      "defaultMetric": "reps",
+      "perSide": false,
+      "cues": [
+        "Rotate from the hips, chest up"
+      ]
+    },
+    {
+      "name": "Seated figure-four stretch",
+      "area": "glutes",
+      "defaultMetric": "hold",
+      "perSide": true,
+      "cues": [
+        "Ankle over the other knee, hinge forward from the hips"
+      ]
+    },
+    {
+      "name": "Standing hamstring sweep",
+      "area": "hamstrings",
+      "defaultMetric": "reps",
+      "perSide": true,
+      "cues": [
+        "Heel out, toes up, sweep the hands to the floor"
+      ]
+    },
+    {
+      "name": "Wrist circles and flexor stretch",
+      "area": "wrists",
+      "defaultMetric": "hold",
+      "perSide": false,
+      "cues": [
+        "Fingers back, gently press the palm away"
+      ]
+    },
+    {
+      "name": "Calf raise with a stretch",
+      "area": "ankles",
+      "defaultMetric": "reps",
+      "perSide": false,
+      "cues": [
+        "All the way up, slowly all the way down off a step"
+      ]
+    }
+  ]
+}

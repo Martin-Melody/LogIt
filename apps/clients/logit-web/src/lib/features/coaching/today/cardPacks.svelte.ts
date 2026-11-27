@@ -45,6 +45,8 @@ export function cardPackInput(o: CoachingOverview, card: string, page: "today" |
         monthsWithYou: Number.isFinite(since) ? Math.max(0, Math.floor((now - since) / (30.44 * DAY))) : 0,
         joinedThisMonth: Number.isFinite(since) && since >= monthStart,
         sessions7d: c.sharing.workouts ? c.sessions7d : null,
+        plannedPerWeek: c.sharing.workouts && p?.state === "running" ? p.daysPerWeek : null,
+        checkinLateDays: c.sharing.checkins ? (c.missed ? Math.max(0, Math.floor((now - c.missed.dueMs) / DAY)) : 0) : null,
         program: p ? { name: p.program.name, week: p.week, totalWeeks: p.totalWeeks, endsInDays: p.endsAtMs ? Math.max(0, Math.ceil((p.endsAtMs - now) / DAY)) : null } : null,
         checkinsToReview: c.toReview.length,
       };

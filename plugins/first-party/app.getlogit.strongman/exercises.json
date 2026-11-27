@@ -1,0 +1,182 @@
+{
+  "formatVersion": 1,
+  "pluginId": "app.getlogit.strongman",
+  "exercises": [
+    {
+      "name": "Yoke carry",
+      "primaryMuscles": [
+        "quads",
+        "core"
+      ],
+      "secondaryMuscles": [
+        "back",
+        "glutes"
+      ],
+      "exerciseType": "normal"
+    },
+    {
+      "name": "Log clean and press",
+      "primaryMuscles": [
+        "shoulders",
+        "quads"
+      ],
+      "secondaryMuscles": [
+        "triceps",
+        "back"
+      ],
+      "exerciseType": "normal"
+    },
+    {
+      "name": "Axle clean and press",
+      "primaryMuscles": [
+        "shoulders",
+        "back"
+      ],
+      "secondaryMuscles": [
+        "triceps",
+        "forearms"
+      ],
+      "exerciseType": "normal"
+    },
+    {
+      "name": "Axle deadlift",
+      "primaryMuscles": [
+        "back",
+        "glutes"
+      ],
+      "secondaryMuscles": [
+        "hamstrings",
+        "forearms"
+      ],
+      "exerciseType": "normal"
+    },
+    {
+      "name": "Atlas stone load",
+      "primaryMuscles": [
+        "back",
+        "glutes"
+      ],
+      "secondaryMuscles": [
+        "biceps",
+        "hamstrings"
+      ],
+      "exerciseType": "normal"
+    },
+    {
+      "name": "Stone to shoulder",
+      "primaryMuscles": [
+        "back",
+        "glutes"
+      ],
+      "secondaryMuscles": [
+        "biceps",
+        "shoulders"
+      ],
+      "exerciseType": "normal"
+    },
+    {
+      "name": "Farmer's walk",
+      "primaryMuscles": [
+        "forearms",
+        "core"
+      ],
+      "secondaryMuscles": [
+        "back",
+        "quads"
+      ],
+      "exerciseType": "normal"
+    },
+    {
+      "name": "Sandbag carry",
+      "primaryMuscles": [
+        "core",
+        "back"
+      ],
+      "secondaryMuscles": [
+        "biceps",
+        "quads"
+      ],
+      "exerciseType": "normal"
+    },
+    {
+      "name": "Sandbag over bar",
+      "primaryMuscles": [
+        "glutes",
+        "back"
+      ],
+      "secondaryMuscles": [
+        "hamstrings"
+      ],
+      "exerciseType": "normal"
+    },
+    {
+      "name": "Keg carry",
+      "primaryMuscles": [
+        "core",
+        "back"
+      ],
+      "secondaryMuscles": [
+        "biceps"
+      ],
+      "exerciseType": "normal"
+    },
+    {
+      "name": "Tyre flip",
+      "primaryMuscles": [
+        "glutes",
+        "quads"
+      ],
+      "secondaryMuscles": [
+        "back",
+        "chest"
+      ],
+      "exerciseType": "normal"
+    },
+    {
+      "name": "Car deadlift",
+      "primaryMuscles": [
+        "back",
+        "glutes"
+      ],
+      "secondaryMuscles": [
+        "hamstrings",
+        "forearms"
+      ],
+      "exerciseType": "normal"
+    },
+    {
+      "name": "Frame carry",
+      "primaryMuscles": [
+        "forearms",
+        "back"
+      ],
+      "secondaryMuscles": [
+        "core"
+      ],
+      "exerciseType": "normal"
+    },
+    {
+      "name": "Sled drag",
+      "primaryMuscles": [
+        "quads",
+        "glutes"
+      ],
+      "secondaryMuscles": [
+        "calves"
+      ],
+      "exerciseType": "normal"
+    },
+    {
+      "name": "Arm-over-arm pull",
+      "primaryMuscles": [
+        "back",
+        "biceps"
+      ],
+      "secondaryMuscles": [
+        "forearms",
+        "core"
+      ],
+      "exerciseType": "normal"
+    }
+  ]
+}

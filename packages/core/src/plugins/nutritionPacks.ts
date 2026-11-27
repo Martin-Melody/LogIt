@@ -24,11 +24,20 @@ export function parseMealPlanPack(raw: unknown, pluginId: string): MealPlanPack 
   const plans = raw.plans.map((p, i): CoachNutritionPlan => {
     if (!isObject(p) || typeof p.name !== "string" || !p.name.trim()) throw new Error(`Meal plan ${i + 1} is missing its name.`);
     if (!num(p.kcalTarget)) throw new Error(`"${p.name}" needs a daily calorie target.`);
-    const meals = Array.isArray(p.meals) ? p.meals : [];
-    if (meals.length > MAX_PACK_MEALS) throw new Error(`"${p.name}" has more than ${MAX_PACK_MEALS} meals.`);
-    for (const m of meals) {
-      if (!isObject(m) || typeof m.name !== "string" || !Array.isArray(m.foods) || m.foods.length > MAX_PACK_FOODS) throw new Error(`"${p.name}" has a meal without a name, or too many foods.`);
-      for (const f of m.foods) if (!isObject(f) || typeof f.name !== "string" || !num(f.grams) || !isObject(f.computed)) throw new Error(`"${p.name}" has a food missing its name, grams or totals.`);
+    const checkMeals = (meals: unknown[], where: string) => {
+      if (meals.length > MAX_PACK_MEALS) throw new Error(`${where} has more than ${MAX_PACK_MEALS} meals.`);
+      for (const m of meals) {
+        if (!isObject(m) || typeof m.name !== "string" || !Array.isArray(m.foods) || m.foods.length > MAX_PACK_FOODS) throw new Error(`${where} has a meal without a name, or too many foods.`);
+        for (const f of m.foods) if (!isObject(f) || typeof f.name !== "string" || !num(f.grams) || !isObject(f.computed)) throw new Error(`${where} has a food missing its name, grams or totals.`);
+      }
+    };
+    checkMeals(Array.isArray(p.meals) ? p.meals : [], `"${p.name}"`);
+    // Day types (training and rest days, or one per weekday) have meals of their own.
+    const dayTypes = Array.isArray(p.dayTypes) ? p.dayTypes : [];
+    if (dayTypes.length > 7) throw new Error(`"${p.name}" has more than 7 day types.`);
+    for (const d of dayTypes) {
+      if (!isObject(d) || typeof d.name !== "string" || !num(d.kcalTarget)) throw new Error(`"${p.name}" has a day type without a name or calories.`);
+      checkMeals(Array.isArray(d.meals) ? d.meals : [], `"${p.name}" (${d.name})`);
     }
     // A pack's ids are only its own: they're replaced when copied.
     return { ...createCoachNutritionPlan(p.name), ...(p as object), id: `${pluginId}#${i}`, archived: false, createdAtMs: 0, updatedAtMs: 0 } as CoachNutritionPlan;

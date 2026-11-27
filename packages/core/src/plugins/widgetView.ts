@@ -23,7 +23,9 @@ export type WidgetDataNeed =
   | "nutrition"
   | "bodyweight"
   | "habits"
-  | "mobility";
+  | "mobility"
+  /** The last 28 days of food, day by day, against the targets (canvas seeds: Protein days). */
+  | "nutritionDays";
 
 export type WidgetWorkoutSet = {
   weight: number;
@@ -139,6 +141,12 @@ export type WidgetInput = {
     /** "2 / 3 this week" for weekly-cadence habits. */
     weekProgress?: { done: number; target: number };
   }[];
+  /** The last 28 days with food logged, oldest first, and today's targets. */
+  nutritionDays?: {
+    days: { dateIso: string; kcal: number; proteinG: number }[];
+    targetKcal?: number;
+    targetProteinG?: number;
+  };
   /** Stretching / mobility drills the user has logged. */
   mobility?: {
     /** Consecutive days with at least one mobility drill logged. */

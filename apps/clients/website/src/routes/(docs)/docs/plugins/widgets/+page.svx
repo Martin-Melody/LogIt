@@ -83,6 +83,7 @@ the sandbox. Ask for the minimum.
 | `nutrition` | `{ hasGoal, targetKcal?, consumedKcal?, targetMacros?, consumedMacros? }` |
 | `bodyweight` | `{ currentKg?, weeklyRateKg?, targetKg?, trendPoints }` |
 | `habits` | `{ id, name, icon?, dueToday, doneToday, streak, weekProgress? }[]` |
+| `nutritionDays` | the last 28 days with food logged, oldest first: `{ days: [{ dateIso, kcal, proteinG }], targetKcal?, targetProteinG? }` |
 
 Full input type: `@logit/core/plugins/widgetView` → `WidgetInput`.
 

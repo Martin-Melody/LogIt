@@ -7,16 +7,21 @@ import { runInSandbox } from "./sandbox";
 // LogIt's own plugins (plugins/first-party): each one passes the same checks as anyone's. The
 // file says the family: block.json, questions.json or a widget's bundle.js.
 const ROOT = join(__dirname, "../../../../plugins/first-party");
-const FILES: [string, string][] = [["block.json", "workout-block"], ["questions.json", "question-pack"], ["bundle.js", "widget"]];
+// The file says the family; a bundle.js says its own (pluginBundle.family).
+const FILES: [string, string][] = [
+  ["block.json", "workout-block"], ["questions.json", "question-pack"], ["exercises.json", "exercise-pack"], ["drills.json", "mobility-pack"],
+  ["programs.json", "program-pack"], ["recipes.json", "recipe-pack"], ["meal-plans.json", "meal-plan-pack"], ["bundle.js", ""],
+];
 const NOW = Date.UTC(2026, 10, 27, 12);
 
 describe("LogIt's own plugins", () => {
   for (const id of readdirSync(ROOT).filter((d) => d.startsWith("app.getlogit."))) {
     const files = readdirSync(join(ROOT, id));
-    const [file, family] = FILES.find(([f]) => files.includes(f)) ?? ["", ""];
+    const [file, fromName] = FILES.find(([f]) => files.includes(f)) ?? ["", ""];
+    const source = file ? readFileSync(join(ROOT, id, file), "utf8") : "";
+    const family = fromName || (/family:\s*"([^"]+)"/.exec(source)?.[1] ?? "");
     it(`${id} (${family}) passes its checks`, async () => {
       expect(file).not.toBe("");
-      const source = readFileSync(join(ROOT, id, file), "utf8");
       const result = await runPluginChecks({ family, pluginId: id, source, now: NOW, run: (src, entry, op) => runInSandbox(src, entry, op, { timeoutMs: 2000 }) });
       expect(result.checks.filter((c) => !c.ok)).toEqual([]);
     });

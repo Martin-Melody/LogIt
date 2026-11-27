@@ -1,0 +1,248 @@
+{
+  "formatVersion": 1,
+  "pluginId": "app.getlogit.kettlebell",
+  "exercises": [
+    {
+      "name": "Kettlebell swing",
+      "primaryMuscles": [
+        "glutes",
+        "hamstrings"
+      ],
+      "secondaryMuscles": [
+        "core",
+        "back"
+      ],
+      "exerciseType": "normal"
+    },
+    {
+      "name": "One-arm kettlebell swing",
+      "primaryMuscles": [
+        "glutes",
+        "hamstrings"
+      ],
+      "secondaryMuscles": [
+        "core",
+        "forearms"
+      ],
+      "exerciseType": "normal"
+    },
+    {
+      "name": "Kettlebell snatch",
+      "primaryMuscles": [
+        "glutes",
+        "shoulders"
+      ],
+      "secondaryMuscles": [
+        "hamstrings",
+        "back",
+        "forearms"
+      ],
+      "exerciseType": "normal"
+    },
+    {
+      "name": "Kettlebell clean",
+      "primaryMuscles": [
+        "glutes",
+        "hamstrings"
+      ],
+      "secondaryMuscles": [
+        "back",
+        "forearms"
+      ],
+      "exerciseType": "normal"
+    },
+    {
+      "name": "Kettlebell clean and press",
+      "primaryMuscles": [
+        "shoulders",
+        "glutes"
+      ],
+      "secondaryMuscles": [
+        "triceps",
+        "core"
+      ],
+      "exerciseType": "normal"
+    },
+    {
+      "name": "Kettlebell jerk",
+      "primaryMuscles": [
+        "shoulders",
+        "quads"
+      ],
+      "secondaryMuscles": [
+        "triceps"
+      ],
+      "exerciseType": "normal"
+    },
+    {
+      "name": "Kettlebell long cycle",
+      "primaryMuscles": [
+        "shoulders",
+        "glutes"
+      ],
+      "secondaryMuscles": [
+        "quads",
+        "core",
+        "forearms"
+      ],
+      "exerciseType": "normal"
+    },
+    {
+      "name": "Turkish get-up",
+      "primaryMuscles": [
+        "core",
+        "shoulders"
+      ],
+      "secondaryMuscles": [
+        "glutes",
+        "quads"
+      ],
+      "exerciseType": "normal"
+    },
+    {
+      "name": "Goblet squat",
+      "primaryMuscles": [
+        "quads",
+        "glutes"
+      ],
+      "secondaryMuscles": [
+        "core"
+      ],
+      "exerciseType": "normal"
+    },
+    {
+      "name": "Kettlebell front squat",
+      "primaryMuscles": [
+        "quads",
+        "glutes"
+      ],
+      "secondaryMuscles": [
+        "core"
+      ],
+      "exerciseType": "normal"
+    },
+    {
+      "name": "Kettlebell overhead press",
+      "primaryMuscles": [
+        "shoulders"
+      ],
+      "secondaryMuscles": [
+        "triceps",
+        "core"
+      ],
+      "exerciseType": "normal"
+    },
+    {
+      "name": "Kettlebell push press",
+      "primaryMuscles": [
+        "shoulders",
+        "quads"
+      ],
+      "secondaryMuscles": [
+        "triceps"
+      ],
+      "exerciseType": "normal"
+    },
+    {
+      "name": "Kettlebell windmill",
+      "primaryMuscles": [
+        "core"
+      ],
+      "secondaryMuscles": [
+        "shoulders",
+        "hamstrings"
+      ],
+      "exerciseType": "normal"
+    },
+    {
+      "name": "Kettlebell halo",
+      "primaryMuscles": [
+        "shoulders"
+      ],
+      "secondaryMuscles": [
+        "core"
+      ],
+      "exerciseType": "normal"
+    },
+    {
+      "name": "Kettlebell gorilla row",
+      "primaryMuscles": [
+        "back"
+      ],
+      "secondaryMuscles": [
+        "biceps",
+        "core"
+      ],
+      "exerciseType": "normal"
+    },
+    {
+      "name": "Kettlebell single-leg deadlift",
+      "primaryMuscles": [
+        "hamstrings",
+        "glutes"
+      ],
+      "secondaryMuscles": [
+        "core"
+      ],
+      "exerciseType": "normal"
+    },
+    {
+      "name": "Kettlebell suitcase carry",
+      "primaryMuscles": [
+        "core",
+        "forearms"
+      ],
+      "secondaryMuscles": [
+        "shoulders"
+      ],
+      "exerciseType": "normal"
+    },
+    {
+      "name": "Kettlebell rack carry",
+      "primaryMuscles": [
+        "core"
+      ],
+      "secondaryMuscles": [
+        "shoulders",
+        "forearms"
+      ],
+      "exerciseType": "normal"
+    },
+    {
+      "name": "Kettlebell bottoms-up press",
+      "primaryMuscles": [
+        "shoulders"
+      ],
+      "secondaryMuscles": [
+        "forearms",
+        "core"
+      ],
+      "exerciseType": "normal"
+    },
+    {
+      "name": "Kettlebell thruster",
+      "primaryMuscles": [
+        "quads",
+        "shoulders"
+      ],
+      "secondaryMuscles": [
+        "glutes",
+        "triceps"
+      ],
+      "exerciseType": "normal"
+    },
+    {
+      "name": "Kettlebell complex (clean, squat, press)",
+      "primaryMuscles": [
+        "quads",
+        "shoulders"
+      ],
+      "secondaryMuscles": [
+        "glutes",
+        "back",
+        "core"
+      ],
+      "exerciseType": "normal"
+    }
+  ]
+}

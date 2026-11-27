@@ -84,6 +84,7 @@ export const WIDGET_NEEDS: { need: WidgetDataNeed; label: string; detail: string
   { need: "bodyweight", label: "Body weight", detail: "Your current weight, trend and goal" },
   { need: "habits", label: "Habits", detail: "Your habits, whether they're done today, and streaks" },
   { need: "mobility", label: "Mobility", detail: "Drills you've logged, with best holds and reps" },
+  { need: "nutritionDays", label: "Food, day by day", detail: "Calories and protein for each of the last 28 days, against your targets" },
 ];
 
 const NEED_INDEX = new Map(WIDGET_NEEDS.map((n) => [n.need as string, n]));

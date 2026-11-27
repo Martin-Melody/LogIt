@@ -1,0 +1,3867 @@
+{
+  "formatVersion": 1,
+  "pluginId": "app.getlogit.home-dumbbells",
+  "programs": [
+    {
+      "name": "Home dumbbells, 3 days",
+      "description": "Three full-body days a week for a pair of adjustable dumbbells and a bench. Eight weeks; a set is added to the main lifts from week 5. Fill the rep range, then go up a weight.",
+      "rule": {
+        "kind": "adaptive"
+      },
+      "weeks": [
+        {
+          "id": "w1",
+          "weekNumber": 1,
+          "days": [
+            {
+              "id": "w1d0",
+              "orderIndex": 0,
+              "name": "Full body A",
+              "weekdays": [
+                1
+              ],
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w1d0b0",
+                  "orderIndex": 0,
+                  "exerciseName": "Goblet squat",
+                  "sets": [
+                    {
+                      "id": "w1d0b0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w1d0b0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w1d0b0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w1d0b1",
+                  "orderIndex": 1,
+                  "exerciseName": "Dumbbell bench press",
+                  "sets": [
+                    {
+                      "id": "w1d0b1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w1d0b1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w1d0b1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w1d0b2",
+                  "orderIndex": 2,
+                  "exerciseName": "One-arm dumbbell row",
+                  "sets": [
+                    {
+                      "id": "w1d0b2s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w1d0b2s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w1d0b2s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w1d0b3",
+                  "orderIndex": 3,
+                  "exerciseName": "Dumbbell Romanian deadlift",
+                  "sets": [
+                    {
+                      "id": "w1d0b3s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w1d0b3s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w1d0b3s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w1d0b4",
+                  "orderIndex": 4,
+                  "exerciseName": "Dead bug",
+                  "sets": [
+                    {
+                      "id": "w1d0b4s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w1d0b4s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w1d1",
+              "orderIndex": 1,
+              "name": "Full body B",
+              "weekdays": [
+                3
+              ],
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w1d1b0",
+                  "orderIndex": 0,
+                  "exerciseName": "Dumbbell split squat",
+                  "sets": [
+                    {
+                      "id": "w1d1b0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w1d1b0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w1d1b0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w1d1b1",
+                  "orderIndex": 1,
+                  "exerciseName": "Dumbbell overhead press",
+                  "sets": [
+                    {
+                      "id": "w1d1b1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w1d1b1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w1d1b1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w1d1b2",
+                  "orderIndex": 2,
+                  "exerciseName": "Chest-supported dumbbell row",
+                  "sets": [
+                    {
+                      "id": "w1d1b2s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w1d1b2s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w1d1b2s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w1d1b3",
+                  "orderIndex": 3,
+                  "exerciseName": "Dumbbell hip thrust",
+                  "sets": [
+                    {
+                      "id": "w1d1b3s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 15
+                    },
+                    {
+                      "id": "w1d1b3s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 15
+                    },
+                    {
+                      "id": "w1d1b3s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 15
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w1d1b4",
+                  "orderIndex": 4,
+                  "exerciseName": "Dumbbell curl",
+                  "sets": [
+                    {
+                      "id": "w1d1b4s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 15
+                    },
+                    {
+                      "id": "w1d1b4s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 15
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w1d2",
+              "orderIndex": 2,
+              "name": "Full body C",
+              "weekdays": [
+                5
+              ],
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w1d2b0",
+                  "orderIndex": 0,
+                  "exerciseName": "Dumbbell step-up",
+                  "sets": [
+                    {
+                      "id": "w1d2b0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w1d2b0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w1d2b0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w1d2b1",
+                  "orderIndex": 1,
+                  "exerciseName": "Incline dumbbell press",
+                  "sets": [
+                    {
+                      "id": "w1d2b1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w1d2b1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w1d2b1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w1d2b2",
+                  "orderIndex": 2,
+                  "exerciseName": "Dumbbell pullover",
+                  "sets": [
+                    {
+                      "id": "w1d2b2s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w1d2b2s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w1d2b2s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w1d2b3",
+                  "orderIndex": 3,
+                  "exerciseName": "Single-leg dumbbell deadlift",
+                  "sets": [
+                    {
+                      "id": "w1d2b3s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w1d2b3s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w1d2b3s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w1d2b4",
+                  "orderIndex": 4,
+                  "exerciseName": "Dumbbell lateral raise",
+                  "sets": [
+                    {
+                      "id": "w1d2b4s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 12,
+                      "repsMax": 15
+                    },
+                    {
+                      "id": "w1d2b4s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 12,
+                      "repsMax": 15
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "w2",
+          "weekNumber": 2,
+          "days": [
+            {
+              "id": "w2d0",
+              "orderIndex": 0,
+              "name": "Full body A",
+              "weekdays": [
+                1
+              ],
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w2d0b0",
+                  "orderIndex": 0,
+                  "exerciseName": "Goblet squat",
+                  "sets": [
+                    {
+                      "id": "w2d0b0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w2d0b0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w2d0b0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w2d0b1",
+                  "orderIndex": 1,
+                  "exerciseName": "Dumbbell bench press",
+                  "sets": [
+                    {
+                      "id": "w2d0b1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w2d0b1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w2d0b1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w2d0b2",
+                  "orderIndex": 2,
+                  "exerciseName": "One-arm dumbbell row",
+                  "sets": [
+                    {
+                      "id": "w2d0b2s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w2d0b2s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w2d0b2s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w2d0b3",
+                  "orderIndex": 3,
+                  "exerciseName": "Dumbbell Romanian deadlift",
+                  "sets": [
+                    {
+                      "id": "w2d0b3s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w2d0b3s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w2d0b3s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w2d0b4",
+                  "orderIndex": 4,
+                  "exerciseName": "Dead bug",
+                  "sets": [
+                    {
+                      "id": "w2d0b4s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w2d0b4s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w2d1",
+              "orderIndex": 1,
+              "name": "Full body B",
+              "weekdays": [
+                3
+              ],
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w2d1b0",
+                  "orderIndex": 0,
+                  "exerciseName": "Dumbbell split squat",
+                  "sets": [
+                    {
+                      "id": "w2d1b0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w2d1b0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w2d1b0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w2d1b1",
+                  "orderIndex": 1,
+                  "exerciseName": "Dumbbell overhead press",
+                  "sets": [
+                    {
+                      "id": "w2d1b1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w2d1b1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w2d1b1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w2d1b2",
+                  "orderIndex": 2,
+                  "exerciseName": "Chest-supported dumbbell row",
+                  "sets": [
+                    {
+                      "id": "w2d1b2s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w2d1b2s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w2d1b2s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w2d1b3",
+                  "orderIndex": 3,
+                  "exerciseName": "Dumbbell hip thrust",
+                  "sets": [
+                    {
+                      "id": "w2d1b3s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 15
+                    },
+                    {
+                      "id": "w2d1b3s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 15
+                    },
+                    {
+                      "id": "w2d1b3s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 15
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w2d1b4",
+                  "orderIndex": 4,
+                  "exerciseName": "Dumbbell curl",
+                  "sets": [
+                    {
+                      "id": "w2d1b4s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 15
+                    },
+                    {
+                      "id": "w2d1b4s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 15
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w2d2",
+              "orderIndex": 2,
+              "name": "Full body C",
+              "weekdays": [
+                5
+              ],
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w2d2b0",
+                  "orderIndex": 0,
+                  "exerciseName": "Dumbbell step-up",
+                  "sets": [
+                    {
+                      "id": "w2d2b0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w2d2b0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w2d2b0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w2d2b1",
+                  "orderIndex": 1,
+                  "exerciseName": "Incline dumbbell press",
+                  "sets": [
+                    {
+                      "id": "w2d2b1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w2d2b1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w2d2b1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w2d2b2",
+                  "orderIndex": 2,
+                  "exerciseName": "Dumbbell pullover",
+                  "sets": [
+                    {
+                      "id": "w2d2b2s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w2d2b2s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w2d2b2s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w2d2b3",
+                  "orderIndex": 3,
+                  "exerciseName": "Single-leg dumbbell deadlift",
+                  "sets": [
+                    {
+                      "id": "w2d2b3s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w2d2b3s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w2d2b3s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w2d2b4",
+                  "orderIndex": 4,
+                  "exerciseName": "Dumbbell lateral raise",
+                  "sets": [
+                    {
+                      "id": "w2d2b4s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 12,
+                      "repsMax": 15
+                    },
+                    {
+                      "id": "w2d2b4s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 12,
+                      "repsMax": 15
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "w3",
+          "weekNumber": 3,
+          "days": [
+            {
+              "id": "w3d0",
+              "orderIndex": 0,
+              "name": "Full body A",
+              "weekdays": [
+                1
+              ],
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w3d0b0",
+                  "orderIndex": 0,
+                  "exerciseName": "Goblet squat",
+                  "sets": [
+                    {
+                      "id": "w3d0b0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w3d0b0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w3d0b0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w3d0b1",
+                  "orderIndex": 1,
+                  "exerciseName": "Dumbbell bench press",
+                  "sets": [
+                    {
+                      "id": "w3d0b1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w3d0b1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w3d0b1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w3d0b2",
+                  "orderIndex": 2,
+                  "exerciseName": "One-arm dumbbell row",
+                  "sets": [
+                    {
+                      "id": "w3d0b2s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w3d0b2s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w3d0b2s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w3d0b3",
+                  "orderIndex": 3,
+                  "exerciseName": "Dumbbell Romanian deadlift",
+                  "sets": [
+                    {
+                      "id": "w3d0b3s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w3d0b3s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w3d0b3s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w3d0b4",
+                  "orderIndex": 4,
+                  "exerciseName": "Dead bug",
+                  "sets": [
+                    {
+                      "id": "w3d0b4s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w3d0b4s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w3d1",
+              "orderIndex": 1,
+              "name": "Full body B",
+              "weekdays": [
+                3
+              ],
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w3d1b0",
+                  "orderIndex": 0,
+                  "exerciseName": "Dumbbell split squat",
+                  "sets": [
+                    {
+                      "id": "w3d1b0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w3d1b0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w3d1b0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w3d1b1",
+                  "orderIndex": 1,
+                  "exerciseName": "Dumbbell overhead press",
+                  "sets": [
+                    {
+                      "id": "w3d1b1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w3d1b1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w3d1b1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w3d1b2",
+                  "orderIndex": 2,
+                  "exerciseName": "Chest-supported dumbbell row",
+                  "sets": [
+                    {
+                      "id": "w3d1b2s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w3d1b2s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w3d1b2s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w3d1b3",
+                  "orderIndex": 3,
+                  "exerciseName": "Dumbbell hip thrust",
+                  "sets": [
+                    {
+                      "id": "w3d1b3s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 15
+                    },
+                    {
+                      "id": "w3d1b3s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 15
+                    },
+                    {
+                      "id": "w3d1b3s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 15
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w3d1b4",
+                  "orderIndex": 4,
+                  "exerciseName": "Dumbbell curl",
+                  "sets": [
+                    {
+                      "id": "w3d1b4s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 15
+                    },
+                    {
+                      "id": "w3d1b4s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 15
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w3d2",
+              "orderIndex": 2,
+              "name": "Full body C",
+              "weekdays": [
+                5
+              ],
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w3d2b0",
+                  "orderIndex": 0,
+                  "exerciseName": "Dumbbell step-up",
+                  "sets": [
+                    {
+                      "id": "w3d2b0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w3d2b0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w3d2b0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w3d2b1",
+                  "orderIndex": 1,
+                  "exerciseName": "Incline dumbbell press",
+                  "sets": [
+                    {
+                      "id": "w3d2b1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w3d2b1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w3d2b1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w3d2b2",
+                  "orderIndex": 2,
+                  "exerciseName": "Dumbbell pullover",
+                  "sets": [
+                    {
+                      "id": "w3d2b2s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w3d2b2s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w3d2b2s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w3d2b3",
+                  "orderIndex": 3,
+                  "exerciseName": "Single-leg dumbbell deadlift",
+                  "sets": [
+                    {
+                      "id": "w3d2b3s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w3d2b3s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w3d2b3s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w3d2b4",
+                  "orderIndex": 4,
+                  "exerciseName": "Dumbbell lateral raise",
+                  "sets": [
+                    {
+                      "id": "w3d2b4s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 12,
+                      "repsMax": 15
+                    },
+                    {
+                      "id": "w3d2b4s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 12,
+                      "repsMax": 15
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "w4",
+          "weekNumber": 4,
+          "days": [
+            {
+              "id": "w4d0",
+              "orderIndex": 0,
+              "name": "Full body A",
+              "weekdays": [
+                1
+              ],
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w4d0b0",
+                  "orderIndex": 0,
+                  "exerciseName": "Goblet squat",
+                  "sets": [
+                    {
+                      "id": "w4d0b0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w4d0b0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w4d0b0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w4d0b1",
+                  "orderIndex": 1,
+                  "exerciseName": "Dumbbell bench press",
+                  "sets": [
+                    {
+                      "id": "w4d0b1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w4d0b1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w4d0b1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w4d0b2",
+                  "orderIndex": 2,
+                  "exerciseName": "One-arm dumbbell row",
+                  "sets": [
+                    {
+                      "id": "w4d0b2s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w4d0b2s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w4d0b2s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w4d0b3",
+                  "orderIndex": 3,
+                  "exerciseName": "Dumbbell Romanian deadlift",
+                  "sets": [
+                    {
+                      "id": "w4d0b3s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w4d0b3s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w4d0b3s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w4d0b4",
+                  "orderIndex": 4,
+                  "exerciseName": "Dead bug",
+                  "sets": [
+                    {
+                      "id": "w4d0b4s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w4d0b4s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w4d1",
+              "orderIndex": 1,
+              "name": "Full body B",
+              "weekdays": [
+                3
+              ],
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w4d1b0",
+                  "orderIndex": 0,
+                  "exerciseName": "Dumbbell split squat",
+                  "sets": [
+                    {
+                      "id": "w4d1b0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w4d1b0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w4d1b0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w4d1b1",
+                  "orderIndex": 1,
+                  "exerciseName": "Dumbbell overhead press",
+                  "sets": [
+                    {
+                      "id": "w4d1b1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w4d1b1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w4d1b1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w4d1b2",
+                  "orderIndex": 2,
+                  "exerciseName": "Chest-supported dumbbell row",
+                  "sets": [
+                    {
+                      "id": "w4d1b2s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w4d1b2s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w4d1b2s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w4d1b3",
+                  "orderIndex": 3,
+                  "exerciseName": "Dumbbell hip thrust",
+                  "sets": [
+                    {
+                      "id": "w4d1b3s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 15
+                    },
+                    {
+                      "id": "w4d1b3s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 15
+                    },
+                    {
+                      "id": "w4d1b3s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 15
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w4d1b4",
+                  "orderIndex": 4,
+                  "exerciseName": "Dumbbell curl",
+                  "sets": [
+                    {
+                      "id": "w4d1b4s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 15
+                    },
+                    {
+                      "id": "w4d1b4s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 15
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w4d2",
+              "orderIndex": 2,
+              "name": "Full body C",
+              "weekdays": [
+                5
+              ],
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w4d2b0",
+                  "orderIndex": 0,
+                  "exerciseName": "Dumbbell step-up",
+                  "sets": [
+                    {
+                      "id": "w4d2b0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w4d2b0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w4d2b0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w4d2b1",
+                  "orderIndex": 1,
+                  "exerciseName": "Incline dumbbell press",
+                  "sets": [
+                    {
+                      "id": "w4d2b1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w4d2b1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w4d2b1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w4d2b2",
+                  "orderIndex": 2,
+                  "exerciseName": "Dumbbell pullover",
+                  "sets": [
+                    {
+                      "id": "w4d2b2s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w4d2b2s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w4d2b2s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w4d2b3",
+                  "orderIndex": 3,
+                  "exerciseName": "Single-leg dumbbell deadlift",
+                  "sets": [
+                    {
+                      "id": "w4d2b3s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w4d2b3s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w4d2b3s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w4d2b4",
+                  "orderIndex": 4,
+                  "exerciseName": "Dumbbell lateral raise",
+                  "sets": [
+                    {
+                      "id": "w4d2b4s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 12,
+                      "repsMax": 15
+                    },
+                    {
+                      "id": "w4d2b4s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 12,
+                      "repsMax": 15
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "w5",
+          "weekNumber": 5,
+          "days": [
+            {
+              "id": "w5d0",
+              "orderIndex": 0,
+              "name": "Full body A",
+              "weekdays": [
+                1
+              ],
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w5d0b0",
+                  "orderIndex": 0,
+                  "exerciseName": "Goblet squat",
+                  "sets": [
+                    {
+                      "id": "w5d0b0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w5d0b0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w5d0b0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w5d0b0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w5d0b1",
+                  "orderIndex": 1,
+                  "exerciseName": "Dumbbell bench press",
+                  "sets": [
+                    {
+                      "id": "w5d0b1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w5d0b1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w5d0b1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w5d0b1s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w5d0b2",
+                  "orderIndex": 2,
+                  "exerciseName": "One-arm dumbbell row",
+                  "sets": [
+                    {
+                      "id": "w5d0b2s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w5d0b2s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w5d0b2s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w5d0b2s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w5d0b3",
+                  "orderIndex": 3,
+                  "exerciseName": "Dumbbell Romanian deadlift",
+                  "sets": [
+                    {
+                      "id": "w5d0b3s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w5d0b3s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w5d0b3s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w5d0b4",
+                  "orderIndex": 4,
+                  "exerciseName": "Dead bug",
+                  "sets": [
+                    {
+                      "id": "w5d0b4s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w5d0b4s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w5d1",
+              "orderIndex": 1,
+              "name": "Full body B",
+              "weekdays": [
+                3
+              ],
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w5d1b0",
+                  "orderIndex": 0,
+                  "exerciseName": "Dumbbell split squat",
+                  "sets": [
+                    {
+                      "id": "w5d1b0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w5d1b0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w5d1b0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w5d1b0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w5d1b1",
+                  "orderIndex": 1,
+                  "exerciseName": "Dumbbell overhead press",
+                  "sets": [
+                    {
+                      "id": "w5d1b1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w5d1b1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w5d1b1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w5d1b1s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w5d1b2",
+                  "orderIndex": 2,
+                  "exerciseName": "Chest-supported dumbbell row",
+                  "sets": [
+                    {
+                      "id": "w5d1b2s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w5d1b2s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w5d1b2s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w5d1b2s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w5d1b3",
+                  "orderIndex": 3,
+                  "exerciseName": "Dumbbell hip thrust",
+                  "sets": [
+                    {
+                      "id": "w5d1b3s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 15
+                    },
+                    {
+                      "id": "w5d1b3s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 15
+                    },
+                    {
+                      "id": "w5d1b3s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 15
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w5d1b4",
+                  "orderIndex": 4,
+                  "exerciseName": "Dumbbell curl",
+                  "sets": [
+                    {
+                      "id": "w5d1b4s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 15
+                    },
+                    {
+                      "id": "w5d1b4s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 15
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w5d2",
+              "orderIndex": 2,
+              "name": "Full body C",
+              "weekdays": [
+                5
+              ],
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w5d2b0",
+                  "orderIndex": 0,
+                  "exerciseName": "Dumbbell step-up",
+                  "sets": [
+                    {
+                      "id": "w5d2b0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w5d2b0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w5d2b0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w5d2b0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w5d2b1",
+                  "orderIndex": 1,
+                  "exerciseName": "Incline dumbbell press",
+                  "sets": [
+                    {
+                      "id": "w5d2b1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w5d2b1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w5d2b1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w5d2b1s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w5d2b2",
+                  "orderIndex": 2,
+                  "exerciseName": "Dumbbell pullover",
+                  "sets": [
+                    {
+                      "id": "w5d2b2s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w5d2b2s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w5d2b2s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w5d2b2s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w5d2b3",
+                  "orderIndex": 3,
+                  "exerciseName": "Single-leg dumbbell deadlift",
+                  "sets": [
+                    {
+                      "id": "w5d2b3s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w5d2b3s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w5d2b3s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w5d2b4",
+                  "orderIndex": 4,
+                  "exerciseName": "Dumbbell lateral raise",
+                  "sets": [
+                    {
+                      "id": "w5d2b4s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 12,
+                      "repsMax": 15
+                    },
+                    {
+                      "id": "w5d2b4s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 12,
+                      "repsMax": 15
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "w6",
+          "weekNumber": 6,
+          "days": [
+            {
+              "id": "w6d0",
+              "orderIndex": 0,
+              "name": "Full body A",
+              "weekdays": [
+                1
+              ],
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w6d0b0",
+                  "orderIndex": 0,
+                  "exerciseName": "Goblet squat",
+                  "sets": [
+                    {
+                      "id": "w6d0b0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w6d0b0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w6d0b0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w6d0b0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w6d0b1",
+                  "orderIndex": 1,
+                  "exerciseName": "Dumbbell bench press",
+                  "sets": [
+                    {
+                      "id": "w6d0b1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w6d0b1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w6d0b1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w6d0b1s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w6d0b2",
+                  "orderIndex": 2,
+                  "exerciseName": "One-arm dumbbell row",
+                  "sets": [
+                    {
+                      "id": "w6d0b2s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w6d0b2s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w6d0b2s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w6d0b2s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w6d0b3",
+                  "orderIndex": 3,
+                  "exerciseName": "Dumbbell Romanian deadlift",
+                  "sets": [
+                    {
+                      "id": "w6d0b3s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w6d0b3s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w6d0b3s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w6d0b4",
+                  "orderIndex": 4,
+                  "exerciseName": "Dead bug",
+                  "sets": [
+                    {
+                      "id": "w6d0b4s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w6d0b4s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w6d1",
+              "orderIndex": 1,
+              "name": "Full body B",
+              "weekdays": [
+                3
+              ],
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w6d1b0",
+                  "orderIndex": 0,
+                  "exerciseName": "Dumbbell split squat",
+                  "sets": [
+                    {
+                      "id": "w6d1b0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w6d1b0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w6d1b0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w6d1b0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w6d1b1",
+                  "orderIndex": 1,
+                  "exerciseName": "Dumbbell overhead press",
+                  "sets": [
+                    {
+                      "id": "w6d1b1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w6d1b1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w6d1b1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w6d1b1s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w6d1b2",
+                  "orderIndex": 2,
+                  "exerciseName": "Chest-supported dumbbell row",
+                  "sets": [
+                    {
+                      "id": "w6d1b2s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w6d1b2s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w6d1b2s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w6d1b2s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w6d1b3",
+                  "orderIndex": 3,
+                  "exerciseName": "Dumbbell hip thrust",
+                  "sets": [
+                    {
+                      "id": "w6d1b3s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 15
+                    },
+                    {
+                      "id": "w6d1b3s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 15
+                    },
+                    {
+                      "id": "w6d1b3s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 15
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w6d1b4",
+                  "orderIndex": 4,
+                  "exerciseName": "Dumbbell curl",
+                  "sets": [
+                    {
+                      "id": "w6d1b4s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 15
+                    },
+                    {
+                      "id": "w6d1b4s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 15
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w6d2",
+              "orderIndex": 2,
+              "name": "Full body C",
+              "weekdays": [
+                5
+              ],
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w6d2b0",
+                  "orderIndex": 0,
+                  "exerciseName": "Dumbbell step-up",
+                  "sets": [
+                    {
+                      "id": "w6d2b0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w6d2b0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w6d2b0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w6d2b0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w6d2b1",
+                  "orderIndex": 1,
+                  "exerciseName": "Incline dumbbell press",
+                  "sets": [
+                    {
+                      "id": "w6d2b1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w6d2b1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w6d2b1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w6d2b1s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w6d2b2",
+                  "orderIndex": 2,
+                  "exerciseName": "Dumbbell pullover",
+                  "sets": [
+                    {
+                      "id": "w6d2b2s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w6d2b2s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w6d2b2s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w6d2b2s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w6d2b3",
+                  "orderIndex": 3,
+                  "exerciseName": "Single-leg dumbbell deadlift",
+                  "sets": [
+                    {
+                      "id": "w6d2b3s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w6d2b3s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w6d2b3s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w6d2b4",
+                  "orderIndex": 4,
+                  "exerciseName": "Dumbbell lateral raise",
+                  "sets": [
+                    {
+                      "id": "w6d2b4s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 12,
+                      "repsMax": 15
+                    },
+                    {
+                      "id": "w6d2b4s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 12,
+                      "repsMax": 15
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "w7",
+          "weekNumber": 7,
+          "days": [
+            {
+              "id": "w7d0",
+              "orderIndex": 0,
+              "name": "Full body A",
+              "weekdays": [
+                1
+              ],
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w7d0b0",
+                  "orderIndex": 0,
+                  "exerciseName": "Goblet squat",
+                  "sets": [
+                    {
+                      "id": "w7d0b0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w7d0b0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w7d0b0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w7d0b0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w7d0b1",
+                  "orderIndex": 1,
+                  "exerciseName": "Dumbbell bench press",
+                  "sets": [
+                    {
+                      "id": "w7d0b1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w7d0b1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w7d0b1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w7d0b1s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w7d0b2",
+                  "orderIndex": 2,
+                  "exerciseName": "One-arm dumbbell row",
+                  "sets": [
+                    {
+                      "id": "w7d0b2s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w7d0b2s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w7d0b2s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w7d0b2s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w7d0b3",
+                  "orderIndex": 3,
+                  "exerciseName": "Dumbbell Romanian deadlift",
+                  "sets": [
+                    {
+                      "id": "w7d0b3s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w7d0b3s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w7d0b3s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w7d0b4",
+                  "orderIndex": 4,
+                  "exerciseName": "Dead bug",
+                  "sets": [
+                    {
+                      "id": "w7d0b4s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w7d0b4s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w7d1",
+              "orderIndex": 1,
+              "name": "Full body B",
+              "weekdays": [
+                3
+              ],
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w7d1b0",
+                  "orderIndex": 0,
+                  "exerciseName": "Dumbbell split squat",
+                  "sets": [
+                    {
+                      "id": "w7d1b0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w7d1b0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w7d1b0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w7d1b0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w7d1b1",
+                  "orderIndex": 1,
+                  "exerciseName": "Dumbbell overhead press",
+                  "sets": [
+                    {
+                      "id": "w7d1b1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w7d1b1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w7d1b1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w7d1b1s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w7d1b2",
+                  "orderIndex": 2,
+                  "exerciseName": "Chest-supported dumbbell row",
+                  "sets": [
+                    {
+                      "id": "w7d1b2s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w7d1b2s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w7d1b2s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w7d1b2s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w7d1b3",
+                  "orderIndex": 3,
+                  "exerciseName": "Dumbbell hip thrust",
+                  "sets": [
+                    {
+                      "id": "w7d1b3s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 15
+                    },
+                    {
+                      "id": "w7d1b3s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 15
+                    },
+                    {
+                      "id": "w7d1b3s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 15
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w7d1b4",
+                  "orderIndex": 4,
+                  "exerciseName": "Dumbbell curl",
+                  "sets": [
+                    {
+                      "id": "w7d1b4s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 15
+                    },
+                    {
+                      "id": "w7d1b4s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 15
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w7d2",
+              "orderIndex": 2,
+              "name": "Full body C",
+              "weekdays": [
+                5
+              ],
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w7d2b0",
+                  "orderIndex": 0,
+                  "exerciseName": "Dumbbell step-up",
+                  "sets": [
+                    {
+                      "id": "w7d2b0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w7d2b0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w7d2b0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w7d2b0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w7d2b1",
+                  "orderIndex": 1,
+                  "exerciseName": "Incline dumbbell press",
+                  "sets": [
+                    {
+                      "id": "w7d2b1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w7d2b1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w7d2b1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w7d2b1s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w7d2b2",
+                  "orderIndex": 2,
+                  "exerciseName": "Dumbbell pullover",
+                  "sets": [
+                    {
+                      "id": "w7d2b2s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w7d2b2s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w7d2b2s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w7d2b2s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w7d2b3",
+                  "orderIndex": 3,
+                  "exerciseName": "Single-leg dumbbell deadlift",
+                  "sets": [
+                    {
+                      "id": "w7d2b3s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w7d2b3s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w7d2b3s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w7d2b4",
+                  "orderIndex": 4,
+                  "exerciseName": "Dumbbell lateral raise",
+                  "sets": [
+                    {
+                      "id": "w7d2b4s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 12,
+                      "repsMax": 15
+                    },
+                    {
+                      "id": "w7d2b4s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 12,
+                      "repsMax": 15
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "w8",
+          "weekNumber": 8,
+          "days": [
+            {
+              "id": "w8d0",
+              "orderIndex": 0,
+              "name": "Full body A",
+              "weekdays": [
+                1
+              ],
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w8d0b0",
+                  "orderIndex": 0,
+                  "exerciseName": "Goblet squat",
+                  "sets": [
+                    {
+                      "id": "w8d0b0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w8d0b0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w8d0b0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w8d0b0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w8d0b1",
+                  "orderIndex": 1,
+                  "exerciseName": "Dumbbell bench press",
+                  "sets": [
+                    {
+                      "id": "w8d0b1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w8d0b1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w8d0b1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w8d0b1s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w8d0b2",
+                  "orderIndex": 2,
+                  "exerciseName": "One-arm dumbbell row",
+                  "sets": [
+                    {
+                      "id": "w8d0b2s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w8d0b2s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w8d0b2s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w8d0b2s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w8d0b3",
+                  "orderIndex": 3,
+                  "exerciseName": "Dumbbell Romanian deadlift",
+                  "sets": [
+                    {
+                      "id": "w8d0b3s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w8d0b3s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w8d0b3s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w8d0b4",
+                  "orderIndex": 4,
+                  "exerciseName": "Dead bug",
+                  "sets": [
+                    {
+                      "id": "w8d0b4s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w8d0b4s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w8d1",
+              "orderIndex": 1,
+              "name": "Full body B",
+              "weekdays": [
+                3
+              ],
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w8d1b0",
+                  "orderIndex": 0,
+                  "exerciseName": "Dumbbell split squat",
+                  "sets": [
+                    {
+                      "id": "w8d1b0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w8d1b0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w8d1b0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w8d1b0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w8d1b1",
+                  "orderIndex": 1,
+                  "exerciseName": "Dumbbell overhead press",
+                  "sets": [
+                    {
+                      "id": "w8d1b1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w8d1b1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w8d1b1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w8d1b1s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w8d1b2",
+                  "orderIndex": 2,
+                  "exerciseName": "Chest-supported dumbbell row",
+                  "sets": [
+                    {
+                      "id": "w8d1b2s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w8d1b2s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w8d1b2s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w8d1b2s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w8d1b3",
+                  "orderIndex": 3,
+                  "exerciseName": "Dumbbell hip thrust",
+                  "sets": [
+                    {
+                      "id": "w8d1b3s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 15
+                    },
+                    {
+                      "id": "w8d1b3s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 15
+                    },
+                    {
+                      "id": "w8d1b3s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 15
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w8d1b4",
+                  "orderIndex": 4,
+                  "exerciseName": "Dumbbell curl",
+                  "sets": [
+                    {
+                      "id": "w8d1b4s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 15
+                    },
+                    {
+                      "id": "w8d1b4s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 15
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w8d2",
+              "orderIndex": 2,
+              "name": "Full body C",
+              "weekdays": [
+                5
+              ],
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w8d2b0",
+                  "orderIndex": 0,
+                  "exerciseName": "Dumbbell step-up",
+                  "sets": [
+                    {
+                      "id": "w8d2b0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w8d2b0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w8d2b0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w8d2b0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w8d2b1",
+                  "orderIndex": 1,
+                  "exerciseName": "Incline dumbbell press",
+                  "sets": [
+                    {
+                      "id": "w8d2b1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w8d2b1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w8d2b1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w8d2b1s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w8d2b2",
+                  "orderIndex": 2,
+                  "exerciseName": "Dumbbell pullover",
+                  "sets": [
+                    {
+                      "id": "w8d2b2s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w8d2b2s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w8d2b2s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    },
+                    {
+                      "id": "w8d2b2s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 10,
+                      "repsMax": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w8d2b3",
+                  "orderIndex": 3,
+                  "exerciseName": "Single-leg dumbbell deadlift",
+                  "sets": [
+                    {
+                      "id": "w8d2b3s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w8d2b3s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w8d2b3s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w8d2b4",
+                  "orderIndex": 4,
+                  "exerciseName": "Dumbbell lateral raise",
+                  "sets": [
+                    {
+                      "id": "w8d2b4s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 12,
+                      "repsMax": 15
+                    },
+                    {
+                      "id": "w8d2b4s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 12,
+                      "repsMax": 15
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

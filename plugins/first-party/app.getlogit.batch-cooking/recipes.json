@@ -1,0 +1,589 @@
+{
+  "formatVersion": 1,
+  "pluginId": "app.getlogit.batch-cooking",
+  "recipes": [
+    {
+      "name": "Chilli con carne (6 portions)",
+      "servings": 6,
+      "minutes": 45,
+      "tags": [
+        "gluten-free",
+        "dairy-free"
+      ],
+      "ingredients": [
+        {
+          "id": "i1",
+          "name": "Beef mince, 5% fat",
+          "grams": 1000,
+          "computed": {
+            "kcal": 1370,
+            "proteinG": 210.0,
+            "carbsG": 0.0,
+            "fatG": 55.0
+          }
+        },
+        {
+          "id": "i2",
+          "name": "Kidney beans, tinned, drained",
+          "grams": 480,
+          "computed": {
+            "kcal": 480,
+            "proteinG": 33.1,
+            "carbsG": 67.2,
+            "fatG": 2.4
+          }
+        },
+        {
+          "id": "i3",
+          "name": "Chopped tomatoes, tinned",
+          "grams": 800,
+          "computed": {
+            "kcal": 168,
+            "proteinG": 8.8,
+            "carbsG": 28.0,
+            "fatG": 0.8
+          }
+        },
+        {
+          "id": "i4",
+          "name": "Onion",
+          "grams": 300,
+          "computed": {
+            "kcal": 120,
+            "proteinG": 3.3,
+            "carbsG": 27.0,
+            "fatG": 0.3
+          }
+        },
+        {
+          "id": "i5",
+          "name": "Red pepper",
+          "grams": 300,
+          "computed": {
+            "kcal": 93,
+            "proteinG": 3.0,
+            "carbsG": 18.0,
+            "fatG": 0.9
+          }
+        },
+        {
+          "id": "i6",
+          "name": "Garlic",
+          "grams": 15,
+          "computed": {
+            "kcal": 22,
+            "proteinG": 1.0,
+            "carbsG": 5.0,
+            "fatG": 0.1
+          }
+        },
+        {
+          "id": "i7",
+          "name": "Tomato purée",
+          "grams": 60,
+          "computed": {
+            "kcal": 49,
+            "proteinG": 2.6,
+            "carbsG": 9.6,
+            "fatG": 0.3
+          }
+        },
+        {
+          "id": "i8",
+          "name": "Beef stock cube",
+          "grams": 10,
+          "computed": {
+            "kcal": 25,
+            "proteinG": 1.0,
+            "carbsG": 2.0,
+            "fatG": 1.4
+          }
+        },
+        {
+          "id": "i9",
+          "name": "Olive oil",
+          "grams": 10,
+          "computed": {
+            "kcal": 88,
+            "proteinG": 0.0,
+            "carbsG": 0.0,
+            "fatG": 10.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "Spaghetti bolognese (8 portions)",
+      "servings": 8,
+      "minutes": 50,
+      "tags": [
+        "dairy-free"
+      ],
+      "ingredients": [
+        {
+          "id": "i10",
+          "name": "Beef mince, 5% fat",
+          "grams": 1000,
+          "computed": {
+            "kcal": 1370,
+            "proteinG": 210.0,
+            "carbsG": 0.0,
+            "fatG": 55.0
+          }
+        },
+        {
+          "id": "i11",
+          "name": "Chopped tomatoes, tinned",
+          "grams": 800,
+          "computed": {
+            "kcal": 168,
+            "proteinG": 8.8,
+            "carbsG": 28.0,
+            "fatG": 0.8
+          }
+        },
+        {
+          "id": "i12",
+          "name": "Onion",
+          "grams": 250,
+          "computed": {
+            "kcal": 100,
+            "proteinG": 2.8,
+            "carbsG": 22.5,
+            "fatG": 0.2
+          }
+        },
+        {
+          "id": "i13",
+          "name": "Carrot",
+          "grams": 200,
+          "computed": {
+            "kcal": 82,
+            "proteinG": 1.8,
+            "carbsG": 20.0,
+            "fatG": 0.4
+          }
+        },
+        {
+          "id": "i14",
+          "name": "Celery",
+          "grams": 150,
+          "computed": {
+            "kcal": 24,
+            "proteinG": 1.0,
+            "carbsG": 4.5,
+            "fatG": 0.3
+          }
+        },
+        {
+          "id": "i15",
+          "name": "Garlic",
+          "grams": 15,
+          "computed": {
+            "kcal": 22,
+            "proteinG": 1.0,
+            "carbsG": 5.0,
+            "fatG": 0.1
+          }
+        },
+        {
+          "id": "i16",
+          "name": "Tomato purée",
+          "grams": 60,
+          "computed": {
+            "kcal": 49,
+            "proteinG": 2.6,
+            "carbsG": 9.6,
+            "fatG": 0.3
+          }
+        },
+        {
+          "id": "i17",
+          "name": "Beef stock cube",
+          "grams": 10,
+          "computed": {
+            "kcal": 25,
+            "proteinG": 1.0,
+            "carbsG": 2.0,
+            "fatG": 1.4
+          }
+        },
+        {
+          "id": "i18",
+          "name": "Olive oil",
+          "grams": 10,
+          "computed": {
+            "kcal": 88,
+            "proteinG": 0.0,
+            "carbsG": 0.0,
+            "fatG": 10.0
+          }
+        },
+        {
+          "id": "i19",
+          "name": "Wholewheat pasta, dry",
+          "grams": 640,
+          "computed": {
+            "kcal": 2240,
+            "proteinG": 83.2,
+            "carbsG": 409.6,
+            "fatG": 16.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "Chicken and chickpea curry (6 portions)",
+      "servings": 6,
+      "minutes": 40,
+      "tags": [
+        "gluten-free",
+        "dairy-free"
+      ],
+      "ingredients": [
+        {
+          "id": "i20",
+          "name": "Chicken breast, raw",
+          "grams": 1000,
+          "computed": {
+            "kcal": 1060,
+            "proteinG": 240.0,
+            "carbsG": 0.0,
+            "fatG": 11.0
+          }
+        },
+        {
+          "id": "i21",
+          "name": "Chickpeas, tinned, drained",
+          "grams": 480,
+          "computed": {
+            "kcal": 576,
+            "proteinG": 34.6,
+            "carbsG": 67.2,
+            "fatG": 12.0
+          }
+        },
+        {
+          "id": "i22",
+          "name": "Light coconut milk",
+          "grams": 400,
+          "computed": {
+            "kcal": 292,
+            "proteinG": 2.4,
+            "carbsG": 9.6,
+            "fatG": 28.0
+          }
+        },
+        {
+          "id": "i23",
+          "name": "Chopped tomatoes, tinned",
+          "grams": 400,
+          "computed": {
+            "kcal": 84,
+            "proteinG": 4.4,
+            "carbsG": 14.0,
+            "fatG": 0.4
+          }
+        },
+        {
+          "id": "i24",
+          "name": "Curry paste",
+          "grams": 80,
+          "computed": {
+            "kcal": 96,
+            "proteinG": 1.6,
+            "carbsG": 8.0,
+            "fatG": 6.4
+          }
+        },
+        {
+          "id": "i25",
+          "name": "Onion",
+          "grams": 250,
+          "computed": {
+            "kcal": 100,
+            "proteinG": 2.8,
+            "carbsG": 22.5,
+            "fatG": 0.2
+          }
+        },
+        {
+          "id": "i26",
+          "name": "Spinach",
+          "grams": 200,
+          "computed": {
+            "kcal": 46,
+            "proteinG": 5.8,
+            "carbsG": 7.2,
+            "fatG": 0.8
+          }
+        },
+        {
+          "id": "i27",
+          "name": "Garlic",
+          "grams": 10,
+          "computed": {
+            "kcal": 15,
+            "proteinG": 0.6,
+            "carbsG": 3.3,
+            "fatG": 0.1
+          }
+        }
+      ]
+    },
+    {
+      "name": "Turkey meatballs in tomato sauce (6 portions)",
+      "servings": 6,
+      "minutes": 40,
+      "tags": [
+        "dairy-free"
+      ],
+      "ingredients": [
+        {
+          "id": "i28",
+          "name": "Turkey mince, 7% fat",
+          "grams": 1000,
+          "computed": {
+            "kcal": 1470,
+            "proteinG": 205.0,
+            "carbsG": 0.0,
+            "fatG": 74.0
+          }
+        },
+        {
+          "id": "i29",
+          "name": "Rolled oats",
+          "grams": 60,
+          "computed": {
+            "kcal": 227,
+            "proteinG": 7.8,
+            "carbsG": 36.0,
+            "fatG": 4.2
+          }
+        },
+        {
+          "id": "i30",
+          "name": "Eggs",
+          "grams": 60,
+          "computed": {
+            "kcal": 86,
+            "proteinG": 7.6,
+            "carbsG": 0.4,
+            "fatG": 5.7
+          }
+        },
+        {
+          "id": "i31",
+          "name": "Chopped tomatoes, tinned",
+          "grams": 800,
+          "computed": {
+            "kcal": 168,
+            "proteinG": 8.8,
+            "carbsG": 28.0,
+            "fatG": 0.8
+          }
+        },
+        {
+          "id": "i32",
+          "name": "Onion",
+          "grams": 200,
+          "computed": {
+            "kcal": 80,
+            "proteinG": 2.2,
+            "carbsG": 18.0,
+            "fatG": 0.2
+          }
+        },
+        {
+          "id": "i33",
+          "name": "Garlic",
+          "grams": 10,
+          "computed": {
+            "kcal": 15,
+            "proteinG": 0.6,
+            "carbsG": 3.3,
+            "fatG": 0.1
+          }
+        },
+        {
+          "id": "i34",
+          "name": "Olive oil",
+          "grams": 10,
+          "computed": {
+            "kcal": 88,
+            "proteinG": 0.0,
+            "carbsG": 0.0,
+            "fatG": 10.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "Red lentil and squash dhal (6 portions)",
+      "servings": 6,
+      "minutes": 35,
+      "tags": [
+        "vegetarian",
+        "vegan",
+        "gluten-free",
+        "dairy-free"
+      ],
+      "ingredients": [
+        {
+          "id": "i35",
+          "name": "Red lentils, dry",
+          "grams": 400,
+          "computed": {
+            "kcal": 1272,
+            "proteinG": 96.0,
+            "carbsG": 192.0,
+            "fatG": 5.2
+          }
+        },
+        {
+          "id": "i36",
+          "name": "Butternut squash",
+          "grams": 600,
+          "computed": {
+            "kcal": 270,
+            "proteinG": 6.0,
+            "carbsG": 72.0,
+            "fatG": 0.6
+          }
+        },
+        {
+          "id": "i37",
+          "name": "Light coconut milk",
+          "grams": 400,
+          "computed": {
+            "kcal": 292,
+            "proteinG": 2.4,
+            "carbsG": 9.6,
+            "fatG": 28.0
+          }
+        },
+        {
+          "id": "i38",
+          "name": "Chopped tomatoes, tinned",
+          "grams": 400,
+          "computed": {
+            "kcal": 84,
+            "proteinG": 4.4,
+            "carbsG": 14.0,
+            "fatG": 0.4
+          }
+        },
+        {
+          "id": "i39",
+          "name": "Onion",
+          "grams": 200,
+          "computed": {
+            "kcal": 80,
+            "proteinG": 2.2,
+            "carbsG": 18.0,
+            "fatG": 0.2
+          }
+        },
+        {
+          "id": "i40",
+          "name": "Garlic",
+          "grams": 10,
+          "computed": {
+            "kcal": 15,
+            "proteinG": 0.6,
+            "carbsG": 3.3,
+            "fatG": 0.1
+          }
+        },
+        {
+          "id": "i41",
+          "name": "Curry paste",
+          "grams": 60,
+          "computed": {
+            "kcal": 72,
+            "proteinG": 1.2,
+            "carbsG": 6.0,
+            "fatG": 4.8
+          }
+        },
+        {
+          "id": "i42",
+          "name": "Spinach",
+          "grams": 150,
+          "computed": {
+            "kcal": 34,
+            "proteinG": 4.3,
+            "carbsG": 5.4,
+            "fatG": 0.6
+          }
+        }
+      ]
+    },
+    {
+      "name": "Chicken, rice and veg bowls (5 portions)",
+      "servings": 5,
+      "minutes": 30,
+      "tags": [
+        "gluten-free",
+        "dairy-free"
+      ],
+      "ingredients": [
+        {
+          "id": "i43",
+          "name": "Chicken breast, raw",
+          "grams": 900,
+          "computed": {
+            "kcal": 954,
+            "proteinG": 216.0,
+            "carbsG": 0.0,
+            "fatG": 9.9
+          }
+        },
+        {
+          "id": "i44",
+          "name": "Brown rice, cooked",
+          "grams": 900,
+          "computed": {
+            "kcal": 1107,
+            "proteinG": 24.3,
+            "carbsG": 234.0,
+            "fatG": 9.0
+          }
+        },
+        {
+          "id": "i45",
+          "name": "Mixed vegetables",
+          "grams": 600,
+          "computed": {
+            "kcal": 240,
+            "proteinG": 12.0,
+            "carbsG": 42.0,
+            "fatG": 1.8
+          }
+        },
+        {
+          "id": "i46",
+          "name": "Olive oil",
+          "grams": 15,
+          "computed": {
+            "kcal": 133,
+            "proteinG": 0.0,
+            "carbsG": 0.0,
+            "fatG": 15.0
+          }
+        },
+        {
+          "id": "i47",
+          "name": "Garlic",
+          "grams": 10,
+          "computed": {
+            "kcal": 15,
+            "proteinG": 0.6,
+            "carbsG": 3.3,
+            "fatG": 0.1
+          }
+        }
+      ]
+    }
+  ]
+}

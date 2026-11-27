@@ -22,7 +22,8 @@ export const algorithm = {
   description: "Sets the target from intake vs. weight trend.",
 
   computeTargets(input) {
-    // input: { goal, currentWeightKg, weightEntries, dailyIntakeKcal, userPreferences, now }
+    // input: { goal, currentWeightKg, weightEntries, dailyIntakeKcal, userPreferences, now, day }
+    // day: { dateIso, trainingDay } — trainingDay is true, false or null (not known)
     const intake = input.dailyIntakeKcal;
     if (intake.length < 10) return { kcal: 0 };   // 0 = "not enough data"
 

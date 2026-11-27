@@ -1,0 +1,1333 @@
+{
+  "formatVersion": 1,
+  "pluginId": "app.getlogit.veg-high-protein",
+  "plans": [
+    {
+      "name": "Vegetarian high-protein week",
+      "note": "Three days of meals over the week, around 150 g of protein a day, no meat or fish. Scale portions to the client's targets after copying.",
+      "kcalTarget": 2030,
+      "proteinG": 169,
+      "mode": "own",
+      "dayTypes": [
+        {
+          "id": "d0",
+          "name": "Monday",
+          "weekdays": [
+            1
+          ],
+          "kcalTarget": 2020,
+          "proteinG": 166,
+          "carbsG": 240,
+          "fatG": 47,
+          "meals": [
+            {
+              "id": "m101",
+              "name": "Breakfast",
+              "foods": [
+                {
+                  "id": "f102",
+                  "name": "Greek yogurt, 0%",
+                  "grams": 300,
+                  "computed": {
+                    "kcal": 171,
+                    "proteinG": 30.0,
+                    "carbsG": 10.8,
+                    "fatG": 0.6
+                  }
+                },
+                {
+                  "id": "f103",
+                  "name": "Rolled oats",
+                  "grams": 50,
+                  "computed": {
+                    "kcal": 190,
+                    "proteinG": 6.5,
+                    "carbsG": 30.0,
+                    "fatG": 3.5
+                  }
+                },
+                {
+                  "id": "f104",
+                  "name": "Mixed berries",
+                  "grams": 100,
+                  "computed": {
+                    "kcal": 50,
+                    "proteinG": 0.7,
+                    "carbsG": 12.0,
+                    "fatG": 0.3
+                  }
+                },
+                {
+                  "id": "f105",
+                  "name": "Whey protein",
+                  "grams": 20,
+                  "computed": {
+                    "kcal": 80,
+                    "proteinG": 16.0,
+                    "carbsG": 1.6,
+                    "fatG": 1.2
+                  }
+                }
+              ]
+            },
+            {
+              "id": "m106",
+              "name": "Lunch",
+              "foods": [
+                {
+                  "id": "f107",
+                  "name": "Firm tofu",
+                  "grams": 200,
+                  "computed": {
+                    "kcal": 288,
+                    "proteinG": 31.4,
+                    "carbsG": 5.6,
+                    "fatG": 17.4
+                  }
+                },
+                {
+                  "id": "f108",
+                  "name": "Quinoa, cooked",
+                  "grams": 180,
+                  "computed": {
+                    "kcal": 216,
+                    "proteinG": 7.9,
+                    "carbsG": 37.8,
+                    "fatG": 3.4
+                  }
+                },
+                {
+                  "id": "f109",
+                  "name": "Mixed vegetables",
+                  "grams": 200,
+                  "computed": {
+                    "kcal": 80,
+                    "proteinG": 4.0,
+                    "carbsG": 14.0,
+                    "fatG": 0.6
+                  }
+                },
+                {
+                  "id": "f110",
+                  "name": "Olive oil",
+                  "grams": 8,
+                  "computed": {
+                    "kcal": 71,
+                    "proteinG": 0.0,
+                    "carbsG": 0.0,
+                    "fatG": 8.0
+                  }
+                }
+              ]
+            },
+            {
+              "id": "m111",
+              "name": "Snack",
+              "foods": [
+                {
+                  "id": "f112",
+                  "name": "Cottage cheese",
+                  "grams": 200,
+                  "computed": {
+                    "kcal": 196,
+                    "proteinG": 22.0,
+                    "carbsG": 6.8,
+                    "fatG": 8.6
+                  }
+                },
+                {
+                  "id": "f113",
+                  "name": "Banana",
+                  "grams": 120,
+                  "computed": {
+                    "kcal": 107,
+                    "proteinG": 1.3,
+                    "carbsG": 27.6,
+                    "fatG": 0.4
+                  }
+                }
+              ]
+            },
+            {
+              "id": "m114",
+              "name": "Dinner",
+              "foods": [
+                {
+                  "id": "f115",
+                  "name": "Lentils, cooked",
+                  "grams": 250,
+                  "computed": {
+                    "kcal": 290,
+                    "proteinG": 22.5,
+                    "carbsG": 50.0,
+                    "fatG": 1.0
+                  }
+                },
+                {
+                  "id": "f116",
+                  "name": "Brown rice, cooked",
+                  "grams": 150,
+                  "computed": {
+                    "kcal": 184,
+                    "proteinG": 4.1,
+                    "carbsG": 39.0,
+                    "fatG": 1.5
+                  }
+                },
+                {
+                  "id": "f117",
+                  "name": "Spinach",
+                  "grams": 100,
+                  "computed": {
+                    "kcal": 23,
+                    "proteinG": 2.9,
+                    "carbsG": 3.6,
+                    "fatG": 0.4
+                  }
+                },
+                {
+                  "id": "f118",
+                  "name": "Egg whites",
+                  "grams": 150,
+                  "computed": {
+                    "kcal": 78,
+                    "proteinG": 16.5,
+                    "carbsG": 1.0,
+                    "fatG": 0.3
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "d1",
+          "name": "Tuesday",
+          "weekdays": [
+            2
+          ],
+          "kcalTarget": 1960,
+          "proteinG": 188,
+          "carbsG": 186,
+          "fatG": 54,
+          "meals": [
+            {
+              "id": "m119",
+              "name": "Breakfast",
+              "foods": [
+                {
+                  "id": "f120",
+                  "name": "Eggs",
+                  "grams": 120,
+                  "computed": {
+                    "kcal": 172,
+                    "proteinG": 15.1,
+                    "carbsG": 0.8,
+                    "fatG": 11.4
+                  }
+                },
+                {
+                  "id": "f121",
+                  "name": "Egg whites",
+                  "grams": 150,
+                  "computed": {
+                    "kcal": 78,
+                    "proteinG": 16.5,
+                    "carbsG": 1.0,
+                    "fatG": 0.3
+                  }
+                },
+                {
+                  "id": "f122",
+                  "name": "Wholemeal bread",
+                  "grams": 70,
+                  "computed": {
+                    "kcal": 173,
+                    "proteinG": 9.1,
+                    "carbsG": 28.7,
+                    "fatG": 2.4
+                  }
+                },
+                {
+                  "id": "f123",
+                  "name": "Spinach",
+                  "grams": 60,
+                  "computed": {
+                    "kcal": 14,
+                    "proteinG": 1.7,
+                    "carbsG": 2.2,
+                    "fatG": 0.2
+                  }
+                }
+              ]
+            },
+            {
+              "id": "m124",
+              "name": "Lunch",
+              "foods": [
+                {
+                  "id": "f125",
+                  "name": "Tempeh",
+                  "grams": 150,
+                  "computed": {
+                    "kcal": 288,
+                    "proteinG": 30.0,
+                    "carbsG": 11.4,
+                    "fatG": 16.2
+                  }
+                },
+                {
+                  "id": "f126",
+                  "name": "Brown rice, cooked",
+                  "grams": 180,
+                  "computed": {
+                    "kcal": 221,
+                    "proteinG": 4.9,
+                    "carbsG": 46.8,
+                    "fatG": 1.8
+                  }
+                },
+                {
+                  "id": "f127",
+                  "name": "Mixed vegetables",
+                  "grams": 200,
+                  "computed": {
+                    "kcal": 80,
+                    "proteinG": 4.0,
+                    "carbsG": 14.0,
+                    "fatG": 0.6
+                  }
+                }
+              ]
+            },
+            {
+              "id": "m128",
+              "name": "Snack",
+              "foods": [
+                {
+                  "id": "f129",
+                  "name": "Skyr",
+                  "grams": 250,
+                  "computed": {
+                    "kcal": 158,
+                    "proteinG": 27.5,
+                    "carbsG": 10.0,
+                    "fatG": 0.5
+                  }
+                },
+                {
+                  "id": "f130",
+                  "name": "Almonds",
+                  "grams": 20,
+                  "computed": {
+                    "kcal": 116,
+                    "proteinG": 4.2,
+                    "carbsG": 4.4,
+                    "fatG": 10.0
+                  }
+                }
+              ]
+            },
+            {
+              "id": "m131",
+              "name": "Dinner",
+              "foods": [
+                {
+                  "id": "f132",
+                  "name": "Seitan",
+                  "grams": 200,
+                  "computed": {
+                    "kcal": 240,
+                    "proteinG": 50.0,
+                    "carbsG": 8.0,
+                    "fatG": 3.0
+                  }
+                },
+                {
+                  "id": "f133",
+                  "name": "Wholewheat pasta, dry",
+                  "grams": 80,
+                  "computed": {
+                    "kcal": 280,
+                    "proteinG": 10.4,
+                    "carbsG": 51.2,
+                    "fatG": 2.0
+                  }
+                },
+                {
+                  "id": "f134",
+                  "name": "Chopped tomatoes, tinned",
+                  "grams": 200,
+                  "computed": {
+                    "kcal": 42,
+                    "proteinG": 2.2,
+                    "carbsG": 7.0,
+                    "fatG": 0.2
+                  }
+                },
+                {
+                  "id": "f135",
+                  "name": "Mozzarella, light",
+                  "grams": 60,
+                  "computed": {
+                    "kcal": 99,
+                    "proteinG": 12.0,
+                    "carbsG": 0.9,
+                    "fatG": 5.4
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "d2",
+          "name": "Wednesday",
+          "weekdays": [
+            3
+          ],
+          "kcalTarget": 2100,
+          "proteinG": 154,
+          "carbsG": 229,
+          "fatG": 65,
+          "meals": [
+            {
+              "id": "m136",
+              "name": "Breakfast",
+              "foods": [
+                {
+                  "id": "f137",
+                  "name": "Rolled oats",
+                  "grams": 60,
+                  "computed": {
+                    "kcal": 227,
+                    "proteinG": 7.8,
+                    "carbsG": 36.0,
+                    "fatG": 4.2
+                  }
+                },
+                {
+                  "id": "f138",
+                  "name": "Semi-skimmed milk",
+                  "grams": 250,
+                  "computed": {
+                    "kcal": 115,
+                    "proteinG": 8.5,
+                    "carbsG": 12.0,
+                    "fatG": 4.0
+                  }
+                },
+                {
+                  "id": "f139",
+                  "name": "Whey protein",
+                  "grams": 30,
+                  "computed": {
+                    "kcal": 120,
+                    "proteinG": 24.0,
+                    "carbsG": 2.4,
+                    "fatG": 1.8
+                  }
+                },
+                {
+                  "id": "f140",
+                  "name": "Banana",
+                  "grams": 100,
+                  "computed": {
+                    "kcal": 89,
+                    "proteinG": 1.1,
+                    "carbsG": 23.0,
+                    "fatG": 0.3
+                  }
+                }
+              ]
+            },
+            {
+              "id": "m141",
+              "name": "Lunch",
+              "foods": [
+                {
+                  "id": "f142",
+                  "name": "Chickpeas, tinned, drained",
+                  "grams": 200,
+                  "computed": {
+                    "kcal": 240,
+                    "proteinG": 14.4,
+                    "carbsG": 28.0,
+                    "fatG": 5.0
+                  }
+                },
+                {
+                  "id": "f143",
+                  "name": "Hummus",
+                  "grams": 50,
+                  "computed": {
+                    "kcal": 83,
+                    "proteinG": 4.0,
+                    "carbsG": 7.0,
+                    "fatG": 4.8
+                  }
+                },
+                {
+                  "id": "f144",
+                  "name": "Wholemeal bread",
+                  "grams": 70,
+                  "computed": {
+                    "kcal": 173,
+                    "proteinG": 9.1,
+                    "carbsG": 28.7,
+                    "fatG": 2.4
+                  }
+                },
+                {
+                  "id": "f145",
+                  "name": "Mixed vegetables",
+                  "grams": 150,
+                  "computed": {
+                    "kcal": 60,
+                    "proteinG": 3.0,
+                    "carbsG": 10.5,
+                    "fatG": 0.4
+                  }
+                }
+              ]
+            },
+            {
+              "id": "m146",
+              "name": "Snack",
+              "foods": [
+                {
+                  "id": "f147",
+                  "name": "Protein pudding",
+                  "grams": 200,
+                  "computed": {
+                    "kcal": 150,
+                    "proteinG": 20.0,
+                    "carbsG": 14.0,
+                    "fatG": 2.4
+                  }
+                },
+                {
+                  "id": "f148",
+                  "name": "Mixed berries",
+                  "grams": 100,
+                  "computed": {
+                    "kcal": 50,
+                    "proteinG": 0.7,
+                    "carbsG": 12.0,
+                    "fatG": 0.3
+                  }
+                }
+              ]
+            },
+            {
+              "id": "m149",
+              "name": "Dinner",
+              "foods": [
+                {
+                  "id": "f150",
+                  "name": "Firm tofu",
+                  "grams": 250,
+                  "computed": {
+                    "kcal": 360,
+                    "proteinG": 39.2,
+                    "carbsG": 7.0,
+                    "fatG": 21.8
+                  }
+                },
+                {
+                  "id": "f151",
+                  "name": "Quinoa, cooked",
+                  "grams": 180,
+                  "computed": {
+                    "kcal": 216,
+                    "proteinG": 7.9,
+                    "carbsG": 37.8,
+                    "fatG": 3.4
+                  }
+                },
+                {
+                  "id": "f152",
+                  "name": "Edamame",
+                  "grams": 120,
+                  "computed": {
+                    "kcal": 145,
+                    "proteinG": 14.4,
+                    "carbsG": 10.8,
+                    "fatG": 6.0
+                  }
+                },
+                {
+                  "id": "f153",
+                  "name": "Olive oil",
+                  "grams": 8,
+                  "computed": {
+                    "kcal": 71,
+                    "proteinG": 0.0,
+                    "carbsG": 0.0,
+                    "fatG": 8.0
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "d3",
+          "name": "Thursday",
+          "weekdays": [
+            4
+          ],
+          "kcalTarget": 2020,
+          "proteinG": 166,
+          "carbsG": 240,
+          "fatG": 47,
+          "meals": [
+            {
+              "id": "m154",
+              "name": "Breakfast",
+              "foods": [
+                {
+                  "id": "f155",
+                  "name": "Greek yogurt, 0%",
+                  "grams": 300,
+                  "computed": {
+                    "kcal": 171,
+                    "proteinG": 30.0,
+                    "carbsG": 10.8,
+                    "fatG": 0.6
+                  }
+                },
+                {
+                  "id": "f156",
+                  "name": "Rolled oats",
+                  "grams": 50,
+                  "computed": {
+                    "kcal": 190,
+                    "proteinG": 6.5,
+                    "carbsG": 30.0,
+                    "fatG": 3.5
+                  }
+                },
+                {
+                  "id": "f157",
+                  "name": "Mixed berries",
+                  "grams": 100,
+                  "computed": {
+                    "kcal": 50,
+                    "proteinG": 0.7,
+                    "carbsG": 12.0,
+                    "fatG": 0.3
+                  }
+                },
+                {
+                  "id": "f158",
+                  "name": "Whey protein",
+                  "grams": 20,
+                  "computed": {
+                    "kcal": 80,
+                    "proteinG": 16.0,
+                    "carbsG": 1.6,
+                    "fatG": 1.2
+                  }
+                }
+              ]
+            },
+            {
+              "id": "m159",
+              "name": "Lunch",
+              "foods": [
+                {
+                  "id": "f160",
+                  "name": "Firm tofu",
+                  "grams": 200,
+                  "computed": {
+                    "kcal": 288,
+                    "proteinG": 31.4,
+                    "carbsG": 5.6,
+                    "fatG": 17.4
+                  }
+                },
+                {
+                  "id": "f161",
+                  "name": "Quinoa, cooked",
+                  "grams": 180,
+                  "computed": {
+                    "kcal": 216,
+                    "proteinG": 7.9,
+                    "carbsG": 37.8,
+                    "fatG": 3.4
+                  }
+                },
+                {
+                  "id": "f162",
+                  "name": "Mixed vegetables",
+                  "grams": 200,
+                  "computed": {
+                    "kcal": 80,
+                    "proteinG": 4.0,
+                    "carbsG": 14.0,
+                    "fatG": 0.6
+                  }
+                },
+                {
+                  "id": "f163",
+                  "name": "Olive oil",
+                  "grams": 8,
+                  "computed": {
+                    "kcal": 71,
+                    "proteinG": 0.0,
+                    "carbsG": 0.0,
+                    "fatG": 8.0
+                  }
+                }
+              ]
+            },
+            {
+              "id": "m164",
+              "name": "Snack",
+              "foods": [
+                {
+                  "id": "f165",
+                  "name": "Cottage cheese",
+                  "grams": 200,
+                  "computed": {
+                    "kcal": 196,
+                    "proteinG": 22.0,
+                    "carbsG": 6.8,
+                    "fatG": 8.6
+                  }
+                },
+                {
+                  "id": "f166",
+                  "name": "Banana",
+                  "grams": 120,
+                  "computed": {
+                    "kcal": 107,
+                    "proteinG": 1.3,
+                    "carbsG": 27.6,
+                    "fatG": 0.4
+                  }
+                }
+              ]
+            },
+            {
+              "id": "m167",
+              "name": "Dinner",
+              "foods": [
+                {
+                  "id": "f168",
+                  "name": "Lentils, cooked",
+                  "grams": 250,
+                  "computed": {
+                    "kcal": 290,
+                    "proteinG": 22.5,
+                    "carbsG": 50.0,
+                    "fatG": 1.0
+                  }
+                },
+                {
+                  "id": "f169",
+                  "name": "Brown rice, cooked",
+                  "grams": 150,
+                  "computed": {
+                    "kcal": 184,
+                    "proteinG": 4.1,
+                    "carbsG": 39.0,
+                    "fatG": 1.5
+                  }
+                },
+                {
+                  "id": "f170",
+                  "name": "Spinach",
+                  "grams": 100,
+                  "computed": {
+                    "kcal": 23,
+                    "proteinG": 2.9,
+                    "carbsG": 3.6,
+                    "fatG": 0.4
+                  }
+                },
+                {
+                  "id": "f171",
+                  "name": "Egg whites",
+                  "grams": 150,
+                  "computed": {
+                    "kcal": 78,
+                    "proteinG": 16.5,
+                    "carbsG": 1.0,
+                    "fatG": 0.3
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "d4",
+          "name": "Friday",
+          "weekdays": [
+            5
+          ],
+          "kcalTarget": 1960,
+          "proteinG": 188,
+          "carbsG": 186,
+          "fatG": 54,
+          "meals": [
+            {
+              "id": "m172",
+              "name": "Breakfast",
+              "foods": [
+                {
+                  "id": "f173",
+                  "name": "Eggs",
+                  "grams": 120,
+                  "computed": {
+                    "kcal": 172,
+                    "proteinG": 15.1,
+                    "carbsG": 0.8,
+                    "fatG": 11.4
+                  }
+                },
+                {
+                  "id": "f174",
+                  "name": "Egg whites",
+                  "grams": 150,
+                  "computed": {
+                    "kcal": 78,
+                    "proteinG": 16.5,
+                    "carbsG": 1.0,
+                    "fatG": 0.3
+                  }
+                },
+                {
+                  "id": "f175",
+                  "name": "Wholemeal bread",
+                  "grams": 70,
+                  "computed": {
+                    "kcal": 173,
+                    "proteinG": 9.1,
+                    "carbsG": 28.7,
+                    "fatG": 2.4
+                  }
+                },
+                {
+                  "id": "f176",
+                  "name": "Spinach",
+                  "grams": 60,
+                  "computed": {
+                    "kcal": 14,
+                    "proteinG": 1.7,
+                    "carbsG": 2.2,
+                    "fatG": 0.2
+                  }
+                }
+              ]
+            },
+            {
+              "id": "m177",
+              "name": "Lunch",
+              "foods": [
+                {
+                  "id": "f178",
+                  "name": "Tempeh",
+                  "grams": 150,
+                  "computed": {
+                    "kcal": 288,
+                    "proteinG": 30.0,
+                    "carbsG": 11.4,
+                    "fatG": 16.2
+                  }
+                },
+                {
+                  "id": "f179",
+                  "name": "Brown rice, cooked",
+                  "grams": 180,
+                  "computed": {
+                    "kcal": 221,
+                    "proteinG": 4.9,
+                    "carbsG": 46.8,
+                    "fatG": 1.8
+                  }
+                },
+                {
+                  "id": "f180",
+                  "name": "Mixed vegetables",
+                  "grams": 200,
+                  "computed": {
+                    "kcal": 80,
+                    "proteinG": 4.0,
+                    "carbsG": 14.0,
+                    "fatG": 0.6
+                  }
+                }
+              ]
+            },
+            {
+              "id": "m181",
+              "name": "Snack",
+              "foods": [
+                {
+                  "id": "f182",
+                  "name": "Skyr",
+                  "grams": 250,
+                  "computed": {
+                    "kcal": 158,
+                    "proteinG": 27.5,
+                    "carbsG": 10.0,
+                    "fatG": 0.5
+                  }
+                },
+                {
+                  "id": "f183",
+                  "name": "Almonds",
+                  "grams": 20,
+                  "computed": {
+                    "kcal": 116,
+                    "proteinG": 4.2,
+                    "carbsG": 4.4,
+                    "fatG": 10.0
+                  }
+                }
+              ]
+            },
+            {
+              "id": "m184",
+              "name": "Dinner",
+              "foods": [
+                {
+                  "id": "f185",
+                  "name": "Seitan",
+                  "grams": 200,
+                  "computed": {
+                    "kcal": 240,
+                    "proteinG": 50.0,
+                    "carbsG": 8.0,
+                    "fatG": 3.0
+                  }
+                },
+                {
+                  "id": "f186",
+                  "name": "Wholewheat pasta, dry",
+                  "grams": 80,
+                  "computed": {
+                    "kcal": 280,
+                    "proteinG": 10.4,
+                    "carbsG": 51.2,
+                    "fatG": 2.0
+                  }
+                },
+                {
+                  "id": "f187",
+                  "name": "Chopped tomatoes, tinned",
+                  "grams": 200,
+                  "computed": {
+                    "kcal": 42,
+                    "proteinG": 2.2,
+                    "carbsG": 7.0,
+                    "fatG": 0.2
+                  }
+                },
+                {
+                  "id": "f188",
+                  "name": "Mozzarella, light",
+                  "grams": 60,
+                  "computed": {
+                    "kcal": 99,
+                    "proteinG": 12.0,
+                    "carbsG": 0.9,
+                    "fatG": 5.4
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "d5",
+          "name": "Saturday",
+          "weekdays": [
+            6
+          ],
+          "kcalTarget": 2100,
+          "proteinG": 154,
+          "carbsG": 229,
+          "fatG": 65,
+          "meals": [
+            {
+              "id": "m189",
+              "name": "Breakfast",
+              "foods": [
+                {
+                  "id": "f190",
+                  "name": "Rolled oats",
+                  "grams": 60,
+                  "computed": {
+                    "kcal": 227,
+                    "proteinG": 7.8,
+                    "carbsG": 36.0,
+                    "fatG": 4.2
+                  }
+                },
+                {
+                  "id": "f191",
+                  "name": "Semi-skimmed milk",
+                  "grams": 250,
+                  "computed": {
+                    "kcal": 115,
+                    "proteinG": 8.5,
+                    "carbsG": 12.0,
+                    "fatG": 4.0
+                  }
+                },
+                {
+                  "id": "f192",
+                  "name": "Whey protein",
+                  "grams": 30,
+                  "computed": {
+                    "kcal": 120,
+                    "proteinG": 24.0,
+                    "carbsG": 2.4,
+                    "fatG": 1.8
+                  }
+                },
+                {
+                  "id": "f193",
+                  "name": "Banana",
+                  "grams": 100,
+                  "computed": {
+                    "kcal": 89,
+                    "proteinG": 1.1,
+                    "carbsG": 23.0,
+                    "fatG": 0.3
+                  }
+                }
+              ]
+            },
+            {
+              "id": "m194",
+              "name": "Lunch",
+              "foods": [
+                {
+                  "id": "f195",
+                  "name": "Chickpeas, tinned, drained",
+                  "grams": 200,
+                  "computed": {
+                    "kcal": 240,
+                    "proteinG": 14.4,
+                    "carbsG": 28.0,
+                    "fatG": 5.0
+                  }
+                },
+                {
+                  "id": "f196",
+                  "name": "Hummus",
+                  "grams": 50,
+                  "computed": {
+                    "kcal": 83,
+                    "proteinG": 4.0,
+                    "carbsG": 7.0,
+                    "fatG": 4.8
+                  }
+                },
+                {
+                  "id": "f197",
+                  "name": "Wholemeal bread",
+                  "grams": 70,
+                  "computed": {
+                    "kcal": 173,
+                    "proteinG": 9.1,
+                    "carbsG": 28.7,
+                    "fatG": 2.4
+                  }
+                },
+                {
+                  "id": "f198",
+                  "name": "Mixed vegetables",
+                  "grams": 150,
+                  "computed": {
+                    "kcal": 60,
+                    "proteinG": 3.0,
+                    "carbsG": 10.5,
+                    "fatG": 0.4
+                  }
+                }
+              ]
+            },
+            {
+              "id": "m199",
+              "name": "Snack",
+              "foods": [
+                {
+                  "id": "f200",
+                  "name": "Protein pudding",
+                  "grams": 200,
+                  "computed": {
+                    "kcal": 150,
+                    "proteinG": 20.0,
+                    "carbsG": 14.0,
+                    "fatG": 2.4
+                  }
+                },
+                {
+                  "id": "f201",
+                  "name": "Mixed berries",
+                  "grams": 100,
+                  "computed": {
+                    "kcal": 50,
+                    "proteinG": 0.7,
+                    "carbsG": 12.0,
+                    "fatG": 0.3
+                  }
+                }
+              ]
+            },
+            {
+              "id": "m202",
+              "name": "Dinner",
+              "foods": [
+                {
+                  "id": "f203",
+                  "name": "Firm tofu",
+                  "grams": 250,
+                  "computed": {
+                    "kcal": 360,
+                    "proteinG": 39.2,
+                    "carbsG": 7.0,
+                    "fatG": 21.8
+                  }
+                },
+                {
+                  "id": "f204",
+                  "name": "Quinoa, cooked",
+                  "grams": 180,
+                  "computed": {
+                    "kcal": 216,
+                    "proteinG": 7.9,
+                    "carbsG": 37.8,
+                    "fatG": 3.4
+                  }
+                },
+                {
+                  "id": "f205",
+                  "name": "Edamame",
+                  "grams": 120,
+                  "computed": {
+                    "kcal": 145,
+                    "proteinG": 14.4,
+                    "carbsG": 10.8,
+                    "fatG": 6.0
+                  }
+                },
+                {
+                  "id": "f206",
+                  "name": "Olive oil",
+                  "grams": 8,
+                  "computed": {
+                    "kcal": 71,
+                    "proteinG": 0.0,
+                    "carbsG": 0.0,
+                    "fatG": 8.0
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "d6",
+          "name": "Sunday",
+          "weekdays": [
+            0
+          ],
+          "kcalTarget": 2020,
+          "proteinG": 166,
+          "carbsG": 240,
+          "fatG": 47,
+          "meals": [
+            {
+              "id": "m207",
+              "name": "Breakfast",
+              "foods": [
+                {
+                  "id": "f208",
+                  "name": "Greek yogurt, 0%",
+                  "grams": 300,
+                  "computed": {
+                    "kcal": 171,
+                    "proteinG": 30.0,
+                    "carbsG": 10.8,
+                    "fatG": 0.6
+                  }
+                },
+                {
+                  "id": "f209",
+                  "name": "Rolled oats",
+                  "grams": 50,
+                  "computed": {
+                    "kcal": 190,
+                    "proteinG": 6.5,
+                    "carbsG": 30.0,
+                    "fatG": 3.5
+                  }
+                },
+                {
+                  "id": "f210",
+                  "name": "Mixed berries",
+                  "grams": 100,
+                  "computed": {
+                    "kcal": 50,
+                    "proteinG": 0.7,
+                    "carbsG": 12.0,
+                    "fatG": 0.3
+                  }
+                },
+                {
+                  "id": "f211",
+                  "name": "Whey protein",
+                  "grams": 20,
+                  "computed": {
+                    "kcal": 80,
+                    "proteinG": 16.0,
+                    "carbsG": 1.6,
+                    "fatG": 1.2
+                  }
+                }
+              ]
+            },
+            {
+              "id": "m212",
+              "name": "Lunch",
+              "foods": [
+                {
+                  "id": "f213",
+                  "name": "Firm tofu",
+                  "grams": 200,
+                  "computed": {
+                    "kcal": 288,
+                    "proteinG": 31.4,
+                    "carbsG": 5.6,
+                    "fatG": 17.4
+                  }
+                },
+                {
+                  "id": "f214",
+                  "name": "Quinoa, cooked",
+                  "grams": 180,
+                  "computed": {
+                    "kcal": 216,
+                    "proteinG": 7.9,
+                    "carbsG": 37.8,
+                    "fatG": 3.4
+                  }
+                },
+                {
+                  "id": "f215",
+                  "name": "Mixed vegetables",
+                  "grams": 200,
+                  "computed": {
+                    "kcal": 80,
+                    "proteinG": 4.0,
+                    "carbsG": 14.0,
+                    "fatG": 0.6
+                  }
+                },
+                {
+                  "id": "f216",
+                  "name": "Olive oil",
+                  "grams": 8,
+                  "computed": {
+                    "kcal": 71,
+                    "proteinG": 0.0,
+                    "carbsG": 0.0,
+                    "fatG": 8.0
+                  }
+                }
+              ]
+            },
+            {
+              "id": "m217",
+              "name": "Snack",
+              "foods": [
+                {
+                  "id": "f218",
+                  "name": "Cottage cheese",
+                  "grams": 200,
+                  "computed": {
+                    "kcal": 196,
+                    "proteinG": 22.0,
+                    "carbsG": 6.8,
+                    "fatG": 8.6
+                  }
+                },
+                {
+                  "id": "f219",
+                  "name": "Banana",
+                  "grams": 120,
+                  "computed": {
+                    "kcal": 107,
+                    "proteinG": 1.3,
+                    "carbsG": 27.6,
+                    "fatG": 0.4
+                  }
+                }
+              ]
+            },
+            {
+              "id": "m220",
+              "name": "Dinner",
+              "foods": [
+                {
+                  "id": "f221",
+                  "name": "Lentils, cooked",
+                  "grams": 250,
+                  "computed": {
+                    "kcal": 290,
+                    "proteinG": 22.5,
+                    "carbsG": 50.0,
+                    "fatG": 1.0
+                  }
+                },
+                {
+                  "id": "f222",
+                  "name": "Brown rice, cooked",
+                  "grams": 150,
+                  "computed": {
+                    "kcal": 184,
+                    "proteinG": 4.1,
+                    "carbsG": 39.0,
+                    "fatG": 1.5
+                  }
+                },
+                {
+                  "id": "f223",
+                  "name": "Spinach",
+                  "grams": 100,
+                  "computed": {
+                    "kcal": 23,
+                    "proteinG": 2.9,
+                    "carbsG": 3.6,
+                    "fatG": 0.4
+                  }
+                },
+                {
+                  "id": "f224",
+                  "name": "Egg whites",
+                  "grams": 150,
+                  "computed": {
+                    "kcal": 78,
+                    "proteinG": 16.5,
+                    "carbsG": 1.0,
+                    "fatG": 0.3
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "tags": [
+        "vegetarian"
+      ]
+    }
+  ]
+}

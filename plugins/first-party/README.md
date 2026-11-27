@@ -11,6 +11,30 @@ accounts can publish under, so apps can show them as LogIt's.
 | `app.getlogit.boulder` | workout-block | Bouldering problems by grade: flashed, sent or a project, and tries |
 | `app.getlogit.climbing-week` | widget | "Climbing this week": sessions, hardest send and flash, tries on projects (reads Bouldering blocks) |
 | `app.getlogit.climbing-checkin` | question-pack | Check-in questions for climbers: finger pain, skin, project highpoint |
+| `app.getlogit.amrap-tm` | progression-algorithm | AMRAP training max: a four-week wave; the next cycle's max comes from the last set of week 3 |
+| `app.getlogit.rep-total` | progression-algorithm | Rep total: reach, say, 50 pull-ups in as few sets as it takes; the total rises when you do |
+| `app.getlogit.macros-by-weight` | nutrition-algorithm | Protein and fat in g per kg of body weight; carbs fill the rest |
+| `app.getlogit.reverse-diet` | nutrition-algorithm | After a cut, a step above what you eat each week until weight starts to rise |
+| `app.getlogit.diet-breaks` | nutrition-algorithm | During a cut, a week or two at maintenance every few weeks (counted from your first weigh-in) |
+| `app.getlogit.carb-cycling` | nutrition-algorithm | More carbs on training days, fewer on rest days, the same weekly total |
+| `app.getlogit.protein-days` | widget | Days within the protein target, week by week (reads `nutritionDays`) |
+| `app.getlogit.kettlebell` | exercise-pack | Swings, snatches, get-ups, complexes and the rest, with muscles |
+| `app.getlogit.calisthenics` | exercise-pack | Rings, levers, planches and their easier versions |
+| `app.getlogit.strongman` | exercise-pack | Yoke, log, stones, farmer's walk, sandbag and more |
+| `app.getlogit.desk-mobility` | mobility-pack | Neck, upper back, hips and wrists for people who sit all day |
+| `app.getlogit.home-dumbbells` | program-pack | Three full-body days a week with dumbbells and a bench, eight weeks |
+| `app.getlogit.meet-prep` | program-pack | Twelve weeks to a powerlifting meet; pairs with AMRAP training max |
+| `app.getlogit.batch-cooking` | recipe-pack | Chilli, bolognese, curry, meatballs, dhal and bowls, made to portion |
+| `app.getlogit.veg-high-protein` | meal-plan-pack | A vegetarian week at around 150 g of protein a day |
+| `app.getlogit.studio-roster` | card-pack | Months with you, programs ending soon, new this month |
+| `app.getlogit.roster-adherence` | card-pack | Every client's sessions against plan and check-ins on time, furthest behind first |
+
+Not made yet, each waiting on something LogIt doesn't have: **Bodyweight ladder** (a progression
+output that can change the exercise), **Check-in trends** and **Body recomposition** (a widget data
+slice for check-in answers and measurements, and a decision on what a plugin may read from them),
+**Powerlifting meet** (events and a meet date a plugin can read).
+
+`packages/core/src/plugins/seedPlugins.test.ts` checks what the code ones do.
 
 Together the last three are the coaching test case (canvas W9): a block clients log, a card a coach
 puts on a client's Overview (+ Card) that only reads workouts the client shares, and questions for

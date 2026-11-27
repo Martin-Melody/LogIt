@@ -213,6 +213,7 @@ export async function getNutritionTargets(
       dailyIntakeKcal,
       userPreferences,
       now,
+      day: { dateIso, trainingDay: opts.trainingDay ?? null },
     });
 
     if (!out.kcal || out.kcal <= 0) {
