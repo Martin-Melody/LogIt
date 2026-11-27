@@ -448,14 +448,20 @@ export const STUDIO_CHAPTERS: Chapter[] = [
     id: "studio.swaps",
     walkthrough: "studio",
     title: "Exercise swaps",
-    blurb: "Which swaps clients may make",
-    minutes: 1,
+    blurb: "Which swaps clients may make, and each exercise's list",
+    minutes: 2,
     feature: "coach-swaps",
     steps: [
       {
         id: "default", on: "web", route: "/coaching/programs?tab=rules", target: "swap-default", kind: "look",
         title: "Your swap rule",
         body: "Programs › Rules: choose what clients may swap in your programs: any exercise, the same muscles only, or only the swaps you list under each exercise. Set it for everyone here and change it for one client on their page. A swap that isn't allowed becomes a message asking you.",
+      },
+      {
+        id: "list", on: "web", route: "/coaching/programs", target: "program-swaps", kind: "do", signal: "swap.added",
+        title: "An exercise's swap list",
+        body: "Each exercise in a program has its own list, under Swaps they can use. Add one with + Swap or tap a suggestion. With \"Only my list\" these are the only swaps a client sees; with \"Same muscles only\" they come first.",
+        arrives: "Open one of your programs and click an exercise to see its swaps.",
       },
     ],
   },

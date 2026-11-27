@@ -13,6 +13,9 @@
   import OptionSelect from "$lib/components/option-select.svelte";
   import { toast } from "$lib/components/ui/sonner";
   import { getWebCheckinRepo } from "$lib/deps";
+  import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
+  import { readyMadeForm } from "@logit/core/domain/Checkin";
+  import { goto } from "$app/navigation";
 
   let {
     open = $bindable(false),
@@ -76,6 +79,15 @@
     }
   }
 
+  // The form you want isn't made yet: make it here and go straight to the editor.
+  async function makeForm(which: "blank" | "weekly" | "health" | "monthly") {
+    const f = which === "blank" ? { ...readyMadeForm("weekly"), name: "New form", questions: [] } : readyMadeForm(which);
+    await getWebCheckinRepo().saveSchedule(f);
+    open = false;
+    toast.success("Form made. Send it from Check-ins › Forms when it's ready.");
+    await goto(`/coaching/checkins/forms/${f.id}`);
+  }
+
   function toggle(id: string, on: boolean) {
     const next = new Set(who);
     if (on) next.add(id);
@@ -90,22 +102,35 @@
       <Dialog.Title>Send a form{fixed && chosen[0] ? ` to ${chosen[0].name}` : ""}</Dialog.Title>
       <Dialog.Description>Each gets it in their app on the day, with one notification.</Dialog.Description>
     </Dialog.Header>
-    <div class="flex flex-col gap-4">
-      <div class="flex flex-col gap-1.5">
+    <div class="flex flex-col gap-5">
+      <div class="flex flex-col gap-2">
         <Label for="send-form">Form</Label>
-        {#if forms.length}
-          <OptionSelect id="send-form" bind:value={pick} options={forms.map((f) => ({ value: f.id, label: `${f.name} · ${f.questions.length} questions` }))}
-            onValueChange={(v) => { const f = forms.find((x) => x.id === v); how = f?.cadence === "monthly" ? "monthly" : f?.cadence === "manual" ? "once" : "weekly"; }} />
-        {:else}
-          <p class="text-[13px] text-muted-foreground">You have no shared check-in forms yet. Make one in Check-ins › Forms.</p>
-        {/if}
+        <div class="flex flex-wrap items-center gap-2">
+          {#if forms.length}
+            <OptionSelect id="send-form" bind:value={pick} options={forms.map((f) => ({ value: f.id, label: `${f.name} · ${f.questions.length} questions` }))}
+              onValueChange={(v) => { const f = forms.find((x) => x.id === v); how = f?.cadence === "monthly" ? "monthly" : f?.cadence === "manual" ? "once" : "weekly"; }} />
+          {:else}
+            <p class="text-[13px] text-muted-foreground">No check-in forms yet.</p>
+          {/if}
+          <DropdownMenu.Root>
+            <DropdownMenu.Trigger>{#snippet child({ props })}<Button {...props} variant="outline">New form</Button>{/snippet}</DropdownMenu.Trigger>
+            <DropdownMenu.Content align="start" class="w-56">
+              <DropdownMenu.Item onSelect={() => void makeForm("blank")}>Blank form</DropdownMenu.Item>
+              <DropdownMenu.Separator />
+              <DropdownMenu.Label>From LogIt</DropdownMenu.Label>
+              <DropdownMenu.Item onSelect={() => void makeForm("weekly")}>Weekly check-in</DropdownMenu.Item>
+              <DropdownMenu.Item onSelect={() => void makeForm("health")}>Health questions</DropdownMenu.Item>
+              <DropdownMenu.Item onSelect={() => void makeForm("monthly")}>Monthly review</DropdownMenu.Item>
+            </DropdownMenu.Content>
+          </DropdownMenu.Root>
+        </div>
       </div>
       {#if !fixed}
-        <fieldset class="flex flex-col gap-1.5">
-          <legend class="mb-1 text-sm font-medium">Who gets it</legend>
-          <div class="flex max-h-48 flex-col gap-1 overflow-y-auto rounded-[10px] border border-border p-2">
+        <fieldset class="flex flex-col gap-2">
+          <legend class="mb-2 text-sm font-medium">Who gets it</legend>
+          <div class="flex max-h-56 flex-col overflow-y-auto rounded-[10px] border border-border p-1.5">
             {#each clients as c (c.id)}
-              <label class="flex items-center gap-2.5 rounded-md px-1.5 py-1 text-[13px] hover:bg-muted/50">
+              <label class="flex min-h-10 items-center gap-3 rounded-md px-2.5 py-2 text-[13px] hover:bg-muted/50">
                 <Checkbox checked={who.has(c.id)} onCheckedChange={(v) => toggle(c.id, v === true)} />
                 <span class="flex-1">{c.name}</span>
                 {#if !c.sharing.checkins}<span class="text-xs text-muted-foreground">doesn't share check-ins</span>{:else if has(c.id)}<span class="text-xs text-muted-foreground">gets it already</span>{/if}
@@ -118,14 +143,14 @@
         <p class="text-[13px] text-muted-foreground">A start-up form is filled in once.</p>
       {:else}
       <fieldset class="flex flex-col gap-2">
-        <legend class="mb-1 text-sm font-medium">How often</legend>
-        <RadioGroup.Root bind:value={how}>
-          <label class="flex items-center gap-2.5 text-[13px]"><RadioGroup.Item value="once" />Once, now</label>
-          <label class="flex items-center gap-2.5 text-[13px]"><RadioGroup.Item value="weekly" />Every week</label>
-          <label class="flex items-center gap-2.5 text-[13px]"><RadioGroup.Item value="monthly" />Every month</label>
+        <legend class="mb-2 text-sm font-medium">How often</legend>
+        <RadioGroup.Root bind:value={how} class="grid grid-cols-3 gap-2">
+          {#each [["once", "Once, now"], ["weekly", "Every week"], ["monthly", "Every month"]] as [v, l] (v)}
+            <label class="flex min-h-11 cursor-pointer items-center gap-2.5 rounded-[10px] border px-3 py-2 text-[13px] transition-colors {how === v ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/50'}"><RadioGroup.Item value={v} />{l}</label>
+          {/each}
         </RadioGroup.Root>
         {#if how !== "once"}
-          <span class="flex flex-col gap-1.5 pt-1"><Label>First one</Label><DateField bind:value={first} minIso={today} aria-label="First one" /></span>
+          <span class="flex flex-col gap-2 pt-2"><Label>First one</Label><DateField bind:value={first} minIso={today} aria-label="First one" class="w-auto self-start" /></span>
         {/if}
       </fieldset>
       {/if}

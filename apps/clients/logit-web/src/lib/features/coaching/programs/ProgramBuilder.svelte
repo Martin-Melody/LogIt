@@ -726,7 +726,7 @@
               <span class="flex flex-col"><Label>Rule</Label><span class="text-[13px]">{b.rule ? P.ruleLabel(b.rule) : `The program's · ${P.ruleLabel(prog.rule)}`}</span></span>
               <Button variant="outline" size="sm" onclick={() => { pickingFor = b; picking = true; }}>Change</Button>
             </div>
-            <div class="flex flex-col gap-1.5">
+            <div data-guide="program-swaps" class="flex flex-col gap-1.5">
               <Label>Swaps they can use</Label>
               <div class="flex flex-wrap gap-1.5">
                 {#each b.alternatives ?? [] as a (a.exerciseName)}
@@ -739,12 +739,12 @@
               </div>
               {#if addingSwap}
                 <NamePicker id="add-swap" label="Swap" placeholder="Search exercises" autofocus search={(q) => searchExercises(q).filter((r) => r.name !== b.exerciseName)}
-                  onPick={(n) => { edit((p) => P.addAlternative(p, { exerciseName: b.exerciseName, exerciseId: b.exerciseId }, { exerciseName: n, exerciseId: index?.get(n)?.id })); addingSwap = false; }} onCancel={() => (addingSwap = false)} />
+                  onPick={(n) => { guideSignal("swap.added"); edit((p) => P.addAlternative(p, { exerciseName: b.exerciseName, exerciseId: b.exerciseId }, { exerciseName: n, exerciseId: index?.get(n)?.id })); addingSwap = false; }} onCancel={() => (addingSwap = false)} />
               {:else}
                 <span class="flex flex-wrap gap-1.5">
                   <Button variant="outline" size="sm" onclick={() => (addingSwap = true)}>+ Swap</Button>
                   {#each sameMuscle(b).slice(0, 3) as n (n)}
-                    <Button variant="ghost" size="sm" onclick={() => edit((p) => P.addAlternative(p, { exerciseName: b.exerciseName, exerciseId: b.exerciseId }, { exerciseName: n, exerciseId: index?.get(n)?.id }))}>+ {n}</Button>
+                    <Button variant="ghost" size="sm" onclick={() => { guideSignal("swap.added"); edit((p) => P.addAlternative(p, { exerciseName: b.exerciseName, exerciseId: b.exerciseId }, { exerciseName: n, exerciseId: index?.get(n)?.id })); }}>+ {n}</Button>
                   {/each}
                 </span>
               {/if}

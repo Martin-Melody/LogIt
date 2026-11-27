@@ -35,8 +35,10 @@
   <ul class="flex flex-col rounded-[10px] border border-border bg-popover p-1 shadow-sm" role="listbox" aria-label="Saved replies">
     {#each matches as r, i (r.id)}
       <li role="option" aria-selected={i === index}>
-        <button type="button" class="flex w-full items-baseline gap-2 rounded-[7px] px-2.5 py-1.5 text-left text-[13px] {i === index ? 'bg-muted' : 'hover:bg-muted/60'}" onmousedown={(e) => { e.preventDefault(); use(r); }}>
-          <b class="font-semibold">/{r.shortcut}</b><span class="text-muted-foreground">{r.title}</span><span class="ml-auto truncate text-xs text-muted-foreground">{fillReply(r.body, fill)}</span>
+        <!-- Shortcut and title never wrap; the reply's text is the part that gets cut short. -->
+        <button type="button" class="grid w-full grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-3 gap-y-0.5 rounded-[7px] px-2.5 py-2 text-left text-[13px] {i === index ? 'bg-muted' : 'hover:bg-muted/60'}" onmousedown={(e) => { e.preventDefault(); use(r); }}>
+          <span class="whitespace-nowrap"><b class="font-semibold">/{r.shortcut}</b> <span class="text-muted-foreground">{r.title}</span></span>
+          <span class="truncate text-xs text-muted-foreground">{fillReply(r.body, fill)}</span>
         </button>
       </li>
     {/each}
