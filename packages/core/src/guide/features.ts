@@ -536,6 +536,18 @@ export const FEATURES: Feature[] = [
     server: ["/coach/cards"],
   },
   {
+    id: "coach-plugins",
+    title: "Coaching plugins",
+    section: "Coaching",
+    plan: "Studio",
+    freeWithSamples: true,
+    summary: "Plugins you use with clients: progression rules, workout blocks, and program, meal plan, recipe and card packs.",
+    web: ["/coaching/plugins"],
+    whereWeb: "Coaching › Plugins",
+    docs: "/docs/add-plugins",
+    can: ["See which of your programs use a plugin before you uninstall it", "Copy meal plans and recipes from community packs into your own"],
+  },
+  {
     id: "coach-saved-replies",
     title: "Saved replies",
     section: "Coaching",

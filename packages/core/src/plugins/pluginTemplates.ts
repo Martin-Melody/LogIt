@@ -220,6 +220,78 @@ export const analytics = {
         null,
         2,
       ) + "\n";
+    case "card-pack":
+      return `${header(pluginId, family, "cards")}
+// Cards for a coach's Today and Your month. compute() is called once per card with that
+// card's id and your roster (first names, months with you, sessions and program week for
+// clients who share workouts, check-ins waiting). Never payments or messages.
+export const cards = {
+  id: ${id},
+  name: ${title},
+  cards: [
+    { id: "roster", name: "Months with you" },
+    { id: "ending", name: "Programs ending soon" },
+  ],
+
+  compute(input) {
+    if (input.card === "ending") {
+      const soon = input.clients.filter((c) => c.program && c.program.endsInDays !== null && c.program.endsInDays <= 14);
+      if (soon.length === 0) return { title: "Programs ending soon", body: [], empty: { text: "Nothing ends in the next two weeks." } };
+      return {
+        title: "Programs ending soon",
+        body: [{ kind: "list", items: soon.map((c) => ({ label: c.firstName, sublabel: c.program.name, trailing: c.program.endsInDays === 0 ? "today" : "in " + c.program.endsInDays + " days" })) }],
+      };
+    }
+    if (input.clients.length === 0) return { title: "Months with you", body: [], empty: { text: "No clients yet." } };
+    const sorted = [...input.clients].sort((a, b) => b.monthsWithYou - a.monthsWithYou);
+    return {
+      title: "Months with you",
+      subtitle: input.clients.filter((c) => c.joinedThisMonth).length + " new this month",
+      body: [{ kind: "list", items: sorted.slice(0, 6).map((c) => ({ label: c.firstName, trailing: c.monthsWithYou + (c.monthsWithYou === 1 ? " month" : " months") })) }],
+    };
+  },
+};
+`;
+    case "meal-plan-pack":
+      return JSON.stringify(
+        {
+          formatVersion: 1,
+          pluginId,
+          plans: [
+            {
+              name: "High-protein cut, 1,900 kcal",
+              kcalTarget: 1900, proteinG: 160,
+              meals: [
+                { id: "m1", name: "Breakfast", foods: [{ id: "f1", name: "Greek yogurt, 0%", grams: 300, computed: { kcal: 171, proteinG: 30, carbsG: 12, fatG: 0 } }] },
+                { id: "m2", name: "Lunch", foods: [{ id: "f2", name: "Chicken breast, cooked", grams: 200, computed: { kcal: 330, proteinG: 62, carbsG: 0, fatG: 7 } }] },
+              ],
+            },
+          ],
+        },
+        null,
+        2,
+      ) + "\n";
+    case "recipe-pack":
+      return JSON.stringify(
+        {
+          formatVersion: 1,
+          pluginId,
+          recipes: [
+            {
+              name: "Protein oats",
+              servings: 1,
+              tags: ["vegetarian"],
+              minutes: 5,
+              ingredients: [
+                { id: "i1", name: "Rolled oats", grams: 60, computed: { kcal: 228, proteinG: 8, carbsG: 39, fatG: 4 } },
+                { id: "i2", name: "Whey protein", grams: 30, computed: { kcal: 120, proteinG: 24, carbsG: 3, fatG: 2 } },
+              ],
+            },
+          ],
+        },
+        null,
+        2,
+      ) + "\n";
     case "workout-block":
       // The declaration is the file (docs/plugin-workout-blocks.md); LogIt draws and times it.
       return JSON.stringify(
@@ -248,7 +320,7 @@ export const analytics = {
 
 /** File name the builder shows for the source. */
 export function sourceFileName(family: string): string {
-  return isCodeFamily(family) ? "bundle.js" : family === "mobility-pack" ? "drills.json" : family === "program-pack" ? "programs.json" : family === "workout-block" ? "block.json" : "exercises.json";
+  return isCodeFamily(family) ? "bundle.js" : family === "mobility-pack" ? "drills.json" : family === "program-pack" ? "programs.json" : family === "meal-plan-pack" ? "meal-plans.json" : family === "recipe-pack" ? "recipes.json" : family === "workout-block" ? "block.json" : "exercises.json";
 }
 
 /** Turn a name into the last part of an id: "Weekly swings" -> "weekly-swings". */

@@ -85,7 +85,7 @@
           <button type="button" disabled={busy} onclick={() => install(false)} class="h-[34px] rounded-[9px] bg-primary px-3 text-[13px] font-semibold text-primary-foreground disabled:opacity-50">{replacing ? "Update" : "Install"}</button>
         {/if}
       </Dialog.Footer>
-      <p class="text-center text-xs text-muted-foreground">Goes on your phone and here.</p>
+      <p class="text-center text-xs text-muted-foreground">{manifest?.family === "card-pack" ? "Shows on your coaching Today and Your month, here on the web." : "Goes on your phone and here."}</p>
     {/if}
   </Dialog.Content>
 </Dialog.Root>

@@ -7,9 +7,13 @@
   import type { RowAction } from "$lib/features/commands/commands.svelte";
   import type { MyCoachNutritionPlan } from "@logit/core/data/coachNutritionPlanRepo";
   import { mealPlanSummary, type CoachNutritionPlan } from "@logit/core/domain/CoachNutritionPlan";
+  import CommunityPacks from "./CommunityPacks.svelte";
+  import { loadMealPlanPack } from "./nutritionPacks";
 
-  let { rows, onduplicate, onarchive, ongive }: {
+  let { rows, onduplicate, onarchive, ongive, oncopy }: {
     rows: MyCoachNutritionPlan[];
+    /** Copy a community pack's plan into yours (canvas Q1). */
+    oncopy: (p: CoachNutritionPlan) => Promise<void>;
     ongive: (p: CoachNutritionPlan) => void;
     onduplicate: (p: CoachNutritionPlan) => void;
     onarchive: (p: CoachNutritionPlan, archived: boolean) => void;
@@ -43,11 +47,7 @@
   </div>
 
   {#if source === "community"}
-    <div class="flex flex-col items-start gap-3 rounded-[12px] border border-border bg-card p-5 text-[13px]">
-      <p>Meal plan packs from the community show here: a week of meals you can copy into your own and change.</p>
-      <p class="text-muted-foreground">None are listed yet.</p>
-      <Button variant="outline" size="sm" href="/plugins">Plugins</Button>
-    </div>
+    <CommunityPacks family="meal-plan-pack" what="meal plan" load={loadMealPlanPack} describe={mealPlanSummary} oncopy={(p) => oncopy(p)} />
   {:else}
     <section class="flex flex-col rounded-[12px] border border-border bg-card" aria-label="Your meal plans">
       {#each shown as p (p.id)}

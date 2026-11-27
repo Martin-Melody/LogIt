@@ -111,6 +111,15 @@ export function sampleFamilyInput(family: string, now: number, empty = false): u
     sets: [set(100 - i * 2.5, 8, 0), set(100 - i * 2.5, 8, 1), set(100 - i * 2.5, 7, 2)],
   }));
   switch (family) {
+    case "card-pack":
+      return {
+        page: "today",
+        now,
+        clients: empty ? [] : [
+          { firstName: "Aoife", monthsWithYou: 11, joinedThisMonth: false, sessions7d: 4, program: { name: "Hypertrophy A", week: 7, totalWeeks: 8, endsInDays: 9 }, checkinsToReview: 1 },
+          { firstName: "Liam", monthsWithYou: 1, joinedThisMonth: true, sessions7d: null, program: null, checkinsToReview: 0 },
+        ],
+      };
     case "progression-algorithm":
       return {
         exercise: { id: "squat", name: "Back squat", primaryMuscles: ["quads", "glutes"], exerciseType: "normal" },

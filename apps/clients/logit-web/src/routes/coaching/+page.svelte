@@ -18,7 +18,10 @@
   import { coachApi } from "@logit/core/api/coachApi";
   import { coachPaymentsApi } from "@logit/core/api/coachPaymentsApi";
   import { needsCoach, type PaymentClient } from "@logit/core/domain/coachPayments";
-  import { PAGE_CARDS, STANDARD_LAYOUT, pageCards, type PageCardId, type PageId } from "@logit/core/domain/coachMonth";
+  import { PAGE_CARDS, STANDARD_LAYOUT, pageCards, type PageCard, type PageId } from "@logit/core/domain/coachMonth";
+  import { parseCardPackCardId } from "@logit/core/plugins/cardPack";
+  import CardPackCard from "$lib/features/coaching/today/CardPackCard.svelte";
+  import { cardPacks } from "$lib/features/coaching/today/cardPacks.svelte";
   import type { CardLayout } from "@logit/core/domain/coachCards";
   import { coachAway } from "$lib/features/coaching/away.svelte";
   import { coachBadges } from "$lib/features/coaching/badges.svelte";
@@ -86,7 +89,7 @@
 
   // Canvas W13: the page's cards, or your edit of them.
   let editing = $state(false);
-  let draft = $state<PageCardId[]>([]);
+  let draft = $state<PageCard[]>([]);
   let saving = $state(false);
   let dragFrom = $state<number | null>(null);
   const cards = $derived(editing ? draft : pageCards(view === "today" ? layout?.today : layout?.month, view));
@@ -110,7 +113,11 @@
       saving = false;
     }
   }
-  const nameOf = (id: PageCardId) => PAGE_CARDS.find((c) => c.id === id)!.name;
+  const nameOf = (id: PageCard) => {
+    const pack = parseCardPackCardId(id);
+    return pack ? (cardPacks.nameOf(pack.pluginId, pack.cardId) ?? "A card pack's card") : PAGE_CARDS.find((c) => c.id === id)!.name;
+  };
+  $effect(() => { if (cards.some((c) => c.startsWith("plugin:"))) void cardPacks.load(); });
   const monday = new Date().getDay() === 1;
 </script>
 
@@ -171,9 +178,11 @@
   {/if}
 {/snippet}
 
-{#snippet card(id: PageCardId)}
+{#snippet card(id: PageCard)}
+  {@const pack = parseCardPackCardId(id)}
   {#if overview}
-    {#if id === "needs"}<NeedsYouCard {overview} {payments} {stripeNeeds} />
+    {#if pack}<CardPackCard pluginId={pack.pluginId} cardId={pack.cardId} page={view} {overview} />
+    {:else if id === "needs"}<NeedsYouCard {overview} {payments} {stripeNeeds} />
     {:else if id === "ahead"}<AheadCard {overview} payments={allPayments} />
     {:else if id === "week"}{#if monday && !cards.includes("lastweek")}<LastWeekCard {overview} />{:else}<ThisWeekCard {overview} />{/if}
     {:else if id === "lastweek"}<LastWeekCard {overview} />

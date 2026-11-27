@@ -17,6 +17,9 @@ export const PLUGIN_FAMILIES = [
   "mobility-pack",
   "program-pack",
   "workout-block",
+  "meal-plan-pack",
+  "recipe-pack",
+  "card-pack",
 ] as const;
 export type BuildablePluginFamily = (typeof PLUGIN_FAMILIES)[number];
 
@@ -27,6 +30,7 @@ export const CODE_FAMILIES: ReadonlySet<string> = new Set([
   "analytics",
   "nutrition-algorithm",
   "nutrition-analytics",
+  "card-pack",
 ]);
 
 export function isCodeFamily(family: string): boolean {
@@ -44,6 +48,9 @@ export const FAMILY_LABELS: Record<string, string> = {
   "mobility-pack": "Mobility pack",
   "program-pack": "Program pack",
   "workout-block": "Workout block",
+  "meal-plan-pack": "Meal plan pack",
+  "recipe-pack": "Recipe pack",
+  "card-pack": "Card pack",
   "muscle-group-insight": "Muscle insight",
 };
 
@@ -59,6 +66,7 @@ export const FAMILY_ENTRY: Record<string, { entry: string; method: string }> = {
   analytics: { entry: "analytics", method: "compute" },
   "nutrition-algorithm": { entry: "algorithm", method: "computeTargets" },
   "nutrition-analytics": { entry: "analytics", method: "compute" },
+  "card-pack": { entry: "cards", method: "compute" },
 };
 
 export type GetsLine = { label: string; detail: string };
@@ -122,6 +130,8 @@ export function pluginGets(family: string, needs: readonly string[] | null | und
       ];
     case "nutrition-analytics":
       return [{ label: "Food diary", detail: "Diary days in the range you pick, your weight log, goal and targets" }];
+    case "card-pack":
+      return [{ label: "Your coaching roster", detail: "Clients' first names, months with you, check-ins waiting, and sessions and program week for those who share workouts. Never payments, messages, food, weight or photos" }];
     default:
       return [];
   }
@@ -148,6 +158,12 @@ export function pluginCan(family: string): string[] {
       return ["Offer programs coaches can copy into their own"];
     case "workout-block":
       return ["Add a kind of block to your workouts, like timed rounds"];
+    case "meal-plan-pack":
+      return ["Offer meal plans coaches can copy into their own"];
+    case "recipe-pack":
+      return ["Offer recipes coaches can copy into their own"];
+    case "card-pack":
+      return ["Show cards on your coaching Today and Your month"];
     default:
       return [];
   }

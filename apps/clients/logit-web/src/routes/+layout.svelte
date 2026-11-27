@@ -41,6 +41,7 @@
     "/library": "Library",
     "/coaching/library": "Exercises",
     "/coaching/nutrition": "Nutrition",
+    "/coaching/plugins": "Plugins",
     "/habits": "Habits & goals",
     "/social": "Social",
     "/social/messages": "Messages",

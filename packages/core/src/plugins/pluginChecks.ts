@@ -1,3 +1,5 @@
+import { parseMealPlanPack, parseRecipePack } from "./nutritionPacks";
+import { cardPackCards } from "./cardPack";
 import { parseProgramPack } from "./programPack";
 import { parseBlockDeclaration } from "../domain/blockPlugin";
 import { parseExercisePack } from "./exercisePack";
@@ -90,6 +92,12 @@ export async function runPluginChecks(input: CheckInput): Promise<CheckResult> {
     detail: idOk ? undefined : `The code says id ${JSON.stringify(meta.id ?? null)}; this plugin is "${pluginId}".`,
   });
 
+  // Card packs (canvas W13) list their cards; each is computed on its own.
+  if (family === "card-pack") {
+    const cards = cardPackCards(meta);
+    checks.push({ id: "cards", label: cards.length ? `Lists ${cards.length} ${cards.length === 1 ? "card" : "cards"}` : "Lists its cards", ok: cards.length > 0, detail: cards.length ? undefined : 'Add cards: [{ id: "roster", name: "Months with you" }].' });
+  }
+
   if (family === "widget") {
     const needs = Array.isArray(meta.needs) ? meta.needs : [];
     const unknown = needs.filter((n) => typeof n !== "string" || !isWidgetNeed(n));
@@ -107,7 +115,8 @@ export async function runPluginChecks(input: CheckInput): Promise<CheckResult> {
 
   // 2. The family's method, with sample data.
   const needs = Array.isArray(meta.needs) ? (meta.needs.filter((n) => typeof n === "string") as string[]) : [];
-  const sample = family === "widget" ? sampleWidgetInput(needs, now) : sampleFamilyInput(family, now);
+  const firstCard = family === "card-pack" ? (cardPackCards(meta)[0]?.id ?? "") : "";
+  const sample = family === "widget" ? sampleWidgetInput(needs, now) : family === "card-pack" ? { ...(sampleFamilyInput(family, now) as object), card: firstCard } : sampleFamilyInput(family, now);
   let output: unknown;
   let ms: number | undefined;
   try {
@@ -120,7 +129,7 @@ export async function runPluginChecks(input: CheckInput): Promise<CheckResult> {
     return done(checks, { meta });
   }
 
-  if (family === "widget") {
+  if (family === "widget" || family === "card-pack") {
     const problems = checkWidgetView(output);
     checks.push({
       id: "view",
@@ -141,9 +150,9 @@ export async function runPluginChecks(input: CheckInput): Promise<CheckResult> {
 
   // 3. Nothing logged yet: new accounts are the first people to install anything.
   try {
-    const empty = family === "widget" ? sampleWidgetInput(needs, now, true) : sampleFamilyInput(family, now, true);
+    const empty = family === "widget" ? sampleWidgetInput(needs, now, true) : family === "card-pack" ? { ...(sampleFamilyInput(family, now, true) as object), card: firstCard } : sampleFamilyInput(family, now, true);
     const out = await input.run(source, entry, { kind: "call", method, input: empty });
-    const problems = family === "widget" ? checkWidgetView(out) : [];
+    const problems = family === "widget" || family === "card-pack" ? checkWidgetView(out) : [];
     checks.push({
       id: "empty",
       label: "Works with nothing logged",
@@ -182,8 +191,12 @@ function checkPack(family: string, pluginId: string, source: string): CheckResul
         ? parseMobilityPack(raw, pluginId).drills.length
         : family === "program-pack"
           ? parseProgramPack(raw, pluginId).programs.length
-          : parseExercisePack(raw, pluginId).exercises.length;
-    const what = family === "mobility-pack" ? "drills" : family === "program-pack" ? "programs" : "exercises";
+          : family === "meal-plan-pack"
+            ? parseMealPlanPack(raw, pluginId).plans.length
+            : family === "recipe-pack"
+              ? parseRecipePack(raw, pluginId).recipes.length
+              : parseExercisePack(raw, pluginId).exercises.length;
+    const what = family === "mobility-pack" ? "drills" : family === "program-pack" ? "programs" : family === "meal-plan-pack" ? "meal plans" : family === "recipe-pack" ? "recipes" : "exercises";
     checks.push({ id: "pack", label: `${count} ${what}, all readable`, ok: true });
   } catch (e) {
     checks.push({ id: "pack", label: "Every entry is readable", ok: false, detail: message(e) });

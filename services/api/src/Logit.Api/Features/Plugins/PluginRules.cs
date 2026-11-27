@@ -22,12 +22,14 @@ public static partial class PluginRules
     [
         "widget", "progression-algorithm", "mobility-progression", "analytics",
         "nutrition-algorithm", "nutrition-analytics", "exercise-pack", "mobility-pack", "program-pack", "workout-block",
+        // Canvas Q1/W13: content coaches copy (meal plans, recipes) and cards for Today and Your month.
+        "meal-plan-pack", "recipe-pack", "card-pack",
     ];
 
     public static readonly HashSet<string> CodeFamilies =
     [
         "widget", "progression-algorithm", "mobility-progression", "analytics",
-        "nutrition-algorithm", "nutrition-analytics",
+        "nutrition-algorithm", "nutrition-analytics", "card-pack",
     ];
 
     /// What a widget can ask for (core plugins/widgetView WidgetDataNeed).
@@ -120,6 +122,9 @@ public static partial class PluginRules
         "program-pack" => new JsonObject { ["family"] = family, ["programPackId"] = pluginId },
         // A kind of workout block, declared as data (docs/plugin-workout-blocks.md); coaches put it in programs (canvas Q4).
         "workout-block" => new JsonObject { ["family"] = family, ["blockId"] = pluginId },
+        "meal-plan-pack" => new JsonObject { ["family"] = family, ["mealPlanPackId"] = pluginId },
+        "recipe-pack" => new JsonObject { ["family"] = family, ["recipePackId"] = pluginId },
+        "card-pack" => new JsonObject { ["family"] = family, ["cardPackId"] = pluginId, ["slot"] = "coaching" },
         _ => new JsonObject { ["family"] = family, ["algorithmId"] = pluginId },
     };
 

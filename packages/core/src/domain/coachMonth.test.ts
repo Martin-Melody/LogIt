@@ -13,6 +13,8 @@ describe("Today and Your month cards (canvas W13)", () => {
     expect(pageCards(null, "today")).toEqual(["needs", "ahead", "week"]);
     expect(pageCards(["paid", "week", "nope"], "today")).toEqual(["needs", "paid", "week"]);
     expect(pageCards(["needs", "week", "wins"], "month")).toEqual(["wins"]);
+    // Card pack cards stay wherever you put them.
+    expect(pageCards(["plugin:com.a.cards:roster", "ahead"], "today")).toEqual(["needs", "plugin:com.a.cards:roster", "ahead"]);
   });
 });
 

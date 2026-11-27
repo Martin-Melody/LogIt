@@ -5,8 +5,10 @@
   import type { RowAction } from "$lib/features/commands/commands.svelte";
   import { recipeUse, type CoachNutritionPlan } from "@logit/core/domain/CoachNutritionPlan";
   import { DIET_TAG_LABELS, type Recipe } from "@logit/core/domain/nutrition";
+  import CommunityPacks from "./CommunityPacks.svelte";
+  import { loadRecipePack } from "./nutritionPacks";
 
-  let { recipes, plans, ondelete }: { recipes: Recipe[]; plans: CoachNutritionPlan[]; ondelete: (r: Recipe) => void } = $props();
+  let { recipes, plans, ondelete, oncopy }: { recipes: Recipe[]; plans: CoachNutritionPlan[]; ondelete: (r: Recipe) => void; oncopy: (r: Recipe) => Promise<void> } = $props();
   let query = $state("");
   const shown = $derived(recipes.filter((r) => r.name.toLowerCase().includes(query.trim().toLowerCase())).sort((a, b) => a.name.localeCompare(b.name)));
 
@@ -43,5 +45,7 @@
       <p class="px-5 py-6 text-[13px] text-muted-foreground">{recipes.length ? "Nothing matches that." : "No recipes yet. Your recipes are the same ones you have in your own diary; ones you make here show there too."}</p>
     {/each}
   </section>
-  <p class="text-xs text-muted-foreground">Recipe packs from the community will show here too.</p>
+  <!-- Canvas Q1: recipe packs from the community, copied into yours. -->
+  <h2 class="pt-2 text-sm font-semibold">From the community</h2>
+  <CommunityPacks family="recipe-pack" what="recipe" load={loadRecipePack} describe={(r) => `${Math.round(r.perServing.kcal)} kcal a serving · ${Math.round(r.perServing.proteinG)} g protein`} oncopy={(r) => oncopy(r)} />
 </div>

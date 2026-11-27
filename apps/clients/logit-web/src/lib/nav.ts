@@ -81,6 +81,8 @@ export const coachGroups: NavGroup[] = [
       { label: "Programs", href: "/coaching/programs", icon: ClipboardListIcon, key: "P" },
       { label: "Nutrition", href: "/coaching/nutrition", icon: UtensilsIcon, key: "N" },
       { label: "Check-ins", href: "/coaching/checkins", icon: ClipboardCheckIcon, key: "K", badge: () => coachBadges.checkins },
+      // Canvas Q1: the plugin kinds a coach uses with clients.
+      { label: "Plugins", href: "/coaching/plugins", icon: PuzzleIcon },
     ],
   },
   {

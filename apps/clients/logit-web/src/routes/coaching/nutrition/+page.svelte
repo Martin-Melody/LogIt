@@ -1,5 +1,6 @@
 <!-- Nutrition (canvas MP1, MP3, Q3): meal plans, recipes and rules, like Programs. -->
 <script lang="ts">
+  import { copyData } from "@logit/core/domain/copyData";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
@@ -71,6 +72,29 @@
       toast.error(e instanceof Error ? e.message : "Couldn't duplicate it");
     }
   }
+  // Canvas Q1: a community pack's plan or recipe becomes your own (new ids; the pack never changes it).
+  async function copyPackPlan(p: CoachNutritionPlan) {
+    const now = Date.now();
+    const copy: CoachNutritionPlan = { ...copyData(p), id: createId("cnplan"), archived: false, createdAtMs: now, updatedAtMs: now };
+    try {
+      await getWebCoachNutritionPlanRepo().savePlan(copy);
+      rows = [...rows, { plan: copy, recipientUserId: null }];
+      toast.success(`${copy.name} is in your meal plans`, { action: { label: "Open", onClick: () => void goto(`/coaching/nutrition/plans/${copy.id}`) } });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't copy it");
+    }
+  }
+  async function copyPackRecipe(r: Recipe) {
+    const now = Date.now();
+    const copy: Recipe = { ...copyData(r), id: createId("rcp"), createdAtMs: now, updatedAtMs: now } as Recipe;
+    try {
+      await getOwnNutritionDeps().nutritionRepo.saveRecipe(copy);
+      recipes = [...recipes, copy];
+      toast.success(`${copy.name} is in your recipes`, { action: { label: "Open", onClick: () => void goto(`/coaching/nutrition/recipes/${copy.id}`) } });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't copy it");
+    }
+  }
   async function archive(p: CoachNutritionPlan, archived: boolean) {
     const next = updateCoachNutritionPlan(p, { archived });
     try {
@@ -115,11 +139,11 @@
   {#if !loaded}
     <Skeleton class="h-64" />
   {:else if tab === "recipes"}
-    <RecipesTab {recipes} {plans} ondelete={(r) => (deleting = r)} />
+    <RecipesTab {recipes} {plans} ondelete={(r) => (deleting = r)} oncopy={copyPackRecipe} />
   {:else if tab === "rules"}
     <NutritionRulesTab {plans} />
   {:else}
-    <MealPlansTab {rows} onduplicate={(p) => void duplicate(p)} onarchive={(p, a) => void archive(p, a)} ongive={(p) => { givePlan = p; giving = true; }} />
+    <MealPlansTab {rows} onduplicate={(p) => void duplicate(p)} onarchive={(p, a) => void archive(p, a)} ongive={(p) => { givePlan = p; giving = true; }} oncopy={copyPackPlan} />
   {/if}
 </div>
 

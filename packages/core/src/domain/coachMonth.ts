@@ -24,9 +24,14 @@ export const PAGE_CARDS: { id: PageCardId; name: string; hint: string; pages: Pa
 ];
 export const STANDARD_LAYOUT: Record<PageId, PageCardId[]> = { today: ["needs", "ahead", "week"], month: ["paid", "clients", "wins", "worth"] };
 
-/** The cards a page shows: yours, or the standard ones. Unknown ids drop out; Needs you stays first. */
-export function pageCards(saved: string[] | null | undefined, page: PageId): PageCardId[] {
-  const known = (saved ?? STANDARD_LAYOUT[page]).filter((id): id is PageCardId => PAGE_CARDS.some((c) => c.id === id && c.pages.includes(page)));
+/** A card from a card pack plugin: "plugin:<pluginId>:<cardId>" (canvas W13). */
+export type PluginCardId = `plugin:${string}`;
+export type PageCard = PageCardId | PluginCardId;
+
+/** The cards a page shows: yours, or the standard ones. Unknown ids drop out (card pack cards
+ * stay; the page skips one whose plugin is gone); Needs you stays first. */
+export function pageCards(saved: string[] | null | undefined, page: PageId): PageCard[] {
+  const known = (saved ?? STANDARD_LAYOUT[page]).filter((id): id is PageCard => id.startsWith("plugin:") || PAGE_CARDS.some((c) => c.id === id && c.pages.includes(page)));
   return page === "today" ? ["needs", ...known.filter((id) => id !== "needs")] : known;
 }
 
