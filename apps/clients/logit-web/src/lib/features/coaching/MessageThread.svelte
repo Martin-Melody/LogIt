@@ -1,6 +1,6 @@
 <script lang="ts">
   import { guideSignal } from "$lib/features/guide/signal";
-  import { onSampleActivity } from "$lib/features/guide/sandbox.svelte";
+  import { onSampleActivity } from "$lib/features/guide/sampleActivity";
   import { onDestroy, tick } from "svelte";
   import { messagesApi, type RemoteMessage } from "@logit/core/api/messagesApi";
   import { createId } from "@logit/core/domain/ids";
@@ -19,6 +19,9 @@
   import * as ContextMenu from "$lib/components/ui/context-menu";
   import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
   import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
+  import MessageSquareQuoteIcon from "@lucide/svelte/icons/message-square-quote";
+  import { fillReply, matchReplies, slashQuery, type SavedReply } from "@logit/core/domain/savedReplies";
+  import { savedReplies } from "./savedReplies.svelte";
   import SmilePlusIcon from "@lucide/svelte/icons/smile-plus";
   import { DM_REACTIONS } from "@logit/core/api/dmApi";
   import { StagedPhoto, imageFrom } from "$lib/features/chat/stagedPhoto.svelte";
@@ -36,6 +39,7 @@
     card,
     closedNote = null,
     messageActions,
+    fill = null,
   }: {
     relationshipId: string;
     otherName: string;
@@ -50,6 +54,8 @@
     closedNote?: string | null;
     /** More things to do with a message from the other person (right-click, or ⋯). */
     messageActions?: (m: RemoteMessage) => { label: string; run: () => void }[];
+    /** A coach's box (canvas W10): saved replies with / and what fills them in. */
+    fill?: { firstName?: string | null; exercise?: string | null; coachName?: string | null } | null;
   } = $props();
 
   let messages = $state<RemoteMessage[]>([]);
@@ -57,6 +63,17 @@
   let error = $state<string | null>(null);
   // svelte-ignore state_referenced_locally
   let draft = $state(initialDraft);
+  // Saved replies (canvas W10): "/" at the start of the box, or the button.
+  let replyIndex = $state(0);
+  let repliesOpen = $state(false);
+  const slash = $derived(fill ? slashQuery(draft) : null);
+  const replyMatches = $derived(fill && (slash !== null || repliesOpen) ? matchReplies(savedReplies.list, slash ?? "").slice(0, 6) : []);
+  $effect(() => { if (fill) void savedReplies.load(); });
+  $effect(() => { void slash; replyIndex = 0; });
+  function useReply(r: SavedReply) {
+    draft = fillReply(r.body, fill ?? {});
+    repliesOpen = false;
+  }
   let sending = $state(false);
   let listEl = $state<HTMLDivElement | null>(null);
   let currentId = "";
@@ -164,6 +181,12 @@
   }
 
   function onKey(e: KeyboardEvent) {
+    if (replyMatches.length) {
+      if (e.key === "ArrowDown") { e.preventDefault(); replyIndex = (replyIndex + 1) % replyMatches.length; return; }
+      if (e.key === "ArrowUp") { e.preventDefault(); replyIndex = (replyIndex - 1 + replyMatches.length) % replyMatches.length; return; }
+      if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); useReply(replyMatches[replyIndex]!); return; }
+      if (e.key === "Escape") { e.preventDefault(); repliesOpen = false; if (slash !== null) draft = ""; return; }
+    }
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       void send();
@@ -315,6 +338,19 @@
       <VoiceRecorder onsend={sendVoice} oncancel={() => (recording = false)} onerror={(m) => (error = m)} />
     {:else}
     <StagedPhotoCard {staged} />
+    {#if replyMatches.length}
+      <ul class="flex flex-col rounded-[10px] border border-border bg-popover p-1 shadow-sm" role="listbox" aria-label="Saved replies">
+        {#each replyMatches as r, i (r.id)}
+          <li role="option" aria-selected={i === replyIndex}>
+            <button type="button" class="flex w-full items-baseline gap-2 rounded-[7px] px-2.5 py-1.5 text-left text-[13px] {i === replyIndex ? 'bg-muted' : 'hover:bg-muted/60'}" onmousedown={(e) => { e.preventDefault(); useReply(r); }}>
+              <b class="font-semibold">/{r.shortcut}</b><span class="text-muted-foreground">{r.title}</span><span class="ml-auto truncate text-xs text-muted-foreground">{fillReply(r.body, fill ?? {})}</span>
+            </button>
+          </li>
+        {/each}
+      </ul>
+    {:else if fill && (slash !== null || repliesOpen) && savedReplies.loaded}
+      <p class="rounded-[10px] border border-dashed border-border px-3 py-2 text-xs text-muted-foreground">No saved replies match. Make them in Messages › ⋯ › Saved replies.</p>
+    {/if}
     <div class="flex items-end gap-2">
       <!-- One box (shadcn Input Group): photo inside, mic beside. Paste or drop a photo too. -->
       <InputGroup.Root class="flex-1 rounded-[12px]">
@@ -325,6 +361,7 @@
         <InputGroup.Textarea id="compose-{relationshipId}" bind:value={draft} onkeydown={onKey} onpaste={onPaste} rows={1}
           placeholder={staged.current ? "Add a caption…" : `Message ${otherName}`} class="max-h-40 min-h-9 py-2 text-[13px]" />
         <InputGroup.Addon align="inline-end" class="self-end pb-1.5">
+          {#if fill}<button type="button" onclick={() => (repliesOpen = !repliesOpen)} aria-label="Saved replies" aria-expanded={repliesOpen} class="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"><MessageSquareQuoteIcon class="size-4" /></button>{/if}
           <button type="button" onclick={() => { error = null; recording = true; }} aria-label="Record a voice message" class="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"><MicIcon class="size-4" /></button>
         </InputGroup.Addon>
       </InputGroup.Root>
@@ -332,7 +369,7 @@
         class="h-9 rounded-[9px] bg-primary px-3.5 text-[13px] font-semibold text-primary-foreground disabled:opacity-50">Send</button>
     </div>
     {/if}
-    {#if !compact}<span class="text-[11px] text-muted-foreground">Enter sends · Shift+Enter for a new line · it reaches their phone on its next sync</span>{/if}
+    {#if !compact}<span class="text-[11px] text-muted-foreground">Enter sends · Shift+Enter for a new line{fill ? " · / for a saved reply" : ""} · it reaches their phone on its next sync</span>{/if}
   </form>
   {/if}
 </div>

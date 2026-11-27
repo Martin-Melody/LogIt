@@ -1,6 +1,7 @@
 // The coach sandbox on the web: the sample clients, adding / resetting / removing them, and
 // the loop that lets them act (sandboxDriver in core). Pages that show what samples do
 // (requests, check-ins, messages, a client's programs) reload on onSampleActivity.
+import { emitSampleActivity } from "./sampleActivity";
 import { sandboxApi, type SandboxClient } from "@logit/core/api/sandboxApi";
 import { addSampleClients, removeSampleClients, resetSampleClients, runSampleClients } from "@logit/core/guide/sandboxDriver";
 import { SAMPLE_CLIENTS } from "@logit/core/guide/sandbox";
@@ -8,14 +9,7 @@ import { apiClient } from "@logit/core/api/client";
 import { coachBadges } from "$lib/features/coaching/badges.svelte";
 
 const TICK_MS = 4_000;
-type Listener = () => void;
-const listeners = new Set<Listener>();
-
-/** Call to reload when a sample client did something (asked to join, sent a check-in, replied). */
-export function onSampleActivity(l: Listener): () => void {
-  listeners.add(l);
-  return () => listeners.delete(l);
-}
+export { onSampleActivity } from "./sampleActivity";
 
 class Sandbox {
   clients = $state<SandboxClient[]>([]);
@@ -75,7 +69,7 @@ class Sandbox {
 
   notify() {
     void coachBadges.refresh(true, true);
-    for (const l of listeners) l();
+    emitSampleActivity();
   }
 
   /** While there are samples, let them act every few seconds. */

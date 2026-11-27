@@ -1,6 +1,6 @@
 <script lang="ts">
   import ClientHoverCard from "$lib/features/coaching/ClientHoverCard.svelte";
-  import { onSampleActivity } from "$lib/features/guide/sandbox.svelte";
+  import { onSampleActivity } from "$lib/features/guide/sampleActivity";
   import CoachStart from "$lib/features/onboarding/CoachStart.svelte";
   import { onMount } from "svelte";
   import * as Alert from "$lib/components/ui/alert";

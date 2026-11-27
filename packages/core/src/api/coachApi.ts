@@ -605,6 +605,14 @@ export function coachApiFor(api: ApiFetcher) {
       return api.fetch("/coach/settings");
     },
 
+    /** Canvas W10: my saved replies. */
+    async getSavedReplies(): Promise<import("../domain/savedReplies").SavedReply[]> {
+      return (await api.fetch<{ replies: import("../domain/savedReplies").SavedReply[] }>("/coach/saved-replies")).replies;
+    },
+    async saveSavedReplies(replies: import("../domain/savedReplies").SavedReply[]): Promise<import("../domain/savedReplies").SavedReply[]> {
+      return (await api.fetch<{ replies: import("../domain/savedReplies").SavedReply[] }>("/coach/saved-replies", { method: "PUT", body: JSON.stringify({ replies }) })).replies;
+    },
+
     /** Canvas Q3: the food swap rule and the built-in Adaptive targets' trend window. */
     async setNutritionSettings(patch: { foodSwapRule?: FoodSwapRule; windowDays?: number }): Promise<CoachSettings> {
       return api.fetch("/coach/settings/nutrition", { method: "PUT", body: JSON.stringify(patch) });

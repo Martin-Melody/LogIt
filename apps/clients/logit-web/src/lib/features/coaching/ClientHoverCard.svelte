@@ -2,7 +2,7 @@
      Message and Open (canvas board 4). `span` puts the trigger inside a row that's already a link. -->
 <script lang="ts" module>
   import { loadCoachingOverview, type CoachingOverview } from "./coachingData";
-  import { onSampleActivity } from "$lib/features/guide/sandbox.svelte";
+  import { onSampleActivity } from "$lib/features/guide/sampleActivity";
   // One overview for every card on the page, kept for a minute (or until Practice view flips).
   let cached: { at: number; load: Promise<CoachingOverview | null> } | null = null;
   onSampleActivity(() => (cached = null));

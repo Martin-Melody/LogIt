@@ -2,7 +2,7 @@
   import ClientHoverCard from "$lib/features/coaching/ClientHoverCard.svelte";
   import * as Tabs from "$lib/components/ui/tabs/index.js";
   import { guideSignal } from "$lib/features/guide/signal";
-  import { onSampleActivity } from "$lib/features/guide/sandbox.svelte";
+  import { onSampleActivity } from "$lib/features/guide/sampleActivity";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";

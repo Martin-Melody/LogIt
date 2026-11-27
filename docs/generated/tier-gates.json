@@ -407,6 +407,20 @@
   },
   {
     "method": "GET",
+    "route": "/coach/saved-replies/",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": true
+  },
+  {
+    "method": "PUT",
+    "route": "/coach/saved-replies/",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": true
+  },
+  {
+    "method": "GET",
     "route": "/coach/settings",
     "plan": "Studio",
     "orActivelyCoached": false,

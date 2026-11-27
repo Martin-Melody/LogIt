@@ -2,7 +2,7 @@
   import { updateCopy } from "@logit/core/domain/programBuilder";
   import { forBuilder } from "@logit/core/domain/programBuilder";
   import ProgramBuilder from "$lib/features/coaching/programs/ProgramBuilder.svelte";
-  import { onSampleActivity } from "$lib/features/guide/sandbox.svelte";
+  import { onSampleActivity } from "$lib/features/guide/sampleActivity";
   import { inView } from "$lib/features/coaching/coachingData";
   import { guideSignal } from "$lib/features/guide/signal";
   import { onMount, untrack } from "svelte";

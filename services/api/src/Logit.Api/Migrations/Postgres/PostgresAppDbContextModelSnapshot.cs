@@ -3139,6 +3139,9 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<string>("CoachProfileJson")
                         .HasColumnType("text");
 
+                    b.Property<string>("CoachSavedRepliesJson")
+                        .HasColumnType("text");
+
                     b.Property<int?>("CoachSpots")
                         .HasColumnType("integer");
 

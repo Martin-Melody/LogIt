@@ -222,6 +222,22 @@ public class CoachEndingTests
     }
 
     [Fact]
+    public async Task Saved_replies_are_the_coachs_own_and_checked()
+    {
+        await using var w = await CoachedAsync("replies", paying: false);
+        Assert.Empty((await Json(await w.Coach.GetAsync("/coach/saved-replies"))).GetProperty("replies").EnumerateArray());
+        var ok = new { replies = new[] { new { id = "r1", shortcut = " swap ", title = "Swap is fine", body = "Yep, {exercise} for now." } } };
+        var saved = await Json(await w.Coach.PutAsJsonAsync("/coach/saved-replies", ok));
+        Assert.Equal("swap", saved.GetProperty("replies")[0].GetProperty("shortcut").GetString());
+        var twice = new { replies = new[] { new { id = "a", shortcut = "x", title = "", body = "1" }, new { id = "b", shortcut = "X", title = "", body = "2" } } };
+        Assert.Equal(HttpStatusCode.BadRequest, (await w.Coach.PutAsJsonAsync("/coach/saved-replies", twice)).StatusCode);
+        var spaced = new { replies = new[] { new { id = "a", shortcut = "two words", title = "", body = "1" } } };
+        Assert.Equal(HttpStatusCode.BadRequest, (await w.Coach.PutAsJsonAsync("/coach/saved-replies", spaced)).StatusCode);
+        // Someone else's are their own.
+        Assert.Empty((await Json(await w.Client.GetAsync("/coach/saved-replies"))).GetProperty("replies").EnumerateArray());
+    }
+
+    [Fact]
     public async Task After_a_week_with_no_reply_the_client_can_stop_with_a_refund()
     {
         await using var w = await CoachedAsync("quiet");
