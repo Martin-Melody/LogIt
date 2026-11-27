@@ -182,6 +182,9 @@ export async function pushAllSessions(): Promise<void> {
 export async function pullAndMergeSessions(): Promise<boolean> {
   if (!apiClient.isAuthenticated()) return true;
   try {
+    // The time before asking, so anything saved on the server while the request runs
+    // comes next time instead of being skipped.
+    const startedAt = Date.now();
     const since = getTimestamp(SESSIONS_LAST_PULLED_KEY);
     const { sessions: remote } = await syncApi.pullSessions(since);
 
@@ -205,7 +208,7 @@ export async function pullAndMergeSessions(): Promise<boolean> {
       } catch (e) { syncWarn("pullAndMergeSessions", e); }
     }
 
-    setTimestamp(SESSIONS_LAST_PULLED_KEY, Date.now());
+    setTimestamp(SESSIONS_LAST_PULLED_KEY, startedAt);
     return true;
   } catch (e) {
     syncWarn("pullAndMergeSessions", e);
@@ -251,6 +254,9 @@ export async function pushAllSplits(): Promise<void> {
 export async function pullAndMergeSplits(): Promise<boolean> {
   if (!apiClient.isAuthenticated()) return true;
   try {
+    // The time before asking, so anything saved on the server while the request runs
+    // comes next time instead of being skipped.
+    const startedAt = Date.now();
     const since = getTimestamp(SPLITS_LAST_PULLED_KEY);
     const { splits: remote } = await syncApi.pullSplits(since);
 
@@ -273,7 +279,7 @@ export async function pullAndMergeSplits(): Promise<boolean> {
       } catch (e) { syncWarn("pullAndMergeSplits", e); }
     }
 
-    setTimestamp(SPLITS_LAST_PULLED_KEY, Date.now());
+    setTimestamp(SPLITS_LAST_PULLED_KEY, startedAt);
     return true;
   } catch (e) {
     syncWarn("pullAndMergeSplits", e);
@@ -621,6 +627,9 @@ export async function pullAndMergeCheckinSchedules(): Promise<boolean> {
 export async function pullAndMergeCheckinSubmissions(): Promise<boolean> {
   if (!apiClient.isAuthenticated()) return true;
   try {
+    // The time before asking, so anything saved on the server while the request runs
+    // comes next time instead of being skipped.
+    const startedAt = Date.now();
     const since = getTimestamp(CHECKIN_SUBMISSIONS_LAST_PULLED_KEY);
     const { submissions } = await syncApi.pullCheckinSubmissions(since);
     const repo = getCheckinRepo();
@@ -636,7 +645,7 @@ export async function pullAndMergeCheckinSubmissions(): Promise<boolean> {
         await repo.upsertSubmissionFromRemote(sub);
       } catch (e) { syncWarn("pullAndMergeCheckinSubmissions", e); }
     }
-    setTimestamp(CHECKIN_SUBMISSIONS_LAST_PULLED_KEY, Date.now());
+    setTimestamp(CHECKIN_SUBMISSIONS_LAST_PULLED_KEY, startedAt);
     return true;
   } catch (e) {
     syncWarn("pullAndMergeCheckinSubmissions", e);
@@ -701,6 +710,9 @@ export async function pushAllAuthoredCheckinSchedules(): Promise<void> {
 export async function pullAndMergeMessages(): Promise<boolean> {
   if (!apiClient.isAuthenticated()) return true;
   try {
+    // The time before asking, so anything saved on the server while the request runs
+    // comes next time instead of being skipped.
+    const startedAt = Date.now();
     const since = getTimestamp(MESSAGES_LAST_PULLED_KEY);
     const remote = await messagesApi.listAll(since);
     const repo = getMessagesRepo();
@@ -720,7 +732,7 @@ export async function pullAndMergeMessages(): Promise<boolean> {
         ...(m.kind ? { kind: m.kind, cardJson: m.cardJson ?? null } : {}),
       });
     }
-    setTimestamp(MESSAGES_LAST_PULLED_KEY, Date.now());
+    setTimestamp(MESSAGES_LAST_PULLED_KEY, startedAt);
     return true;
   } catch (e) {
     syncWarn("pullAndMergeMessages", e);
@@ -872,6 +884,9 @@ export async function pullAndMergeNutrition(): Promise<boolean> {
   let ok = true;
 
   try {
+    // The time before asking, so anything saved on the server while the request runs
+    // comes next time instead of being skipped.
+    const startedAt = Date.now();
     const since = getTimestamp(NUTRITION_DAYS_LAST_PULLED_KEY);
     const { days } = await syncApi.pullNutritionDays(since);
     for (const e of days) {
@@ -886,13 +901,16 @@ export async function pullAndMergeNutrition(): Promise<boolean> {
         await repo.upsertDayFromRemote(day);
       } catch (e) { syncWarn("pullAndMergeNutrition", e); }
     }
-    setTimestamp(NUTRITION_DAYS_LAST_PULLED_KEY, Date.now());
+    setTimestamp(NUTRITION_DAYS_LAST_PULLED_KEY, startedAt);
   } catch (e) {
     syncWarn("pullAndMergeNutrition", e);
     ok = false;
   }
 
   try {
+    // The time before asking, so anything saved on the server while the request runs
+    // comes next time instead of being skipped.
+    const startedAt = Date.now();
     const since = getTimestamp(CUSTOM_FOODS_LAST_PULLED_KEY);
     const { foods } = await syncApi.pullCustomFoods(since);
     for (const e of foods) {
@@ -907,13 +925,16 @@ export async function pullAndMergeNutrition(): Promise<boolean> {
         await repo.upsertCustomFoodFromRemote(food);
       } catch (e) { syncWarn("pullAndMergeNutrition", e); }
     }
-    setTimestamp(CUSTOM_FOODS_LAST_PULLED_KEY, Date.now());
+    setTimestamp(CUSTOM_FOODS_LAST_PULLED_KEY, startedAt);
   } catch (e) {
     syncWarn("pullAndMergeNutrition", e);
     ok = false;
   }
 
   try {
+    // The time before asking, so anything saved on the server while the request runs
+    // comes next time instead of being skipped.
+    const startedAt = Date.now();
     const since = getTimestamp(RECIPES_LAST_PULLED_KEY);
     const { recipes } = await syncApi.pullRecipes(since);
     for (const e of recipes) {
@@ -928,13 +949,16 @@ export async function pullAndMergeNutrition(): Promise<boolean> {
         await repo.upsertRecipeFromRemote(recipe);
       } catch (e) { syncWarn("pullAndMergeNutrition", e); }
     }
-    setTimestamp(RECIPES_LAST_PULLED_KEY, Date.now());
+    setTimestamp(RECIPES_LAST_PULLED_KEY, startedAt);
   } catch (e) {
     syncWarn("pullAndMergeNutrition", e);
     ok = false;
   }
 
   try {
+    // The time before asking, so anything saved on the server while the request runs
+    // comes next time instead of being skipped.
+    const startedAt = Date.now();
     const since = getTimestamp(FAVORITES_LAST_PULLED_KEY);
     const { favorites } = await syncApi.pullFavorites(since);
     const local = await repo.listFavorites();
@@ -950,13 +974,16 @@ export async function pullAndMergeNutrition(): Promise<boolean> {
         await repo.upsertFavoriteFromRemote(fav);
       } catch (e) { syncWarn("pullAndMergeNutrition", e); }
     }
-    setTimestamp(FAVORITES_LAST_PULLED_KEY, Date.now());
+    setTimestamp(FAVORITES_LAST_PULLED_KEY, startedAt);
   } catch (e) {
     syncWarn("pullAndMergeNutrition", e);
     ok = false;
   }
 
   try {
+    // The time before asking, so anything saved on the server while the request runs
+    // comes next time instead of being skipped.
+    const startedAt = Date.now();
     const since = getTimestamp(MEAL_TEMPLATES_LAST_PULLED_KEY);
     const { templates } = await syncApi.pullMealTemplates(since);
     const local = await repo.listMealTemplates();
@@ -972,13 +999,16 @@ export async function pullAndMergeNutrition(): Promise<boolean> {
         await repo.upsertMealTemplateFromRemote(t);
       } catch (e) { syncWarn("pullAndMergeNutrition", e); }
     }
-    setTimestamp(MEAL_TEMPLATES_LAST_PULLED_KEY, Date.now());
+    setTimestamp(MEAL_TEMPLATES_LAST_PULLED_KEY, startedAt);
   } catch (e) {
     syncWarn("pullAndMergeNutrition", e);
     ok = false;
   }
 
   try {
+    // The time before asking, so anything saved on the server while the request runs
+    // comes next time instead of being skipped.
+    const startedAt = Date.now();
     const since = getTimestamp(WEIGHT_ENTRIES_LAST_PULLED_KEY);
     const { entries } = await syncApi.pullWeightEntries(since);
     for (const e of entries) {
@@ -993,7 +1023,7 @@ export async function pullAndMergeNutrition(): Promise<boolean> {
         await repo.upsertWeightEntryFromRemote(entry);
       } catch (e) { syncWarn("pullAndMergeNutrition", e); }
     }
-    setTimestamp(WEIGHT_ENTRIES_LAST_PULLED_KEY, Date.now());
+    setTimestamp(WEIGHT_ENTRIES_LAST_PULLED_KEY, startedAt);
   } catch (e) {
     syncWarn("pullAndMergeNutrition", e);
     ok = false;
@@ -1079,6 +1109,9 @@ export async function pullAndMergeHabits(): Promise<boolean> {
   let ok = true;
 
   try {
+    // The time before asking, so anything saved on the server while the request runs
+    // comes next time instead of being skipped.
+    const startedAt = Date.now();
     const since = getTimestamp(HABITS_LAST_PULLED_KEY);
     const { habits } = await syncApi.pullHabits(since);
     for (const e of habits) {
@@ -1093,13 +1126,16 @@ export async function pullAndMergeHabits(): Promise<boolean> {
         await repo.upsertHabitFromRemote(habit);
       } catch (e) { syncWarn("pullAndMergeHabits", e); }
     }
-    setTimestamp(HABITS_LAST_PULLED_KEY, Date.now());
+    setTimestamp(HABITS_LAST_PULLED_KEY, startedAt);
   } catch (e) {
     syncWarn("pullAndMergeHabits", e);
     ok = false;
   }
 
   try {
+    // The time before asking, so anything saved on the server while the request runs
+    // comes next time instead of being skipped.
+    const startedAt = Date.now();
     const since = getTimestamp(HABIT_ENTRIES_LAST_PULLED_KEY);
     const { entries } = await syncApi.pullHabitEntries(since);
     for (const e of entries) {
@@ -1114,7 +1150,7 @@ export async function pullAndMergeHabits(): Promise<boolean> {
         await repo.upsertEntryFromRemote(entry);
       } catch (e) { syncWarn("pullAndMergeHabits", e); }
     }
-    setTimestamp(HABIT_ENTRIES_LAST_PULLED_KEY, Date.now());
+    setTimestamp(HABIT_ENTRIES_LAST_PULLED_KEY, startedAt);
   } catch (e) {
     syncWarn("pullAndMergeHabits", e);
     ok = false;

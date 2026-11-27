@@ -1,6 +1,8 @@
 <script lang="ts">
   import GoalSuggestionCard from "$lib/features/coaching/GoalSuggestionCard.svelte";
   import { checkinReplyLabel, parseCheckinReply } from "@logit/core/domain/savedReplies";
+  import { parseMonthReport } from "@logit/core/domain/monthReport";
+  import MonthReportCard from "$lib/features/coaching/MonthReportCard.svelte";
   import { parseGoalSuggestion } from "@logit/core/domain/goalSuggestion";
   import { Spinner } from "$lib/components/ui/spinner/index.js";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
@@ -158,6 +160,8 @@
           {@const s = parseGoalSuggestion(last.cardJson)!}
           <!-- Canvas GL1: the coach suggests a change to my goal. -->
           <GoalSuggestionCard suggestion={s} coachName={name} {relationshipId} answered={answerTo(s.id)} onanswer={() => void refresh()} />
+        {:else if run.event && last.kind === "month-report" && parseMonthReport(last.cardJson)}
+          <MonthReportCard report={parseMonthReport(last.cardJson)!} coachName={name} />
         {:else if run.event}
           {@const k = last.kind as RequestEvent}
           <p class="px-6 py-1 text-center text-[13px] leading-snug text-muted-foreground">{eventLine(k, readerOf(k, last.mine), name, name) || last.body}</p>

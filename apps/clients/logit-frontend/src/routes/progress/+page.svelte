@@ -11,6 +11,7 @@
   import { goto } from "$app/navigation";
   import { ChartColumn, ChevronRight, Lightbulb } from "lucide-svelte";
   import GoalsPanel from "$lib/features/goals/GoalsPanel.svelte";
+  import ProgressSummary from "$lib/features/progress/ProgressSummary.svelte";
   import { getAllExerciseProgressStories } from "@logit/core/usecases/progression/getAllExerciseProgressStories";
   import type { ExerciseProgressStory } from "@logit/core/usecases/progression/getExerciseProgressStory";
   import { PROGRESS_STATUS_ATTENTION_ORDER, type ProgressStatus } from "@logit/core/domain/progression";
@@ -28,7 +29,8 @@
   if (initialTab === "muscles") void goto("/insights/balance", { replaceState: true });
   else if (initialTab === "nutrition") void goto("/insights/food-vs-lifts", { replaceState: true });
   // Goals first: it's the tab that works from day one (streak + goals need no history).
-  let tab = $state(initialTab === "exercises" ? "exercises" : "goals");
+  // Summary (canvas W12): a week, month or block; "See it in Progress" on your coach's month card lands there.
+  let tab = $state(initialTab === "exercises" ? "exercises" : initialTab === "summary" ? "summary" : "goals");
 
   const selectedStory = $derived(
     stories.find((s) => s.exerciseName === selected) ?? null,
@@ -83,7 +85,12 @@
       <Tabs.List class="w-full">
         <Tabs.Trigger value="goals" class="flex-1">Goals</Tabs.Trigger>
         <Tabs.Trigger value="exercises" class="flex-1">Exercises</Tabs.Trigger>
+        <Tabs.Trigger value="summary" class="flex-1">Summary</Tabs.Trigger>
       </Tabs.List>
+
+      <Tabs.Content value="summary">
+        <ProgressSummary />
+      </Tabs.Content>
 
       <Tabs.Content value="goals">
         <GoalsPanel />

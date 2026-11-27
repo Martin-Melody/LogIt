@@ -22,6 +22,8 @@
   import MessageSquareQuoteIcon from "@lucide/svelte/icons/message-square-quote";
   import SavedReplyPicker from "./SavedReplyPicker.svelte";
   import { checkinReplyLabel, parseCheckinReply } from "@logit/core/domain/savedReplies";
+  import { parseMonthReport } from "@logit/core/domain/monthReport";
+  import MonthReportCard from "./MonthReportCard.svelte";
   import SmilePlusIcon from "@lucide/svelte/icons/smile-plus";
   import { DM_REACTIONS } from "@logit/core/api/dmApi";
   import { StagedPhoto, imageFrom } from "$lib/features/chat/stagedPhoto.svelte";
@@ -199,7 +201,7 @@
     shown.forEach((m, i) => {
       const day = !compact && (i === 0 || dayLabel(m.createdAtMs) !== dayLabel(shown[i - 1]!.createdAtMs));
       // Swap messages ("lasting-swap", "program-swap") and check-in replies are ordinary bubbles; only request steps are cards.
-      const event = !!m.kind && !m.kind.endsWith("swap") && m.kind !== "checkin-reply" && !!card;
+      const event = !!m.kind && !m.kind.endsWith("swap") && m.kind !== "checkin-reply" && m.kind !== "month-report" && !!card;
       const prev = out.at(-1);
       if (prev && !day && !event && !prev.event && prev.mine === m.mine && m.createdAtMs - prev.items.at(-1)!.createdAtMs < 3_600_000) prev.items.push(m);
       else out.push({ key: m.messageId, mine: m.mine, day, event, items: [m] });
@@ -252,7 +254,10 @@
                 {#if m.photoUrl}<div class={joinedKids(m.mine, first, end)}><ChatPhoto url={m.photoUrl} width={m.photoWidth ?? 0} height={m.photoHeight ?? 0} mine={m.mine} /></div>{/if}
                 {#if m.voiceUrl}<div class={joinedKids(m.mine, first, end)}><ChatVoice voice={{ url: m.voiceUrl, ms: m.voiceMs ?? 0, peaks: m.voicePeaks ?? "" }} mine={m.mine} /></div>{/if}
                 {@const replyTo = m.kind === "checkin-reply" ? parseCheckinReply(m.cardJson) : null}
-                {#if m.body || m.contextDateIso}
+                {@const report = m.kind === "month-report" ? parseMonthReport(m.cardJson) : null}
+                {#if report}
+                  <MonthReportCard {report} mine={m.mine} from={m.mine ? "you" : otherName} />
+                {:else if m.body || m.contextDateIso}
                   <Bubble.Root variant={m.mine ? "default" : "muted"} {align} class="max-w-full">
                     <Bubble.Content class="rounded-[18px] px-3 py-2 text-[13px] leading-relaxed {joined(m.mine, first, end)}">
                       {#if m.contextDateIso}

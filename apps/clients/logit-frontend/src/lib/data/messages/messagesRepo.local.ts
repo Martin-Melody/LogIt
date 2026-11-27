@@ -58,5 +58,8 @@ export function createLocalMessagesRepo(): MessagesRepo {
         .filter((m) => m.contextDateIso === dateIso)
         .sort((a, b) => a.createdAtMs - b.createdAtMs);
     },
+    async listByKind(kind: string): Promise<CoachMessage[]> {
+      return Object.values(readAll()).filter((m) => m.kind === kind).sort((a, b) => a.createdAtMs - b.createdAtMs);
+    },
   };
 }

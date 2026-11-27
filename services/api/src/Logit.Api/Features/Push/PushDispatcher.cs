@@ -138,8 +138,8 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
             var message = new PushMessage(
                 names.Count == 1 ? names[0] : names.Count == 2 ? $"{names[0]} and {names[1]}" : $"{names[0]} and {names.Count - 1} others",
                 names.Count > 1 ? $"{wanted.Count} messages"
-                    : wanted.Count == 1 ? StepText(wanted[0].Kind) ?? "sent you a message"
-                    : StepText(wanted[^1].Kind) is { } step ? step : $"sent you {wanted.Count} messages",
+                    : wanted.Count == 1 ? StepText(wanted[0].Kind, wanted[0].CardJson) ?? "sent you a message"
+                    : StepText(wanted[^1].Kind, wanted[^1].CardJson) is { } step ? step : $"sent you {wanted.Count} messages",
                 "messages",
                 wanted.Select(m => m.RelationshipId).Distinct().Count() == 1
                     ? new Dictionary<string, string> { ["type"] = "Message", ["relationshipId"] = wanted[0].RelationshipId.ToString() }
@@ -151,8 +151,10 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
     }
 
     /// A request step said the way a push says it (who, then what; never the words).
-    private static string? StepText(string? kind) => kind switch
+    private static string? StepText(string? kind, string? card = null) => kind switch
     {
+        // Canvas W7: "Sam sent you your November".
+        "month-report" => $"sent you your {MonthLabel(card) ?? "month"}",
         "offer" => "offered you a spot",
         "offer-changed" => "changed their offer",
         "offer-withdrawn" => "withdrew their offer",
@@ -163,6 +165,17 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
         "joined" => "took the spot",
         _ => null,
     };
+
+    private static string? MonthLabel(string? card)
+    {
+        if (card is null) return null;
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(card);
+            return doc.RootElement.TryGetProperty("label", out var l) && l.ValueKind == System.Text.Json.JsonValueKind.String ? l.GetString() : null;
+        }
+        catch (System.Text.Json.JsonException) { return null; }
+    }
 
     /// Messages between people, like coach messages: straight away, who and never what. A message
     /// that lands in someone's requests makes no push (Instagram); reading it first drops it.

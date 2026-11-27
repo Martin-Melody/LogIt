@@ -1056,10 +1056,10 @@ public static class CoachEndpoints
         if (req.Kind is { } k)
         {
             // Clients: a lasting swap (SW1), an answer to a goal suggestion (GL1). Coaches: a
-            // program swap (W6/Q8), a goal suggestion (GL1), a reply to a check-in (K4).
-            string[] allowed = relationship.ClientId == callerId ? ["lasting-swap", "goal-answer"] : ["program-swap", "goal-suggestion", "checkin-reply"];
+            // program swap (W6/Q8), a goal suggestion (GL1), a reply to a check-in (K4), their month (W7).
+            string[] allowed = relationship.ClientId == callerId ? ["lasting-swap", "goal-answer"] : ["program-swap", "goal-suggestion", "checkin-reply", "month-report"];
             if (!allowed.Contains(k)) return Results.BadRequest(new { error = "That kind of message can't be sent." });
-            if (req.CardJson is { Length: > 2000 }) return Results.BadRequest(new { error = "Card too large." });
+            if (req.CardJson is { Length: > 4000 }) return Results.BadRequest(new { error = "Card too large." });
             try { if (req.CardJson is not null) using (System.Text.Json.JsonDocument.Parse(req.CardJson)) { } }
             catch (System.Text.Json.JsonException) { return Results.BadRequest(new { error = "Card isn't JSON." }); }
             (kind, card) = (k, req.CardJson);

@@ -162,6 +162,10 @@ public class CoachEndingTests
         var replyCard = "{\"scheduleName\":\"Weekly check-in\",\"periodStartMs\":1,\"submissionId\":\"s1\"}";
         (await w.Coach.PostAsJsonAsync("/coach/messages", new { messageId = "cr1", relationshipId = w.RelId, body = "Great week", createdAtMs = 3L, kind = "checkin-reply", cardJson = replyCard })).EnsureSuccessStatusCode();
         Assert.Equal(HttpStatusCode.BadRequest, (await w.Client.PostAsJsonAsync("/coach/messages", new { messageId = "cr2", relationshipId = w.RelId, body = "x", createdAtMs = 4L, kind = "checkin-reply", cardJson = replyCard })).StatusCode);
+        // Canvas W7: a month sent to the client; only coaches send it.
+        var month = "{\"v\":1,\"month\":\"2026-11\",\"label\":\"November\",\"note\":\"Great month\",\"sections\":[]}";
+        (await w.Coach.PostAsJsonAsync("/coach/messages", new { messageId = "mr1", relationshipId = w.RelId, body = "Your November: Great month", createdAtMs = 5L, kind = "month-report", cardJson = month })).EnsureSuccessStatusCode();
+        Assert.Equal(HttpStatusCode.BadRequest, (await w.Client.PostAsJsonAsync("/coach/messages", new { messageId = "mr2", relationshipId = w.RelId, body = "x", createdAtMs = 6L, kind = "month-report", cardJson = month })).StatusCode);
         (await w.Client.PostAsJsonAsync("/coach/messages", new { messageId = "g2", relationshipId = w.RelId, body = "I'll keep mine.", createdAtMs = 3L, kind = "goal-answer", cardJson = "{\"id\":\"g1\",\"used\":false}" })).EnsureSuccessStatusCode();
         Assert.Equal(HttpStatusCode.BadRequest, (await w.Client.PostAsJsonAsync("/coach/messages", new { messageId = "s1", relationshipId = w.RelId, body = "x", createdAtMs = 1L, kind = "lasting-swap", cardJson = "not json" })).StatusCode);
         (await w.Client.PostAsJsonAsync("/coach/messages", new { messageId = "s2", relationshipId = w.RelId, body = "I've swapped Hack squat for Leg press for the rest of the program.", createdAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), kind = "lasting-swap", cardJson = card })).EnsureSuccessStatusCode();

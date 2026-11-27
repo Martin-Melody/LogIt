@@ -65,6 +65,10 @@ kind of cards as the phone's home screen, so your widget plugins can be cards to
 the data the plugin asks for and the client shares. **+ Card** turns cards on and off and orders
 them, for this client, everyone on their package, or all clients.
 
+On **This month**, **Send it to …** sends the month to the client with your note on top: a card in
+your conversation with the same numbers (only what they share, never photos), and the month in their
+Progress, where your note shows too. They get one notification: "Joe sent you your November".
+
 If a client answers Yes to a health question (a heart condition, chest pain or dizziness), their
 page says so in amber until you mark that form read. ⋯ has Message, Change package, Send a form,
 their answers from when they asked to be coached, and Pause or End coaching.

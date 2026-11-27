@@ -136,5 +136,12 @@ export function createSqliteMessagesRepo(): MessagesRepo {
       );
       return ((res.values ?? []) as Row[]).map(toMessage);
     },
+    async listByKind(kind: string): Promise<CoachMessage[]> {
+      const res = await getDb().query(
+        `SELECT * FROM coach_messages WHERE (owner_id = ? OR owner_id IS NULL) AND kind = ? ORDER BY created_at_ms ASC`,
+        [getActiveOwnerId(), kind],
+      );
+      return ((res.values ?? []) as Row[]).map(toMessage);
+    },
   };
 }

@@ -24,6 +24,10 @@
   import { loadClientCardData, type ClientCardData } from "./clientCards";
   import ClientPluginCard from "./ClientPluginCard.svelte";
   import CardPickerDialog from "./CardPickerDialog.svelte";
+  import { Textarea } from "$lib/components/ui/textarea";
+  import { messagesApi } from "@logit/core/api/messagesApi";
+  import { createId } from "@logit/core/domain/ids";
+  import { MAX_NOTE, monthReportBody, monthReportFrom } from "@logit/core/domain/monthReport";
   import type { ClientSummary, CoachingOverview } from "../coachingData";
 
   let { client, overview }: { client: ClientSummary; overview: CoachingOverview } = $props();
@@ -76,6 +80,29 @@
   });
 
   const chosen = $derived(cardsFor(layout, client.id, pkg.id));
+
+  // Canvas W4: send the month to them, with a note on top. They see the same numbers (only what
+  // they share) as a card in your conversation (W7) and in their Progress (W12).
+  let note = $state("");
+  let sending = $state(false);
+  let sentFor = $state<string | null>(null);
+  const monthOf = (ms: number) => { const d = new Date(ms); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; };
+  async function sendMonth() {
+    if (!data || sending) return;
+    sending = true;
+    try {
+      const input = { ...data, now: Date.now(), period, diaryDays: days };
+      const report = monthReportFrom(monthOf(period.fromMs), period.label, note, (["training", "body", "food"] as const).map((id) => coachCard(id, input)).filter((v) => !v.empty));
+      await messagesApi.send({ relationshipId: client.relationshipId, messageId: createId("msg"), body: monthReportBody(report), createdAtMs: Date.now(), kind: "month-report", cardJson: JSON.stringify(report) });
+      sentFor = report.month;
+      note = "";
+      toast.success(`Sent ${first} their ${period.label}`, { action: { label: "Open conversation", onClick: () => void goto(`/messages?c=${client.relationshipId}`) } });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't send it");
+    } finally {
+      sending = false;
+    }
+  }
   const isCoachCard = (id: string): id is CoachCardId => COACH_CARDS.some((c) => c.id === id);
   const shares = $derived(SHARE_AREAS.filter((a) => client.sharing[a.key]).map((a) => a.label.toLowerCase()));
 </script>
@@ -112,6 +139,15 @@
           {#if p?.enabled}<ClientPluginCard plugin={p} {client} untilMs={period.toMs} />{/if}
         {/if}
       {/each}
+      {#if kind === "month"}
+        <section aria-label="Send it to {first}" class="flex flex-col gap-2 rounded-[10px] border border-border bg-card px-[18px] py-4 text-[13px]">
+          <h2 class="text-sm font-semibold">Send it to {first}</h2>
+          <label for="month-note" class="text-xs text-muted-foreground">Your note (it goes at the top)</label>
+          <Textarea id="month-note" rows={3} maxlength={MAX_NOTE} bind:value={note} placeholder="Brilliant month. Three records, and the knee is holding up." />
+          <p class="text-xs text-muted-foreground">{first} sees these same numbers (only what they share, never photos) as a card in your conversation, and in their Progress.</p>
+          <Button class="self-start" disabled={sending} onclick={() => void sendMonth()}>{sentFor === monthOf(period.fromMs) ? "Send again" : `Send to ${first}`}</Button>
+        </section>
+      {/if}
       <section class="flex flex-col gap-1 rounded-[10px] border border-border bg-card px-[18px] py-4 text-[13px]">
         <h2 class="text-sm font-semibold">{first} shares</h2>
         <p class="leading-relaxed text-muted-foreground">
