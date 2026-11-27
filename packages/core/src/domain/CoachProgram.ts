@@ -37,6 +37,10 @@ export type CoachProgram = {
   /** On a client's copy: the library program it was assigned from. Lets the coach push a
    * library edit to the copies (see updateCopyFromTemplate). */
   sourceProgramId?: string;
+  /** On a client's copy: the library program as it was when the copy was made or last
+   * updated (canvas Q6), so an update takes the coach's library changes and keeps the
+   * changes made for this client. Copies made before this don't have it. */
+  libraryBase?: LibraryBase;
   /** On a client's copy: the coach it came from, so the phone applies that coach's swap
    * rule. Set by the client's app from the assigned-programs pull, never by the coach. */
   coachId?: string;
@@ -255,24 +259,40 @@ export function archiveCoachProgram(program: CoachProgram, archived = true): Coa
 
 // ── Library → client copies ───────────────────────────────────────────────────
 
-/** A client's own copy of a library program, as assigning creates it: new ids, linked back
- * to the library program, starting on `start`. */
+/** What a copy remembers of its library program (canvas Q6). */
+export type LibraryBase = Pick<CoachProgram, "name" | "description" | "lengthWeeks" | "rule" | "weeks" | "updatedAtMs">;
+
+export function libraryBaseOf(template: CoachProgram): LibraryBase {
+  return { name: template.name, description: template.description, lengthWeeks: template.lengthWeeks, rule: template.rule, weeks: template.weeks, updatedAtMs: template.updatedAtMs };
+}
+
+/** A client's own copy of a library program, as assigning creates it: linked back to the
+ * library program, starting on `start`. Weeks, days and blocks keep the library's ids, so a
+ * later library change can be merged in without losing changes made for this client. */
 export function copyProgramForClient(
   template: CoachProgram,
   start: { mode: "manual" } | { mode: "fixed-date"; startDateMs: number },
 ): CoachProgram {
   const now = nowMs();
-  const { startDateMs: _d, clientStartedAtMs: _c, ...rest } = template;
+  const { startDateMs: _d, clientStartedAtMs: _c, libraryBase: _b, sourceProgramId: _s, coachId: _k, ...rest } = template;
   const copy: CoachProgram = {
     ...rest,
     id: createId("cprog"),
     sourceProgramId: template.id,
+    libraryBase: libraryBaseOf(template),
     archived: false,
-    weeks: template.weeks.map(cloneWeek),
+    weeks: structuredClone(template.weeks),
     createdAtMs: now,
     updatedAtMs: now,
   };
   return setProgramStart(copy, start);
+}
+
+/** A program of your own made from another (Duplicate, start from one): new ids, no link. */
+export function duplicateProgram(source: CoachProgram, name = source.name): CoachProgram {
+  const now = nowMs();
+  const { startDateMs: _d, clientStartedAtMs: _c, libraryBase: _b, sourceProgramId: _s, coachId: _k, ...rest } = source;
+  return { ...rest, name, startMode: "manual", id: createId("cprog"), archived: false, weeks: source.weeks.map(cloneWeek), createdAtMs: now, updatedAtMs: now };
 }
 
 /** A copy brought up to date with its library program: same name, description and weeks;
@@ -286,7 +306,8 @@ export function updateCopyFromTemplate(copy: CoachProgram, template: CoachProgra
     lengthWeeks: template.lengthWeeks,
     schemaVersion: template.schemaVersion,
     rule: template.rule,
-    weeks: template.weeks.map(cloneWeek),
+    // The library's ids, so later updates can merge (canvas Q6).
+    weeks: structuredClone(template.weeks),
   });
 }
 
@@ -885,7 +906,7 @@ export const UPDATE_LINE = "Update LogIt to see this part";
  * kept for "From LogIt: …". The original stays as it was. */
 export function copyToMyPrograms(source: CoachProgram, origin: NonNullable<CoachProgram["origin"]>): CoachProgram {
   const now = nowMs();
-  const { sourceProgramId: _s, startDateMs: _d, clientStartedAtMs: _c, coachId: _k, ...rest } = upgradeProgram(source);
+  const { sourceProgramId: _s, startDateMs: _d, clientStartedAtMs: _c, coachId: _k, libraryBase: _b, ...rest } = upgradeProgram(source);
   return { ...rest, id: createId("cprog"), origin, archived: false, startMode: "manual", weeks: source.weeks.map(cloneWeek), createdAtMs: now, updatedAtMs: now };
 }
 

@@ -4,7 +4,7 @@
 // built week. Saved as you go, with undo, and changes from another device merged in.
 
 import { createId } from "./ids";
-import { touchCoachProgram, type CoachProgram, type ProgramBlock, type ProgramDay, type ProgramSet, type ProgramWeek } from "./CoachProgram";
+import { libraryBaseOf, touchCoachProgram, updateCopyFromTemplate, type CoachProgram, type ProgramBlock, type ProgramDay, type ProgramSet, type ProgramWeek } from "./CoachProgram";
 
 const byOrder = <T extends { orderIndex: number }>(xs: T[]) => [...xs].sort((a, b) => a.orderIndex - b.orderIndex);
 const byWeek = (ws: ProgramWeek[]) => [...ws].sort((a, b) => a.weekNumber - b.weekNumber);
@@ -304,4 +304,54 @@ export function takeTheirs(program: CoachProgram, theirs: CoachProgram, key: str
   }
   const tb = tT.days.flatMap((d) => d.blocks).find((b) => b.id === id);
   return editTemplate(program, (w) => ({ ...w, days: w.days.map((d) => ({ ...d, blocks: d.blocks.map((b) => (b.id === id && tb ? { ...tb, orderIndex: b.orderIndex } : b)) })) }));
+}
+
+// ── Library → clients' copies (canvas Q6) ──
+
+export type CopyUpdate = {
+  program: CoachProgram;
+  /** The library's changes it took in. */
+  taken: string[];
+  /** What was changed for this client and kept, where the library changed it too. */
+  kept: string[];
+  /** Made before copies remembered their library version: replaced by it instead (their
+   * start, the week they're on and everything they logged stay). */
+  replaced: boolean;
+};
+
+/** The copy as its library program was when it was made or last updated. */
+function baseOf(copy: CoachProgram): CoachProgram | null {
+  const b = copy.libraryBase;
+  return b ? { ...copy, ...b } : null;
+}
+/** The library now, as this copy would have it (its own id, start and links). */
+function asCopy(copy: CoachProgram, library: CoachProgram): CoachProgram {
+  return { ...copy, name: library.name, description: library.description, lengthWeeks: library.lengthWeeks, rule: library.rule, weeks: library.weeks, updatedAtMs: library.updatedAtMs };
+}
+const shaped = (...ps: CoachProgram[]) => ps.every((p) => forBuilder(p) !== null);
+
+/** What the library changed since this copy last took it ("Lateral Raise on Upper A", …). */
+export function libraryChanges(copy: CoachProgram, library: CoachProgram): string[] {
+  const base = baseOf(copy);
+  if (!base || !shaped(base, library)) return [];
+  return mergePrograms(base, base, asCopy(copy, library)).taken;
+}
+
+/** What's been changed for this client since the copy last took the library. */
+export function copyOwnChanges(copy: CoachProgram): string[] {
+  const base = baseOf(copy);
+  if (!base || !shaped(base, copy)) return [];
+  return mergePrograms(base, base, copy).taken;
+}
+
+/** The copy with the library's changes in it; anything changed for this client stays (canvas Q6). */
+export function updateCopy(copy: CoachProgram, library: CoachProgram): CopyUpdate {
+  const base = baseOf(copy);
+  const theirs = asCopy(copy, library);
+  const fresh = { libraryBase: libraryBaseOf(library) };
+  if (!base || !shaped(base, copy, library)) {
+    return { program: { ...updateCopyFromTemplate(copy, library), ...fresh }, taken: [], kept: [], replaced: true };
+  }
+  const merged = mergePrograms(base, copy, theirs);
+  return { program: touchCoachProgram({ ...merged.program, ...fresh }), taken: merged.taken, kept: merged.conflicts.map((c) => c.label), replaced: false };
 }

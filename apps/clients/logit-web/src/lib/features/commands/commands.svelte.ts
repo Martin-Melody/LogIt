@@ -26,6 +26,8 @@ export function clientActions(c: ClientSummary): RowAction[] {
     { id: "open", label: `Open ${c.name}`, href: page },
     { id: "message", label: `Message ${c.name}`, href: `/messages?c=${c.relationshipId}` },
     { id: "assign", label: "Assign a program…", href: `${page}?assign=1`, separatorBefore: true },
+    // Canvas W3.
+    { id: "next-block", label: "Plan the next block…", href: `${page}/next-block`, disabled: c.program ? undefined : "Not on a program from you" },
     { id: "training", label: "See their training", href: `${page}?tab=training`, disabled: c.sharing.workouts ? undefined : "Not shared" },
     {
       id: "checkin",

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { updateCopy } from "@logit/core/domain/programBuilder";
   import { forBuilder } from "@logit/core/domain/programBuilder";
   import ProgramBuilder from "$lib/features/coaching/programs/ProgramBuilder.svelte";
   import { onSampleActivity } from "$lib/features/guide/sandbox.svelte";
@@ -101,10 +102,7 @@
   async function copyIn(pick: { program: CoachProgram; origin: CoachProgram["origin"] | null }) {
     const p = pick.origin
       ? P.copyToMyPrograms(pick.program, pick.origin)
-      : (() => {
-          const { sourceProgramId: _s, ...rest } = P.copyProgramForClient(pick.program, { mode: "manual" });
-          return { ...rest, name: `${pick.program.name} (copy)` } as CoachProgram;
-        })();
+      : P.duplicateProgram(pick.program, `${pick.program.name} (copy)`);
     try {
       await getWebCoachProgramRepo().saveProgram(p);
       rows = [...rows, { program: p, recipientUserId: null }];
@@ -161,8 +159,7 @@
   async function duplicateOf(from: CoachProgram) {
     busy = true;
     try {
-      const { sourceProgramId: _s, ...rest } = P.copyProgramForClient(from, { mode: "manual" });
-      const p: CoachProgram = { ...rest, name: `${from.name} (copy)` };
+      const p = P.duplicateProgram(from, `${from.name} (copy)`);
       await getWebCoachProgramRepo().saveProgram(p);
       rows = [...rows, { program: p, recipientUserId: null }];
       select(p.id);
@@ -185,35 +182,31 @@
     }
   }
 
-  /** The builder's "Update their copies…": the ticked clients' copies follow the program. */
-  async function pushToCopies(next: CoachProgram, ids: string[]) {
+  /** Canvas Q6: the ticked clients' copies take your library changes; changes made for each
+   * client stay (updateCopy). */
+  async function updateCopiesOf(next: CoachProgram, ids: string[]): Promise<number> {
     const repo = getWebCoachProgramRepo();
     let updated = 0;
     for (const id of ids) {
       const row = rows.find((r) => r.program.id === id);
       const username = clients.find((c) => c.client.id === row?.recipientUserId)?.client.username;
       if (!row || !username) continue;
-      const copy = P.updateCopyFromTemplate(row.program, next);
+      const copy = updateCopy(row.program, next).program;
       await repo.saveProgram(copy, username);
       rows = rows.map((r) => (r.program.id === id ? { ...r, program: copy } : r));
       updated++;
     }
-    toast.success(`Updated ${updated} client cop${updated === 1 ? "y" : "ies"}`);
+    return updated;
+  }
+  async function pushToCopies(next: CoachProgram, ids: string[]) {
+    const updated = await updateCopiesOf(next, ids);
+    toast.success(`Updated ${updated} ${updated === 1 ? "client" : "clients"}. They see it from their next session.`);
   }
 
   async function save(next: CoachProgram, updateCopies: string[]) {
     const repo = getWebCoachProgramRepo();
     await repo.saveProgram(next);
-    let updated = 0;
-    for (const id of updateCopies) {
-      const row = rows.find((r) => r.program.id === id);
-      const username = clients.find((c) => c.client.id === row?.recipientUserId)?.client.username;
-      if (!row || !username) continue;
-      const copy = P.updateCopyFromTemplate(row.program, next);
-      await repo.saveProgram(copy, username);
-      rows = rows.map((r) => (r.program.id === id ? { ...r, program: copy } : r));
-      updated++;
-    }
+    const updated = await updateCopiesOf(next, updateCopies);
     rows = rows.map((r) => (r.program.id === next.id ? { ...r, program: next } : r));
     toast.success(updated ? `Saved, and updated ${updated} client cop${updated === 1 ? "y" : "ies"}` : "Saved");
   }
@@ -237,7 +230,7 @@
         {/if}
       </span>
     </header>
-    {@const copies = copiesOf(selected.id).map((r) => ({ id: r.program.id, label: `${nameOf(r.recipientUserId)}'s copy` }))}
+    {@const copies = copiesOf(selected.id).map((r) => ({ id: r.program.id, label: nameOf(r.recipientUserId), program: r.program }))}
     <section class="flex min-w-0 flex-col gap-3.5 rounded-[10px] border border-border bg-card px-[22px] py-5">
       {#key selected.id}
         {@const shaped = forBuilder(selected)}

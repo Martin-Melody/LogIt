@@ -462,7 +462,7 @@ export const FEATURES: Feature[] = [
     plan: "Studio",
     freeWithSamples: true,
     summary: "Write multi-week programs once and give them to clients.",
-    web: ["/coaching/programs", "/coaching/programs/rules/[id]", "/clients/[id]/programs/[programId]"],
+    web: ["/coaching/programs", "/coaching/programs/rules/[id]", "/clients/[id]/programs/[programId]", "/clients/[id]/next-block"],
     phone: ["/clients/[id]/programs/[programId]"],
     whereWeb: "Coaching › Programs",
     docs: "/docs/coaching/programs",

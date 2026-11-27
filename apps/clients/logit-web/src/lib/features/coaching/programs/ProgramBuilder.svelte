@@ -28,7 +28,7 @@
   import { getWebCoachProgramRepo } from "$lib/deps";
   import * as P from "@logit/core/domain/CoachProgram";
   import type { CoachProgram, ProgramBlock, ProgramDay, ProgramRule, ProgramSet, ProgramStrength } from "@logit/core/domain/CoachProgram";
-  import { applyTemplate, forBuilder, mergePrograms, setLength, setLighterWeeks, takeTheirs, templateOf, type MergeConflict } from "@logit/core/domain/programBuilder";
+  import { applyTemplate, copyOwnChanges, forBuilder, libraryChanges, mergePrograms, setLength, setLighterWeeks, takeTheirs, templateOf, type MergeConflict } from "@logit/core/domain/programBuilder";
   import { BUILTIN_MOBILITY_DRILLS } from "@logit/core/domain/mobilityDrill";
   import { createId } from "@logit/core/domain/ids";
   import { SET_TYPE_META, type SetType } from "@logit/core/domain/workout";
@@ -51,8 +51,8 @@
     mode: "library" | "copy";
     /** Copy mode: whose copy, for saving. */
     username?: string;
-    /** Library: clients' copies, offered for updating. */
-    copies?: { id: string; label: string }[];
+    /** Library: clients' copies, offered for updating (canvas Q6). */
+    copies?: { id: string; label: string; program: CoachProgram }[];
     swapRule?: SwapRule;
     updateCopies?: (next: CoachProgram, ids: string[]) => Promise<void>;
     onchange?: (next: CoachProgram) => void;
@@ -447,10 +447,38 @@
     edit((p) => setLighterWeeks(p, [...next]));
   }
 
-  // ── Copies (library) ──
+  // ── Copies (library, canvas Q6) ──
   let copiesOpen = $state(false);
   let tick = $state<string[]>([]);
   let pushing = $state(false);
+  type CopyRow = { id: string; label: string; status: string; own: string[]; behind: boolean; legacy: boolean; nearlyDone: boolean };
+  const copyRows = $derived.by((): CopyRow[] => copies.map((c) => {
+    const changes = libraryChanges(c.program, prog);
+    const legacy = !c.program.libraryBase;
+    const progress = P.getProgramProgress(c.program);
+    const total = c.program.weeks.length;
+    const start = P.getProgramStartMs(c.program);
+    const endsMs = start != null ? start + total * 7 * 86_400_000 : null;
+    const nearlyDone = progress.status === "finished" || (progress.status === "running" && endsMs != null && endsMs - Date.now() < 7 * 86_400_000);
+    const status = progress.status === "running"
+      ? `week ${progress.weekNumber} of ${total}${nearlyDone && endsMs ? `, finishing ${new Date(endsMs - 86_400_000).toLocaleDateString(undefined, { weekday: "long" })}` : ""}`
+      : progress.status === "scheduled" ? `starts ${new Date(progress.startsAtMs).toLocaleDateString(undefined, { day: "numeric", month: "short" })}`
+      : progress.status === "finished" ? "finished" : "hasn't started";
+    // Older copies don't know their library version: behind when the library changed after them.
+    const behindNow = legacy ? prog.updatedAtMs > c.program.updatedAtMs : changes.length > 0;
+    return { id: c.id, label: c.label, status, own: copyOwnChanges(c.program), behind: behindNow, legacy, nearlyDone };
+  }));
+  const behind = $derived(copyRows.filter((c) => c.behind));
+  /** What you changed, from a copy that remembers the library version it took. */
+  const changedLine = $derived.by(() => {
+    const withBase = copies.find((c) => c.program.libraryBase && libraryChanges(c.program, prog).length);
+    const list = withBase ? libraryChanges(withBase.program, prog) : [];
+    return list.length ? `${list.slice(0, 4).join(", ")}${list.length > 4 ? ` and ${list.length - 4} more` : ""}` : null;
+  });
+  function openCopies() {
+    tick = behind.filter((c) => !c.nearlyDone).map((c) => c.id);
+    copiesOpen = true;
+  }
   async function pushCopies() {
     if (!updateCopies || !tick.length) return;
     pushing = true;
@@ -507,8 +535,8 @@
       <Button variant="ghost" size="icon" aria-label="Undo" title="Undo (Ctrl Z)" disabled={!past.length} onclick={undo}><Undo2Icon class="size-4" /></Button>
       <Button variant="ghost" size="icon" aria-label="Redo" title="Redo (Ctrl Shift Z)" disabled={!future.length} onclick={redo}><Redo2Icon class="size-4" /></Button>
       <Button variant="outline" size="sm" onclick={() => (view = view === "days" ? "weeks" : "days")}>{view === "days" ? "See every week" : "Back to the days"}</Button>
-      {#if mode === "library" && copies.length && updateCopies}
-        <Button variant="outline" size="sm" onclick={() => { tick = copies.map((c) => c.id); copiesOpen = true; }}>Update their copies…</Button>
+      {#if mode === "library" && behind.length && updateCopies}
+        <Button variant="outline" size="sm" onclick={openCopies}>Update {behind.length} {behind.length === 1 ? "client" : "clients"}…</Button>
       {/if}
     </span>
   </div>
@@ -767,19 +795,29 @@
 </div>
 
 <Dialog.Root bind:open={copiesOpen}>
-  <Dialog.Content class="sm:max-w-md">
+  <Dialog.Content class="sm:max-w-lg">
     <Dialog.Header>
-      <Dialog.Title>Update their copies?</Dialog.Title>
-      <Dialog.Description>Each client has their own copy. Ticked copies change to match this program; the rest stay as they are.</Dialog.Description>
+      <Dialog.Title>Update clients on {prog.name}?</Dialog.Title>
+      <Dialog.Description>{changedLine ? `You changed: ${changedLine}. ` : ""}{copies.length} {copies.length === 1 ? "client has their" : "clients have their"} own copy.</Dialog.Description>
     </Dialog.Header>
-    <ul class="flex flex-col gap-1.5">
-      {#each copies as c (c.id)}
-        <li><label class="flex items-center justify-between gap-3 text-[13px]"><span>{c.label}</span><Switch checked={tick.includes(c.id)} onCheckedChange={(v) => (tick = v ? [...tick, c.id] : tick.filter((x) => x !== c.id))} /></label></li>
+    <ul class="flex flex-col">
+      {#each copyRows as c (c.id)}
+        <li class="flex items-start justify-between gap-3 border-t border-border py-2.5 text-[13px]">
+          <span class="flex flex-col gap-0.5">
+            <span><b class="font-medium">{c.label}</b> <span class="text-muted-foreground">· {c.status}</span></span>
+            {#if !c.behind}<span class="text-xs text-muted-foreground">Already up to date.</span>
+            {:else if c.legacy}<span class="text-xs text-muted-foreground">Made before LogIt kept track of changes for them, so it becomes the library version.</span>
+            {:else if c.own.length}<span class="text-xs text-muted-foreground">Their copy has your own changes for them ({c.own.slice(0, 2).join(", ")}{c.own.length > 2 ? "…" : ""}). Kept.</span>{/if}
+            {#if c.behind && c.nearlyDone && !tick.includes(c.id)}<span class="text-xs text-muted-foreground">Left as is: nearly done.</span>{/if}
+          </span>
+          <Switch aria-label="Update {c.label}" disabled={!c.behind} checked={tick.includes(c.id)} onCheckedChange={(v) => (tick = v ? [...tick, c.id] : tick.filter((x) => x !== c.id))} />
+        </li>
       {/each}
     </ul>
+    <p class="text-xs text-muted-foreground">Updating keeps each client's start date, the week they're on and everything they've logged. Changes apply from their next session. Unticked copies stay as they are.</p>
     <Dialog.Footer>
-      <Button variant="outline" onclick={() => (copiesOpen = false)}>Cancel</Button>
-      <Button disabled={pushing || !tick.length} onclick={() => void pushCopies()}>{pushing ? "Updating…" : `Update ${tick.length} ${tick.length === 1 ? "copy" : "copies"}`}</Button>
+      <Button variant="outline" onclick={() => (copiesOpen = false)}>Only the library</Button>
+      <Button disabled={pushing || !tick.length} onclick={() => void pushCopies()}>{pushing ? "Updating…" : `Update ${tick.length} ${tick.length === 1 ? "client" : "clients"}`}</Button>
     </Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>

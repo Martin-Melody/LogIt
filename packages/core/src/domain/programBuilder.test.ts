@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { addDay, addSet, addStrengthBlock, createCoachProgram, duplicateWeek, updateSet, type CoachProgram, type ProgramStrength } from "./CoachProgram";
-import { applyTemplate, editTemplate, forBuilder, mergePrograms, setLength, setLighterWeeks, takeTheirs, templateOf } from "./programBuilder";
+import { addDay, addSet, addStrengthBlock, copyProgramForClient, createCoachProgram, duplicateProgram, duplicateWeek, updateSet, type CoachProgram, type ProgramStrength } from "./CoachProgram";
+import { applyTemplate, copyOwnChanges, editTemplate, forBuilder, libraryChanges, mergePrograms, setLength, setLighterWeeks, takeTheirs, templateOf, updateCopy } from "./programBuilder";
 
 /** Upper A: Bench 3 × 8 at 60 kg, Row 3 × 10; then three copies of week 1 (old-style, new ids). */
 function oldStyle(): CoachProgram {
@@ -122,5 +122,55 @@ describe("two devices: typed-over weeks", () => {
     const both = mergePrograms(b, mine, theirs);
     expect(both.conflicts.map((c) => c.label)).toEqual(["Bench Press, week 3"]);
     expect(bench(takeTheirs(both.program, theirs, both.conflicts[0]!.key), 3).sets[0]!.weight).toBe(65);
+  });
+});
+
+describe("updating clients' copies (canvas Q6)", () => {
+  const library = () => forBuilder(oldStyle())!;
+  const edit = (p: CoachProgram, fn: (b: ProgramStrength) => ProgramStrength, index = 0) =>
+    editTemplate(p, (w) => ({ ...w, days: w.days.map((d) => ({ ...d, blocks: d.blocks.map((b, i) => (i === index ? fn(b as ProgramStrength) : b)) })) }));
+
+  it("a copy keeps the library's ids and remembers the version it came from", () => {
+    const lib = library();
+    const copy = copyProgramForClient(lib, { mode: "manual" });
+    expect(copy.weeks[0]!.days[0]!.blocks.map((b) => b.id)).toEqual(lib.weeks[0]!.days[0]!.blocks.map((b) => b.id));
+    expect(copy.libraryBase?.weeks).toEqual(lib.weeks);
+    expect(duplicateProgram(lib).weeks[0]!.days[0]!.blocks[0]!.id).not.toBe(lib.weeks[0]!.days[0]!.blocks[0]!.id);
+  });
+
+  it("takes the library's changes and keeps what was changed for the client", () => {
+    const lib = library();
+    let copy = copyProgramForClient(lib, { mode: "fixed-date", startDateMs: Date.UTC(2026, 10, 2) });
+    // For her: the row is a cable row.
+    copy = edit(copy, (b) => ({ ...b, exerciseName: "Cable Row" }), 1);
+    // The library: bench to 4 sets, and the row to a T-bar row.
+    let next = edit(lib, (b) => ({ ...b, sets: [...b.sets, { ...b.sets[0]!, id: "extra", orderIndex: 3 }] }), 0);
+    next = edit(next, (b) => ({ ...b, exerciseName: "T-Bar Row" }), 1);
+
+    expect(libraryChanges(copy, next)).toEqual(["Bench Press on Upper A", "T-Bar Row on Upper A"]);
+    expect(copyOwnChanges(copy)).toEqual(["Cable Row on Upper A"]);
+    const u = updateCopy(copy, next);
+    expect(u.replaced).toBe(false);
+    expect(bench(u.program, 1).sets).toHaveLength(4);
+    expect(bench(u.program, 3).sets).toHaveLength(4);
+    expect((u.program.weeks[0]!.days[0]!.blocks[1] as ProgramStrength).exerciseName).toBe("Cable Row");
+    expect(u.kept).toEqual(["Cable Row on Upper A"]);
+    // Their start and their link stay; the next update starts from this library version.
+    expect(u.program.startDateMs).toBe(copy.startDateMs);
+    expect(u.program.id).toBe(copy.id);
+    expect(libraryChanges(u.program, next)).toEqual([]);
+  });
+
+  it("an older copy without a remembered version is replaced, keeping its start", () => {
+    const lib = library();
+    const { libraryBase: _b, ...old } = copyProgramForClient(lib, { mode: "fixed-date", startDateMs: Date.UTC(2026, 10, 2) });
+    const next = edit(lib, (b) => ({ ...b, exerciseName: "Incline Bench" }), 0);
+    const u = updateCopy(old as CoachProgram, next);
+    expect(u.replaced).toBe(true);
+    expect(bench(u.program, 1).exerciseName).toBe("Incline Bench");
+    expect(u.program.startDateMs).toBe(old.startDateMs);
+    expect(u.program.libraryBase).toBeDefined();
+    // Nothing reads as changed for her right after.
+    expect(copyOwnChanges(u.program)).toEqual([]);
   });
 });

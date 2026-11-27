@@ -34,7 +34,7 @@ export type ProgramStatus = {
   startsAtMs: number | null;
   /** Planned sessions a week (days in the current or first week). */
   daysPerWeek: number;
-  /** Ms until the last week ends, while running. */
+  /** When the last week ends (epoch ms), while running. */
   endsAtMs: number | null;
 };
 

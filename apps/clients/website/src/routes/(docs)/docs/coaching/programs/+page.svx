@@ -106,6 +106,35 @@ works.
 On a client's Training tab, their program is at the top: which week they're in, its rule, the
 next lighter week, this week's days and what they've done, and any swaps. Their main lifts show
 their best set this week, their strength estimate then and four weeks ago, and what the program
-plans next time. ⋯ on the program has Change program… and Stop the program.
+plans next time. ⋯ on the program has Change program…, Plan the next block… and Stop the
+program.
+
+## When you change a program clients have
+
+Each client has their own copy, so changing your program doesn't change theirs. When copies are
+behind yours, the builder shows **Update N clients…**: it says what you changed and lists each
+client with the week they're on. Ticked copies take your changes; anything you changed for one
+client stays as it is, and the list says so. Clients finishing within a week are left unticked.
+Their start date, the week they're on and everything they've logged stay; the changes apply from
+their next session. **Only the library** keeps the change to your program alone.
+
+Copies made before LogIt kept track of what changed for each client are replaced by your version
+the first time (start and logs kept); after that they update like the rest.
+
+## The next block
+
+In a program's last two weeks, the client's Training tab shows **Plan next block** (also on
+Today, and in Ctrl K on the client). It shows how the block went: sessions done of those planned,
+check-ins, their weight trend, each lift's estimate at the start and now, and any muscle whose
+weekly sets stayed under the usual range. Then pick what's next:
+
+- **Run it again from their new numbers**: the same program from a new start; the rules plan
+  from today's estimates, and numbers you'd typed over are cleared.
+- **Copy it and change things**: the same, then opened in the builder for them.
+- **Something different**: pick another program.
+
+Small changes for a rerun: one more set on each exercise for the muscles that were behind, a
+lighter first week, and keeping their swaps. Choose the start date and length, and whether to send
+them the block's numbers in a message.
 
 <CanCant ids={["coach-programs"]} />

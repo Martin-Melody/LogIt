@@ -182,7 +182,7 @@
             {:else if i.kind === "missed"}
               <a href="/messages?c={i.client.relationshipId}&draft={encodeURIComponent(NUDGE)}" class="h-8 rounded-[9px] border border-border px-3 text-xs font-medium leading-8 hover:bg-muted">Nudge</a>
             {:else if i.kind === "ending"}
-              <a href="/clients/{i.client.id}?tab=programs" class="h-8 rounded-[9px] border border-border px-3 text-xs font-medium leading-8 hover:bg-muted">Plan next block</a>
+              <a href="/clients/{i.client.id}/next-block" class="h-8 rounded-[9px] border border-border px-3 text-xs font-medium leading-8 hover:bg-muted">Plan next block</a>
             {:else}
               <a href="/clients?tab=requests&r={i.request.relationshipId}" class="h-8 rounded-[9px] bg-primary px-3 text-xs font-semibold leading-8 text-primary-foreground">{i.request.stage === "offered" ? "Offer again" : "Answer"}</a>
             {/if}

@@ -2,6 +2,7 @@
      week, this week's days and what's done, swaps. Change program… opens Assign for them only;
      Stop the program asks first. -->
 <script lang="ts">
+  import { goto } from "$app/navigation";
   import * as AlertDialog from "$lib/components/ui/alert-dialog";
   import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
   import { Button } from "$lib/components/ui/button";
@@ -73,6 +74,8 @@
   }
 
   const needed = $derived(p ? pluginsNeeded(p) : []);
+  // Canvas W3: in its last two weeks, or over.
+  const endingSoon = $derived(!!status && (status.state === "finished" || (status.state === "running" && status.endsAtMs != null && status.endsAtMs - Date.now() <= 14 * 86_400_000)));
 
   // Canvas Q8: a lasting swap, kept (their copy says it now) or put back (and they're told).
   const active = $derived(p ? activeLastingSwaps(p, sessions) : []);
@@ -136,6 +139,7 @@
         </p>
       </div>
       <span class="flex items-center gap-1.5">
+        {#if endingSoon}<Button size="sm" href="/clients/{clientId}/next-block">Plan next block</Button>{/if}
         <Button variant="outline" size="sm" href="/clients/{clientId}/programs/{p.id}?u={username}">Edit their copy</Button>
         <DropdownMenu.Root>
           <DropdownMenu.Trigger>
@@ -143,6 +147,7 @@
           </DropdownMenu.Trigger>
           <DropdownMenu.Content align="end" class="w-52">
             <DropdownMenu.Item onSelect={() => (assigning = true)}>Change program…</DropdownMenu.Item>
+            <DropdownMenu.Item onSelect={() => void goto(`/clients/${clientId}/next-block`)}>Plan the next block…</DropdownMenu.Item>
             <DropdownMenu.Item onSelect={() => (pickingRule = true)}>Change {first}'s rule…</DropdownMenu.Item>
             <DropdownMenu.Separator />
             <DropdownMenu.Item class="text-destructive" onSelect={() => (stopping = true)}>Stop the program…</DropdownMenu.Item>
