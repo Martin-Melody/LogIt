@@ -215,6 +215,7 @@
     if (n.type === "FollowAccepted") return "accepted your follow request";
     if (n.type === "CoachInvite") return "wants to coach you";
     if (n.type === "CoachProgram") return "sent you a program";
+    if (n.type === "CoachMealPlan") return "sent you a meal plan";
     if (n.type === "CoachPaymentFailed") return "couldn't take your coaching payment. Check your card in My coach";
     if (n.type === "Cheer") return "cheered you on";
     if (n.type === "StoryCheer") return "cheered your story";
@@ -234,6 +235,7 @@
   function socialTarget(n: ApiNotification) {
     if (n.type === "CoachInvite") return "/clients";
     if (n.type === "CoachProgram") return "/splits";
+    if (n.type === "CoachMealPlan") return "/nutrition/plan";
     if (n.type === "CoachPaymentFailed") return "/clients";
     if (n.type === "Follow") return `/social/${n.actor.username}`;
     if (n.type.startsWith("GroupEvent") && n.event) return `/events/${n.event.id}`;

@@ -388,6 +388,7 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
         NotificationType.FollowAccepted => "accepted your follow request",
         NotificationType.CoachInvite => "wants to coach you",
         NotificationType.CoachProgram => "sent you a program",
+        NotificationType.CoachMealPlan => "sent you a meal plan",
         NotificationType.CoachPaymentFailed => "couldn't take your coaching payment",
         NotificationType.Cheer => "is cheering you on",
         NotificationType.StoryCheer => "cheered your story",

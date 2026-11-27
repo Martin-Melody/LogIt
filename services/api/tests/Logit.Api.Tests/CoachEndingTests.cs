@@ -154,8 +154,11 @@ public class CoachEndingTests
     {
         await using var w = await CoachedAsync("swap", paying: false);
         var card = "{\"from\":\"Hack squat\",\"to\":\"Leg press\"}";
-        // Each side sends only its own kind.
+        // Each side sends only its own kinds.
         Assert.Equal(HttpStatusCode.BadRequest, (await w.Client.PostAsJsonAsync("/coach/messages", new { messageId = "s0", relationshipId = w.RelId, body = "x", createdAtMs = 1L, kind = "program-swap", cardJson = card })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await w.Client.PostAsJsonAsync("/coach/messages", new { messageId = "s0b", relationshipId = w.RelId, body = "x", createdAtMs = 1L, kind = "goal-suggestion", cardJson = card })).StatusCode);
+        (await w.Coach.PostAsJsonAsync("/coach/messages", new { messageId = "g1", relationshipId = w.RelId, body = "A slower pace?", createdAtMs = 2L, kind = "goal-suggestion", cardJson = "{\"id\":\"g1\",\"goalType\":\"lose\",\"rateKgPerWeek\":0.3}" })).EnsureSuccessStatusCode();
+        (await w.Client.PostAsJsonAsync("/coach/messages", new { messageId = "g2", relationshipId = w.RelId, body = "I'll keep mine.", createdAtMs = 3L, kind = "goal-answer", cardJson = "{\"id\":\"g1\",\"used\":false}" })).EnsureSuccessStatusCode();
         Assert.Equal(HttpStatusCode.BadRequest, (await w.Client.PostAsJsonAsync("/coach/messages", new { messageId = "s1", relationshipId = w.RelId, body = "x", createdAtMs = 1L, kind = "lasting-swap", cardJson = "not json" })).StatusCode);
         (await w.Client.PostAsJsonAsync("/coach/messages", new { messageId = "s2", relationshipId = w.RelId, body = "I've swapped Hack squat for Leg press for the rest of the program.", createdAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), kind = "lasting-swap", cardJson = card })).EnsureSuccessStatusCode();
         Assert.True((await Json(await w.Coach.GetAsync("/coach/roster"))).GetProperty("roster")[0].GetProperty("lastingSwap").GetBoolean());
@@ -202,6 +205,20 @@ public class CoachEndingTests
         Assert.Equal("any", saved.GetProperty("swapRule").GetString());
         var mine = (await Json(await w.Client.GetAsync("/coach/coaches")))[0];
         Assert.Equal("close", mine.GetProperty("foodSwapRule").GetString());
+    }
+
+    [Fact]
+    public async Task Giving_a_meal_plan_tells_the_client_once()
+    {
+        await using var w = await CoachedAsync("mealplan", paying: false);
+        var username = w.ClientName;
+        var plan = new { planId = "cnplan_1", dataJson = "{\"id\":\"cnplan_1\",\"name\":\"Fat loss\",\"kcalTarget\":2100,\"archived\":false,\"createdAtMs\":1,\"updatedAtMs\":1}", updatedAtMs = 1L, recipientUsername = username };
+        (await w.Coach.PostAsJsonAsync("/coach/nutrition-plans", plan)).EnsureSuccessStatusCode();
+        // Saving changes to it later doesn't tell them again.
+        (await w.Coach.PostAsJsonAsync("/coach/nutrition-plans", plan with { updatedAtMs = 2L })).EnsureSuccessStatusCode();
+        var notes = (await Json(await w.Client.GetAsync("/notifications"))).GetProperty("notifications").EnumerateArray()
+            .Where(n => n.GetProperty("type").GetString() == "CoachMealPlan").ToList();
+        Assert.Single(notes);
     }
 
     [Fact]

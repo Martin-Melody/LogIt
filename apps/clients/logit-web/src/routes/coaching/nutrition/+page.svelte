@@ -11,6 +11,9 @@
   import MealPlansTab from "$lib/features/coaching/nutrition/MealPlansTab.svelte";
   import RecipesTab from "$lib/features/coaching/nutrition/RecipesTab.svelte";
   import NutritionRulesTab from "$lib/features/coaching/nutrition/NutritionRulesTab.svelte";
+  import GiveMealPlanDialog from "$lib/features/coaching/nutrition/GiveMealPlanDialog.svelte";
+  let giving = $state(false);
+  let givePlan = $state<CoachNutritionPlan | null>(null);
   import { loadCoachNutrition } from "$lib/features/coaching/nutrition/nutritionData";
   import { getOwnNutritionDeps, getWebCoachNutritionPlanRepo } from "$lib/deps";
   import { coachApi } from "@logit/core/api/coachApi";
@@ -116,7 +119,7 @@
   {:else if tab === "rules"}
     <NutritionRulesTab {plans} />
   {:else}
-    <MealPlansTab {rows} onduplicate={(p) => void duplicate(p)} onarchive={(p, a) => void archive(p, a)} />
+    <MealPlansTab {rows} onduplicate={(p) => void duplicate(p)} onarchive={(p, a) => void archive(p, a)} ongive={(p) => { givePlan = p; giving = true; }} />
   {/if}
 </div>
 
@@ -132,3 +135,5 @@
     </AlertDialog.Footer>
   </AlertDialog.Content>
 </AlertDialog.Root>
+
+<GiveMealPlanDialog bind:open={giving} plan={givePlan} ongiven={async () => ({ rows, recipes } = await loadCoachNutrition())} />

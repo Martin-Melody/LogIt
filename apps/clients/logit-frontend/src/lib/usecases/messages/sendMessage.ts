@@ -7,7 +7,7 @@ import { createOutgoingMessage, type CoachMessage, type MessagePhoto, type Messa
 export async function sendMessage(
   relationshipId: string, body: string, photo?: MessagePhoto, voice?: MessageVoice,
   /** A program swap (canvas SW1): the message is also a card the coach can act on. */
-  card?: { kind: "lasting-swap"; json: string },
+  card?: { kind: "lasting-swap" | "goal-answer"; json: string },
 ): Promise<CoachMessage | null> {
   const msg = { ...createOutgoingMessage(relationshipId, body, undefined, photo, voice), ...(card ? { kind: card.kind, cardJson: card.json } : {}) };
   if (!msg.body && !msg.photo && !msg.voice) return null;

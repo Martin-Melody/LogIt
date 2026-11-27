@@ -684,6 +684,9 @@ public static class CoachEndpoints
                 DeletedAtMs = req.DeletedAtMs,
             };
             db.CoachNutritionPlans.Add(stored);
+            // Canvas MP5: one notification when a plan is given ("Sam sent you a meal plan").
+            if (recipientUserId.HasValue && !req.DeletedAtMs.HasValue)
+                db.Notifications.Add(new Notification { UserId = recipientUserId.Value, ActorId = coachId, Type = NotificationType.CoachMealPlan });
             await db.SaveChangesAsync();
             return Results.Ok(new { id = stored.Id, planId = stored.PlanId, updatedAtMs = stored.UpdatedAtMs });
         }
@@ -1038,8 +1041,10 @@ public static class CoachEndpoints
         string? kind = null, card = null;
         if (req.Kind is { } k)
         {
-            var allowed = relationship.ClientId == callerId ? "lasting-swap" : "program-swap";
-            if (k != allowed) return Results.BadRequest(new { error = "That kind of message can't be sent." });
+            // Clients: a lasting swap (SW1), an answer to a goal suggestion (GL1). Coaches: a
+            // program swap (W6/Q8), a goal suggestion (GL1).
+            string[] allowed = relationship.ClientId == callerId ? ["lasting-swap", "goal-answer"] : ["program-swap", "goal-suggestion"];
+            if (!allowed.Contains(k)) return Results.BadRequest(new { error = "That kind of message can't be sent." });
             if (req.CardJson is { Length: > 2000 }) return Results.BadRequest(new { error = "Card too large." });
             try { if (req.CardJson is not null) using (System.Text.Json.JsonDocument.Parse(req.CardJson)) { } }
             catch (System.Text.Json.JsonException) { return Results.BadRequest(new { error = "Card isn't JSON." }); }

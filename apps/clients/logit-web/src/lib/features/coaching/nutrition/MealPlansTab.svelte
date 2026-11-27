@@ -8,8 +8,9 @@
   import type { MyCoachNutritionPlan } from "@logit/core/data/coachNutritionPlanRepo";
   import { mealPlanSummary, type CoachNutritionPlan } from "@logit/core/domain/CoachNutritionPlan";
 
-  let { rows, onduplicate, onarchive }: {
+  let { rows, onduplicate, onarchive, ongive }: {
     rows: MyCoachNutritionPlan[];
+    ongive: (p: CoachNutritionPlan) => void;
     onduplicate: (p: CoachNutritionPlan) => void;
     onarchive: (p: CoachNutritionPlan, archived: boolean) => void;
   } = $props();
@@ -22,6 +23,7 @@
 
   const actions = (p: CoachNutritionPlan): RowAction[] => [
     { id: "open", label: `Open ${p.name}`, href: `/coaching/nutrition/plans/${p.id}` },
+    { id: "give", label: "Give to a client…", run: () => ongive(p), disabled: p.archived ? "Archived" : undefined },
     { id: "dup", label: "Duplicate", run: () => onduplicate(p) },
     { id: "archive", label: p.archived ? "Back in your plans" : "Archive", run: () => onarchive(p, !p.archived), separatorBefore: true },
   ];

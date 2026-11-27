@@ -62,3 +62,37 @@ their weight and food trend after about two weeks), with your trend window for n
 nutrition plugins you've added. Food swaps: only your swaps, or your swaps then foods close to the
 plan (the same kind of food, within 15% of the calories and protein). Logging anything else is
 always allowed; it shows as off plan.
+
+## Giving a meal plan
+
+**Give to a client…** (on a meal plan, its ⋯ in the list, or a client's Nutrition tab) gives each
+client their own copy; you can change theirs without touching yours. For each client it shows:
+
+- what the plan works out to for them: each day type's calories (Adaptive targets from their
+  weight and diary, when they have a goal) and protein, and which days are training days;
+- a check against their start-up answers: food they said they don't eat that's in the plan, and
+  whether they'll only see its swap;
+- a warning when a day comes out below their resting burn (worked out from their own goal's
+  height, age and weight). You can still give it.
+
+If they already have a plan, choose when the new one starts: from tomorrow, from today, or from the
+day the old one started, when it was the wrong plan. Then their past days are measured against the
+new targets instead, in their charts, your Nutrition tab and Adaptive targets; the food they logged
+and their weight entries never change. You can add a message. They get one notification.
+
+When you change a plan clients have copies of, **Update N clients…** brings their copies up to
+your version from their next day. A copy you changed for one client is left as it is unless you
+tick it.
+
+## A client's Nutrition tab
+
+Their plan (their copy, since when, what it works out to), with **Edit their copy** (the same
+builder, for them only) and **Change plan**. If they share their food diary: the last 7 days, each
+against the target that applied that day (training or rest, and the plan they had then), how many
+of the plan's meals they logged, and a comment on any day, which goes to your messages and shows on
+that day in their app. Then their weight trend against their goal pace.
+
+Goals are theirs; targets and programs are yours. **Suggest a goal change…** sends them your
+suggestion (a pace, a target weight, why); they use it or keep theirs, and you're told either way.
+Adaptive targets aim at their goal pace, so if the pace looks wrong, suggest a change rather than
+fight it with targets.

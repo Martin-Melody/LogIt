@@ -729,6 +729,10 @@ export async function pullAndMergeMessages(): Promise<boolean> {
 }
 
 /** Send one message: optimistic local insert already done by the caller; this pushes it. */
+/** Messages that are also a card (a swap, a goal answer), kept when sent later. */
+type SendableKind = NonNullable<import("@logit/core/api/messagesApi").SendMessageInput["kind"]>;
+const SENDABLE_KINDS: ReadonlySet<string> = new Set<SendableKind>(["lasting-swap", "program-swap", "goal-suggestion", "goal-answer"]);
+
 export function pushMessage(message: CoachMessage): void {
   if (!apiClient.isAuthenticated()) return;
   const dto = {
@@ -740,7 +744,7 @@ export function pushMessage(message: CoachMessage): void {
     photoId: message.photo?.id,
     voiceId: message.voice?.id,
     voicePeaks: message.voice?.peaks,
-    ...(message.kind === "lasting-swap" || message.kind === "program-swap" ? { kind: message.kind as "lasting-swap" | "program-swap", cardJson: message.cardJson ?? undefined } : {}),
+    ...(SENDABLE_KINDS.has(message.kind ?? "") ? { kind: message.kind as SendableKind, cardJson: message.cardJson ?? undefined } : {}),
   };
   // On failure the message just stays unsynced locally: that flag is its queue, and the next
   // sync re-sends it (pushPendingMessages). It used to also go into the outbox, which sent it
@@ -767,7 +771,7 @@ export async function pushPendingMessages(): Promise<void> {
           photoId: m.photo?.id,
           voiceId: m.voice?.id,
           voicePeaks: m.voice?.peaks,
-          ...(m.kind === "lasting-swap" || m.kind === "program-swap" ? { kind: m.kind as "lasting-swap" | "program-swap", cardJson: m.cardJson ?? undefined } : {}),
+          ...(SENDABLE_KINDS.has(m.kind ?? "") ? { kind: m.kind as SendableKind, cardJson: m.cardJson ?? undefined } : {}),
         });
         await repo.markSynced(m.id);
       } catch (e) { syncWarn("pushPendingMessages", e); }

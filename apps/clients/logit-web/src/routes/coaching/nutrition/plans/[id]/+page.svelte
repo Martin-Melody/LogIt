@@ -11,12 +11,28 @@
   import { toast } from "$lib/components/ui/sonner";
   import { getOwnNutritionDeps, getWebCoachNutritionPlanRepo } from "$lib/deps";
   import MealPlanBuilder from "$lib/features/coaching/nutrition/MealPlanBuilder.svelte";
+  import GiveMealPlanDialog from "$lib/features/coaching/nutrition/GiveMealPlanDialog.svelte";
+  import UpdatePlanCopiesDialog, { type PlanCopy } from "$lib/features/coaching/nutrition/UpdatePlanCopiesDialog.svelte";
+  import { copyState } from "@logit/core/domain/givingMealPlan";
+  import { coachApi } from "@logit/core/api/coachApi";
+  let giving = $state(false);
   import { mealPlanSummary, updateCoachNutritionPlan, type CoachNutritionPlan } from "@logit/core/domain/CoachNutritionPlan";
   import { DIET_TAGS, DIET_TAG_LABELS, type DietTag, type Recipe } from "@logit/core/domain/nutrition";
 
   const id = $derived(page.params.id!);
   let plan = $state<CoachNutritionPlan | null>(null);
   let loaded = $state(false);
+  // Canvas Q6: clients' copies of this plan.
+  let copies = $state<PlanCopy[]>([]);
+  let updating = $state(false);
+  async function loadCopies() {
+    const [rows, clients] = await Promise.all([getWebCoachNutritionPlanRepo().listMine().catch(() => []), coachApi.listClients().catch(() => [])]);
+    copies = rows.filter((r) => r.recipientUserId && r.plan.sourcePlanId === id && !r.plan.untilIso && !r.plan.archived).flatMap((r) => {
+      const c = clients.find((x) => x.client.id === r.recipientUserId);
+      return c ? [{ plan: r.plan, username: c.client.username, name: c.client.displayName || c.client.username }] : [];
+    });
+  }
+  const behind = $derived(plan ? copies.filter((c) => copyState(c.plan, plan!).behind).length : 0);
   let status = $state<"saved" | "saving" | "error">("saved");
   let timer: ReturnType<typeof setTimeout> | undefined;
 
@@ -27,6 +43,7 @@
       getOwnNutritionDeps().nutritionRepo.listRecipes().catch(() => []),
     ]);
     plan = rows.find((r) => r.plan.id === id && r.recipientUserId === null)?.plan ?? null;
+    void loadCopies();
     recipes = mine.filter((r) => !r.deletedAtMs);
     loaded = true;
   });
@@ -72,6 +89,8 @@
         <input value={plan.name} onchange={(e) => { const v = e.currentTarget.value.trim(); if (v) edit({ name: v }); }} class="h-9 rounded-[9px] border border-input bg-background px-2.5 text-[15px] font-semibold text-foreground" />
       </label>
       <span class="pb-2 text-xs text-muted-foreground" aria-live="polite">{status === "saving" ? "Saving…" : status === "error" ? "Couldn't save" : "Saved"}</span>
+      {#if behind && status === "saved"}<Button variant="outline" onclick={() => (updating = true)}>Update {behind} {behind === 1 ? "client" : "clients"}…</Button>{/if}
+      <Button onclick={() => (giving = true)}>Give to a client…</Button>
     </div>
     <p class="text-[13px] text-muted-foreground">{mealPlanSummary(plan)}</p>
 
@@ -94,3 +113,8 @@
     </section>
   {/if}
 </div>
+
+{#if plan}
+  <GiveMealPlanDialog bind:open={giving} plan={plan} ongiven={() => void loadCopies()} />
+  <UpdatePlanCopiesDialog bind:open={updating} library={plan} {copies} onupdated={() => void loadCopies()} />
+{/if}

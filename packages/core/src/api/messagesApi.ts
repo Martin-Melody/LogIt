@@ -17,7 +17,7 @@ export interface RemoteMessage {
   /** The other person's reaction (only the person it was sent to reacts). */
   reaction?: string | null;
   /** A step in a request (an offer, the waiting list…); `body` says it in words too. */
-  kind?: RequestEvent | "lasting-swap" | "program-swap" | null;
+  kind?: RequestEvent | "lasting-swap" | "program-swap" | "goal-suggestion" | "goal-answer" | null;
   /** What that step's card shows, as JSON (an OfferCard for "offer" and "offer-changed"). */
   cardJson?: string | null;
 }
@@ -33,7 +33,7 @@ export interface SendMessageInput {
   voiceId?: string;
   voicePeaks?: string;
   /** Program swaps (canvas SW1, Q8): "lasting-swap" from a client, "program-swap" from a coach. */
-  kind?: "lasting-swap" | "program-swap";
+  kind?: "lasting-swap" | "program-swap" | "goal-suggestion" | "goal-answer";
   cardJson?: string;
 }
 

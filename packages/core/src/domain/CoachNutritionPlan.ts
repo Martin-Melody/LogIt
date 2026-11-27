@@ -110,6 +110,8 @@ export type CoachNutritionPlan = {
   tags?: DietTag[];
   /** A client's plan: the meal plan in your library it was given from (canvas MP1 "3 clients"). */
   sourcePlanId?: string;
+  /** A client's plan: when its library plan last changed as of giving or updating it (canvas Q6). */
+  libraryUpdatedAtMs?: number;
   /** A client's plan: the first day it applies (YYYY-MM-DD, their local date). Unset on older
    * plans: from when it was made. */
   fromIso?: string;

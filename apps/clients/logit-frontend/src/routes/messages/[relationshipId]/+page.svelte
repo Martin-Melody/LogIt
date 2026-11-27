@@ -1,4 +1,6 @@
 <script lang="ts">
+  import GoalSuggestionCard from "$lib/features/coaching/GoalSuggestionCard.svelte";
+  import { parseGoalSuggestion } from "@logit/core/domain/goalSuggestion";
   import { Spinner } from "$lib/components/ui/spinner/index.js";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
@@ -97,6 +99,15 @@
       toast.error("Reactions need a connection. Try again when you're online.");
     }
   }
+  /** My answer to a goal suggestion in this conversation, if I gave one. */
+  function answerTo(id: string): boolean | null {
+    for (const m of messages) {
+      if (m.kind !== "goal-answer" || !m.mine) continue;
+      try { const a = JSON.parse(m.cardJson ?? "") as { id?: string; used?: boolean }; if (a.id === id) return !!a.used; } catch { /* not ours */ }
+    }
+    return null;
+  }
+
   const reactionsOf = (m: CoachMessage) => (m.reaction ? [{ emoji: m.reaction, count: 1, mine: !m.mine }] : []);
 
   // Runs of messages from one side (shadcn Message): joined corners, one time under the run.
@@ -142,7 +153,11 @@
       {#each runs as run (run.key)}
         {@const last = run.items.at(-1)!}
         {#if run.time}<p class="py-2 text-center text-[12px] text-muted-foreground">{fmt(run.items[0]!.createdAtMs)}</p>{/if}
-        {#if run.event}
+        {#if run.event && last.kind === "goal-suggestion" && !last.mine && parseGoalSuggestion(last.cardJson)}
+          {@const s = parseGoalSuggestion(last.cardJson)!}
+          <!-- Canvas GL1: the coach suggests a change to my goal. -->
+          <GoalSuggestionCard suggestion={s} coachName={name} {relationshipId} answered={answerTo(s.id)} onanswer={() => void refresh()} />
+        {:else if run.event}
           {@const k = last.kind as RequestEvent}
           <p class="px-6 py-1 text-center text-[13px] leading-snug text-muted-foreground">{eventLine(k, readerOf(k, last.mine), name, name) || last.body}</p>
         {:else}

@@ -1,3 +1,4 @@
+import { copyData } from "./copyData";
 import type { MobilityMetric, SetType } from "./workout";
 import type { BlockValue } from "./blockPlugin";
 import type { SharedRecipe } from "./progressionRecipe";
@@ -281,7 +282,7 @@ export function copyProgramForClient(
     sourceProgramId: template.id,
     libraryBase: libraryBaseOf(template),
     archived: false,
-    weeks: structuredClone(template.weeks),
+    weeks: copyData(template.weeks),
     createdAtMs: now,
     updatedAtMs: now,
   };
@@ -307,7 +308,7 @@ export function updateCopyFromTemplate(copy: CoachProgram, template: CoachProgra
     schemaVersion: template.schemaVersion,
     rule: template.rule,
     // The library's ids, so later updates can merge (canvas Q6).
-    weeks: structuredClone(template.weeks),
+    weeks: copyData(template.weeks),
   });
 }
 
