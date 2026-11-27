@@ -99,7 +99,10 @@ the block (up to the next lighter week) are on the cell's menu.
 
 From a program, or from a client's page, Assign gives one or several clients their own copy. It
 starts when they tap Start on their phone, or on a date you choose. Someone already on a program
-can switch now, or start the new one the day theirs ends. A program with a block from a plugin
+can switch now at week 1, or start the new one the day theirs ends. Gave someone the wrong program
+a few weeks ago? **Replace, at week N** starts the right one on the date the wrong one did, as if
+they'd been on it all along. Either way their logged sessions stay in their history as done, and
+their strength estimates and records stay, so the new program plans from their real numbers. A program with a block from a plugin
 says so: without the plugin on their phone, that block shows as a note and the rest of the day
 works.
 

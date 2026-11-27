@@ -42,8 +42,9 @@
   let pick = $state("");
   let startMode = $state<"manual" | "date">("manual");
   let startDate = $state(P.toDateInputValue(P.startOfLocalDayMs() + DAY));
-  /** Per client already on a program: replace it now, or start after it ends. */
-  let when = $state<Record<string, "replace" | "after">>({});
+  /** Per client already on a program: replace it now, replace it at the week they're on (canvas
+   * FX1: "as if they'd been on it all along"), or start after it ends. */
+  let when = $state<Record<string, "replace" | "backdate" | "after">>({});
   let busy = $state(false);
   let loaded = $state(false);
 
@@ -78,6 +79,12 @@
   /** Starting after only works when theirs has an end (it's running or has a start date). */
   const defaultWhen = (cur: { endsAtMs: number | null }): "replace" | "after" => (cur.endsAtMs ? "after" : "replace");
 
+  /** "Starts" only matters for someone not on a program, or replacing it at week 1. */
+  const startsMatters = $derived(people.some((c) => {
+    const cur = onNow.get(c.client.id);
+    return !cur || (when[c.client.id] ?? defaultWhen(cur)) === "replace";
+  }));
+
   const plugins = $derived(giving ? giving.weeks.flatMap((w) => w.days.flatMap((d) => d.blocks.filter((b) => b.type === "plugin").map((b) => ({ name: (b as P.ProgramPluginBlock).name, day: d.name ?? "a day" })))) : []);
   const pluginNames = $derived([...new Set(plugins.map((p) => p.name))]);
 
@@ -102,8 +109,10 @@
         const choice = current ? (when[c.client.id] ?? defaultWhen(current)) : null;
         let start: { mode: "manual" } | { mode: "fixed-date"; startDateMs: number } =
           startMode === "manual" ? { mode: "manual" } : { mode: "fixed-date", startDateMs: P.fromDateInputValue(startDate) ?? P.startOfLocalDayMs() };
-        if (current && choice === "replace") {
+        if (current && (choice === "replace" || choice === "backdate")) {
           await repo.saveProgram(P.archiveCoachProgram(current.program), c.client.username);
+          const was = P.getProgramStartMs(current.program);
+          if (choice === "backdate" && was != null) start = { mode: "fixed-date", startDateMs: was };
         } else if (current && choice === "after" && current.endsAtMs) {
           start = { mode: "fixed-date", startDateMs: P.startOfLocalDayMs(current.endsAtMs) };
         }
@@ -158,6 +167,7 @@
         </div>
 
         {#if pick !== BLANK}
+          {#if startsMatters}
           <div class="flex flex-col gap-1.5">
             <span id="assign-start" class="text-xs font-medium text-muted-foreground">Starts</span>
             <RadioGroup.Root bind:value={startMode} aria-labelledby="assign-start" class="flex flex-col gap-1.5">
@@ -170,6 +180,7 @@
               </label>
             </RadioGroup.Root>
           </div>
+          {/if}
 
           {#each people as c (c.client.id)}
             {@const cur = onNow.get(c.client.id)}
@@ -181,12 +192,22 @@
                   {cur.state === "running" ? `is ${cur.week} ${cur.week === 1 ? "week" : "weeks"} into ${cur.program.name}` : cur.state === "scheduled" ? `starts ${cur.program.name} ${weekdayDate(cur.startsAtMs!)}` : `has ${cur.program.name} waiting to start`}.
                   {#if cur.endsAtMs}Replace it now, or start {giving?.name ?? "this"} when it ends ({weekdayDate(cur.endsAtMs)})?{:else}Replace it now?{/if}
                 </p>
-                <div class="flex gap-1.5" role="radiogroup" aria-label="When {first(c)} starts">
-                  <Button size="sm" variant={choice === "replace" ? "default" : "outline"} role="radio" aria-checked={choice === "replace"} onclick={() => (when = { ...when, [c.client.id]: "replace" })}>Replace now</Button>
+                <div class="flex flex-wrap gap-1.5" role="radiogroup" aria-label="When {first(c)} starts">
+                  <Button size="sm" variant={choice === "replace" ? "default" : "outline"} role="radio" aria-checked={choice === "replace"} onclick={() => (when = { ...when, [c.client.id]: "replace" })}>Replace now, at week 1</Button>
+                  {#if cur.state === "running" && (cur.week ?? 1) > 1}
+                    <!-- Canvas FX1: the wrong program for a few weeks. -->
+                    <Button size="sm" variant={choice === "backdate" ? "default" : "outline"} role="radio" aria-checked={choice === "backdate"} onclick={() => (when = { ...when, [c.client.id]: "backdate" })}>Replace, at week {cur.week}</Button>
+                  {/if}
                   {#if cur.endsAtMs}
                     <Button size="sm" variant={choice === "after" ? "default" : "outline"} role="radio" aria-checked={choice === "after"} onclick={() => (when = { ...when, [c.client.id]: "after" })}>After it ends</Button>
                   {/if}
                 </div>
+                {#if choice === "backdate"}
+                  <p class="text-xs text-muted-foreground">As if {first(c)} had been on {giving?.name ?? "it"} all along: it starts on the date {cur.program.name} did.</p>
+                {/if}
+                {#if cur.state === "running" && choice !== "after"}
+                  <p class="text-xs text-muted-foreground">What never changes: their logged sessions stay in their history as done, and their strength estimates and records stay, so the new program starts from their real numbers.</p>
+                {/if}
               </div>
             {/if}
           {/each}
