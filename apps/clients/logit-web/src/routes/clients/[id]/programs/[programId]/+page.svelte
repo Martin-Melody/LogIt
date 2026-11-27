@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { upgradeProgram } from "@logit/core/domain/CoachProgram";
+  import { forBuilder } from "@logit/core/domain/programBuilder";
+  import ProgramBuilder from "$lib/features/coaching/programs/ProgramBuilder.svelte";
   import PageCrumbs from "$lib/components/PageCrumbs.svelte";
   import { clientName } from "$lib/features/coaching/clientName";
   import { goto } from "$app/navigation";
@@ -65,7 +68,13 @@
     <section class="flex flex-col gap-3.5 rounded-[10px] border border-border bg-card px-[22px] py-5">
       <p class="text-xs text-muted-foreground">@{username}'s copy</p>
       {#key program.id}
-        <ProgramEditor {program} mode="copy" onSave={save} />
+        {@const shaped = forBuilder(upgradeProgram(program))}
+        {#if shaped}
+          <ProgramBuilder program={shaped} mode="copy" {username} onchange={(p) => (program = p)} />
+        {:else}
+          <p class="rounded-[10px] bg-muted px-3.5 py-2.5 text-[13px]">This program's weeks have different exercises, so it's edited week by week.</p>
+          <ProgramEditor {program} mode="copy" onSave={save} />
+        {/if}
       {/key}
     </section>
   {/if}

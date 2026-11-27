@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { forBuilder } from "@logit/core/domain/programBuilder";
+  import ProgramBuilder from "$lib/features/coaching/programs/ProgramBuilder.svelte";
   import { onSampleActivity } from "$lib/features/guide/sandbox.svelte";
   import { inView } from "$lib/features/coaching/coachingData";
   import { guideSignal } from "$lib/features/guide/signal";
@@ -179,6 +181,22 @@
     }
   }
 
+  /** The builder's "Update their copies…": the ticked clients' copies follow the program. */
+  async function pushToCopies(next: CoachProgram, ids: string[]) {
+    const repo = getWebCoachProgramRepo();
+    let updated = 0;
+    for (const id of ids) {
+      const row = rows.find((r) => r.program.id === id);
+      const username = clients.find((c) => c.client.id === row?.recipientUserId)?.client.username;
+      if (!row || !username) continue;
+      const copy = P.updateCopyFromTemplate(row.program, next);
+      await repo.saveProgram(copy, username);
+      rows = rows.map((r) => (r.program.id === id ? { ...r, program: copy } : r));
+      updated++;
+    }
+    toast.success(`Updated ${updated} client cop${updated === 1 ? "y" : "ies"}`);
+  }
+
   async function save(next: CoachProgram, updateCopies: string[]) {
     const repo = getWebCoachProgramRepo();
     await repo.saveProgram(next);
@@ -218,7 +236,14 @@
     {@const copies = copiesOf(selected.id).map((r) => ({ id: r.program.id, label: `${nameOf(r.recipientUserId)}'s copy` }))}
     <section class="flex min-w-0 flex-col gap-3.5 rounded-[10px] border border-border bg-card px-[22px] py-5">
       {#key selected.id}
-        <ProgramEditor program={selected} mode="library" {copies} {swapRule} onSave={save} />
+        {@const shaped = forBuilder(selected)}
+        {#if shaped}
+          <ProgramBuilder program={shaped} mode="library" {copies} {swapRule} updateCopies={pushToCopies}
+            onchange={(p) => (rows = rows.map((r) => (r.program.id === p.id ? { ...r, program: p } : r)))} />
+        {:else}
+          <p class="rounded-[10px] bg-muted px-3.5 py-2.5 text-[13px]">This program's weeks have different exercises, so it's edited week by week.</p>
+          <ProgramEditor program={selected} mode="library" {copies} {swapRule} onSave={save} />
+        {/if}
       {/key}
     </section>
   {:else}

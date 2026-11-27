@@ -300,7 +300,7 @@ export const STUDIO_CHAPTERS: Chapter[] = [
     id: "studio.program",
     walkthrough: "studio",
     title: "Build a program",
-    blurb: "Weeks, days, sets, loads and supersets",
+    blurb: "One week of days, a rule, sets and loads",
     minutes: 4,
     feature: "coach-programs",
     steps: [
@@ -311,14 +311,14 @@ export const STUDIO_CHAPTERS: Chapter[] = [
       },
       {
         id: "editor", on: "web", route: "/coaching/programs", target: "program-editor", kind: "look",
-        title: "Weeks, days and sets",
-        body: "Name it, then open a day and add exercises. Each set has reps (a number or a range like 8-10), load (kg, or a percent like 75% of the client's own best), RPE, rest and tempo. Copy a week to the next one to build a block quickly.",
+        title: "One week of days",
+        body: "You build one week and it applies to every week. Pick a day, add exercises, supersets, cardio or mobility, and click one to set its sets, reps (8 or 8-10), load (kg, or 75% of their best), rest and tempo, its swaps and a note. Choose the rule that moves the numbers each week, the length, and any lighter weeks.",
       },
       {
         id: "save", on: "web", route: "/coaching/programs", target: "program-save", kind: "do", signal: "program.saved",
-        title: "Save it to your library",
-        body: "Choose Save. Nothing reaches a client until you give it to them, and changes you make later can be sent to clients' copies when you save.",
-        arrives: "Change something in the program first, like its name: then Save appears.",
+        title: "It saves as you go",
+        body: "There's no Save button: every change is saved, and Ctrl Z undoes. Nothing reaches a client until you assign it; later, Update their copies sends your changes to the clients you tick.",
+        arrives: "Change something in the program, like its name.",
       },
     ],
   },
