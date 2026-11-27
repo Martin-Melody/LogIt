@@ -239,6 +239,7 @@
         {@const shaped = forBuilder(selected)}
         {#if shaped}
           <ProgramBuilder program={shaped} mode="library" {copies} {swapRule} updateCopies={pushToCopies}
+            preview={copiesOf(selected.id).filter((r) => r.recipientUserId).map((r) => ({ clientId: r.recipientUserId!, label: nameOf(r.recipientUserId) }))}
             onchange={(p) => (rows = rows.map((r) => (r.program.id === p.id ? { ...r, program: p } : r)))} />
         {:else}
           <p class="rounded-[10px] bg-muted px-3.5 py-2.5 text-[13px]">This program's weeks have different exercises, so it's edited week by week.</p>

@@ -17,6 +17,7 @@
   import Undo2Icon from "@lucide/svelte/icons/undo-2";
   import Redo2Icon from "@lucide/svelte/icons/redo-2";
   import ActionMenu from "$lib/features/commands/ActionMenu.svelte";
+  import ProgramWeeks from "./ProgramWeeks.svelte";
   import type { RowAction } from "$lib/features/commands/commands.svelte";
   import NamePicker from "$lib/features/plan/NamePicker.svelte";
   import { loadExerciseIndex, type ExerciseIndex } from "$lib/features/plan/exerciseIndex";
@@ -38,6 +39,8 @@
     swapRule = "any",
     updateCopies,
     onchange,
+    clientId = null,
+    preview = [],
   }: {
     /** Already shaped for the builder (forBuilder). */
     program: CoachProgram;
@@ -50,7 +53,14 @@
     swapRule?: SwapRule;
     updateCopies?: (next: CoachProgram, ids: string[]) => Promise<void>;
     onchange?: (next: CoachProgram) => void;
+    /** Copy mode: whose copy, for "Every week" (their lifts and what they've done). */
+    clientId?: string | null;
+    /** Library: clients with a copy, to preview "Every week" with their lifts. */
+    preview?: { clientId: string; label: string }[];
   } = $props();
+
+  /** Canvas PG3: the days, or every week. */
+  let view = $state<"days" | "weeks">("days");
 
   const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0];
@@ -455,6 +465,7 @@
       <span class="mr-1 text-xs {status === 'error' ? 'text-destructive' : 'text-muted-foreground'}" role="status">{statusText}</span>
       <Button variant="ghost" size="icon" aria-label="Undo" title="Undo (Ctrl Z)" disabled={!past.length} onclick={undo}><Undo2Icon class="size-4" /></Button>
       <Button variant="ghost" size="icon" aria-label="Redo" title="Redo (Ctrl Shift Z)" disabled={!future.length} onclick={redo}><Redo2Icon class="size-4" /></Button>
+      <Button variant="outline" size="sm" onclick={() => (view = view === "days" ? "weeks" : "days")}>{view === "days" ? "See every week" : "Back to the days"}</Button>
       {#if mode === "library" && copies.length && updateCopies}
         <Button variant="outline" size="sm" onclick={() => { tick = copies.map((c) => c.id); copiesOpen = true; }}>Update their copies…</Button>
       {/if}
@@ -501,6 +512,9 @@
     {/if}
   </section>
 
+  {#if view === "weeks"}
+    <ProgramWeeks program={prog} {mode} {clientId} {preview} edit={(fn) => edit((p) => fn(p))} />
+  {:else}
   <div class="flex flex-wrap items-start gap-4">
     <!-- Days -->
     <nav aria-label="Days" class="flex w-full flex-col gap-1 rounded-[10px] border border-border bg-card p-1.5 sm:w-56">
@@ -690,6 +704,7 @@
       </aside>
     {/if}
   </div>
+  {/if}
   <p class="text-xs text-muted-foreground">You're building one week; it applies to all {prog.weeks.length} {prog.weeks.length === 1 ? "week" : "weeks"}. Changes save as you go. Ctrl Z undoes.</p>
 </div>
 

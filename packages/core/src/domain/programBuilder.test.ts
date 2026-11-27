@@ -107,3 +107,20 @@ describe("program builder", () => {
     });
   });
 });
+
+describe("two devices: typed-over weeks", () => {
+  it("numbers typed into week 3 on another device come across", async () => {
+    const { pinWeek, parseCell } = await import("./programPlan");
+    const b = forBuilder(oldStyle())!;
+    const benchId = templateOf(b).days[0]!.blocks[0]!.id;
+    const theirs = pinWeek(b, 3, benchId, parseCell("65 × 5")!);
+    const r = mergePrograms(b, b, theirs);
+    expect(r.conflicts).toEqual([]);
+    expect(bench(r.program, 3).sets[0]).toMatchObject({ weight: 65, reps: 5, pinned: true });
+    // Both typed different numbers into the same week: a choice.
+    const mine = pinWeek(b, 3, benchId, parseCell("70 × 3")!);
+    const both = mergePrograms(b, mine, theirs);
+    expect(both.conflicts.map((c) => c.label)).toEqual(["Bench Press, week 3"]);
+    expect(bench(takeTheirs(both.program, theirs, both.conflicts[0]!.key), 3).sets[0]!.weight).toBe(65);
+  });
+});

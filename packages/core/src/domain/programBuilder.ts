@@ -216,7 +216,47 @@ export function mergePrograms(base: CoachProgram, mine: CoachProgram, theirs: Co
     days.push(day);
   }
   out = applyTemplate(out, { ...tM, days });
+  out = mergePins(base, mine, theirs, out, taken, conflicts);
   return { program: out, taken, conflicts };
+}
+
+/** A later week's typed-over numbers (canvas PG3): theirs when only they changed them. */
+function mergePins(base: CoachProgram, mine: CoachProgram, theirs: CoachProgram, out: CoachProgram, taken: string[], conflicts: MergeConflict[]): CoachProgram {
+  const setAt = (p: CoachProgram, week: number, blockId: string, setId: string) => {
+    const w = p.weeks.find((x) => x.weekNumber === week);
+    for (const d of w?.days ?? []) for (const b of d.blocks) if (b.id === blockId && b.type === "strength") return b.sets.find((s) => s.id === setId);
+    return undefined;
+  };
+  const pinText = (s: ProgramSet | undefined) => (s?.pinned ? j(Object.fromEntries(NUMBERS.map((k) => [k, s[k]]))) : "rule");
+  let next = out;
+  const seen = new Set<string>();
+  for (const w of next.weeks) {
+    if (w.weekNumber === templateOf(next).weekNumber) continue;
+    for (const d of w.days) for (const b of d.blocks) {
+      if (b.type !== "strength") continue;
+      for (const s of b.sets) {
+        const bs = pinText(setAt(base, w.weekNumber, b.id, s.id)), ms = pinText(setAt(mine, w.weekNumber, b.id, s.id));
+        const ts = setAt(theirs, w.weekNumber, b.id, s.id);
+        const tt = pinText(ts);
+        if (tt === bs || tt === ms) continue;
+        const key = `pin:${w.weekNumber}:${b.id}`;
+        if (ms !== bs) {
+          if (!seen.has(key)) conflicts.push({ key, label: `${b.exerciseName}, week ${w.weekNumber}`, mine: ms === "rule" ? "the rule's numbers" : "your numbers", theirs: tt === "rule" ? "the rule's numbers" : "the other numbers" });
+          seen.add(key);
+          continue;
+        }
+        next = {
+          ...next,
+          weeks: next.weeks.map((x) => (x.weekNumber !== w.weekNumber ? x : {
+            ...x, days: x.days.map((dd) => ({ ...dd, blocks: dd.blocks.map((bb) => (bb.id !== b.id || bb.type !== "strength" ? bb : { ...bb, sets: bb.sets.map((ss) => (ss.id === s.id && ts ? { ...ts } : ss)) })) })),
+          })),
+        };
+        if (!seen.has(key)) taken.push(`${b.exerciseName}, week ${w.weekNumber}`);
+        seen.add(key);
+      }
+    }
+  }
+  return next;
 }
 
 function mergeBlocks(base: ProgramBlock[], mine: ProgramBlock[], theirs: ProgramBlock[], dayName: string, taken: string[], conflicts: MergeConflict[]): ProgramBlock[] {
@@ -249,6 +289,13 @@ function mergeBlocks(base: ProgramBlock[], mine: ProgramBlock[], theirs: Program
 /** The coach picked "Use the phone's" for a conflict: take theirs for that one thing. */
 export function takeTheirs(program: CoachProgram, theirs: CoachProgram, key: string): CoachProgram {
   const [kind, id, field] = key.split(":");
+  if (kind === "pin") {
+    // key "pin:<week>:<blockId>": that week's sets of that exercise, as they have them.
+    const week = Number(id);
+    const from = theirs.weeks.find((w) => w.weekNumber === week);
+    const tb = from?.days.flatMap((d) => d.blocks).find((b) => b.id === field);
+    return touchCoachProgram({ ...program, weeks: program.weeks.map((w) => (w.weekNumber !== week || !tb ? w : { ...w, days: w.days.map((d) => ({ ...d, blocks: d.blocks.map((b) => (b.id === field ? { ...tb, orderIndex: b.orderIndex } : b)) })) })) });
+  }
   if (kind === "program") return touchCoachProgram({ ...program, [id!]: theirs[id as keyof CoachProgram] });
   const tT = templateOf(theirs);
   if (kind === "day") {
