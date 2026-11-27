@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { blockLine } from "@logit/core/domain/CoachProgram";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
   import { goto } from "$app/navigation";
@@ -119,7 +120,7 @@
                     <span class="truncate">{block.exerciseName}{block.sets.length ? ` · ${setSummary(block)}` : ""}</span>
                   {:else}
                     <Activity class="h-3 w-3 shrink-0" />
-                    <span class="truncate">{block.activityName}</span>
+                    <span class="truncate">{blockLine(block)}</span>
                   {/if}
                 </p>
               {/each}

@@ -7,6 +7,7 @@ describe("tapping a push", () => {
     expect(pushTarget({ type: "Message", relationshipId: "r1" })).toBe("/messages/r1");
     expect(pushTarget({ type: "DirectMessage", threadId: "t1" })).toBe("/messages/chat?t=t1");
     expect(pushTarget({ type: "CoachProgram" })).toBe("/splits");
+    expect(pushTarget({ type: "CoachMealPlan" })).toBe("/nutrition/plan");
     expect(pushTarget({ type: "Like", count: "1", postId: "p1" })).toBe("/social/post/p1");
     // A gathered push opens the Inbox, not one of its posts.
     expect(pushTarget({ type: "Like", count: "4" })).toBe("/inbox");

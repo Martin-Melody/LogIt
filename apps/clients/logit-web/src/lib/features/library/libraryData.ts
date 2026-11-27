@@ -69,7 +69,9 @@ export function programsUsing(entry: LibraryEntry, programs: CoachProgram[]): Co
         d.blocks.some((b) =>
           entry.kind === "strength"
             ? b.type === "strength" && (b.exerciseId === entry.item.id || b.exerciseName.trim().toLowerCase() === name)
-            : entry.kind === "cardio" && b.type === "cardio" && b.activityName.trim().toLowerCase() === name,
+            : entry.kind === "cardio"
+              ? b.type === "cardio" && b.activityName.trim().toLowerCase() === name
+              : b.type === "mobility" && b.drillName.trim().toLowerCase() === name,
         ),
       ),
     ),

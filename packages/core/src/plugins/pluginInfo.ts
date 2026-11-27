@@ -15,6 +15,12 @@ export const PLUGIN_FAMILIES = [
   "nutrition-analytics",
   "exercise-pack",
   "mobility-pack",
+  "program-pack",
+  "workout-block",
+  "meal-plan-pack",
+  "recipe-pack",
+  "card-pack",
+  "question-pack",
 ] as const;
 export type BuildablePluginFamily = (typeof PLUGIN_FAMILIES)[number];
 
@@ -25,6 +31,7 @@ export const CODE_FAMILIES: ReadonlySet<string> = new Set([
   "analytics",
   "nutrition-algorithm",
   "nutrition-analytics",
+  "card-pack",
 ]);
 
 export function isCodeFamily(family: string): boolean {
@@ -40,6 +47,12 @@ export const FAMILY_LABELS: Record<string, string> = {
   "nutrition-analytics": "Nutrition analytics",
   "exercise-pack": "Exercise pack",
   "mobility-pack": "Mobility pack",
+  "program-pack": "Program pack",
+  "workout-block": "Workout block",
+  "meal-plan-pack": "Meal plan pack",
+  "recipe-pack": "Recipe pack",
+  "card-pack": "Card pack",
+  "question-pack": "Question pack",
   "muscle-group-insight": "Muscle insight",
 };
 
@@ -55,6 +68,7 @@ export const FAMILY_ENTRY: Record<string, { entry: string; method: string }> = {
   analytics: { entry: "analytics", method: "compute" },
   "nutrition-algorithm": { entry: "algorithm", method: "computeTargets" },
   "nutrition-analytics": { entry: "analytics", method: "compute" },
+  "card-pack": { entry: "cards", method: "compute" },
 };
 
 export type GetsLine = { label: string; detail: string };
@@ -70,6 +84,7 @@ export const WIDGET_NEEDS: { need: WidgetDataNeed; label: string; detail: string
   { need: "bodyweight", label: "Body weight", detail: "Your current weight, trend and goal" },
   { need: "habits", label: "Habits", detail: "Your habits, whether they're done today, and streaks" },
   { need: "mobility", label: "Mobility", detail: "Drills you've logged, with best holds and reps" },
+  { need: "nutritionDays", label: "Food, day by day", detail: "Calories and protein for each of the last 28 days, against your targets" },
 ];
 
 const NEED_INDEX = new Map(WIDGET_NEEDS.map((n) => [n.need as string, n]));
@@ -118,6 +133,8 @@ export function pluginGets(family: string, needs: readonly string[] | null | und
       ];
     case "nutrition-analytics":
       return [{ label: "Food diary", detail: "Diary days in the range you pick, your weight log, goal and targets" }];
+    case "card-pack":
+      return [{ label: "Your coaching roster", detail: "Clients' first names, months with you, check-ins waiting, and sessions and program week for those who share workouts. Never payments, messages, food, weight or photos" }];
     default:
       return [];
   }
@@ -140,6 +157,18 @@ export function pluginCan(family: string): string[] {
       return ["Add exercises to your library"];
     case "mobility-pack":
       return ["Add mobility drills to your library"];
+    case "program-pack":
+      return ["Offer programs coaches can copy into their own"];
+    case "workout-block":
+      return ["Add a kind of block to your workouts, like timed rounds"];
+    case "meal-plan-pack":
+      return ["Offer meal plans coaches can copy into their own"];
+    case "recipe-pack":
+      return ["Offer recipes coaches can copy into their own"];
+    case "card-pack":
+      return ["Show cards on your coaching Today and Your month"];
+    case "question-pack":
+      return ["Add questions coaches can put in check-in forms"];
     default:
       return [];
   }

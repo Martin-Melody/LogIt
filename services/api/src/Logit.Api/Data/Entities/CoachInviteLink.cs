@@ -17,10 +17,16 @@ public class CoachInviteLink
     /// Null = no limit. Counts requests waiting plus people who joined through it.
     public int? MaxUses { get; set; }
     public DateTime? RevokedAt { get; set; }
-    /// What people pay through this link. Null = free: they ask, the coach accepts. With a
-    /// package they pay first and coaching starts straight away.
+    /// The package the link is about. With PayAndStart they pay for it first and coaching starts
+    /// straight away; without, it's only picked for them when they ask (canvas L1).
     public Guid? PackageId { get; set; }
     public CoachPackage? Package { get; set; }
+    /// "Pay and start straight away": skips asking and the conversation. For a set program sold
+    /// to anyone, not one-to-one coaching.
+    public bool PayAndStart { get; set; }
+
+    /// The package paid for through this link, or null when it's a link to ask.
+    public CoachPackage? PaidPackage => PayAndStart && Package is { Hidden: false } p ? p : null;
 }
 
 public static class CoachInviteLinkLimits

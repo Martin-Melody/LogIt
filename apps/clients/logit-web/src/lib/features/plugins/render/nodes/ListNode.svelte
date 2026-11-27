@@ -1,7 +1,8 @@
 <script lang="ts">
   import ChevronRight from "@lucide/svelte/icons/chevron-right";
   import type { WidgetListNode } from "@logit/core/plugins/widgetView";
-  import { runWidgetAction } from "../widgetAction";
+  import { widgetActions } from "../widgetAction";
+  const runWidgetAction = widgetActions();
   const { node }: { node: WidgetListNode } = $props();
 </script>
 

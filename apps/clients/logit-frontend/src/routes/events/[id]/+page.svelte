@@ -73,6 +73,8 @@
         await load();
       }
     } catch (e) {
+      // The group asks questions first (canvas R6): answer them on its join screen.
+      if (e instanceof ApiError && e.code === "answers") return void goto(`/groups/join?id=${ev.groupId}&event=${ev.id}`);
       toast.error(e instanceof ApiError && e.status < 500 && e.message ? e.message : "Couldn't join. Try again.");
     } finally {
       joining = false;

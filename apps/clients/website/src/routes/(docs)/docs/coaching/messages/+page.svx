@@ -14,6 +14,22 @@ title: Messages
 
 You can also comment on a day in a client's food diary; the message shows that day with it.
 
+Messages is one inbox: your clients' conversations, your direct messages and people asking you to
+coach them, with **All**, **Unread** and **Requests** to narrow it. Beside a client's conversation
+is what you'd otherwise open a second tab for: their program and week, sessions this week, their
+last check-in, their weight trend and when they're paid until, with a way to their training and
+program. A request opens in Clients › Requests, where you answer it.
+
+## Saved replies
+
+<FeatureFacts id="coach-saved-replies" />
+
+Type **/** at the start of any message box to pick one of your saved replies: keep typing to
+narrow the list (`/sw` finds `/swap`), then Enter puts it in the box with `{first name}`,
+`{exercise}` (when they've asked about an exercise in their program) and `{coach name}` filled
+in. You can still change it before sending. Make and edit them from Messages › ⋯ › Saved replies;
+they're plain text.
+
 ## On the phone
 
 <HowTo id="phone.messages" />

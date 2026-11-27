@@ -31,7 +31,7 @@
       price: PRICES.studio.monthly,
       per: "/ month",
       yearly: `or ${PRICES.studio.yearly} a year · first ${PRICES.studio.trialDays} days free`,
-      items: ["Everything in Pro", "Invite clients. You see nothing until they accept", "Their training, nutrition and habits in one place", "Assign programs, macro targets and check-ins; message clients"],
+      items: ["Everything in Pro", "Invite clients. They choose what you see, and you see nothing until they accept", "Programs, meal plans and check-ins, with each client's week beside them", "One inbox for clients and requests, with saved replies", "Your month: what you were paid, your clients and their wins"],
       cta: "app",
     },
   ];

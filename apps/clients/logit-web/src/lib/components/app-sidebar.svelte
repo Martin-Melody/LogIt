@@ -1,5 +1,6 @@
 <script lang="ts">
-  import * as NativeSelect from "$lib/components/ui/native-select/index.js";
+  import { Switch } from "$lib/components/ui/switch";
+  import { practice, sandbox } from "$lib/features/guide/sandbox.svelte";
   import { photoSrc } from "@logit/core/api/photosApi";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
@@ -29,6 +30,8 @@
   import { Kbd } from "$lib/components/ui/kbd";
   import { commands, modKey } from "$lib/features/commands/commands.svelte";
   import { coachBadges } from "$lib/features/coaching/badges.svelte";
+  import { coachAway } from "$lib/features/coaching/away.svelte";
+  import PlaneIcon from "@lucide/svelte/icons/plane";
 
   let {
     isStudio = false,
@@ -77,13 +80,6 @@
     onNavClick();
   }
 
-  function viewClientTraining(e: Event) {
-    const value = (e.target as HTMLSelectElement).value;
-    if (!value) return;
-    viewingClient.set(value);
-    void goto("/progress");
-    onNavClick();
-  }
 
   const segBase = "h-[30px] rounded-[7px] text-xs transition-colors";
   const segOn = "bg-primary text-primary-foreground font-semibold";
@@ -144,25 +140,19 @@
       </Sidebar.Group>
     {/each}
 
-    {#if coaching && viewingClient.clients.length > 0}
-      <Sidebar.Group class="group-data-[collapsible=icon]:hidden">
-        <Sidebar.GroupLabel class="uppercase tracking-wider text-[11px]">A client's training</Sidebar.GroupLabel>
-        <Sidebar.GroupContent>
-          <label for="client-training" class="sr-only">Open a client's training</label>
-          <NativeSelect.Root size="sm" id="client-training"
-            class="w-full"
-            value="" onchange={viewClientTraining}>
-            <NativeSelect.Option value="">Choose a client…</NativeSelect.Option>
-            {#each viewingClient.clients as c (c.relationshipId)}
-              <NativeSelect.Option value={c.client.id}>{c.client.displayName || c.client.username}</NativeSelect.Option>
-            {/each}
-          </NativeSelect.Root>
-        </Sidebar.GroupContent>
-      </Sidebar.Group>
-    {/if}
   </Sidebar.Content>
 
   <Sidebar.Footer>
+    {#if coaching && sandbox.on}
+      <!-- Practice view (V1): show only the sample clients. Locked on while trying Studio. -->
+      <label class="flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 group-data-[collapsible=icon]:hidden">
+        <span class="flex flex-col">
+          <span class="text-[13px] font-medium">Practice view</span>
+          <span class="text-[11px] text-muted-foreground">{practice.locked ? "Studio, then real clients" : "Sample clients only"}</span>
+        </span>
+        <Switch checked={practice.on} disabled={practice.locked} onCheckedChange={(v) => practice.set(v)} aria-label="Practice view" />
+      </label>
+    {/if}
     <Sidebar.Menu>
       {#if admin}
         <Sidebar.MenuItem>
@@ -238,6 +228,13 @@
                 </a>
               {/snippet}
             </DropdownMenu.Item>
+            {#if isStudio && !admin}
+              <!-- Canvas Z7: away until a date. -->
+              <DropdownMenu.Item onclick={() => { void coachAway.load().then(() => (coachAway.dialogOpen = true)); }}>
+                <PlaneIcon class="size-4" />
+                {coachAway.value?.now ? `Away until ${new Date(coachAway.value.until).toLocaleDateString(undefined, { day: "numeric", month: "short" })}…` : "Set away…"}
+              </DropdownMenu.Item>
+            {/if}
             {#if adminState.isAdmin && !admin}
               <DropdownMenu.Item>
                 {#snippet child({ props })}

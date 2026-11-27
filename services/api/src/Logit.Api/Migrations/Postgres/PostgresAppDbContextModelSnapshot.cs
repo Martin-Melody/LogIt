@@ -292,6 +292,9 @@ namespace Logit.Api.Migrations.Postgres
                         .HasMaxLength(3)
                         .HasColumnType("character varying(3)");
 
+                    b.Property<bool>("Disputed")
+                        .HasColumnType("boolean");
+
                     b.Property<int?>("FailDays")
                         .HasColumnType("integer");
 
@@ -322,6 +325,15 @@ namespace Logit.Api.Migrations.Postgres
 
                     b.Property<bool>("PausedForPayment")
                         .HasColumnType("boolean");
+
+                    b.Property<bool>("PendingNoPayment")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("PendingPackageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("PendingPayPackageId")
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("RelationshipId")
                         .HasColumnType("uuid");
@@ -370,6 +382,15 @@ namespace Logit.Api.Migrations.Postgres
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("AgreedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("AgreedText")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AnswersJson")
+                        .HasColumnType("text");
+
                     b.Property<Guid>("ClientId")
                         .HasColumnType("uuid");
 
@@ -379,8 +400,23 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("EndsAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("InterestedPackageId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("InviteLinkId")
                         .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("PausedUntil")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PluginConsentJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("RequestStage")
+                        .HasColumnType("text");
 
                     b.Property<bool>("RequestedByClient")
                         .HasColumnType("boolean");
@@ -407,6 +443,9 @@ namespace Logit.Api.Migrations.Postgres
                         .HasColumnType("text");
 
                     b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("WaitingSince")
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
@@ -496,6 +535,9 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<Guid?>("PackageId")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("PayAndStart")
+                        .HasColumnType("boolean");
+
                     b.Property<DateTime?>("RevokedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -521,11 +563,17 @@ namespace Logit.Api.Migrations.Postgres
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("CardJson")
+                        .HasColumnType("text");
+
                     b.Property<string>("ContextDateIso")
                         .HasColumnType("text");
 
                     b.Property<long>("CreatedAtMs")
                         .HasColumnType("bigint");
+
+                    b.Property<string>("Kind")
+                        .HasColumnType("text");
 
                     b.Property<string>("MessageId")
                         .IsRequired()
@@ -628,6 +676,71 @@ namespace Logit.Api.Migrations.Postgres
                     b.ToTable("CoachNutritionPlans");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.CoachOffer", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("AmountCents")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("ClosedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("FirstChargeOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("HoldUntil")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Interval")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsChange")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("PackageDescription")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("PackageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PackageName")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<Guid>("RelationshipId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("StartsOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<int?>("Weeks")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RelationshipId");
+
+                    b.ToTable("CoachOffers");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.CoachPackage", b =>
                 {
                     b.Property<Guid>("Id")
@@ -665,6 +778,9 @@ namespace Logit.Api.Migrations.Postgres
                         .IsRequired()
                         .HasMaxLength(80)
                         .HasColumnType("character varying(80)");
+
+                    b.Property<bool>("ShowOnProfile")
+                        .HasColumnType("boolean");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -715,6 +831,9 @@ namespace Logit.Api.Migrations.Postgres
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)");
 
+                    b.Property<bool>("PaymentsStopped")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("RequirementsDue")
                         .HasColumnType("boolean");
 
@@ -727,6 +846,9 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<string>("StripeAccountId")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<string>("StripeNeeds")
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -1242,6 +1364,9 @@ namespace Logit.Api.Migrations.Postgres
                         .HasMaxLength(24)
                         .HasColumnType("character varying(24)");
 
+                    b.Property<string>("JoinQuestionsJson")
+                        .HasColumnType("text");
+
                     b.Property<string>("Kind")
                         .IsRequired()
                         .HasMaxLength(16)
@@ -1424,6 +1549,9 @@ namespace Logit.Api.Migrations.Postgres
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("AnswersJson")
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -2966,6 +3094,21 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<string>("AvatarUrl")
                         .HasColumnType("text");
 
+                    b.Property<bool>("AwayExcusesCheckins")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("AwayFrom")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("AwayNote")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("AwayTellAskers")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("AwayUntil")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("BackupDeviceId")
                         .HasColumnType("text");
 
@@ -2975,7 +3118,40 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<int>("CheersFrom")
                         .HasColumnType("integer");
 
+                    b.Property<string>("CoachAgreement")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("CoachAgreementChangedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CoachAskQuestionsJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CoachCardsJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CoachExpectSpots")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CoachFoodSwapRule")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CoachNutritionPrefsJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CoachProfileJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CoachSavedRepliesJson")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("CoachSpots")
+                        .HasColumnType("integer");
+
                     b.Property<string>("CoachSwapRule")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CoachWhenFull")
                         .HasColumnType("text");
 
                     b.Property<DateTime>("CreatedAt")
@@ -3043,6 +3219,9 @@ namespace Logit.Api.Migrations.Postgres
 
                     b.Property<string>("PublicProfileJson")
                         .HasColumnType("text");
+
+                    b.Property<bool>("RequestEmailsOff")
+                        .HasColumnType("boolean");
 
                     b.Property<Guid?>("SampleOwnerId")
                         .HasColumnType("uuid");
@@ -3348,6 +3527,17 @@ namespace Logit.Api.Migrations.Postgres
                     b.Navigation("Coach");
 
                     b.Navigation("Recipient");
+
+                    b.Navigation("Relationship");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.CoachOffer", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.CoachClientRelationship", "Relationship")
+                        .WithMany()
+                        .HasForeignKey("RelationshipId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Relationship");
                 });

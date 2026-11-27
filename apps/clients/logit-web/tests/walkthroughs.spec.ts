@@ -19,6 +19,25 @@ const PREPARE: Record<string, (page: Page) => Promise<void>> = {
     if (!(await p.locator('[data-guide="plan-save"]').isVisible())) await p.getByRole("button", { name: "+ New split" }).click();
   },
   "program.saved": (p) => p.locator('[data-guide="program-editor"] input').first().fill("Beginner full body"),
+  // An exercise's swap list shows once a program is open and an exercise picked (adding one to an empty day).
+  "swap.added": async (p) => {
+    if (!/[?&]id=/.test(p.url())) {
+      // The step before is on another tab: go to the list, then open the first program.
+      await p.goto("/coaching/programs");
+      await p.locator('[data-guide="programs-assign"]').first().click();
+      await p.waitForURL(/[?&]id=/);
+    }
+    const editor = p.locator('[data-guide="program-editor"]');
+    await expect(editor).toBeVisible();
+    const blocks = editor.locator("ul li button.text-left");
+    if (await blocks.count()) await blocks.first().click();
+    else {
+      await editor.getByRole("button", { name: "+ Exercise" }).click();
+      await p.locator("#add-exercise").fill("Bench");
+      await p.locator("#add-exercise").press("Enter");
+      await editor.locator("ul li button.text-left").first().click();
+    }
+  },
 };
 
 /** What a person does to finish each "do" step, by the signal it waits for. */
@@ -40,29 +59,55 @@ const ACTIONS: Record<string, (page: Page) => Promise<void>> = {
   "social.discover-opened": (p) => p.locator('[data-guide="social-tabs"]').getByRole("tab", { name: "Discover" }).click(),
   "plugins.mine-opened": (p) => p.getByRole("tab", { name: /My plugins/ }).click(),
   "link.created": async (p) => {
-    await p.getByPlaceholder("Instagram bio").fill("Instagram bio");
-    await p.getByRole("button", { name: "Create link" }).click();
+    await p.locator('[data-guide="links-new"]').click();
+    await p.getByRole("dialog").getByPlaceholder("Instagram bio").fill("Instagram bio");
+    await p.getByRole("dialog").getByRole("button", { name: "Create link" }).click();
   },
-  "request.accepted": (p) => p.locator('[data-guide="links-requests"]').getByRole("button", { name: "Accept" }).first().click(),
+  "request.offered": async (p) => {
+    await p.locator('[data-guide="requests-pane"]').getByRole("button", { name: "Offer a spot" }).click();
+    await p.getByRole("dialog").getByRole("button", { name: "Send offer" }).click();
+  },
   "client.opened": async (p) => {
     const list = p.locator('[data-guide="clients-list"]');
     const conor = list.getByRole("link", { name: /Conor/ });
     await ((await conor.count()) ? conor.first() : list.getByRole("link").first()).click();
   },
   "client.tab-checkins": (p) => p.locator('[data-guide="client-tabs"]').getByRole("tab", { name: /Check-ins/ }).click(),
-  "checkin-form.added": (p) => p.locator('[data-guide="client-forms"]').getByRole("button", { name: "Add form" }).click(),
+  "checkin-form.added": async (p) => {
+    const box = p.locator('[data-guide="client-forms"]');
+    const first = box.getByRole("button", { name: "Send LogIt's weekly check-in" });
+    if (await first.count()) return first.click();
+    await box.getByRole("button", { name: "Send a form" }).click();
+    await p.getByRole("dialog").getByRole("button", { name: /^Send to / }).click();
+  },
   "checkin.reviewed": async (p) => {
     await p.locator("#reply").fill("Good week. Swap squats for leg press until the knee settles.");
-    await p.getByRole("button", { name: "Send and mark reviewed" }).click();
+    // "Send and go to {next}" when more are waiting (canvas K4).
+    await p.getByRole("button", { name: /^Send and (mark reviewed|go to )/ }).click();
   },
   "program.created": (p) => p.locator('[data-guide="programs-new"]').click(),
   "program.saved": (p) => p.locator('[data-guide="program-save"]').click(),
   "program.assigned": async (p) => {
-    await p.locator('[data-guide="programs-assign"]').click();
-    const dialog = p.getByRole("dialog", { name: /Assign/ });
-    const niamh = dialog.locator("option", { hasText: "Niamh" });
-    if (await niamh.count()) await dialog.locator("select").first().selectOption({ label: (await niamh.first().textContent())!.trim() });
+    // On the list the mark is the first program: open it, then its Assign….
+    if (!/[?&]id=/.test(p.url())) {
+      await p.locator('[data-guide="programs-assign"]').first().click();
+      await p.waitForURL(/[?&]id=/);
+    }
+    await p.getByRole("button", { name: "Assign…" }).click();
+    await expect(p.getByRole("dialog", { name: /^Assign (?!to a client)/ })).toBeVisible();
+    const dialog = p.getByRole("dialog", { name: /^Assign (?!to a client)/ });
+    // "Add a client" is our own Select: open it, then pick Niamh if she's listed.
+    await dialog.getByRole("button", { name: "Add a client" }).or(dialog.getByRole("combobox", { name: "Add a client" })).first().click();
+    const niamh = p.getByRole("option", { name: /Niamh/ });
+    // Niamh if she's joined by now, else whoever's first.
+    if (await niamh.count()) await niamh.first().click();
+    else await p.getByRole("option").first().click();
     await dialog.getByRole("button", { name: "Assign", exact: true }).click();
+  },
+  "swap.added": async (p) => {
+    await p.locator('[data-guide="program-swaps"]').getByRole("button", { name: "+ Swap" }).click();
+    await p.locator("#add-swap").fill("Dumbbell");
+    await p.locator("#add-swap").press("Enter");
   },
   "message.sent": async (p) => {
     await p.locator('[data-guide="message-compose"] textarea').fill("How's the knee this week?");
@@ -100,13 +145,13 @@ async function signIn(page: Page, username: string) {
 
 async function play(page: Page, chapter: Chapter) {
   await page.goto(`/?guide=${chapter.id}`);
-  const practise = page.getByRole("dialog", { name: "Practise on sample clients first?" });
+  const practise = page.getByRole("dialog", { name: "Practise on sample clients", exact: true });
   const steps = chapter.steps.filter((s) => s.on === "web");
   for (const [i, step] of steps.entries()) {
     const pop = page.getByRole("dialog", { name: step.title, exact: true });
     await expect(pop.or(practise)).toBeVisible({ timeout: 30_000 });
     if (await practise.isVisible()) {
-      await practise.getByRole("button", { name: /Add sample clients and start|Use the sample clients/ }).click();
+      await practise.getByRole("button", { name: /^Start$/ }).click();
       await expect(pop).toBeVisible({ timeout: 60_000 });
     }
     if (step.kind === "do" && PREPARE[step.signal!]) await PREPARE[step.signal!](page);

@@ -2,8 +2,10 @@
      Message and Open (canvas board 4). `span` puts the trigger inside a row that's already a link. -->
 <script lang="ts" module>
   import { loadCoachingOverview, type CoachingOverview } from "./coachingData";
-  // One overview for every card on the page, kept for a minute.
+  import { onSampleActivity } from "$lib/features/guide/sampleActivity";
+  // One overview for every card on the page, kept for a minute (or until Practice view flips).
   let cached: { at: number; load: Promise<CoachingOverview | null> } | null = null;
+  onSampleActivity(() => (cached = null));
   function overview(): Promise<CoachingOverview | null> {
     if (!cached || Date.now() - cached.at > 60_000) cached = { at: Date.now(), load: loadCoachingOverview().catch(() => null) };
     return cached.load;

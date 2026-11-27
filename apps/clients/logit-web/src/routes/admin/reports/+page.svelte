@@ -6,11 +6,8 @@
   import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
   import * as Alert from "$lib/components/ui/alert";
   import * as AlertDialog from "$lib/components/ui/alert-dialog";
-  import * as ContextMenu from "$lib/components/ui/context-menu";
-  import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
-  import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
   import { Kbd } from "$lib/components/ui/kbd";
-  import RowMenuItems from "$lib/features/commands/RowMenuItems.svelte";
+  import ActionMenu from "$lib/features/commands/ActionMenu.svelte";
   import { isTyping, type RowAction } from "$lib/features/commands/commands.svelte";
   import PersonHoverCard from "$lib/features/admin/PersonHoverCard.svelte";
   import { Skeleton } from "$lib/components/ui/skeleton";
@@ -136,9 +133,8 @@
         <ul>
           {#each rows as r (r.id)}
             {@const actions = reportActions(r)}
-            <ContextMenu.Root>
-            <ContextMenu.Trigger>
-            {#snippet child({ props })}
+            <ActionMenu {actions} label="More for this report">
+            {#snippet children({ props, more })}
             <li {...props} class="flex items-start rounded-lg hover:bg-muted data-[state=open]:bg-muted {selectedId === r.id ? 'bg-muted' : ''}">
               <a href="/admin/reports?id={r.id}" aria-current={selectedId === r.id ? "page" : undefined}
                 class="grid min-w-0 flex-1 grid-cols-[10px_minmax(0,1fr)_auto] items-start gap-3 rounded-lg py-2.5 pr-1 pl-3">
@@ -149,18 +145,10 @@
                 </span>
                 <span class="text-xs text-muted-foreground">{ago(at(r.status === "Open" ? r.createdAt : r.reviewedAt!))}</span>
               </a>
-              <DropdownMenu.Root>
-                <DropdownMenu.Trigger aria-label="More for this report"
-                  class="mt-1.5 mr-1.5 grid size-7 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-background/60 hover:text-foreground data-[state=open]:text-foreground">
-                  <EllipsisIcon class="size-4" />
-                </DropdownMenu.Trigger>
-                <DropdownMenu.Content align="end" class="w-auto min-w-60"><RowMenuItems {actions} kind="dropdown" /></DropdownMenu.Content>
-              </DropdownMenu.Root>
+              {@render more("mt-1.5 mr-1.5 size-7 hover:bg-background/60")}
             </li>
             {/snippet}
-            </ContextMenu.Trigger>
-            <ContextMenu.Content class="w-auto min-w-60"><RowMenuItems {actions} kind="context" /></ContextMenu.Content>
-            </ContextMenu.Root>
+            </ActionMenu>
           {:else}
             <li class="px-3 py-3 text-[13px] text-muted-foreground">{label === "Open" ? "No open reports." : "None."}</li>
           {/each}

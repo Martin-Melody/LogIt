@@ -287,6 +287,9 @@ namespace Logit.Api.Migrations
                         .HasMaxLength(3)
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("Disputed")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int?>("FailDays")
                         .HasColumnType("INTEGER");
 
@@ -317,6 +320,15 @@ namespace Logit.Api.Migrations
 
                     b.Property<bool>("PausedForPayment")
                         .HasColumnType("INTEGER");
+
+                    b.Property<bool>("PendingNoPayment")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("PendingPackageId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("PendingPayPackageId")
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid>("RelationshipId")
                         .HasColumnType("TEXT");
@@ -365,6 +377,15 @@ namespace Logit.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("AgreedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AgreedText")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AnswersJson")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid>("ClientId")
                         .HasColumnType("TEXT");
 
@@ -374,7 +395,22 @@ namespace Logit.Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("EndsAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("InterestedPackageId")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid?>("InviteLinkId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("PausedUntil")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PluginConsentJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequestStage")
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("RequestedByClient")
@@ -402,6 +438,9 @@ namespace Logit.Api.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("WaitingSince")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -491,6 +530,9 @@ namespace Logit.Api.Migrations
                     b.Property<Guid?>("PackageId")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("PayAndStart")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime?>("RevokedAt")
                         .HasColumnType("TEXT");
 
@@ -516,11 +558,17 @@ namespace Logit.Api.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("CardJson")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("ContextDateIso")
                         .HasColumnType("TEXT");
 
                     b.Property<long>("CreatedAtMs")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("Kind")
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("MessageId")
                         .IsRequired()
@@ -623,6 +671,71 @@ namespace Logit.Api.Migrations
                     b.ToTable("CoachNutritionPlans");
                 });
 
+            modelBuilder.Entity("Logit.Api.Data.Entities.CoachOffer", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("AmountCents")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("ClosedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("FirstChargeOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("HoldUntil")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Interval")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsChange")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PackageDescription")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("PackageId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PackageName")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("RelationshipId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("StartsOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("Weeks")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RelationshipId");
+
+                    b.ToTable("CoachOffers");
+                });
+
             modelBuilder.Entity("Logit.Api.Data.Entities.CoachPackage", b =>
                 {
                     b.Property<Guid>("Id")
@@ -660,6 +773,9 @@ namespace Logit.Api.Migrations
                         .IsRequired()
                         .HasMaxLength(80)
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("ShowOnProfile")
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");
@@ -710,6 +826,9 @@ namespace Logit.Api.Migrations
                         .HasMaxLength(10)
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("PaymentsStopped")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("RequirementsDue")
                         .HasColumnType("INTEGER");
 
@@ -721,6 +840,9 @@ namespace Logit.Api.Migrations
 
                     b.Property<string>("StripeAccountId")
                         .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StripeNeeds")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("UpdatedAt")
@@ -1237,6 +1359,9 @@ namespace Logit.Api.Migrations
                         .HasMaxLength(24)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("JoinQuestionsJson")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Kind")
                         .IsRequired()
                         .HasMaxLength(16)
@@ -1418,6 +1543,9 @@ namespace Logit.Api.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AnswersJson")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
@@ -2961,6 +3089,21 @@ namespace Logit.Api.Migrations
                     b.Property<string>("AvatarUrl")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("AwayExcusesCheckins")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("AwayFrom")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AwayNote")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("AwayTellAskers")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("AwayUntil")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("BackupDeviceId")
                         .HasColumnType("TEXT");
 
@@ -2970,7 +3113,40 @@ namespace Logit.Api.Migrations
                     b.Property<int>("CheersFrom")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("CoachAgreement")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("CoachAgreementChangedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CoachAskQuestionsJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CoachCardsJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CoachExpectSpots")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CoachFoodSwapRule")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CoachNutritionPrefsJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CoachProfileJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CoachSavedRepliesJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("CoachSpots")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("CoachSwapRule")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CoachWhenFull")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
@@ -3038,6 +3214,9 @@ namespace Logit.Api.Migrations
 
                     b.Property<string>("PublicProfileJson")
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("RequestEmailsOff")
+                        .HasColumnType("INTEGER");
 
                     b.Property<Guid?>("SampleOwnerId")
                         .HasColumnType("TEXT");
@@ -3343,6 +3522,17 @@ namespace Logit.Api.Migrations
                     b.Navigation("Coach");
 
                     b.Navigation("Recipient");
+
+                    b.Navigation("Relationship");
+                });
+
+            modelBuilder.Entity("Logit.Api.Data.Entities.CoachOffer", b =>
+                {
+                    b.HasOne("Logit.Api.Data.Entities.CoachClientRelationship", "Relationship")
+                        .WithMany()
+                        .HasForeignKey("RelationshipId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Relationship");
                 });

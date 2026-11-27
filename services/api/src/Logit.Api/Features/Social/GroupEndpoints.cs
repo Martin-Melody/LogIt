@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using Logit.Api.Data;
 using Logit.Api.Data.Entities;
 using Logit.Api.Features.Photos;
+using Logit.Api.Features.Coach;
 using Microsoft.EntityFrameworkCore;
 
 namespace Logit.Api.Features.Social;
@@ -42,6 +43,7 @@ public static class GroupEndpoints
         g.MapGet("/{id:guid}/about", About).RequireAuthorization();
         g.MapPost("/{id:guid}/join", JoinById).RequireAuthorization().RequireRateLimiting("social-write");
         g.MapDelete("/{id:guid}/request", CancelRequest).RequireAuthorization();
+        g.MapGet("/requests/mine", MyRequests).RequireAuthorization();
         g.MapGet("/{id:guid}/requests", Requests).RequireAuthorization();
         g.MapPost("/{id:guid}/requests/{username}", Approve).RequireAuthorization();
         g.MapDelete("/{id:guid}/requests/{username}", Decline).RequireAuthorization();
@@ -53,18 +55,24 @@ public static class GroupEndpoints
     public record MeDto(string Role, bool OnBoard, string Notify);
     /// Requests: how many are waiting (organisers only, else 0).
     public record GroupDto(Guid Id, string Name, string Kind, string? Place, string? PhotoUrl, int Members, Guid ThreadId, string InviteCode,
-        NoteDto? Note, MeDto Me, List<PersonDto> Organisers, List<PersonDto> Preview, string Access, int Requests, int Reports = 0, long? MutedUntilMs = null);
+        NoteDto? Note, MeDto Me, List<PersonDto> Organisers, List<PersonDto> Preview, string Access, int Requests, int Reports = 0, long? MutedUntilMs = null,
+        List<CoachIntake.Question>? JoinQuestions = null);
     public record MemberDto(PersonDto User, string Role, long JoinedAtMs, long? MutedUntilMs = null);
     /// Requested: you asked to join and wait. InvitedBy: a member invited you from a chat.
+    /// Questions: what asking to join asks (canvas R6), when the group wants approval.
     public record PreviewDto(Guid Id, string Name, string Kind, string? Place, string? PhotoUrl, int Members, string? Organiser,
-        List<PersonDto> Followed, bool Member, string Access = "InviteOnly", bool Requested = false, string? InvitedBy = null);
+        List<PersonDto> Followed, bool Member, string Access = "InviteOnly", bool Requested = false, string? InvitedBy = null,
+        List<CoachIntake.Question>? Questions = null);
     /// A search result; State is "member", "requested", "invited" or "none".
     public record SearchDto(Guid Id, string Name, string Kind, string? Place, string? PhotoUrl, int Members, string Access, string State, string? Followed);
-    public record RequestDto(PersonDto User, long AtMs, string? FollowedBy);
+    public record RequestDto(PersonDto User, long AtMs, string? FollowedBy, List<CoachIntake.Answer>? Answers = null);
     public record CreateRequest(string Name, string? Kind, string? Place, Guid? PhotoId, string? Access = null);
-    public record EditRequest(string? Name, string? Kind, string? Place, Guid? PhotoId, bool RemovePhoto = false, string? Access = null);
+    /// JoinQuestions: an empty list takes them off.
+    public record EditRequest(string? Name, string? Kind, string? Place, Guid? PhotoId, bool RemovePhoto = false, string? Access = null,
+        List<CoachIntake.Question>? JoinQuestions = null);
     /// EventId: joining from an event in search, so you're going to it once you're in.
-    public record JoinRequest(bool OnBoard = true, Guid? EventId = null);
+    /// Answers: to the group's join questions, by question id.
+    public record JoinRequest(bool OnBoard = true, Guid? EventId = null, Dictionary<string, string>? Answers = null);
     public record NoteRequest(string Text, bool Notify = true);
     public record RoleRequest(string Role);
     public record MySettingsRequest(bool? OnBoard, string? Notify);
@@ -156,7 +164,8 @@ public static class GroupEndpoints
             g.Note is null ? null : new NoteDto(g.Note, noteBy is null ? null : Person(noteBy), Ms(g.NoteAt ?? g.CreatedAt)),
             new MeDto(mine.Role.ToString(), mine.OnBoard, mine.Notify.ToString()),
             [.. organisers.Select(Person)], [.. preview.Select(Person)], g.Access.ToString(), requests, reports,
-            mine.MutedUntil is { } mu && mu > DateTime.UtcNow ? Ms(mu) : null);
+            mine.MutedUntil is { } mu && mu > DateTime.UtcNow ? Ms(mu) : null,
+            mine.Role == GroupRole.Organiser ? JoinQuestionsOf(g) : null);
     }
 
     private static async Task<IResult> Get(Guid id, ClaimsPrincipal caller, AppDbContext db)
@@ -190,6 +199,11 @@ public static class GroupEndpoints
         {
             if (!Enum.TryParse<GroupAccess>(req.Access, true, out var access)) return Results.BadRequest(new { error = "InviteOnly, Request or Open." });
             g.Access = access;
+        }
+        if (req.JoinQuestions is { } questions)
+        {
+            if (questions.Count > 0 && CoachIntake.CheckQuestions(questions) is { } problem) return Results.BadRequest(new { error = problem });
+            g.JoinQuestionsJson = questions.Count == 0 ? null : CoachIntake.ToJson(questions);
         }
         if (req.PhotoId is { } pid && pid != g.PhotoId)
         {
@@ -394,7 +408,16 @@ public static class GroupEndpoints
             .Select(m => m.User).Take(3).ToListAsync();
         var requested = await db.GroupJoinRequests.AnyAsync(r => r.GroupId == id && r.UserId == me);
         return Results.Ok(new PreviewDto(g.Id, g.Name, g.Kind, g.Place, PhotoOf(g), count, organiser, [.. followed.Select(Person)], member,
-            g.Access.ToString(), requested, invite?.Inviter.DisplayName));
+            g.Access.ToString(), requested, invite?.Inviter.DisplayName,
+            g.Access == GroupAccess.Request && invite is null ? JoinQuestionsOf(g) : null));
+    }
+
+    /// A group's join questions (canvas R6), or null when it asks none.
+    public static List<CoachIntake.Question>? JoinQuestionsOf(Group g)
+    {
+        if (string.IsNullOrWhiteSpace(g.JoinQuestionsJson)) return null;
+        try { return System.Text.Json.JsonSerializer.Deserialize<List<CoachIntake.Question>>(g.JoinQuestionsJson, CoachIntake.Json) is { Count: > 0 } q ? q : null; }
+        catch (System.Text.Json.JsonException) { return null; }
     }
 
     /// Joining from search or an invite card: straight in when invited or the group is open; a
@@ -418,20 +441,41 @@ public static class GroupEndpoints
             if (goingTo is { } ev) await GoingAsync(db, ev, me, now);
             return Results.Ok(new { id, status = "member" });
         }
+        // Canvas R6: the organisers' questions, answered when asking.
+        string? answersJson = null;
+        if (JoinQuestionsOf(g) is { } questions)
+        {
+            var (answers, problem) = CoachIntake.CheckAnswers(questions, req?.Answers);
+            if (problem is not null) return Results.BadRequest(new { error = problem, code = "answers" });
+            answersJson = answers.Count == 0 ? null : CoachIntake.ToJson(answers);
+        }
         if (await db.GroupJoinRequests.FirstOrDefaultAsync(r => r.GroupId == id && r.UserId == me) is { } asked)
         {
             if (goingTo is not null) asked.GoingTo = goingTo;
+            if (answersJson is not null) asked.AnswersJson = answersJson;
             await db.SaveChangesAsync();
         }
         else
         {
-            db.GroupJoinRequests.Add(new GroupJoinRequest { GroupId = id, UserId = me, OnBoard = req?.OnBoard ?? true, GoingTo = goingTo, CreatedAt = now });
+            db.GroupJoinRequests.Add(new GroupJoinRequest { GroupId = id, UserId = me, OnBoard = req?.OnBoard ?? true, GoingTo = goingTo, AnswersJson = answersJson, CreatedAt = now });
             var organisers = await db.GroupMembers.Where(m => m.GroupId == id && (m.Role == GroupRole.Organiser || m.Role == GroupRole.Moderator)).Select(m => m.UserId).ToListAsync();
             db.Notifications.AddRange(organisers.Select(o => new Notification { UserId = o, ActorId = me, Type = NotificationType.GroupRequest, GroupId = id, CreatedAt = now }));
             try { await db.SaveChangesAsync(); }
             catch (DbUpdateException) { /* asked twice at once */ }
         }
         return Results.Ok(new { id, status = "requested" });
+    }
+
+    /// Groups I've asked to join, still waiting for an organiser (Messages › Requests › Sent, canvas R4).
+    private static async Task<IResult> MyRequests(ClaimsPrincipal caller, AppDbContext db)
+    {
+        var me = caller.GetUserId();
+        var rows = await db.GroupJoinRequests.AsNoTracking().Include(r => r.Group)
+            .Where(r => r.UserId == me).OrderByDescending(r => r.CreatedAt).ToListAsync();
+        return Results.Ok(new
+        {
+            requests = rows.Select(r => new { groupId = r.GroupId, name = r.Group.Name, photoUrl = PhotoOf(r.Group), askedAt = r.CreatedAt }),
+        });
     }
 
     private static async Task<IResult> CancelRequest(Guid id, ClaimsPrincipal caller, AppDbContext db)
@@ -451,12 +495,19 @@ public static class GroupEndpoints
         var rows = await db.GroupJoinRequests.Where(r => r.GroupId == id).OrderBy(r => r.CreatedAt)
             .Select(r => new
             {
-                r.User, r.CreatedAt,
+                r.User, r.CreatedAt, r.AnswersJson,
                 // A member who follows them, to put a face to the name.
                 FollowedBy = db.GroupMembers.Where(m => m.GroupId == id && db.Follows.Any(f => f.FollowerId == m.UserId && f.FollowedId == r.UserId))
                     .Select(m => m.User.DisplayName).FirstOrDefault(),
             }).Take(500).ToListAsync();
-        return Results.Ok(rows.Select(r => new RequestDto(Person(r.User), Ms(r.CreatedAt), r.FollowedBy)));
+        return Results.Ok(rows.Select(r => new RequestDto(Person(r.User), Ms(r.CreatedAt), r.FollowedBy, AnswersOf(r.AnswersJson))));
+    }
+
+    private static List<CoachIntake.Answer>? AnswersOf(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try { return System.Text.Json.JsonSerializer.Deserialize<List<CoachIntake.Answer>>(json, CoachIntake.Json); }
+        catch (System.Text.Json.JsonException) { return null; }
     }
 
     private static async Task<IResult> Approve(Guid id, string username, ClaimsPrincipal caller, AppDbContext db, TimeProvider clock)
@@ -483,16 +534,23 @@ public static class GroupEndpoints
         catch (DbUpdateException) { /* answered at the same moment */ }
     }
 
-    /// Declining tells nobody (as with follow requests).
-    private static async Task<IResult> Decline(Guid id, string username, ClaimsPrincipal caller, AppDbContext db)
+    /// Declining tells them "The organisers didn't approve your request", with no reason and not
+    /// which organiser (canvas K8, as Facebook groups do).
+    private static async Task<IResult> Decline(Guid id, string username, ClaimsPrincipal caller, AppDbContext db, TimeProvider clock)
     {
         var mine = await MembershipAsync(db, id, caller.GetUserId());
         if (mine is null) return Gone();
         if (!CanModerate(mine)) return NotModerator();
         var userId = await db.Users.Where(u => u.Username == username.ToLowerInvariant()).Select(u => (Guid?)u.Id).FirstOrDefaultAsync();
         if (userId is null) return Results.NotFound();
-        await db.GroupJoinRequests.Where(r => r.GroupId == id && r.UserId == userId).ExecuteDeleteAsync();
+        var removed = await db.GroupJoinRequests.Where(r => r.GroupId == id && r.UserId == userId).ExecuteDeleteAsync();
         await db.Notifications.Where(n => n.GroupId == id && n.ActorId == userId && n.Type == NotificationType.GroupRequest).ExecuteDeleteAsync();
+        if (removed > 0)
+        {
+            // Their own name as the actor, so the notice never shows who declined.
+            db.Notifications.Add(new Notification { UserId = userId.Value, ActorId = userId.Value, Type = NotificationType.GroupDeclined, GroupId = id, CreatedAt = clock.GetUtcNow().UtcDateTime });
+            await db.SaveChangesAsync();
+        }
         return Results.NoContent();
     }
 

@@ -1,6 +1,8 @@
 import { ApiError, apiClient, type ApiFetcher } from "./client";
 import type { SwapRule } from "../domain/swaps";
 import type { ClientPayment, LinkPackage } from "../domain/coachPayments";
+import type { CoachProfile, MyCoachProfile } from "../domain/coachProfile";
+import type { AskQuestion, CoachIntake, OfferCard, OfferInput, OfferState, RequestAnswer, RequestOffer, RequestStage } from "../domain/coachRequest";
 
 export interface CoachClientUser {
   id: string;
@@ -10,6 +12,10 @@ export interface CoachClientUser {
   /** A sample client in your sandbox (only ever seen by its own coach). */
   isSample?: boolean;
 }
+
+/** Not a sample client. Sample clients belong to Practice view on the web dashboard, so the
+ * phone never lists them (it has no Practice view). */
+export const isRealClient = (x: { client: { isSample?: boolean } }): boolean => !x.client.isSample;
 
 /** What a client lets one coach read. The server enforces it on every coach read; a
  * switched-off area answers 403 with `code: "not_shared"`. */
@@ -45,6 +51,13 @@ export interface ClientRelationship {
   swapRule?: SwapRule | null;
 }
 
+/** Canvas Q3 / SW2: "mine" — only the coach's swaps; "close" — theirs, then foods close to the plan. */
+export type FoodSwapRule = "mine" | "close";
+export type CoachSettings = { swapRule: SwapRule; foodSwapRule?: FoodSwapRule; nutrition?: { windowDays?: number | null } | null };
+
+/** Canvas PG8: a client's answer per plugin a coach's program uses ("removed": it's gone from their phone). */
+export type PluginConsent = Record<string, { state: "allowed" | "declined" | "removed"; name: string; atMs: number }>;
+
 export interface CoachRelationship {
   relationshipId: string;
   coach: CoachClientUser;
@@ -52,10 +65,31 @@ export interface CoachRelationship {
   since?: string;
   /** The swap rule that applies to me in this coach's programs (missing on older servers = any). */
   swapRule?: SwapRule;
+  /** Canvas SW2: the food swaps I may make in this coach's meal plans (missing = mine). */
+  foodSwapRule?: FoodSwapRule;
+  /** Canvas PG8: what I said about each plugin this coach's programs use. */
+  pluginConsent?: PluginConsent;
   /** "paused" = coaching stopped until it's paid (missing on older servers = active). */
   status?: "active" | "paused";
   /** How I pay this coach through LogIt, if I do. Never carries a price (app store rules). */
   payment?: ClientPayment | null;
+  /** Canvas Z7: the coach is away (or will be); pinned in the conversation while away. */
+  away?: CoachAway | null;
+}
+
+/** A coach's away (canvas Z7). `now`: it has started. */
+export interface CoachAway {
+  from: string;
+  until: string;
+  note: string | null;
+  now: boolean;
+  excuseCheckins: boolean;
+  tellAskers: boolean;
+}
+
+/** The check-in excuse for missedCheckin while (and after) a coach is away. */
+export function awayExcuse(away: CoachAway | null | undefined): { fromMs: number; untilMs: number } | null {
+  return away?.excuseCheckins ? { fromMs: Date.parse(away.from), untilMs: Date.parse(away.until) } : null;
 }
 
 /** A coach's review of one of my check-ins. */
@@ -73,6 +107,10 @@ export interface RosterEntry {
   lastSessionAtMs: number | null;
   sessions7d: number;
   sessions28d: number;
+  /** Canvas K3: what they answered when they asked to be coached. */
+  answers?: RequestAnswer[];
+  /** Days of the last 7 with any food logged; null when they don't share food. */
+  foodDays7d?: number | null;
   programCount: number;
   checkinScheduleCount: number;
   assignedHabitCount: number;
@@ -80,9 +118,20 @@ export interface RosterEntry {
   unreadFromClient: number;
   sharing?: Sharing;
   since?: string;
+  /** Their first message since your last reply (canvas Z2); missing on older servers. */
+  waitingSinceMs?: number | null;
+  /** Canvas Q8: an unread "for the rest of the program" swap from them. */
+  lastingSwap?: boolean;
+  /** Canvas PG8: what they said about each plugin your programs use. */
+  pluginConsent?: PluginConsent;
+  /** You paused coaching until then (canvas E1). */
+  pausedUntil?: string | null;
+  /** Coaching ends then (they stopped, or moved coach). */
+  endsAt?: string | null;
 }
 
-export type InviteLinkState = "active" | "off" | "expired" | "full";
+/** "notlive": the coach is trying Studio; only their sample clients can use it (canvas V3). */
+export type InviteLinkState = "active" | "off" | "expired" | "full" | "notlive";
 
 export interface InviteLink {
   id: string;
@@ -95,9 +144,23 @@ export interface InviteLink {
   joined: number;
   waiting: number;
   state: InviteLinkState;
-  /** The package people pay for through this link; null = a free link. */
+  /** The link's package: paid for when payAndStart, else picked for them when they ask. */
   packageId?: string | null;
   packageName?: string | null;
+  /** "Pay and start straight away" (canvas L1). */
+  payAndStart?: boolean;
+  /** Everyone who asked or paid through it, whatever happened since. */
+  asked?: number;
+  /** False while trying Studio: real, not live yet (canvas V3). */
+  live?: boolean;
+}
+
+/** Where a link sends people: the coach's profile with the link (canvas L1), or straight to
+ * paying for a pay-and-start link. A self-hosted server has no getlogit.app: the web app's own ask page. */
+export function linkUrl(link: Pick<InviteLink, "code" | "payAndStart">, username: string, opts: { webOrigin: string; marketingUrl: string; selfHosted: boolean }): string {
+  const code = encodeURIComponent(link.code.replace("-", ""));
+  if (link.payAndStart) return `${opts.webOrigin}/c/${code}`;
+  return opts.selfHosted ? `${opts.webOrigin}/ask/${encodeURIComponent(username)}?l=${code}` : `${opts.marketingUrl}/@${encodeURIComponent(username)}?l=${code}`;
 }
 
 /** What someone opening a link sees. */
@@ -114,6 +177,17 @@ export interface InviteLinkInfo {
   paymentsReady?: boolean;
   /** I already pay this coach through LogIt. */
   paying?: boolean;
+  /** A link to ask with a package picked for them (canvas L1). */
+  pickedPackageId?: string | null;
+  /** The coach's questions (a free link asks them; canvas P2). Missing on older servers. */
+  questions?: AskQuestion[];
+  spots?: { full: boolean; whenFull: "waitlist" | "stop"; expectSpots: string | null };
+  /** My open request's stage, when relationship is "requested". */
+  stage?: RequestStage | null;
+  /** Already this coach's client: since when (ISO). */
+  coachedSince?: string | null;
+  /** The coach I already have, if it's someone else (canvas R1). */
+  otherCoach?: string | null;
 }
 
 /** A client asking to be coached, through a link. */
@@ -123,6 +197,12 @@ export interface CoachingRequest {
   linkName: string | null;
   sharing: Sharing;
   requestedAt: string;
+  /** Older servers don't send these: treat missing as "asked" with no answers or offer. */
+  stage?: RequestStage;
+  answers?: RequestAnswer[];
+  interestedPackageId?: string | null;
+  waitingSince?: string | null;
+  offer?: RequestOffer | null;
 }
 
 export interface MyCoachingRequest {
@@ -130,6 +210,105 @@ export interface MyCoachingRequest {
   coach: CoachClientUser;
   sharing: Sharing;
   requestedAt: string;
+  stage?: RequestStage;
+  /** A request the coach closed or that was withdrawn (only with includeClosed). */
+  closed?: boolean;
+  answers?: RequestAnswer[];
+  waitingSince?: string | null;
+  /** "Expect spots" while on the waiting list. */
+  expectSpots?: string | null;
+  offer?: RequestOffer | null;
+}
+
+/** Your month (canvas W5), from GET /coach/month. */
+export interface CoachMonthData {
+  month: string;
+  currency: string;
+  /** Six months to `month`, oldest first; cents paid through LogIt less refunds, before Stripe's fees. */
+  income: { month: string; cents: number }[];
+  /** The best month before `month`, for "Best month yet". */
+  bestBeforeCents: number;
+  /** Clients marked as paying you another way. */
+  paidElsewhere: number;
+  clients: { count: number; spots: number | null; joined: number; left: number };
+  asked: { count: number; joined: number; waiting: number; notAFit: number };
+  longest: { name: string; sinceMs: number } | null;
+}
+
+export interface EndingPreview {
+  mode: "stripe" | "elsewhere" | "none";
+  lastPayment: { amountCents: number; currency: string; paidAt: string } | null;
+  unusedCents: number;
+  paidUntil: string | null;
+  pausedUntil: string | null;
+}
+
+export interface ManageCoaching {
+  coach: CoachClientUser;
+  since: string;
+  plan: { name: string; amountCents: number; currency: string; interval: "month" | "once"; state: string; paidUntil: string | null; stopsAtPeriodEnd: boolean; receipts: number } | null;
+  paidElsewhere: boolean;
+  sharing: Sharing;
+  answers: RequestAnswer[];
+  agreedAt: string | null;
+  agreedText: string | null;
+  pausedUntil: string | null;
+  endsAt: string | null;
+  /** The coach hasn't replied for a week (canvas Z2). */
+  quiet: { days: number; lastMessage: string | null; lastMessageAt: string | null; refundCents: number } | null;
+  /** A change of package waiting for their answer (canvas K14). */
+  change?: {
+    offerId: string; packageName: string; packageDescription: string; amountCents: number; currency: string;
+    interval: "month" | "once"; weeks: number | null; pays: boolean; startsOn: string;
+  } | null;
+  /** The package they changed to is due now: pay it on Stripe's page. */
+  payDue?: { packageName: string; amountCents: number; currency: string; interval: "month" | "once" } | null;
+  /** An accepted change starting at their next payment. */
+  pendingPackage?: string | null;
+}
+
+/** Taking a spot (canvas J1). */
+export interface TakeInfo {
+  offer: OfferCard;
+  state: OfferState;
+  relationshipId: string;
+  relationship: "requested" | "active" | "closed";
+  coach: CoachClientUser;
+  agreement: { text: string; changedAt: string | null } | null;
+  agreedAt: string | null;
+  sharing: Sharing;
+  paymentsReady: boolean;
+  /** "This ends coaching with Joe Burke"; paidUntil when coaching with them runs on to then. */
+  otherCoach: { name: string; paidUntil: string | null } | null;
+  isSample: boolean;
+}
+
+/** A closed request in the coach's Closed list (canvas C6). */
+export interface ClosedRequest {
+  relationshipId: string;
+  client: CoachClientUser;
+  linkName: string | null;
+  stage: RequestStage;
+  answers: RequestAnswer[];
+  closedAt: string;
+}
+
+/** What the ask sheet needs (canvas P2, A4). */
+export interface AskInfo {
+  coach: CoachClientUser;
+  questions: AskQuestion[];
+  packages: { id: string; name: string; amountCents: number; currency: string; interval: "month" | "once"; weeks: number | null }[];
+  full: boolean;
+  whenFull: "waitlist" | "stop";
+  expectSpots: string | null;
+  /** Canvas Z7: the coach is away until then. */
+  awayUntil?: string | null;
+  isSelf: boolean;
+  relationshipId: string | null;
+  relationship: "none" | "requested" | "invited" | "active";
+  stage: RequestStage | null;
+  coachedSince: string | null;
+  otherCoach: string | null;
 }
 
 /** One submitted check-in in the coach's inbox. `dataJson` is a CheckinSubmission. */
@@ -153,6 +332,8 @@ export interface ReceivedInvite {
   relationshipId: string;
   coach: CoachClientUser;
   createdAt: string;
+  /** An invite with an offer (canvas K13): take it on the take page. Older invites have none. */
+  offer?: { card: OfferCard; state: OfferState } | null;
 }
 
 export interface SentInvite {
@@ -164,8 +345,12 @@ export interface SentInvite {
 /** The same calls as `coachApi`, made with another identity (a sandbox sample client's token). */
 export function coachApiFor(api: ApiFetcher) {
   return {
-    async inviteClient(username: string): Promise<void> {
-      await api.fetch(`/coach/clients/${username}/invite`, { method: "POST" });
+    /** With an offer (canvas K13): a package, or null for no payment through LogIt. */
+    async inviteClient(username: string, offer?: { packageId: string | null; message?: string }): Promise<{ relationshipId: string; offerId?: string | null }> {
+      return api.fetch(`/coach/clients/${username}/invite`, {
+        method: "POST",
+        ...(offer ? { body: JSON.stringify({ offer: true, packageId: offer.packageId, message: offer.message }) } : {}),
+      });
     },
 
     async listClients(): Promise<ClientRelationship[]> {
@@ -173,6 +358,11 @@ export function coachApiFor(api: ApiFetcher) {
     },
 
     /** The current user's active coaches (the mirror of listClients). */
+    /** Canvas PG8: tell the coach whether I allow a plugin their program uses. */
+    async setPluginConsent(relationshipId: string, pluginId: string, name: string, state: "allowed" | "declined" | "removed"): Promise<void> {
+      await api.fetch(`/coach/coaches/${encodeURIComponent(relationshipId)}/plugins`, { method: "PUT", body: JSON.stringify({ pluginId, name, state }) });
+    },
+
     async listCoaches(): Promise<CoachRelationship[]> {
       return api.fetch("/coach/coaches");
     },
@@ -210,8 +400,13 @@ export function coachApiFor(api: ApiFetcher) {
 
     // ── Invite links ──
 
-    async createLink(input: { name: string; expiresInDays?: number | null; maxUses?: number | null; packageId?: string | null }): Promise<InviteLink> {
+    async createLink(input: { name: string; expiresInDays?: number | null; maxUses?: number | null; packageId?: string | null; payAndStart?: boolean }): Promise<InviteLink> {
       return api.fetch("/coach/links", { method: "POST", body: JSON.stringify(input) });
+    },
+
+    /** Change a link, or switch it off (on: false) or on again. */
+    async editLink(id: string, input: { name: string; expiresAt: string | null; maxUses: number | null; packageId: string | null; payAndStart: boolean; on: boolean }): Promise<InviteLink> {
+      return api.fetch(`/coach/links/${id}`, { method: "PUT", body: JSON.stringify(input) });
     },
 
     async listLinks(): Promise<InviteLink[]> {
@@ -227,10 +422,15 @@ export function coachApiFor(api: ApiFetcher) {
       return api.fetch(`/coach/links/code/${encodeURIComponent(code)}`);
     },
 
-    async requestCoaching(code: string, sharing: Sharing): Promise<{ relationshipId: string; status: "requested" | "active" }> {
+    async requestCoaching(
+      code: string,
+      sharing: Sharing,
+      answers?: Record<string, string>,
+      interestedPackageId?: string | null,
+    ): Promise<{ relationshipId: string; status: "requested" | "active"; stage?: RequestStage | null }> {
       return api.fetch(`/coach/links/code/${encodeURIComponent(code)}/request`, {
         method: "POST",
-        body: JSON.stringify({ sharing }),
+        body: JSON.stringify({ sharing, answers, interestedPackageId }),
       });
     },
 
@@ -239,9 +439,147 @@ export function coachApiFor(api: ApiFetcher) {
       return requests;
     },
 
-    async listMyRequests(): Promise<MyCoachingRequest[]> {
-      const { requests } = await api.fetch<{ requests: MyCoachingRequest[] }>("/coach/requests/mine");
+    async listMyRequests(includeClosed = false): Promise<MyCoachingRequest[]> {
+      const { requests } = await api.fetch<{ requests: MyCoachingRequest[] }>(`/coach/requests/mine${includeClosed ? "?includeClosed=true" : ""}`);
       return requests;
+    },
+
+    // ── Asking and answering (canvas P2, R3, C1–C6, A1–A5) ──
+
+    /** Coach: the client limit, when-full rule, "expect spots" and the questions people answer. */
+    async getIntake(): Promise<CoachIntake> {
+      return api.fetch("/coach/intake");
+    },
+
+    async saveIntake(input: { spots: number | null; whenFull: "waitlist" | "stop"; expectSpots: string | null; questions?: AskQuestion[]; resetQuestions?: boolean }): Promise<CoachIntake> {
+      return api.fetch("/coach/intake", { method: "PUT", body: JSON.stringify(input) });
+    },
+
+    /** Coach: offer a spot, or change the open offer (the old one is replaced). */
+    async offerSpot(relationshipId: string, input: OfferInput): Promise<{ offerId: string }> {
+      return api.fetch(`/coach/requests/${relationshipId}/offer`, { method: "POST", body: JSON.stringify(input) });
+    },
+
+    async withdrawOffer(relationshipId: string): Promise<void> {
+      await api.fetch(`/coach/requests/${relationshipId}/withdraw-offer`, { method: "POST" });
+    },
+
+    async putOnWaitingList(relationshipId: string, message: string, expectSpots?: string | null): Promise<void> {
+      await api.fetch(`/coach/requests/${relationshipId}/waitlist`, { method: "POST", body: JSON.stringify({ message, expectSpots }) });
+    },
+
+    async notAFit(relationshipId: string, message: string, block = false): Promise<void> {
+      await api.fetch(`/coach/requests/${relationshipId}/not-a-fit`, { method: "POST", body: JSON.stringify({ message, block }) });
+    },
+
+    async reopenRequest(relationshipId: string): Promise<void> {
+      await api.fetch(`/coach/requests/${relationshipId}/reopen`, { method: "POST" });
+    },
+
+    async listClosedRequests(): Promise<ClosedRequest[]> {
+      const { requests } = await api.fetch<{ requests: ClosedRequest[] }>("/coach/requests/closed");
+      return requests;
+    },
+
+    /** Someone thinking of asking: the coach's questions, packages, and whether they're full. */
+    async askInfo(username: string): Promise<AskInfo> {
+      return api.fetch(`/coach/ask/${encodeURIComponent(username)}`);
+    },
+
+    /** Ask a coach from their profile. Answers are keyed by question id. */
+    async ask(username: string, answers: Record<string, string>, interestedPackageId: string | null, sharing: Sharing): Promise<{ relationshipId: string; status: "requested" | "active"; stage: RequestStage | null }> {
+      return api.fetch(`/coach/ask/${encodeURIComponent(username)}`, { method: "POST", body: JSON.stringify({ answers, interestedPackageId, sharing }) });
+    },
+
+    /** Withdraw my request, or leave the waiting list. */
+    async withdrawMyRequest(relationshipId: string): Promise<void> {
+      await api.fetch(`/coach/requests/mine/${relationshipId}/withdraw`, { method: "POST" });
+    },
+
+    /** Delete a closed request: my answers go. */
+    async deleteMyRequest(relationshipId: string): Promise<void> {
+      await api.fetch(`/coach/requests/mine/${relationshipId}`, { method: "DELETE" });
+    },
+
+    // ── Pausing and ending (canvas E1, M1, Z2, Z3) ──
+
+    /** Coach: what ending would do with money. */
+    async endingPreview(relationshipId: string): Promise<EndingPreview> {
+      return api.fetch(`/coach/clients/${relationshipId}/ending`);
+    },
+
+    /** Coach: end coaching, with a refund ("none" | "unused" | "full" | "exact"), a message and a coach to suggest. */
+    async endCoaching(relationshipId: string, input: { refund: "none" | "unused" | "full" | "exact"; refundCents?: number; message?: string; suggest?: string }): Promise<{ refundedCents: number; currency: string; refundStatus: string | null }> {
+      return api.fetch(`/coach/clients/${relationshipId}/end`, { method: "POST", body: JSON.stringify(input) });
+    },
+
+    /** Coach: pause coaching until a date (YYYY-MM-DD); payments and check-ins pause. */
+    /** Canvas Z7: your own away, set it, or end it now. */
+    async getAway(): Promise<CoachAway | null> {
+      return (await api.fetch<{ away: CoachAway | null }>("/coach/away")).away;
+    },
+    async setAway(input: { from: string; until: string; note?: string; excuseCheckins: boolean; tellAskers: boolean }): Promise<CoachAway | null> {
+      return (await api.fetch<{ away: CoachAway | null }>("/coach/away", { method: "PUT", body: JSON.stringify(input) })).away;
+    },
+    async endAway(): Promise<void> {
+      await api.fetch("/coach/away", { method: "DELETE" });
+    },
+
+    async pauseCoaching(relationshipId: string, until: string, message?: string): Promise<void> {
+      await api.fetch(`/coach/clients/${relationshipId}/pause`, { method: "POST", body: JSON.stringify({ until, message }) });
+    },
+
+    async resumeCoaching(relationshipId: string): Promise<void> {
+      await api.fetch(`/coach/clients/${relationshipId}/resume`, { method: "POST" });
+    },
+
+    /** Client: My coach › Manage (canvas M1). */
+    async manageCoaching(relationshipId: string): Promise<ManageCoaching> {
+      return api.fetch(`/coach/coaches/${relationshipId}/manage`);
+    },
+
+    /** Client: stop coaching; quiet = the coach hasn't replied for a week, with a refund. */
+    async stopCoaching(relationshipId: string, quiet = false): Promise<{ status: "ending" | "ended"; endsAt?: string; refundedCents?: number; currency?: string }> {
+      return api.fetch(`/coach/coaches/${relationshipId}/stop`, { method: "POST", body: JSON.stringify({ quiet }) });
+    },
+
+    /** Client: after a new card, try the unpaid payment now. */
+    async retryPayment(relationshipId: string): Promise<{ paid: boolean; error?: string }> {
+      return api.fetch(`/coach/coaches/${relationshipId}/retry-payment`, { method: "POST" });
+    },
+
+    /** "Stop these emails" from the request-reply email; the link carries the key. */
+    async stopRequestEmails(userId: string, token: string): Promise<void> {
+      await api.fetch("/email/stop-request-emails", { method: "POST", body: JSON.stringify({ userId, token }) });
+    },
+
+    /** What the take page shows (canvas J1). */
+    async takeInfo(offerId: string): Promise<TakeInfo> {
+      return api.fetch(`/coach/offers/${offerId}`);
+    },
+
+    /** Take an offer with no payment through LogIt (a paid one answers 402: pay at checkout). */
+    async takeOffer(offerId: string, sharing?: Sharing, agreed = false): Promise<{ relationshipId: string; status: "active" }> {
+      return api.fetch(`/coach/offers/${offerId}/take`, { method: "POST", body: JSON.stringify({ sharing, agreed }) });
+    },
+
+    /** Pay for an offer on Stripe's page; come back to successUrl with ?session_id=. */
+    async checkoutOffer(offerId: string, input: { sharing: Sharing; agreed: boolean; adult: boolean; successUrl: string; cancelUrl: string }): Promise<{ url: string }> {
+      return api.fetch(`/coach/offers/${offerId}/checkout`, { method: "POST", body: JSON.stringify(input) });
+    },
+
+    /** Back from Stripe: start coaching now rather than waiting for Stripe's webhook. */
+    async confirmOfferCheckout(offerId: string, sessionId: string): Promise<{ status: "active" | "pending"; relationshipId?: string }> {
+      return api.fetch("/coach/payments/checkout/confirm", { method: "POST", body: JSON.stringify({ offerId, sessionId }) });
+    },
+
+    /** The coach's agreement (canvas J4); null text = none. */
+    async getAgreement(): Promise<{ text: string | null; changedAt: string | null }> {
+      return api.fetch("/coach/agreement");
+    },
+
+    async saveAgreement(text: string | null): Promise<{ text: string | null; changedAt: string | null }> {
+      return api.fetch("/coach/agreement", { method: "PUT", body: JSON.stringify({ text }) });
     },
 
     async acceptRequest(relationshipId: string): Promise<void> {
@@ -275,9 +613,43 @@ export function coachApiFor(api: ApiFetcher) {
 
     // ── Exercise swaps ──
 
-    /** Coach: my default swap rule for every client. */
-    async getCoachSettings(): Promise<{ swapRule: SwapRule }> {
+    /** Coach: the Coaching section of my profile, my packages, and whether it's public yet. */
+    async getCoachProfile(): Promise<MyCoachProfile> {
+      return api.fetch("/coach/profile");
+    },
+
+    /** Saves the Coaching section; `packagesOnProfile` lists the packages shown on it. */
+    async saveCoachProfile(profile: CoachProfile, packagesOnProfile: string[]): Promise<MyCoachProfile> {
+      return api.fetch("/coach/profile", { method: "PUT", body: JSON.stringify({ profile, packagesOnProfile }) });
+    },
+
+    /** Coach: my default swap rule for every client, and Nutrition › Rules (canvas Q3). */
+    async getCoachSettings(): Promise<CoachSettings> {
       return api.fetch("/coach/settings");
+    },
+
+    /** Canvas W5: your month (sample clients never count). month = "YYYY-MM", default this one. */
+    async getMonth(month?: string): Promise<CoachMonthData> {
+      return api.fetch(`/coach/month${month ? `?month=${month}` : ""}`);
+    },
+    /** Canvas W11: which cards show on a client's Overview. */
+    async getCards(): Promise<import("../domain/coachCards").CardLayout> {
+      return api.fetch("/coach/cards");
+    },
+    async saveCards(layout: import("../domain/coachCards").CardLayout): Promise<import("../domain/coachCards").CardLayout> {
+      return api.fetch("/coach/cards", { method: "PUT", body: JSON.stringify(layout) });
+    },
+    /** Canvas W10: my saved replies. */
+    async getSavedReplies(): Promise<import("../domain/savedReplies").SavedReply[]> {
+      return (await api.fetch<{ replies: import("../domain/savedReplies").SavedReply[] }>("/coach/saved-replies")).replies;
+    },
+    async saveSavedReplies(replies: import("../domain/savedReplies").SavedReply[]): Promise<import("../domain/savedReplies").SavedReply[]> {
+      return (await api.fetch<{ replies: import("../domain/savedReplies").SavedReply[] }>("/coach/saved-replies", { method: "PUT", body: JSON.stringify({ replies }) })).replies;
+    },
+
+    /** Canvas Q3: the food swap rule and the built-in Adaptive targets' trend window. */
+    async setNutritionSettings(patch: { foodSwapRule?: FoodSwapRule; windowDays?: number }): Promise<CoachSettings> {
+      return api.fetch("/coach/settings/nutrition", { method: "PUT", body: JSON.stringify(patch) });
     },
 
     async setDefaultSwapRule(swapRule: SwapRule): Promise<{ swapRule: SwapRule }> {

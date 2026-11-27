@@ -1,30 +1,47 @@
+<!-- Coaching › Today and Your month (canvas T2, W1, W5): cards, arranged by you (W13). Needs you
+     is always first on Today. Your month steps back through months. V4: in Practice view the
+     income card is a marked Example; everything else is what the samples really did. -->
 <script lang="ts">
-  import ClientHoverCard from "$lib/features/coaching/ClientHoverCard.svelte";
-  import { onSampleActivity } from "$lib/features/guide/sandbox.svelte";
-  import { apiClient } from "@logit/core/api/client";
-  import WelcomeCard from "$lib/features/guide/WelcomeCard.svelte";
+  import { onSampleActivity } from "$lib/features/guide/sampleActivity";
+  import { practice } from "$lib/features/guide/sandbox.svelte";
   import CoachStart from "$lib/features/onboarding/CoachStart.svelte";
-  import { coachTrial } from "$lib/workspace";
-  import { onMount } from "svelte";
+  import { onMount, untrack } from "svelte";
+  import { goto } from "$app/navigation";
+  import { page } from "$app/state";
   import * as Alert from "$lib/components/ui/alert";
+  import * as Tabs from "$lib/components/ui/tabs/index.js";
+  import { Button } from "$lib/components/ui/button";
   import { Skeleton } from "$lib/components/ui/skeleton";
+  import { toast } from "$lib/components/ui/sonner";
+  import ChevronLeftIcon from "@lucide/svelte/icons/chevron-left";
+  import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
   import { coachApi } from "@logit/core/api/coachApi";
   import { coachPaymentsApi } from "@logit/core/api/coachPaymentsApi";
-  import { coachProblemText, needsCoach, type PaymentClient } from "@logit/core/domain/coachPayments";
-  import { toast } from "$lib/components/ui/sonner";
-  import Avatar from "$lib/features/coaching/Avatar.svelte";
+  import { needsCoach, type PaymentClient } from "@logit/core/domain/coachPayments";
+  import { cardActions } from "$lib/features/commands/commands.svelte";
+  import { PAGE_CARDS, STANDARD_LAYOUT, pageCards, type PageCard, type PageId } from "@logit/core/domain/coachMonth";
+  import { parseCardPackCardId } from "@logit/core/plugins/cardPack";
+  import CardPackCard from "$lib/features/coaching/today/CardPackCard.svelte";
+  import { cardPacks } from "$lib/features/coaching/today/cardPacks.svelte";
+  import type { CardLayout } from "@logit/core/domain/coachCards";
+  import { coachAway } from "$lib/features/coaching/away.svelte";
   import { coachBadges } from "$lib/features/coaching/badges.svelte";
-  import {
-    loadCoachingOverview,
-    needsYou,
-    type CoachingOverview,
-    type NeedsYou,
-  } from "$lib/features/coaching/coachingData";
-  import { ago, daysBetween, weekdayDate, when } from "$lib/features/coaching/format";
+  import { loadCoachingOverview, type CoachingOverview } from "$lib/features/coaching/coachingData";
+  import NeedsYouCard from "$lib/features/coaching/today/NeedsYouCard.svelte";
+  import AheadCard from "$lib/features/coaching/today/AheadCard.svelte";
+  import ThisWeekCard from "$lib/features/coaching/today/ThisWeekCard.svelte";
+  import LastWeekCard from "$lib/features/coaching/today/LastWeekCard.svelte";
+  import PaidCard from "$lib/features/coaching/today/PaidCard.svelte";
+  import ClientsCard from "$lib/features/coaching/today/ClientsCard.svelte";
+  import WinsCard from "$lib/features/coaching/today/WinsCard.svelte";
+  import WorthCard from "$lib/features/coaching/today/WorthCard.svelte";
+  import EditCardsBar from "$lib/features/coaching/today/EditCardsBar.svelte";
+  import CardFrame from "$lib/features/coaching/today/CardFrame.svelte";
+  import { monthData, monthKey, monthRange } from "$lib/features/coaching/today/monthData.svelte";
 
   let overview = $state<CoachingOverview | null>(null);
   let error = $state<string | null>(null);
-  let busy = $state<string | null>(null);
+  let layout = $state<CardLayout | null>(null);
 
   async function load() {
     try {
@@ -36,179 +53,162 @@
     }
   }
   onMount(load);
+  onMount(() => void coachAway.load());
+  onMount(() => void coachApi.getCards().then((l) => (layout = l), () => (layout = {})));
   // Payments that need the coach (failed, overdue, paused) belong here too, not only on the
   // Payments page (bug hunt 6.2). No payments set up: nothing to add.
   let payments = $state<PaymentClient[]>([]);
+  let allPayments = $state<PaymentClient[]>([]);
+  // Canvas Z4: Stripe needs something (restricted, or details due), in Stripe's words.
+  let stripeNeeds = $state<string | null | false>(false);
   onMount(async () => {
-    try { payments = needsCoach((await coachPaymentsApi.overview()).clients); } catch { payments = []; }
+    try {
+      const o = await coachPaymentsApi.overview();
+      payments = needsCoach(o.clients);
+      allPayments = o.clients;
+      stripeNeeds = o.account.connected && (!o.account.ready || o.account.requirementsDue) && (o.account.requirementsDue || !!o.account.needs) ? (o.account.needs ?? null) : false;
+    } catch { payments = []; }
   });
+  // The server's month never counts samples, so it isn't reloaded when they act (every few seconds).
   onMount(() => onSampleActivity(() => void load()));
 
-  const items = $derived(overview ? needsYou(overview) : []);
-  const stats = $derived.by(() => {
-    if (!overview) return null;
-    const c = overview.clients;
-    const sharing = c.filter((x) => x.sharing.workouts);
-    const planned = sharing.reduce((n, x) => n + (x.program?.state === "running" ? x.program.daysPerWeek : 0), 0);
-    return {
-      active: c.length,
-      invited: overview.sent.length + overview.requests.length,
-      sessions: sharing.reduce((n, x) => n + x.sessions7d, 0),
-      planned,
-      toReview: c.reduce((n, x) => n + x.toReview.length, 0),
-      missed: c.filter((x) => x.missed).length,
-      unread: c.reduce((n, x) => n + x.unread, 0),
-    };
-  });
+  const view = $derived<PageId>(page.url.searchParams.get("view") === "month" ? "month" : "today");
+  const thisMonth = monthKey(new Date());
+  const month = $derived(page.url.searchParams.get("m") ?? thisMonth);
+  const range = $derived(monthRange(month));
+  function go(params: Record<string, string | null>) {
+    const u = new URL(page.url);
+    for (const [k, v] of Object.entries(params)) { if (v === null) u.searchParams.delete(k); else u.searchParams.set(k, v); }
+    void goto(u, { noScroll: true, keepFocus: true });
+  }
+  function stepMonth(by: number) {
+    const d = new Date(range.fromMs);
+    d.setMonth(d.getMonth() + by);
+    const k = monthKey(d);
+    go({ m: k === thisMonth ? null : k });
+  }
 
-  async function accept(relationshipId: string, name: string) {
-    busy = relationshipId;
+  // Canvas W13: the page's cards, or your edit of them.
+  let editing = $state(false);
+  let draft = $state<PageCard[]>([]);
+  let saving = $state(false);
+  let dragFrom = $state<number | null>(null);
+  const cards = $derived(editing ? draft : pageCards(view === "today" ? layout?.today : layout?.month, view));
+  $effect(() => { void view; editing = false; });
+  // ?edit=1 (⌘K "Edit Today's cards").
+  $effect(() => { if (layout && page.url.searchParams.get("edit") === "1") untrack(() => { startEditing(); go({ edit: null }); }); });
+  function startEditing() { draft = [...cards]; editing = true; }
+  function move(i: number, by: number) {
+    const j = i + by;
+    if (j < 0 || j >= draft.length || (view === "today" && (i === 0 || j === 0))) return;
+    const next = [...draft];
+    [next[i], next[j]] = [next[j]!, next[i]!];
+    draft = next;
+  }
+  async function done() {
+    saving = true;
     try {
-      await coachApi.acceptRequest(relationshipId);
-      toast.success(`${name} is now your client`);
-      await load();
+      layout = await coachApi.saveCards({ ...(layout ?? {}), [view]: draft });
+      editing = false;
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't accept");
+      toast.error(e instanceof Error ? e.message : "Couldn't save your cards");
     } finally {
-      busy = null;
+      saving = false;
     }
   }
+  const nameOf = (id: PageCard) => {
+    const pack = parseCardPackCardId(id);
+    return pack ? (cardPacks.nameOf(pack.pluginId, pack.cardId) ?? "A card pack's card") : PAGE_CARDS.find((c) => c.id === id)!.name;
+  };
+  $effect(() => { if (cards.some((c) => c.startsWith("plugin:"))) void cardPacks.load(); });
+  const monday = new Date().getDay() === 1;
 
-  const NUDGE = "Hi! Just a reminder your check-in is waiting. Fill it in when you get a minute.";
-
-  function title(i: NeedsYou): string {
-    switch (i.kind) {
-      case "checkin": return `${i.client.name} sent a check-in`;
-      case "message": return `${i.client.name} messaged you`;
-      case "missed": {
-        const late = daysBetween(i.dueMs, Date.now());
-        return `${i.client.name}'s check-in is ${late <= 0 ? "due" : `${late} day${late === 1 ? "" : "s"} late`}`;
-      }
-      case "ending": return `${i.client.name}'s program ends ${when(i.program.endsAtMs!) === "today" ? "today" : `on ${weekdayDate(i.program.endsAtMs!)}`}`;
-      case "request": return `${i.request.client.displayName || i.request.client.username} wants you to coach them`;
-    }
+  // Canvas X4: a card's menu outside edit mode. Moving and removing save straight away.
+  async function saveCards(next: PageCard[]) {
+    try { layout = await coachApi.saveCards({ ...(layout ?? {}), [view]: next }); } catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't save your cards"); }
   }
-
-  function detail(i: NeedsYou): string {
-    switch (i.kind) {
-      case "checkin": return `Check-in · ${ago(i.item.submittedAtMs)}`;
-      case "message": return `${i.client.unread} unread`;
-      case "missed": return `${i.client.sessions7d} session${i.client.sessions7d === 1 ? "" : "s"} in the last 7 days`;
-      case "ending": return `${i.program.program.name}, week ${i.program.week} of ${i.program.totalWeeks}`;
-      case "request": return `Via ${i.request.linkName ? `"${i.request.linkName}"` : "an invite link"} · ${ago(Date.parse(i.request.requestedAt))}`;
-    }
+  function cardMenu(id: PageCard, i: number) {
+    const all = cards;
+    return cardActions({
+      fixed: id === "needs",
+      first: view === "today" ? i <= 1 : i === 0,
+      last: i === all.length - 1,
+      move: (by) => { const j = i + by; if (j < (view === "today" ? 1 : 0) || j >= all.length) return; const next = [...all]; [next[i], next[j]] = [next[j]!, next[i]!]; void saveCards(next); },
+      remove: () => { const before = [...all]; void saveCards(all.filter((x) => x !== id)).then(() => toast.success(`Removed ${nameOf(id)}`, { action: { label: "Undo", onClick: () => void saveCards(before) } })); },
+      about: () => { const pack = parseCardPackCardId(id); toast(pack ? `${nameOf(id)}: from a card pack you installed. It sees your roster only (first names, months with you, sessions and program week for clients who share workouts, check-ins waiting).` : `${nameOf(id)}: ${PAGE_CARDS.find((c) => c.id === id)?.hint ?? ""}. Made by LogIt, from what your clients share.`); },
+    });
   }
 </script>
 
 <div class="flex flex-col gap-4">
-  <header>
-    <p class="mb-1 text-[13px] text-muted-foreground">{new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}</p>
-    <h1 class="text-[26px] font-bold tracking-tight">Today</h1>
+  <header class="flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <p class="mb-1 text-[13px] text-muted-foreground">{view === "today" ? new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" }) : "Your coaching, in numbers"}</p>
+      <h1 class="text-[26px] font-bold tracking-tight">{view === "today" ? "Today" : "Your month"}</h1>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      {#if view === "month"}
+        <Button variant="ghost" size="icon" class="size-8" aria-label="Month before" onclick={() => stepMonth(-1)}><ChevronLeftIcon class="size-4" /></Button>
+        <span class="min-w-24 text-center text-sm font-semibold">{range.label}</span>
+        <Button variant="ghost" size="icon" class="size-8" aria-label="Month after" disabled={month === thisMonth} onclick={() => stepMonth(1)}><ChevronRightIcon class="size-4" /></Button>
+      {/if}
+      <Tabs.Root value={view} onValueChange={(v) => go({ view: v === "month" ? "month" : null, m: null })}>
+        <Tabs.List aria-label="Page">
+          <Tabs.Trigger value="today">Today</Tabs.Trigger>
+          <Tabs.Trigger value="month">Your month</Tabs.Trigger>
+        </Tabs.List>
+      </Tabs.Root>
+      {#if !editing}<Button variant="outline" size="sm" disabled={!layout} onclick={startEditing}>Edit cards</Button>{/if}
+    </div>
   </header>
 
-  {#if !coachTrial()}<WelcomeCard walkthrough="studio" name={(apiClient.getUser()?.displayName || apiClient.getUser()?.username || "").split(" ")[0]} />{/if}
+  <!-- The Set up coaching card (CoachStart) replaces the Studio welcome card: it has Take the walkthrough (canvas T1). -->
+  {#if overview && view === "today"}<CoachStart {overview} />{/if}
 
-  {#if overview}<CoachStart {overview} />{/if}
+  {#if editing}
+    <EditCardsBar page={view} bind:cards={draft} {saving} ondone={() => void done()} onstandard={() => (draft = [...STANDARD_LAYOUT[view]])} />
+  {/if}
 
   {#if error}
     <Alert.Root variant="destructive"><Alert.Description>{error}</Alert.Description></Alert.Root>
-  {:else if !overview || !stats}
-    <div class="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-3">
-      {#each [0, 1, 2, 3] as i (i)}<Skeleton class="h-[78px]" />{/each}
+  {:else if !overview || !layout}
+    <div class="flex flex-wrap gap-4"><Skeleton class="h-72 flex-[2_1_520px]" /><Skeleton class="h-72 flex-[1_1_300px]" /></div>
+  {:else if view === "today"}
+    <!-- Needs you on the left, the rest beside it (canvas W1). -->
+    <div class="flex flex-wrap items-start gap-4" role={editing ? "list" : undefined}>
+      <div class="flex min-w-0 flex-[2_1_520px] flex-col gap-4">{@render frame(0)}</div>
+      <div class="flex min-w-0 flex-[1_1_300px] flex-col gap-4">{#each cards.slice(1) as id, i (id)}{@render frame(i + 1)}{/each}</div>
     </div>
-    <Skeleton class="h-72" />
   {:else}
-    <div class="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-3">
-      <a href="/clients" class="rounded-[10px] border border-border bg-card px-[18px] py-4 hover:bg-muted/40">
-        <div class="text-xs text-muted-foreground">Active clients</div>
-        <div class="mt-1 text-[22px] font-bold">{stats.active}{#if stats.invited}<span class="text-[13px] font-normal text-muted-foreground">{` +${stats.invited} waiting`}</span>{/if}</div>
-      </a>
-      <div class="rounded-[10px] border border-border bg-card px-[18px] py-4">
-        <div class="text-xs text-muted-foreground">Sessions, last 7 days</div>
-        <div class="mt-1 text-[22px] font-bold">{stats.sessions}{#if stats.planned}<span class="text-[13px] font-normal text-muted-foreground">{` of ${stats.planned} planned`}</span>{/if}</div>
-      </div>
-      <a href="/coaching/checkins" class="rounded-[10px] border border-border bg-card px-[18px] py-4 hover:bg-muted/40">
-        <div class="text-xs text-muted-foreground">Check-ins to review</div>
-        <div class="mt-1 text-[22px] font-bold">{stats.toReview}{#if stats.missed}<span class="text-[13px] font-normal text-muted-foreground">{` ${stats.missed} missed`}</span>{/if}</div>
-      </a>
-      <a href="/messages" class="rounded-[10px] border border-border bg-card px-[18px] py-4 hover:bg-muted/40">
-        <div class="text-xs text-muted-foreground">Unread messages</div>
-        <div class="mt-1 text-[22px] font-bold">{stats.unread}</div>
-      </a>
-    </div>
-
-    <div class="flex flex-wrap items-start gap-4">
-      <section data-guide="today-needs-you" class="flex min-w-0 flex-[2_1_520px] flex-col rounded-[10px] border border-border bg-card px-[18px] py-4">
-        <div class="flex items-baseline justify-between pb-1">
-          <h2 class="text-sm font-semibold">Needs you</h2>
-          <span class="text-xs text-muted-foreground">Newest first</span>
-        </div>
-        {#if items.length === 0 && payments.length === 0}
-          <p class="border-t border-border py-4 text-[13px] text-muted-foreground">
-            {overview.clients.length === 0 ? "No clients yet. Invite someone from Clients, or share an invite link." : "Nothing waiting. Nice."}
-          </p>
-        {/if}
-        {#each items as i, n (n)}
-          {@const who = i.kind === "request" ? (i.request.client.displayName || i.request.client.username) : i.client.name}
-          <div class="flex items-center gap-3 border-t border-border py-3">
-            <Avatar name={who} url={i.kind === "request" ? i.request.client.avatarUrl : i.client.avatarUrl} />
-            <span class="flex min-w-0 flex-1 flex-col">
-              <span class="text-[13px] font-medium">{title(i)}</span>
-              <span class="text-xs text-muted-foreground">{detail(i)}</span>
-            </span>
-            {#if i.kind === "checkin"}
-              <a href="/coaching/checkins?id={encodeURIComponent(i.item.id)}&client={i.client.id}" class="h-8 rounded-[9px] bg-primary px-3 text-xs font-semibold leading-8 text-primary-foreground">Review</a>
-            {:else if i.kind === "message"}
-              <a href="/messages?c={i.client.relationshipId}" class="h-8 rounded-[9px] border border-border px-3 text-xs font-medium leading-8 hover:bg-muted">Reply</a>
-            {:else if i.kind === "missed"}
-              <a href="/messages?c={i.client.relationshipId}&draft={encodeURIComponent(NUDGE)}" class="h-8 rounded-[9px] border border-border px-3 text-xs font-medium leading-8 hover:bg-muted">Nudge</a>
-            {:else if i.kind === "ending"}
-              <a href="/clients/{i.client.id}?tab=programs" class="h-8 rounded-[9px] border border-border px-3 text-xs font-medium leading-8 hover:bg-muted">Plan next block</a>
-            {:else}
-              <button type="button" disabled={busy === i.request.relationshipId} onclick={() => accept(i.request.relationshipId, who)}
-                class="h-8 rounded-[9px] bg-primary px-3 text-xs font-semibold text-primary-foreground disabled:opacity-50">Accept</button>
-            {/if}
-          </div>
-        {/each}
-        {#each payments as c (c.relationshipId)}
-          {@const who = c.client.displayName || c.client.username}
-          <div class="flex items-center gap-3 border-t border-border py-3">
-            <Avatar name={who} url={c.client.avatarUrl} />
-            <span class="flex min-w-0 flex-1 flex-col">
-              <span class="text-[13px] font-medium">{coachProblemText(c)}</span>
-              <span class="text-xs text-muted-foreground">Payments</span>
-            </span>
-            <a href="/coaching/payments" class="h-8 shrink-0 rounded-[9px] border border-border px-3 text-xs font-medium leading-8 hover:bg-muted">Open payments</a>
-          </div>
-        {/each}
-      </section>
-
-      <section data-guide="today-week" class="flex min-w-0 flex-[1_1_300px] flex-col rounded-[10px] border border-border bg-card px-[18px] py-4">
-        <div class="flex items-baseline justify-between pb-1">
-          <h2 class="text-sm font-semibold">This week</h2>
-          <span class="text-xs text-muted-foreground">Last 7 days</span>
-        </div>
-        {#each overview.clients as c (c.relationshipId)}
-          <a href="/clients/{c.id}?tab=training" class="flex items-center gap-3 border-t border-border py-3 hover:opacity-90">
-            <Avatar name={c.name} url={c.avatarUrl} />
-            <span class="flex min-w-0 flex-1 flex-col">
-              <ClientHoverCard clientId={c.id} span class="w-fit text-[13px] font-medium">{c.name}</ClientHoverCard>
-              {#if !c.sharing.workouts}
-                <span class="text-xs text-muted-foreground">Doesn't share workouts</span>
-              {:else if c.lastSessionAtMs && when(c.lastSessionAtMs) === "today"}
-                <span class="text-xs text-success">Trained today</span>
-              {:else}
-                <span class="text-xs text-muted-foreground">{c.lastSessionAtMs ? `Last trained ${when(c.lastSessionAtMs)}` : "No workouts yet"}</span>
-              {/if}
-            </span>
-            {#if c.sharing.workouts}
-              <span class="text-[13px] tabular-nums text-muted-foreground">{c.sessions7d}{c.program?.state === "running" ? ` / ${c.program.daysPerWeek}` : ""}</span>
-            {/if}
-          </a>
-        {:else}
-          <p class="border-t border-border py-4 text-[13px] text-muted-foreground">Your clients show up here.</p>
-        {/each}
-      </section>
+    <div class="grid items-start gap-4 md:grid-cols-2" role={editing ? "list" : undefined}>
+      {#each cards as id, i (id)}{@render frame(i)}{:else}<p class="text-[13px] text-muted-foreground">No cards. Edit cards to add some.</p>{/each}
     </div>
   {/if}
 </div>
+
+{#snippet frame(i: number)}
+  {@const id = cards[i]}
+  {#if id}
+    <CardFrame {editing} menu={editing ? null : cardMenu(id, i)} name={nameOf(id)} fixed={id === "needs"} first={view === "today" ? i <= 1 : i === 0} last={i === cards.length - 1}
+      onmove={(by) => move(i, by)} onremove={() => (draft = draft.filter((x) => x !== id))}
+      ondragstart={() => (dragFrom = i)} ondragover={() => { if (dragFrom !== null && dragFrom !== i && !(view === "today" && (i === 0 || dragFrom === 0))) { const next = [...draft]; const [c] = next.splice(dragFrom, 1); next.splice(i, 0, c!); draft = next; dragFrom = i; } }}>
+      {@render card(id)}
+    </CardFrame>
+  {/if}
+{/snippet}
+
+{#snippet card(id: PageCard)}
+  {@const pack = parseCardPackCardId(id)}
+  {#if overview}
+    {#if pack}<CardPackCard pluginId={pack.pluginId} cardId={pack.cardId} page={view} {overview} />
+    {:else if id === "needs"}<NeedsYouCard {overview} {payments} {stripeNeeds} />
+    {:else if id === "ahead"}<AheadCard {overview} payments={allPayments} />
+    {:else if id === "week"}{#if monday && !cards.includes("lastweek")}<LastWeekCard {overview} />{:else}<ThisWeekCard {overview} />{/if}
+    {:else if id === "lastweek"}<LastWeekCard {overview} />
+    {:else if id === "paid"}<PaidCard month={view === "month" ? month : thisMonth} practice={practice.on} />
+    {:else if id === "clients"}<ClientsCard month={view === "month" ? month : thisMonth} practice={practice.on} samples={overview.clients.length} />
+    {:else if id === "wins"}<WinsCard month={view === "month" ? month : thisMonth} {overview} />
+    {:else if id === "worth"}<WorthCard {overview} />
+    {/if}
+  {/if}
+{/snippet}

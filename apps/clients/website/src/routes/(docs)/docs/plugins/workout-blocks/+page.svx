@@ -1,0 +1,54 @@
+---
+title: Workout blocks
+description: "Add a kind of block to LogIt workouts, like timed rounds or hangboard hangs: a JSON declaration, no code."
+---
+
+A workout block plugin adds a **kind of block** to workouts, next to Strength, Cardio and
+Mobility: rounds of rolling or sparring, hangboard hangs, climbing problems. You describe the
+block; LogIt draws it, times it and keeps it in history. It's pure JSON, no code, so it
+installs whether or not community plugins are turned on.
+
+Coaches put blocks in programs (Programs › a day › **+ From a plugin**), with the block's
+settings and how many entries it starts with ("6 rounds"). Their client is asked to allow it
+the first time; until they do, the block is a note in their workout.
+
+## The block file
+
+The file is the declaration itself, and its `id` is the plugin's id.
+
+```json
+{
+  "id": "com.you.rounds",
+  "name": "Rounds",
+  "description": "Timed rounds with rest and notes.",
+  "entry": { "one": "Round", "many": "Rounds" },
+  "blockFields": [
+    { "key": "kind", "type": "choice", "label": "What", "options": ["Rolling", "Sparring"], "remember": true }
+  ],
+  "fields": [
+    { "key": "length", "type": "duration", "label": "Length", "default": 300, "timer": "work", "column": true },
+    { "key": "partner", "type": "text", "label": "Partner", "optional": true, "suggestions": "previous", "column": true },
+    { "key": "note", "type": "text", "label": "Note", "multiline": true, "optional": true }
+  ],
+  "timer": { "pattern": "rounds", "work": "length", "rest": { "default": 60, "label": "Rest" } },
+  "summary": "{count} rounds"
+}
+```
+
+- **`entry`**: what one entry is called, and several.
+- **`fields`**: what each entry records (a round, a hang). **`blockFields`**: set once for the
+  whole block (gi or no-gi, which board). Coaches fill in the block fields in a program.
+- Field types: `number`, `weight`, `distance`, `duration` (seconds), `counter`, `scale`
+  (with `min`/`max`), `choice` and `tags` (with `options`, or `"list:<id>"` for one of your
+  `lists`), `toggle`, `text`.
+- Field options: `optional`, `default`, `unit`, `step`, `min`, `max`, `remember` (prefill from
+  the last block), `suggestions: "previous"`, `column` (show it in the entries table), and
+  `timer: "work"` on the duration the timer runs.
+- **`timer`**: `none`, or `rounds` with a work field and a rest.
+- **`summary`**: the line in history, with `{count}` and `{sum:<key>}`.
+- **`lists`** (optional): your own lists, e.g. submissions or grades,
+  `{ "grades": { "label": "Font grades", "items": ["5", "6A"], "ordered": true } }`.
+- At most 20 fields. Keys are stable: a later version can add fields and rename labels, and
+  rename a key with `"was": "oldKey"`, but never change a key's type.
+
+LogIt's own blocks, Rounds and Hangboard, are good ones to copy.

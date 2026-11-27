@@ -268,7 +268,7 @@
       <div class="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(240px,1fr))]">
         <div class="flex flex-col gap-1.5 rounded-xl bg-secondary p-[18px]"><span class="font-semibold text-heading">Free · €0</span><span class="text-sm leading-normal text-muted-foreground">The whole app on your phone. A free account backs it up and adds the social feed.</span></div>
         <div class="flex flex-col gap-1.5 rounded-xl bg-secondary p-[18px] ring-1 ring-primary/35"><span class="font-semibold text-heading">Pro · {PRICES.pro.monthly}/mo</span><span class="text-sm leading-normal text-muted-foreground">Sync between phones, plus the web dashboard.</span></div>
-        <div class="flex flex-col gap-1.5 rounded-xl bg-secondary p-[18px]"><span class="font-semibold text-heading">Studio · {PRICES.studio.monthly}/mo</span><span class="text-sm leading-normal text-muted-foreground">For coaches: clients, programs, check-ins, messages.</span></div>
+        <div class="flex flex-col gap-1.5 rounded-xl bg-secondary p-[18px]"><span class="font-semibold text-heading">Studio · {PRICES.studio.monthly}/mo</span><span class="text-sm leading-normal text-muted-foreground">For coaches: programs, meal plans, check-ins and one inbox, on the web and your phone.</span></div>
       </div>
     </div>
   </section>

@@ -34,6 +34,9 @@ export type NutritionAlgorithmInput = {
   userPreferences: unknown;
   /** Epoch ms "now" — passed in so the algorithm stays pure/testable. */
   now: number;
+  /** The day the targets are for, and whether it has training (null: not known). Lets a plugin
+   * cycle carbs between training and rest days. */
+  day?: { dateIso: string; trainingDay: boolean | null };
 };
 
 export type NutritionAlgorithmOutput = {

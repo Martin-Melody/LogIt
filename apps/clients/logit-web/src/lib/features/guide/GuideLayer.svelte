@@ -12,9 +12,13 @@
   const step = $derived(guide.paused ? null : guide.step);
   const chapter = $derived(guide.chapter);
   const kind = $derived(guide.stepKind);
-  const onPage = $derived(step ? routeMatches(step.route, page.url.pathname) : false);
+  const onPage = $derived(step ? routeMatches(step.route, page.url.pathname, page.url.search) : false);
 
   let rect = $state<DOMRect | null>(null);
+  // A dialog the person opened that the step's target isn't in (e.g. "New link" during
+  // "make your first link"): don't dim or cover it, sit beside it.
+  let openDialog = $state<DOMRect | null>(null);
+  let guideEl = $state<HTMLElement | null>(null);
   let empty = $state(false);
   let missing = $state(false);
   let popW = $state(360);
@@ -41,7 +45,12 @@
         const key = `${guide.active?.chapterId}/${s.id}`;
         if (scrolledFor !== key) {
           scrolledFor = key;
-          el.scrollIntoView({ block: "center", behavior: "smooth" });
+          // Only scroll when it's out of view, and then smoothly to near the top, not the middle.
+          const r0 = el.getBoundingClientRect();
+          if (r0.top < 72 || r0.bottom > window.innerHeight - 16) {
+            el.style.scrollMarginTop = "96px";
+            el.scrollIntoView({ block: "start", behavior: "smooth" });
+          }
         }
         rect = el.getBoundingClientRect();
         empty = el.hasAttribute("data-guide-empty");
@@ -51,6 +60,9 @@
         empty = false;
         missing = !!s.target && !s.arrives && performance.now() - startedAt > 4000;
       }
+      const dlg = [...document.querySelectorAll<HTMLElement>("[role='dialog'][data-state='open'], [role='alertdialog'][data-state='open']")]
+        .find((d) => d !== guideEl && !(el && d.contains(el)));
+      openDialog = dlg ? dlg.getBoundingClientRect() : null;
       frame = requestAnimationFrame(tick);
     };
     tick();
@@ -63,8 +75,9 @@
 
   // Beside the target if there's room (right, then below, left, above), else centred.
   const pos = $derived.by(() => {
-    if (phone || !rect) return null;
-    const r = rect;
+    if (phone) return null;
+    const r = openDialog ?? rect;
+    if (!r) return null;
     const fits = (x: number, y: number) => x >= 8 && y >= 8 && x + popW <= vw - 8 && y + popH <= vh - 8;
     const clampY = (y: number) => Math.min(Math.max(8, y), vh - popH - 8);
     const clampX = (x: number) => Math.min(Math.max(8, x), vw - popW - 8);
@@ -74,7 +87,9 @@
       { x: r.left - PAD - GAP - popW, y: clampY(r.top - PAD) },
       { x: clampX(r.left - PAD), y: r.top - PAD - GAP - popH },
     ];
-    return tries.find((t) => fits(t.x, t.y)) ?? null;
+    const found = tries.find((t) => fits(t.x, t.y));
+    // No room beside an open dialog: the bottom-left corner, clear of it as far as possible.
+    return found ?? (openDialog ? { x: 16, y: vh - popH - 16 } : null);
   });
 
   // A target that turns up later (a sample client's request): wait for it, don't call it missing.
@@ -92,7 +107,9 @@
 <svelte:window onkeydown={onKey} />
 
 {#if step && chapter}
-  {#if rect}
+  {#if openDialog}
+    <!-- The person's own dialog is in front; no dimming over it. -->
+  {:else if rect}
     <div aria-hidden="true" class="pointer-events-none fixed z-[60] rounded-xl ring-2 ring-primary transition-[top,left,width,height] duration-150"
       style="top:{rect.top - PAD}px;left:{rect.left - PAD}px;width:{rect.width + PAD * 2}px;height:{rect.height + PAD * 2}px;box-shadow:0 0 0 9999px rgb(4 6 9 / 0.55)"></div>
   {:else}
@@ -101,8 +118,8 @@
 
   <div
     role="dialog" aria-modal="false" aria-labelledby="guide-step-title"
-    bind:offsetWidth={popW} bind:offsetHeight={popH}
-    class="fixed z-[61] w-[min(360px,calc(100vw-16px))] rounded-xl border border-border bg-popover p-4 text-popover-foreground shadow-2xl
+    bind:this={guideEl} bind:offsetWidth={popW} bind:offsetHeight={popH}
+    class="fixed z-[61] w-[min(360px,calc(100vw-16px))] transition-[left,top] duration-200 ease-out motion-reduce:transition-none rounded-xl border border-border bg-popover p-4 text-popover-foreground shadow-2xl
       {phone ? 'inset-x-2 bottom-2 w-auto' : ''}"
     style={phone ? "" : pos ? `left:${pos.x}px;top:${pos.y}px` : "left:50%;top:50%;transform:translate(-50%,-50%)"}
   >

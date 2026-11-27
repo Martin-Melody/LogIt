@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Checkbox } from "$lib/components/ui/checkbox/index.js";
-  import * as NativeSelect from "$lib/components/ui/native-select/index.js";
+  import OptionSelect from "$lib/components/option-select.svelte";
   import type { Equipment, Exercise, ExerciseType, MuscleGroup } from "@logit/core/domain/exercise";
   import { EQUIPMENT } from "@logit/core/domain/exercise";
   import type { CardioActivity, CardioMeasure } from "@logit/core/domain/cardioActivity";
@@ -151,10 +151,8 @@
       {#if entry.kind === "strength"}
         <div>
           <label class={label} for="li-eq">Equipment</label>
-          <NativeSelect.Root id="li-eq" class="w-full" bind:value={equipment}>
-            <NativeSelect.Option value="">Not set</NativeSelect.Option>
-            {#each EQUIPMENT as e (e)}<NativeSelect.Option value={e}>{capitalise(EQUIPMENT_LABEL[e])}</NativeSelect.Option>{/each}
-          </NativeSelect.Root>
+          <OptionSelect id="li-eq" class="w-full" bind:value={equipment}
+            options={[{ value: "", label: "Not set" }, ...EQUIPMENT.map((e) => ({ value: e, label: capitalise(EQUIPMENT_LABEL[e]) }))]} />
         </div>
         <!-- Its own row: three words don't fit a third of the panel ("Bodyweight" spilled out). -->
         <div class="col-span-full">
@@ -176,9 +174,8 @@
       {:else}
         <div>
           <label class={label} for="li-area">Body area</label>
-          <NativeSelect.Root id="li-area" class="w-full" bind:value={area}>
-            {#each MOBILITY_AREAS as a (a)}<NativeSelect.Option value={a}>{capitalise(MOBILITY_AREA_LABEL[a])}</NativeSelect.Option>{/each}
-          </NativeSelect.Root>
+          <OptionSelect id="li-area" class="w-full" bind:value={area}
+            options={MOBILITY_AREAS.map((a) => ({ value: a, label: capitalise(MOBILITY_AREA_LABEL[a]) }))} />
         </div>
         <div>
           <span class={label}>Measured by</span>

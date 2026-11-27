@@ -63,6 +63,7 @@
       case "nutrition-algorithm": return "Nutrition algorithm";
       case "nutrition-analytics": return "Nutrition insights";
       case "muscle-group-insight": return "Muscle-group insight";
+      case "workout-block": return "Workout block";
     }
   }
 

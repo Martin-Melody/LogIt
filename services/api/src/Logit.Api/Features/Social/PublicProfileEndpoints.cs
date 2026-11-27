@@ -11,7 +11,8 @@ namespace Logit.Api.Features.Social;
 /// posts, forum posts and the training cards they chose to show (design canvas PR5): never stories, follow lists or anything else.
 public static class PublicProfileEndpoints
 {
-    public record ProfileDto(string Username, string DisplayName, string? Bio, string? AvatarUrl, int Posts, int Followers, int Following, string? PublicProfileJson = null);
+    public record ProfileDto(string Username, string DisplayName, string? Bio, string? AvatarUrl, int Posts, int Followers, int Following, string? PublicProfileJson = null,
+        Coach.CoachProfileEndpoints.CoachingSectionDto? Coaching = null);
     public record ProfilePageDto(ProfileDto Profile, List<PostDto> Posts, List<GroupPostEndpoints.PostDto> Forum);
     public record PostPageDto(ProfileDto Profile, PostDto Post, List<CommentDto> Comments, List<PostDto> More);
 
@@ -45,12 +46,13 @@ public static class PublicProfileEndpoints
         return [.. rows.Select(p => p.ToDto(null, hidden))];
     }
 
-    private static async Task<IResult> Profile(string username, AppDbContext db)
+    private static async Task<IResult> Profile(string username, AppDbContext db, IConfiguration config)
     {
         var user = await PublicUserAsync(db, username);
         if (user is null) return Results.NotFound();
         var rows = await PostsOf(db, user.Id).OrderByDescending(p => p.CreatedAt).Take(12).ToListAsync();
-        return Results.Ok(new ProfilePageDto(await ProfileOfAsync(db, user), await DtosAsync(db, rows), await GroupPostEndpoints.PublicByAuthorAsync(db, user.Id, 10)));
+        var profile = await ProfileOfAsync(db, user) with { Coaching = await Coach.CoachProfileEndpoints.SectionAsync(db, user, config, DateTime.UtcNow) };
+        return Results.Ok(new ProfilePageDto(profile, await DtosAsync(db, rows), await GroupPostEndpoints.PublicByAuthorAsync(db, user.Id, 10)));
     }
 
     private static async Task<IResult> Post(string username, Guid id, AppDbContext db)

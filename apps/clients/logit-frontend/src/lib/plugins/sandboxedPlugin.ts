@@ -8,6 +8,12 @@ import {
 } from "./bundleStore";
 import { runInSandbox } from "./sandbox";
 import { isCommunityPluginsEnabled } from "./settings";
+import { coachAllowedPlugins } from "./coachAllowed";
+
+/** Community code runs when community plugins are on, or this one was allowed for a coach's program. */
+export function mayRunPlugin(pluginId: string): boolean {
+  return isCommunityPluginsEnabled() || coachAllowedPlugins().has(pluginId);
+}
 import type { InstalledPlugin, PluginFamily } from "./types";
 
 /**
@@ -83,7 +89,7 @@ export async function runSandboxMeta(
  * sandbox call. null if disabled / not installed locally / invalid.
  */
 export async function sandboxedMeta(plugin: InstalledPlugin): Promise<BundleMeta | null> {
-  if (!isCommunityPluginsEnabled()) return null;
+  if (!mayRunPlugin(plugin.manifest.id)) return null;
   const cached = getStoredBundleMeta(plugin.manifest.id);
   if (cached) return cached;
   const source = await ensureBundleSource(plugin);
@@ -101,7 +107,7 @@ export function sandboxedCall<T>(
   method: string,
 ): (input: unknown) => Promise<T> {
   return async (input: unknown) => {
-    if (!isCommunityPluginsEnabled()) {
+    if (!mayRunPlugin(plugin.manifest.id)) {
       throw new Error("Community plugins are turned off.");
     }
     const source = await ensureBundleSource(plugin);
@@ -122,10 +128,9 @@ export async function listSandboxedPlugins<T>(
   hasCapability: (plugin: InstalledPlugin) => boolean,
   build: (plugin: InstalledPlugin, meta: BundleMeta) => T | null,
 ): Promise<T[]> {
-  if (!isCommunityPluginsEnabled()) return [];
   const out: T[] = [];
   for (const plugin of installed) {
-    if (!plugin.enabled || plugin.manifest.family !== family) continue;
+    if (!plugin.enabled || plugin.manifest.family !== family || !mayRunPlugin(plugin.manifest.id)) continue;
     if (!hasCapability(plugin)) continue;
     // sandboxedMeta heals a missing bundle on demand; skip only if that fails.
     const meta = await sandboxedMeta(plugin);
@@ -142,10 +147,9 @@ export function findSandboxedPlugin(
   family: PluginFamily,
   matches: (plugin: InstalledPlugin) => boolean,
 ): InstalledPlugin | null {
-  if (!isCommunityPluginsEnabled()) return null;
   return (
     installed.find(
-      (p) => p.enabled && p.manifest.family === family && matches(p),
+      (p) => p.enabled && p.manifest.family === family && mayRunPlugin(p.manifest.id) && matches(p),
     ) ?? null
   );
 }

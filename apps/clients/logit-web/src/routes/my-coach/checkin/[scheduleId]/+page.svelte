@@ -12,6 +12,7 @@
     currentPeriodIndex,
     markSubmitted,
     missedCheckin,
+    missingAnswers,
     periodDueMs,
     setAnswer,
     type CheckinAnswer,
@@ -22,7 +23,8 @@
   import { localDateIso } from "@logit/core/domain/nutrition";
   import { getOwnNutritionDeps } from "$lib/deps";
   import CheckinAnswers from "$lib/features/coaching/CheckinAnswers.svelte";
-  import { loadAssignedForms, loadMySubmissions, saveMySubmission, shrinkPhoto } from "$lib/features/coaching/myCoachData";
+  import QuestionField from "$lib/features/coaching/forms/QuestionField.svelte";
+  import { loadAssignedForms, loadMySubmissions, saveMySubmission } from "$lib/features/coaching/myCoachData";
   import { shortDate, weekdayDate } from "$lib/features/coaching/format";
 
   // Filling in a coach's check-in on the web. Same rules as the phone: one per period, a
@@ -111,27 +113,10 @@
     missing = missing.filter((m) => m !== q.id);
   }
 
-  async function photo(q: CheckinQuestion, e: Event) {
-    const input = e.currentTarget as HTMLInputElement;
-    const file = input.files?.[0];
-    input.value = "";
-    if (!file) return;
-    try {
-      set(q, { photoDataUrl: await shrinkPhoto(file) });
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Couldn't read that photo");
-    }
-  }
-
-  function answered(q: CheckinQuestion): boolean {
-    const a = answer(q.id);
-    return !!a && (a.text?.trim() || a.number !== undefined || a.bool !== undefined || a.photoDataUrl) ? true : false;
-  }
-
   async function save(submit: boolean) {
     if (!sub || !form) return;
     if (submit) {
-      missing = form.questions.filter((q) => q.required && !answered(q)).map((q) => q.id);
+      missing = missingAnswers(form, sub).map((q) => q.id);
       if (missing.length) {
         document.getElementById(`q-${missing[0]}`)?.focus();
         return;
@@ -139,7 +124,8 @@
     }
     saving = true;
     try {
-      const next = submit ? markSubmitted(sub) : { ...sub, updatedAtMs: Date.now() };
+      // Sent with the questions as they are now, so later edits don't change what was asked.
+      const next = submit ? markSubmitted(sub, form) : { ...sub, updatedAtMs: Date.now() };
       await saveMySubmission(next);
       sub = next;
       dirty = false;
@@ -156,7 +142,6 @@
     }
   }
 
-  const field = "rounded-[9px] border border-input bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring";
 </script>
 
 <div class="flex flex-col gap-4">
@@ -187,50 +172,9 @@
         {#each form.questions as q, i (q.id)}
           {@const a = answer(q.id)}
           {@const bad = missing.includes(q.id)}
-          <div class="flex flex-col gap-2 py-4 {i ? 'border-t border-border' : ''}">
-            {#if q.type === "scale" || q.type === "boolean"}
-              <span id="label-{q.id}" class="text-sm font-medium">{q.prompt}{#if q.required}<span class="ml-2 text-xs font-medium text-warning">Required</span>{/if}</span>
-            {:else}
-              <label for="q-{q.id}" class="text-sm font-medium">{q.prompt}{#if q.required}<span class="ml-2 text-xs font-medium text-warning">Required</span>{/if}</label>
-            {/if}
-
-            {#if q.type === "text"}
-              <textarea id="q-{q.id}" rows="4" class="{field} w-full py-2.5 leading-relaxed" aria-invalid={bad} value={a?.text ?? ""} oninput={(e) => set(q, { text: e.currentTarget.value })}></textarea>
-            {:else if q.type === "number" || q.type === "weight"}
-              <span class="flex items-center gap-2">
-                <input id="q-{q.id}" type="number" step="0.1" inputmode="decimal" class="{field} h-[38px] w-32" aria-invalid={bad} value={a?.number ?? ""}
-                  oninput={(e) => set(q, { number: e.currentTarget.value === "" ? undefined : Number(e.currentTarget.value) })} />
-                {#if q.type === "weight"}<span class="text-[13px] text-muted-foreground">kg</span>{/if}
-              </span>
-              {#if q.type === "weight" && weightHint}<span class="text-xs text-muted-foreground">Filled in from your {weightHint.today ? "weigh-in this morning" : "latest weigh-in"}. Change it if you like.</span>{/if}
-            {:else if q.type === "scale"}
-              {@const min = q.scaleMin ?? 1}
-              {@const max = q.scaleMax ?? 10}
-              <div role="radiogroup" aria-labelledby="label-{q.id}" class="flex flex-wrap gap-1">
-                {#each Array.from({ length: max - min + 1 }, (_, k) => min + k) as n (n)}
-                  <button type="button" role="radio" id={n === min ? `q-${q.id}` : undefined} aria-checked={a?.number === n} onclick={() => set(q, { number: n })}
-                    class="h-9 w-[38px] rounded-lg text-[13px] {a?.number === n ? 'bg-primary font-semibold text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground'}">{n}</button>
-                {/each}
-              </div>
-            {:else if q.type === "boolean"}
-              <div role="radiogroup" aria-labelledby="label-{q.id}" class="flex gap-1">
-                {#each [{ v: true, l: "Yes" }, { v: false, l: "No" }] as o, k (o.l)}
-                  <button type="button" role="radio" id={k === 0 ? `q-${q.id}` : undefined} aria-checked={a?.bool === o.v} onclick={() => set(q, { bool: o.v })}
-                    class="h-9 rounded-lg px-4 text-[13px] {a?.bool === o.v ? 'bg-primary font-semibold text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground'}">{o.l}</button>
-                {/each}
-              </div>
-            {:else if q.type === "photo"}
-              <div class="flex flex-wrap items-end gap-2">
-                {#if a?.photoDataUrl}<img src={a.photoDataUrl} alt="Your photo for {q.prompt}" class="max-h-40 rounded-lg border border-border" />{/if}
-                <label class="flex h-9 cursor-pointer items-center rounded-lg border border-dashed border-border px-3 text-[13px] text-muted-foreground hover:text-foreground">
-                  {a?.photoDataUrl ? "Change photo" : "Add photo"}
-                  <input id="q-{q.id}" type="file" accept="image/*" class="sr-only" onchange={(e) => photo(q, e)} />
-                </label>
-                {#if a?.photoDataUrl}<button type="button" class="text-xs text-muted-foreground hover:text-destructive" onclick={() => set(q, { photoDataUrl: undefined })}>Remove</button>{/if}
-              </div>
-              <span class="text-xs text-muted-foreground">Only {coachName} sees check-in photos.</span>
-            {/if}
-            {#if bad}<span class="text-xs text-destructive">Please answer this one.</span>{/if}
+          <div class="py-4 {i ? 'border-t border-border' : ''}">
+            <QuestionField {q} answer={a} invalid={bad} {coachName} onchange={(v) => set(q, v)}
+              weightHint={q.type === "weight" && weightHint ? `Filled in from your ${weightHint.today ? "weigh-in this morning" : "latest weigh-in"}. Change it if you like.` : null} />
           </div>
         {/each}
         <div class="flex flex-wrap justify-end gap-2 border-t border-border pt-3">

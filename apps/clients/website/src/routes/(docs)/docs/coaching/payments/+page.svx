@@ -14,19 +14,41 @@ title: Getting paid
 
 ## Set up
 
-Payments › Packages and settings walks you through three steps: connect Stripe (Stripe's own sign-up,
-about 10 minutes), make a package, and put it on an invite link. You're the seller: your own VAT and
-refunds, all in Stripe. Stripe's card fees are yours; LogIt takes nothing.
+Payments is optional: only if clients pay you through LogIt. Payments › Packages walks you through
+three steps: connect Stripe (Stripe's own sign-up; what it asks for depends on your country), make a
+package, and offer it when someone asks to be coached. You're the seller: your own VAT. Stripe's card
+fees are yours; LogIt takes nothing.
 
-People who open a paid link see your package and price first. If they're new to LogIt they make an
-account right on that page, then pay on Stripe's page, where they can also type a discount code you
-made under Coupons in your Stripe dashboard. You get an email when someone pays.
+When you come back from Stripe, Packages shows where you are: ready to take payments, Stripe still
+checking your details, or setup not finished (what you entered is kept). If Stripe needs something
+months later, it's first on Today and offers say they can't be paid until you finish in Stripe.
+
+Packages work without Stripe too: they show on your profile, and an offer can say "No payment through
+LogIt". Clients pay on Stripe's page, where they can type a discount code you made under Coupons in your
+Stripe dashboard. You get an email when someone pays.
+
+## Changing, refunding, stopping
+
+Manage on a row in Payments › Clients:
+
+- **Change package** sends the client an offer card in your conversation. Nothing changes until they
+  accept, and the change starts at their next payment, so nobody pays twice.
+- **Refund** gives money back through your Stripe account; coaching carries on. Stripe's fee on the
+  original payment isn't returned to you.
+- **Pause or end coaching** opens the client's page, where ending can refund too.
+
+A payment disputed with the client's bank shows as Disputed; it changes nothing on its own. You answer
+it in Stripe.
+
+To leave Stripe, Payments › Settings › Stop taking payments through LogIt. Plans stop renewing, each
+client keeps coaching to the end of what they paid for, then shows as paid elsewhere. Nothing is
+refunded, and your Stripe account stays yours.
 
 ## When a payment fails
 
 LogIt emails the client a link to update their card, and Stripe tries the card again over a few days.
 Clients can also press Update card in My coach on the web; Stripe takes the overdue payment as soon as the
 new card is in. You choose what happens to coaching meanwhile, for everyone or per client, and you get an
-email too (turn these off in Packages and settings).
+email too; turn these off in Payments › Settings.
 
 <CanCant ids={["coach-payments"]} />

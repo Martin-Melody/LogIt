@@ -2,7 +2,7 @@
      hand. LogIt never handles money here: refunds and cancellations happen in the store. -->
 <script lang="ts">
   import * as Table from "$lib/components/ui/table/index.js";
-  import * as NativeSelect from "$lib/components/ui/native-select/index.js";
+  import OptionSelect from "$lib/components/option-select.svelte";
   import { toast } from "$lib/components/ui/sonner";
   import { shortDate, when } from "$lib/features/coaching/format";
   import { adminApi, at, type Person, type SubscriptionRow } from "./adminApi";
@@ -61,9 +61,8 @@
 
   <form class="flex flex-wrap items-end gap-3 border-t border-border pt-3" onsubmit={(e) => { e.preventDefault(); void save(); }}>
     <label class="flex flex-[0_1_200px] flex-col gap-1.5 text-[13px] font-medium">Plan given by hand
-      <NativeSelect.Root bind:value={manual}>
-        <NativeSelect.Option value="Free">None</NativeSelect.Option><NativeSelect.Option value="Pro">Pro</NativeSelect.Option><NativeSelect.Option value="Studio">Studio</NativeSelect.Option>
-      </NativeSelect.Root>
+      <OptionSelect bind:value={manual} aria-label="Plan given by hand"
+        options={[{ value: "Free", label: "None" }, { value: "Pro", label: "Pro" }, { value: "Studio", label: "Studio" }]} />
     </label>
     <p class="min-w-0 flex-[1_1_240px] text-[13px] text-muted-foreground">For friends, testers or to make up for a problem. A paid plan still counts on top, and they get an email about it.</p>
     <button type="submit" disabled={saving || manual === (person.manualTier ?? "Free")} class="inline-flex h-[34px] items-center rounded-[9px] bg-primary px-3 text-[13px] font-semibold text-primary-foreground disabled:opacity-50">Save</button>

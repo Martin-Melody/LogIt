@@ -1,7 +1,8 @@
 <!-- A public profile, signed out (design canvas W1, W3, F5): the profile, the latest posts and
      forum posts, then Sign in. Follow and Open in LogIt go to the app (or the web app). -->
 <script lang="ts">
-  import { PLAY_URL, SITE_URL } from "$lib/site";
+  import { DASHBOARD_URL, PLAY_URL, SITE_URL } from "$lib/site";
+  import CoachingSection from "@logit/ui/CoachingSection.svelte";
   import { ask, logIn } from "$lib/social/prompt.svelte";
   import ProfileHead from "$lib/social/ProfileHead.svelte";
   import PublicPost from "$lib/social/PublicPost.svelte";
@@ -11,16 +12,28 @@
 
   const { data } = $props();
   const p = $derived(data.profile);
+  // Canvas L1: a working link opens asking with it (so the coach knows where people came from),
+  // or straight to paying for a pay-and-start link. Anything else is the plain profile.
+  const linkAsk = $derived.by(() => {
+    const plain = { href: `${DASHBOARD_URL}/ask/${encodeURIComponent(p.username)}`, label: null as string | null };
+    const l = data.link;
+    if (!l || l.state !== "active") return plain;
+    if (l.pays) {
+      const price = new Intl.NumberFormat(undefined, { style: "currency", currency: l.pays.currency.toUpperCase(), maximumFractionDigits: 0 }).format(l.pays.amountCents / 100);
+      return { href: `${DASHBOARD_URL}/c/${encodeURIComponent(l.code)}`, label: `Start coaching · ${price}${l.pays.interval === "month" ? " a month" : ""}` };
+    }
+    return { href: `${plain.href}?l=${encodeURIComponent(l.code)}`, label: null };
+  });
   // Posts | Training tabs, as in the app (the page's 620 px column has no room for a side column).
   let view = $state<"posts" | "training">("posts");
   const hasCards = $derived(shownCards(parseProfileData(p.publicProfileJson)).length > 0);
-  const description = $derived((p.bio || `${p.displayName} trains with LogIt.`).replace(/\s+/g, " ").slice(0, 155));
+  const description = $derived((p.coaching?.headline ? `${p.coaching.headline}. ${p.bio ?? ""}` : p.bio || `${p.displayName} trains with LogIt.`).replace(/\s+/g, " ").trim().slice(0, 155));
 </script>
 
 <svelte:head>
   <title>{p.displayName} (@{p.username}) · LogIt</title>
   <!-- A page with nothing on it counts against the whole site in search; the profiles sitemap skips these too. -->
-  {#if data.posts.length === 0 && data.forum.length === 0}<meta name="robots" content="noindex" />{/if}
+  {#if data.posts.length === 0 && data.forum.length === 0 && !p.coaching}<meta name="robots" content="noindex" />{/if}
   <meta name="description" content={description} />
   <link rel="canonical" href="{SITE_URL}/@{p.username}" />
   <meta property="og:title" content="{p.displayName} (@{p.username})" />
@@ -34,6 +47,11 @@
     <button type="button" class="rounded-lg bg-primary px-4 py-3 text-center font-semibold text-primary-foreground hover:bg-primary/90" onclick={() => ask("follow", p.displayName)}>Follow</button>
     <a href="logit://u/{p.username}" class="rounded-lg border border-border px-4 py-3 text-center font-semibold hover:bg-muted">Open in the app</a>
   </div>
+  {#if p.coaching}
+    <!-- Canvas P1: what a coach offers, and Ask to be coached (on the web app, where the ask happens). -->
+    <CoachingSection section={p.coaching} name={p.displayName} class="rounded-2xl border border-border p-4"
+      askHref={linkAsk.href} askLabel={linkAsk.label} />
+  {/if}
   <!-- Design canvas PR5: the same Training cards as the app. Both tabs are in the page for search engines. -->
   {#if hasCards}
     <div role="tablist" aria-label="@{p.username}" class="flex border-b border-border">

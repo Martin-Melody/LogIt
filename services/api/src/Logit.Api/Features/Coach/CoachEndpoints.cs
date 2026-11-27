@@ -67,7 +67,11 @@ public static class CoachEndpoints
         CoachPaymentEndpoints.MapWebhook(app);
     }
 
-    private static async Task<IResult> Invite(string username, ClaimsPrincipal caller, AppDbContext db, IConfiguration config)
+    /// Offer: invite with an offer they take on the take page (canvas K13: a package or no
+    /// payment through LogIt). Older apps send no body: a plain invite they accept.
+    public record InviteBody(bool Offer = false, Guid? PackageId = null, string? Message = null);
+
+    private static async Task<IResult> Invite(string username, [FromBody] InviteBody? body, ClaimsPrincipal caller, AppDbContext db, IConfiguration config)
     {
         var coachId = caller.GetUserId();
         var coach = await db.Users.FindAsync(coachId);
@@ -117,11 +121,47 @@ public static class CoachEndpoints
             relationship.ApplySharing(SharingDto.All);
             relationship.UpdatedAt = DateTime.UtcNow;
         }
+        CoachOffer? offer = null;
+        if (body?.Offer == true)
+        {
+            CoachPackage? package = null;
+            if (body.PackageId is { } pid)
+            {
+                package = await db.CoachPackages.FirstOrDefaultAsync(k => k.Id == pid && k.CoachId == coachId && !k.Hidden);
+                if (package is null) return Results.BadRequest(new { error = "That package isn't available." });
+                if (!await db.CoachPaymentAccounts.AnyAsync(a => a.CoachId == coachId && a.CardPaymentsActive && !a.PaymentsStopped))
+                    return Results.BadRequest(new { error = "Paid packages need payments set up first.", code = "payments_not_ready" });
+            }
+            if (body.Message?.Length > CoachIntake.MaxMessage) return Results.BadRequest(new { error = "That message is too long." });
+            var now = DateTime.UtcNow;
+            // An invite is someone you know: the offer holds for two weeks.
+            offer = new CoachOffer
+            {
+                Relationship = relationship,
+                PackageId = package?.Id,
+                PackageName = package?.Name ?? "Coaching",
+                PackageDescription = package?.Description ?? "",
+                AmountCents = package?.AmountCents ?? 0,
+                Currency = package?.Currency ?? "eur",
+                Interval = package?.Interval ?? PaymentIntervals.Once,
+                Weeks = package?.Weeks,
+                HoldUntil = now.AddDays(14),
+                CreatedAt = now,
+            };
+            db.CoachOffers.Add(offer);
+        }
         // Otherwise nothing tells them: the invite only shows on their Coaching page.
         db.Notifications.Add(new Notification { UserId = client.Id, ActorId = coachId, Type = NotificationType.CoachInvite });
         await db.SaveChangesAsync();
+        if (offer is not null)
+        {
+            CoachIntake.Post(db, relationship, coachId, CoachIntake.Events.Offer,
+                $"{CoachIntake.NameOf(coach)} invited you to be coached: {offer.PackageName}, {CoachIntake.PriceText(offer)}.",
+                CoachIntake.CardOf(offer), body!.Message, DateTime.UtcNow);
+            await db.SaveChangesAsync();
+        }
 
-        return Results.Created($"/coach/invites/{relationship.Id}", new { relationshipId = relationship.Id });
+        return Results.Created($"/coach/invites/{relationship.Id}", new { relationshipId = relationship.Id, offerId = offer?.Id });
     }
 
     private static async Task<IResult> GetClients(ClaimsPrincipal caller, AppDbContext db)
@@ -175,6 +215,17 @@ public static class CoachEndpoints
                 C28 = g.Count(x => x.StartedAtMs >= d28),
             })
             .ToListAsync()).ToDictionary(x => x.UserId);
+
+        // Canvas W1: on how many of the last 7 days each client logged any food (nutrition sharers only).
+        var nutritionIds = rels.Where(r => r.ShareNutrition).Select(r => r.ClientId).ToList();
+        var fromDay = "nday_" + DateTime.UtcNow.Date.AddDays(-6).ToString("yyyy-MM-dd");
+        var foodDays = (await db.SyncedNutritionDays
+            .Where(d => nutritionIds.Contains(d.UserId) && d.DeletedAtMs == null && string.Compare(d.ClientId, fromDay) >= 0)
+            .Select(d => new { d.UserId, d.DataJson })
+            .ToListAsync())
+            .Where(d => d.DataJson.Contains("\"items\":[{"))
+            .GroupBy(d => d.UserId)
+            .ToDictionary(g => g.Key, g => g.Count());
 
         var programCounts = (await db.CoachPrograms
             .Where(p => p.CoachId == coachId && p.DeletedAtMs == null && p.RecipientUserId != null
@@ -235,6 +286,28 @@ public static class CoachEndpoints
             return best;
         }
 
+        // How long each client has waited for a reply (canvas Z2: Today shows it from day 5).
+        var relIds = rels.Select(r => r.Id).ToList();
+        var lastCoachMs = (await db.CoachMessages.Where(m => relIds.Contains(m.RelationshipId) && m.SenderUserId == coachId)
+            .GroupBy(m => m.RelationshipId).Select(g => new { g.Key, Ms = g.Max(m => m.CreatedAtMs) }).ToListAsync())
+            .ToDictionary(x => x.Key, x => x.Ms);
+        var clientMsgs = await db.CoachMessages.Where(m => relIds.Contains(m.RelationshipId) && m.SenderUserId != coachId && m.Kind == null)
+            .Select(m => new { m.RelationshipId, m.CreatedAtMs }).ToListAsync();
+        // Canvas Q8: a client changed an exercise for the rest of the program, and the coach hasn't
+        // read it or answered it (Keep it / Put back send a "program-swap" message).
+        var swapMsgs = await db.CoachMessages.Where(m => relIds.Contains(m.RelationshipId)
+                && ((m.SenderUserId != coachId && m.Kind == "lasting-swap" && m.ReadAtMs == null) || (m.SenderUserId == coachId && m.Kind == "program-swap")))
+            .Select(m => new { m.RelationshipId, m.Kind, m.CreatedAtMs }).ToListAsync();
+        var lastingSwaps = swapMsgs.Where(m => m.Kind == "lasting-swap"
+                && !swapMsgs.Any(c => c.RelationshipId == m.RelationshipId && c.Kind == "program-swap" && c.CreatedAtMs >= m.CreatedAtMs))
+            .Select(m => m.RelationshipId).ToHashSet();
+        long? WaitingSince(Guid relId)
+        {
+            var after = lastCoachMs.GetValueOrDefault(relId, 0);
+            var first = clientMsgs.Where(m => m.RelationshipId == relId && m.CreatedAtMs > after).Select(m => (long?)m.CreatedAtMs).Min();
+            return first;
+        }
+
         var roster = rels.Select(r =>
         {
             sessionAgg.TryGetValue(r.ClientId, out var s);
@@ -245,6 +318,7 @@ public static class CoachEndpoints
                 lastSessionAtMs = s?.Last,
                 sessions7d = s?.C7 ?? 0,
                 sessions28d = s?.C28 ?? 0,
+                foodDays7d = r.ShareNutrition ? foodDays.GetValueOrDefault(r.ClientId, 0) : (int?)null,
                 programCount = programCounts.GetValueOrDefault(r.ClientId, 0),
                 checkinScheduleCount = scheduleCounts.GetValueOrDefault(r.ClientId, 0),
                 assignedHabitCount = habitCounts.GetValueOrDefault(r.ClientId, 0),
@@ -252,6 +326,13 @@ public static class CoachEndpoints
                 unreadFromClient = unread.GetValueOrDefault(r.ClientId, 0),
                 sharing = r.ToSharingDto(),
                 since = r.UpdatedAt,
+                waitingSinceMs = WaitingSince(r.Id),
+                lastingSwap = lastingSwaps.Contains(r.Id),
+                pluginConsent = CoachPluginConsent.Read(r.PluginConsentJson),
+                pausedUntil = r.PausedUntil,
+                endsAt = r.EndsAt,
+                // Canvas K3: their answers when they asked to be coached.
+                answers = CoachIntake.AnswersOf(r),
             };
         });
 
@@ -281,8 +362,12 @@ public static class CoachEndpoints
             since = r.UpdatedAt,
             // The swap rule that applies to me in this coach's programs.
             swapRule = SwapRules.Effective(r, r.Coach),
+            foodSwapRule = r.Coach.CoachFoodSwapRule ?? FoodSwapRules.Mine,
+            pluginConsent = CoachPluginConsent.Read(r.PluginConsentJson),
             status = r.Status == CoachClientStatus.Paused ? "paused" : "active",
             payment = CoachPaymentEndpoints.ClientPaymentDto(r.Payment, accounts.GetValueOrDefault(r.CoachId)),
+            // Canvas Z7: pinned in the conversation while the coach is away.
+            away = CoachAway.Dto(r.Coach, DateTime.UtcNow),
         }));
     }
 
@@ -295,11 +380,17 @@ public static class CoachEndpoints
             .OrderByDescending(r => r.CreatedAt)
             .ToListAsync();
 
+        var ids = relationships.Select(r => r.Id).ToList();
+        var offers = (await db.CoachOffers.AsNoTracking().Where(o => ids.Contains(o.RelationshipId)).ToListAsync())
+            .GroupBy(o => o.RelationshipId).ToDictionary(g => g.Key, g => g.OrderByDescending(o => o.CreatedAt).First());
+        var now = DateTime.UtcNow;
         return Results.Ok(relationships.Select(r => new
         {
             relationshipId = r.Id,
             coach = r.Coach.ToProfileDto(false),
             createdAt = r.CreatedAt,
+            // Canvas K13: take it on the take page (agreement, sharing, paying).
+            offer = offers.TryGetValue(r.Id, out var o) ? new { card = CoachIntake.CardOf(o), state = CoachIntake.StateOf(o, now) } : null,
         }));
     }
 
@@ -358,7 +449,7 @@ public static class CoachEndpoints
     }
 
     private static async Task<IResult> RevokeRelationship(
-        Guid relationshipId, ClaimsPrincipal caller, AppDbContext db, CoachPaymentService payments, CancellationToken ct)
+        Guid relationshipId, ClaimsPrincipal caller, AppDbContext db, CoachingEnd coaching, CancellationToken ct)
     {
         var userId = caller.GetUserId();
         var relationship = await db.CoachClientRelationships.FirstOrDefaultAsync(r =>
@@ -380,11 +471,9 @@ public static class CoachEndpoints
             if (asker != userId) return Results.NotFound();
         }
 
-        relationship.Status = CoachClientStatus.Revoked;
-        relationship.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync(ct);
         // No more charges once coaching has ended, whoever ended it.
-        await payments.CoachingEndedAsync(relationship, DateTime.UtcNow, ct);
+        var reason = relationship.CoachId == userId ? EndReason.CoachEnded : EndReason.ClientStopped;
+        await coaching.EndAsync(relationship, reason, RefundRule.None, DateTime.UtcNow, ct);
 
         return Results.NoContent();
     }
@@ -609,6 +698,9 @@ public static class CoachEndpoints
                 DeletedAtMs = req.DeletedAtMs,
             };
             db.CoachNutritionPlans.Add(stored);
+            // Canvas MP5: one notification when a plan is given ("Sam sent you a meal plan").
+            if (recipientUserId.HasValue && !req.DeletedAtMs.HasValue)
+                db.Notifications.Add(new Notification { UserId = recipientUserId.Value, ActorId = coachId, Type = NotificationType.CoachMealPlan });
             await db.SaveChangesAsync();
             return Results.Ok(new { id = stored.Id, planId = stored.PlanId, updatedAtMs = stored.UpdatedAtMs });
         }
@@ -917,19 +1009,26 @@ public static class CoachEndpoints
 
     // ── Messaging ─────────────────────────────────────────────────────────────
 
-    /// The Active relationship the caller participates in, or null (not found / not a
-    /// participant / not Active — all indistinguishable to the caller).
+    /// The relationship the caller can message in, or null (not found / not a participant /
+    /// not open — all indistinguishable to the caller). Open: Active coaching, or a request
+    /// someone made, which is a conversation before coaching starts (canvas R3). With
+    /// `reading`, a closed request's conversation too: it stays readable, never replied to.
     private static Task<CoachClientRelationship?> ParticipantRelationship(
-        Guid callerId, Guid relationshipId, AppDbContext db) =>
+        Guid callerId, Guid relationshipId, AppDbContext db, bool reading = false) =>
         db.CoachClientRelationships.FirstOrDefaultAsync(r =>
             r.Id == relationshipId &&
-            r.Status == CoachClientStatus.Active &&
-            (r.CoachId == callerId || r.ClientId == callerId));
+            (r.CoachId == callerId || r.ClientId == callerId) &&
+            (r.Status == CoachClientStatus.Active
+                || (r.Status == CoachClientStatus.Pending && r.RequestedByClient)
+                || (reading && r.Status == CoachClientStatus.Revoked && r.RequestedByClient
+                    && (r.RequestStage == RequestStages.NotAFit || r.RequestStage == RequestStages.Withdrawn))));
 
     private static async Task<IResult> SendMessage(
         [FromBody] SendMessageRequest req,
         ClaimsPrincipal caller,
-        AppDbContext db)
+        AppDbContext db,
+        Logit.Api.Features.Email.IEmailSender email,
+        IConfiguration config)
     {
         var callerId = caller.GetUserId();
         if (string.IsNullOrWhiteSpace(req.MessageId))
@@ -953,8 +1052,23 @@ public static class CoachEndpoints
         if (req.VoiceId is { } voiceId && (voice = await Logit.Api.Features.Voice.VoiceEndpoints.OwnedAsync(db, callerId, voiceId)) is null)
             return Results.BadRequest(new { error = "That voice message didn't upload. Try again." });
 
+        string? kind = null, card = null;
+        if (req.Kind is { } k)
+        {
+            // Clients: a lasting swap (SW1), an answer to a goal suggestion (GL1). Coaches: a
+            // program swap (W6/Q8), a goal suggestion (GL1), a reply to a check-in (K4), their month (W7).
+            string[] allowed = relationship.ClientId == callerId ? ["lasting-swap", "goal-answer"] : ["program-swap", "goal-suggestion", "checkin-reply", "month-report"];
+            if (!allowed.Contains(k)) return Results.BadRequest(new { error = "That kind of message can't be sent." });
+            if (req.CardJson is { Length: > 4000 }) return Results.BadRequest(new { error = "Card too large." });
+            try { if (req.CardJson is not null) using (System.Text.Json.JsonDocument.Parse(req.CardJson)) { } }
+            catch (System.Text.Json.JsonException) { return Results.BadRequest(new { error = "Card isn't JSON." }); }
+            (kind, card) = (k, req.CardJson);
+        }
+
         var message = new CoachMessage
         {
+            Kind = kind,
+            CardJson = card,
             VoiceId = voice?.Id,
             VoiceMs = voice?.DurationMs ?? 0,
             VoicePeaks = voice is null ? null : Logit.Api.Features.Voice.VoiceEndpoints.Peaks(req.VoicePeaks),
@@ -970,6 +1084,9 @@ public static class CoachEndpoints
         };
         db.CoachMessages.Add(message);
         await db.SaveChangesAsync();
+        // A coach answering a request: an email if they don't have the app yet (canvas R7).
+        if (relationship.Status == CoachClientStatus.Pending && relationship.CoachId == callerId)
+            await RequestEmails.MaybeSendAsync(db, email, config, relationship.Id, null, message.Id);
 
         return Results.Ok(new { id = message.Id, messageId = message.MessageId });
     }
@@ -981,7 +1098,7 @@ public static class CoachEndpoints
         AppDbContext db)
     {
         var callerId = caller.GetUserId();
-        var relationship = await ParticipantRelationship(callerId, relationshipId, db);
+        var relationship = await ParticipantRelationship(callerId, relationshipId, db, reading: true);
         if (relationship is null) return Results.NotFound();
 
         var sinceUtc = DateTimeOffset.FromUnixTimeMilliseconds(since).UtcDateTime;
@@ -992,7 +1109,8 @@ public static class CoachEndpoints
             .Select(m => new MessageDto(
                 m.MessageId, m.Body, m.CreatedAtMs, m.ReadAtMs, m.SenderUserId == callerId, m.ContextDateIso,
                 m.PhotoId == null ? null : "/photos/" + m.PhotoId.Value.ToString("N"), m.PhotoWidth, m.PhotoHeight,
-                m.VoiceId == null ? null : "/voice/" + m.VoiceId.Value.ToString("N"), m.VoiceMs, m.VoicePeaks, m.Reaction))
+                m.VoiceId == null ? null : "/voice/" + m.VoiceId.Value.ToString("N"), m.VoiceMs, m.VoicePeaks, m.Reaction,
+                m.Kind, m.CardJson))
             .ToListAsync();
 
         return Results.Ok(new { messages });
@@ -1017,7 +1135,8 @@ public static class CoachEndpoints
             .Select(m => new ThreadMessageDto(
                 m.RelationshipId, m.MessageId, m.Body, m.CreatedAtMs, m.ReadAtMs, m.SenderUserId == callerId, m.ContextDateIso,
                 m.PhotoId == null ? null : "/photos/" + m.PhotoId.Value.ToString("N"), m.PhotoWidth, m.PhotoHeight,
-                m.VoiceId == null ? null : "/voice/" + m.VoiceId.Value.ToString("N"), m.VoiceMs, m.VoicePeaks, m.Reaction))
+                m.VoiceId == null ? null : "/voice/" + m.VoiceId.Value.ToString("N"), m.VoiceMs, m.VoicePeaks, m.Reaction,
+                m.Kind, m.CardJson))
             .ToListAsync();
 
         return Results.Ok(new { messages });
@@ -1049,7 +1168,7 @@ public static class CoachEndpoints
         AppDbContext db)
     {
         var callerId = caller.GetUserId();
-        var relationship = await ParticipantRelationship(callerId, req.RelationshipId, db);
+        var relationship = await ParticipantRelationship(callerId, req.RelationshipId, db, reading: true);
         if (relationship is null) return Results.NotFound();
 
         var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -1089,15 +1208,20 @@ public static class CoachEndpoints
 public record AcceptInviteRequest(SharingDto? Sharing);
 
 public record SendMessageRequest(Guid RelationshipId, string MessageId, string? Body, long CreatedAtMs, string? ContextDateIso = null, Guid? PhotoId = null,
-    Guid? VoiceId = null, string? VoicePeaks = null);
+    Guid? VoiceId = null, string? VoicePeaks = null,
+    // Program swaps (canvas SW1, Q8): a client's "for the rest of the program", or the coach
+    // changing an exercise in their copy. Only these two; request steps stay server-made.
+    string? Kind = null, string? CardJson = null);
 public record MarkReadRequest(Guid RelationshipId, long UpToMs);
 public record CoachReactRequest(Guid RelationshipId, string MessageId, string? Emoji);
 public record MessageDto(string MessageId, string Body, long CreatedAtMs, long? ReadAtMs, bool Mine, string? ContextDateIso = null,
     string? PhotoUrl = null, int PhotoWidth = 0, int PhotoHeight = 0, string? VoiceUrl = null, int VoiceMs = 0, string? VoicePeaks = null,
-    string? Reaction = null);
+    string? Reaction = null,
+    // A step in a request (CoachIntake.Events) and what its card shows; null for ordinary messages.
+    string? Kind = null, string? CardJson = null);
 public record ThreadMessageDto(Guid RelationshipId, string MessageId, string Body, long CreatedAtMs, long? ReadAtMs, bool Mine, string? ContextDateIso = null,
     string? PhotoUrl = null, int PhotoWidth = 0, int PhotoHeight = 0, string? VoiceUrl = null, int VoiceMs = 0, string? VoicePeaks = null,
-    string? Reaction = null);
+    string? Reaction = null, string? Kind = null, string? CardJson = null);
 
 public record UpsertProgramRequest(
     string ProgramId,

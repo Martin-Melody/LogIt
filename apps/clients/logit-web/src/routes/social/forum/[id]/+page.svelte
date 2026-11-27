@@ -2,6 +2,7 @@
      depth, as in the app. Reddit's nesting: replies under what they answer, three shown then
      "Show more", "Continue this thread" past six levels. Open to every account. -->
 <script lang="ts">
+  import RichText from "@logit/ui/RichText.svelte";
   import PageCrumbs from "$lib/components/PageCrumbs.svelte";
   import { page } from "$app/state";
   import ProfileHoverCard from "$lib/features/social/ProfileHoverCard.svelte";
@@ -87,7 +88,11 @@
         {#if post.deleted}<p class="italic text-muted-foreground">{post.removedByModerator ? "Removed by a moderator" : "Deleted by its author"}</p>{:else}
           <h1 class="text-2xl font-bold tracking-tight">{post.title}</h1>
           <span class="text-sm text-muted-foreground">{#if post.author}<ProfileHoverCard username={post.author.username} class="font-medium text-foreground hover:underline">{name(post)}</ProfileHoverCard>{:else}{name(post)}{/if}{post.authorRole ? ` · ${post.authorRole}` : ""}{post.group && !post.authorIsMember ? " · Not a member" : ""} · {ago(post.createdAtMs)}</span>
-          {#if post.body}<MentionText text={post.body} class="text-[15px] leading-relaxed" />{/if}
+          {#if post.body}
+            <RichText text={post.body} class="text-[15px] leading-relaxed" tagHref={(t) => `/social/tag/${encodeURIComponent(t)}`}>
+              {#snippet mention(u)}<ProfileHoverCard username={u} class="font-medium text-sky-700 hover:underline dark:text-sky-300">@{u}</ProfileHoverCard>{/snippet}
+            </RichText>
+          {/if}
           {#if post.photoUrl}<img src={photoSrc(post.photoUrl)} alt="" class="max-h-[420px] w-fit rounded-xl border border-border" />{/if}
           {#if post.tags.length}<span class="flex flex-wrap gap-x-2 text-sm">{#each post.tags as t (t)}<a href="/social/tag/{encodeURIComponent(t)}" class="text-sky-700 hover:underline dark:text-sky-300">#{t}</a>{/each}</span>{/if}
         {/if}

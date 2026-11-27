@@ -25,6 +25,12 @@ you can browse Explore, the Forum, search and groups anyone can find at getlogit
 replying, following and posting ask you to sign in. A private
 account's profile and posts, and forum posts in an invite-only group, are never on the web.
 
+A group can be invite only, open to anyone, or findable with an organiser approving each request.
+An approving group can ask a few questions when someone asks to join, like where they train; only
+its organisers and moderators see the answers. Organisers set the questions in the group's Edit, and
+answer requests in Members. Declining tells the person the organisers didn't approve their request,
+with no reason and not who declined; they can ask again.
+
 <HowTo id="pro.social" />
 
 <CanCant ids={["social"]} />

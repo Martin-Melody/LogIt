@@ -1,7 +1,7 @@
 <script lang="ts">
   import PageCrumbs from "$lib/components/PageCrumbs.svelte";
   import { Checkbox } from "$lib/components/ui/checkbox/index.js";
-  import * as NativeSelect from "$lib/components/ui/native-select/index.js";
+  import OptionSelect from "$lib/components/option-select.svelte";
   import * as Tabs from "$lib/components/ui/tabs/index.js";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
@@ -287,9 +287,8 @@
       </div>
       <div class="flex flex-col gap-1.5">
         <label for="np-family" class="text-xs font-medium text-muted-foreground">Type</label>
-        <NativeSelect.Root id="np-family" bind:value={newFamily} class="w-full">
-          {#each PLUGIN_FAMILIES as f (f)}<NativeSelect.Option value={f}>{FAMILY_LABELS[f]}</NativeSelect.Option>{/each}
-        </NativeSelect.Root>
+        <OptionSelect id="np-family" class="w-full" bind:value={newFamily}
+          options={PLUGIN_FAMILIES.map((f) => ({ value: f, label: FAMILY_LABELS[f] ?? f }))} />
       </div>
       <div class="flex flex-col gap-1.5">
         <label for="np-id" class="text-xs font-medium text-muted-foreground">Id</label>
@@ -372,7 +371,7 @@
           <span class="flex items-center gap-2 pb-1.5">
             <label for="b-upload" class="inline-flex h-7 cursor-pointer items-center rounded-[8px] border border-border px-2.5 text-xs">Upload files…</label>
             <input id="b-upload" type="file" multiple accept=".js,.mjs,.json" class="sr-only" onchange={upload} />
-            <a href="https://getlogit.app/docs/plugins/{family === 'widget' ? 'widgets' : family.includes('pack') ? (family === 'mobility-pack' ? 'mobility-packs' : 'exercise-packs') : family === 'analytics' ? 'analytics' : family.startsWith('nutrition') ? 'nutrition' : family === 'mobility-progression' ? 'mobility-progression' : 'progression'}" target="_blank" rel="noopener" class="inline-flex h-7 items-center rounded-[8px] border border-border px-2.5 text-xs">Docs</a>
+            <a href="https://getlogit.app/docs/plugins/{family === 'widget' ? 'widgets' : family.includes('pack') ? (family === 'mobility-pack' ? 'mobility-packs' : family === 'program-pack' ? 'program-packs' : 'exercise-packs') : family === 'analytics' ? 'analytics' : family.startsWith('nutrition') ? 'nutrition' : family === 'mobility-progression' ? 'mobility-progression' : 'progression'}" target="_blank" rel="noopener" class="inline-flex h-7 items-center rounded-[8px] border border-border px-2.5 text-xs">Docs</a>
           </span>
         </div>
         {#if view === "code"}

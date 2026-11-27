@@ -2,7 +2,7 @@ import { checkinApi } from "@logit/core/api/checkinApi";
 import { coachProgramApi } from "@logit/core/api/coachProgramApi";
 import { syncApi } from "@logit/core/api/syncApi";
 import type { CheckinSchedule, CheckinSubmission } from "@logit/core/domain/Checkin";
-import type { CoachProgram } from "@logit/core/domain/CoachProgram";
+import { parseProgram, type CoachProgram } from "@logit/core/domain/CoachProgram";
 
 // The client side of coaching on the web: what your coach assigned you, and your answers.
 
@@ -40,7 +40,7 @@ export async function loadAssignedPrograms(): Promise<CoachProgram[]> {
   for (const r of rows) {
     if (r.deletedAtMs || !r.dataJson) continue;
     try {
-      const p = JSON.parse(r.dataJson) as CoachProgram;
+      const p = parseProgram(r.dataJson);
       if (!p.archived) out.push(r.startedAtMs ? { ...p, clientStartedAtMs: r.startedAtMs } : p);
     } catch {
       /* skip */

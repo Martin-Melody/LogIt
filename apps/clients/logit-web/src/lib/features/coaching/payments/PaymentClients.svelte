@@ -22,9 +22,16 @@
     type Tone,
   } from "@logit/core/domain/coachPayments";
   import Avatar from "$lib/features/coaching/Avatar.svelte";
+  import { goto } from "$app/navigation";
+  import RefundDialog from "./RefundDialog.svelte";
+  import ChangePackageDialog from "./ChangePackageDialog.svelte";
   import { coachBadges } from "$lib/features/coaching/badges.svelte";
 
   let { data, reload, onsetup }: { data: PaymentsOverview; reload: () => Promise<void>; onsetup: () => void } = $props();
+
+  // Canvas Q9, K14: refund only, and change package.
+  let refundFor = $state<PaymentClient | null>(null);
+  let changeFor = $state<PaymentClient | null>(null);
 
   const now = new Date();
   const problems = $derived(needsCoach(data.clients, now));
@@ -105,20 +112,11 @@
     void run(() => coachPaymentsApi.markPaidElsewhere(c.relationshipId, elsewhereUntil || null), `${nameOf(c)} marked as paid`);
   }
 
-  // Stop a plan / end coaching
+  // Stop a plan (ending coaching is the client page's Pause or end, canvas E1)
   let stopFor = $state<PaymentClient | null>(null);
-  let endFor = $state<PaymentClient | null>(null);
   function stopPlan(c: PaymentClient, stop: boolean) {
     stopFor = null;
     void run(() => coachPaymentsApi.stopClientPlan(c.relationshipId, stop), stop ? "Their plan stops at the end of the month" : "Their plan carries on");
-  }
-  function endCoaching() {
-    const c = endFor!;
-    endFor = null;
-    void run(async () => {
-      await coachApi.revokeRelationship(c.relationshipId);
-      void coachBadges.refresh(true, true);
-    }, `You no longer coach ${nameOf(c)}`);
   }
 </script>
 
@@ -164,7 +162,9 @@
           {#if c.status === "active"}
             <a href="/messages?c={c.relationshipId}" class="inline-flex h-[30px] items-center rounded-lg border border-border px-2.5 text-xs hover:bg-background">Message {nameOf(c)}</a>
           {/if}
-          {#if c.mode === "stripe" && c.rule !== "keep"}
+          {#if c.disputed}
+            <a href="https://dashboard.stripe.com/disputes" target="_blank" rel="noopener" class="inline-flex h-[30px] items-center rounded-lg bg-primary px-2.5 text-xs font-semibold text-primary-foreground">Open in Stripe ↗</a>
+          {:else if c.mode === "stripe" && c.rule !== "keep" && (c.status === "paused" || c.unpaidSince)}
             <button type="button" disabled={busy} onclick={() => run(() => coachPaymentsApi.setClientRule(c.relationshipId, "keep", null), `${nameOf(c)} keeps being coached`)}
               class="h-[30px] rounded-lg border border-border px-2.5 text-xs hover:bg-background disabled:opacity-50">{c.status === "paused" ? `Restart ${nameOf(c)} anyway` : `Don't ${c.rule === "end" ? "end" : "pause"} ${nameOf(c)}`}</button>
           {/if}
@@ -192,8 +192,18 @@
               </a>
             </Table.Cell>
             <Table.Cell class="px-3 py-3 {c.mode === 'stripe' ? '' : 'text-muted-foreground'}">{packageText(c)}</Table.Cell>
-            <Table.Cell class="px-3 py-3"><span class="whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold {toneClass[chip.tone]}">{chip.label}</span></Table.Cell>
-            <Table.Cell class="px-3 py-3 {c.state === 'paid' && c.interval === 'month' && !c.stopsAtPeriodEnd ? '' : 'text-muted-foreground'}">{nextText(c)}</Table.Cell>
+            <Table.Cell class="px-3 py-3">
+              {#if c.disputed}
+                <!-- K10: a dispute changes nothing on its own; it's answered in Stripe. -->
+                <span class="whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold {toneClass.bad}">Disputed with their bank</span>
+              {:else if c.pausedUntil}
+                <span class="whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold {toneClass.muted}">Paused to {shortDate(c.pausedUntil, now)}</span>
+              {:else}
+                <span class="whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold {toneClass[chip.tone]}">{chip.label}</span>
+              {/if}
+              {#if c.pendingPackage}<span class="mt-1 block text-xs text-muted-foreground">Moving to {c.pendingPackage}</span>{/if}
+            </Table.Cell>
+            <Table.Cell class="px-3 py-3 {c.state === 'paid' && c.interval === 'month' && !c.stopsAtPeriodEnd ? '' : 'text-muted-foreground'}">{c.disputed ? "Coaching carries on" : c.pausedUntil ? `After ${shortDate(c.pausedUntil, now)}` : nextText(c)}</Table.Cell>
             <Table.Cell class="px-3 py-3 {c.ownRule ? '' : 'text-muted-foreground'}">{ruleCell(c)}</Table.Cell>
             <Table.Cell class="px-3 py-3 text-right">
               <DropdownMenu.Root>
@@ -203,6 +213,12 @@
                   {/snippet}
                 </DropdownMenu.Trigger>
                 <DropdownMenu.Content align="end" class="w-72">
+                  <DropdownMenu.Item onclick={() => goto(`/clients/${c.client.id}`)}>Open {nameOf(c)}</DropdownMenu.Item>
+                  <DropdownMenu.Separator />
+                  <DropdownMenu.Item onclick={() => (changeFor = c)}>Change package…</DropdownMenu.Item>
+                  {#if c.mode === "stripe"}
+                    <DropdownMenu.Item onclick={() => (refundFor = c)}>Refund…</DropdownMenu.Item>
+                  {/if}
                   {#if c.mode === "stripe"}
                     <DropdownMenu.Item onclick={() => openRule(c)}>If a payment fails: {c.ownRule ? ruleText(c.rule, c.days) : `your default (${ruleText(c.rule, c.days).toLowerCase()})`}…</DropdownMenu.Item>
                   {/if}
@@ -218,7 +234,8 @@
                     <DropdownMenu.Item onclick={() => window.open("https://dashboard.stripe.com/payments", "_blank", "noopener")}>See payments in Stripe ↗</DropdownMenu.Item>
                   {/if}
                   <DropdownMenu.Separator />
-                  <DropdownMenu.Item class="text-destructive" onclick={() => (endFor = c)}>Stop coaching {nameOf(c)}…</DropdownMenu.Item>
+                  <!-- E1: pause or end, with a refund and a coach to suggest. -->
+                  <DropdownMenu.Item class="text-destructive" onclick={() => goto(`/clients/${c.client.id}?end=1`)}>Pause or end coaching…</DropdownMenu.Item>
                 </DropdownMenu.Content>
               </DropdownMenu.Root>
             </Table.Cell>
@@ -287,15 +304,9 @@
   </AlertDialog.Content>
 </AlertDialog.Root>
 
-<AlertDialog.Root open={endFor !== null} onOpenChange={(o) => { if (!o) endFor = null; }}>
-  <AlertDialog.Content>
-    <AlertDialog.Header>
-      <AlertDialog.Title>Stop coaching {endFor ? nameOf(endFor) : ""}?</AlertDialog.Title>
-      <AlertDialog.Description>You stop seeing their data and they lose your program, check-ins and messages. {endFor?.mode === "stripe" && endFor.state !== "ended" ? "Their plan is cancelled now; refunds, if any, are done in Stripe." : ""}</AlertDialog.Description>
-    </AlertDialog.Header>
-    <AlertDialog.Footer>
-      <AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
-      <AlertDialog.Action onclick={endCoaching}>Stop coaching</AlertDialog.Action>
-    </AlertDialog.Footer>
-  </AlertDialog.Content>
-</AlertDialog.Root>
+
+
+{#if refundFor}
+  <RefundDialog bind:open={() => !!refundFor, (v) => { if (!v) refundFor = null; }} relationshipId={refundFor.relationshipId} name={nameOf(refundFor)} ondone={reload} />
+{/if}
+<ChangePackageDialog bind:open={() => !!changeFor, (v) => { if (!v) changeFor = null; }} client={changeFor} packages={data.packages} ondone={reload} />

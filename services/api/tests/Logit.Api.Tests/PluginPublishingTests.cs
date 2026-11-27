@@ -28,12 +28,20 @@ public class PluginPublishingTests
     [InlineData("com..alex", "reverse-domain")]
     [InlineData("builtin.widget.recap", "reserved")]
     [InlineData("com.logit.recap", "reserved")]
+    [InlineData("app.getlogit.rounds", "reserved")]
     [InlineData("", "Give the plugin an id")]
     public void Ids_are_reverse_domain_and_not_reserved(string id, string? errorContains)
     {
         var error = PluginRules.CheckId(id);
         if (errorContains is null) Assert.Null(error);
         else Assert.Contains(errorContains, error);
+    }
+
+    [Fact]
+    public void Only_admins_publish_under_LogIts_own_prefix()
+    {
+        Assert.Null(PluginRules.CheckId("app.getlogit.rounds", admin: true));
+        Assert.Contains("reserved", PluginRules.CheckId("com.logit.recap", admin: true));
     }
 
     [Fact]

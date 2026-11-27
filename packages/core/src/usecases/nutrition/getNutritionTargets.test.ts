@@ -8,6 +8,7 @@ import {
 import type { NutritionAlgorithm, NutritionAlgorithmRegistry } from "../../domain/nutritionAlgorithm";
 import { createLocalNutritionAlgorithmRegistry } from "../../nutrition/algorithmRegistry";
 import { getNutritionTargets } from "./getNutritionTargets";
+import { createCoachNutritionPlan, endPlan, type CoachNutritionPlan } from "../../domain/CoachNutritionPlan";
 
 const NOW = Date.parse("2026-06-15T12:00:00Z");
 
@@ -152,5 +153,54 @@ describe("getNutritionTargets", () => {
     expect(s.targets?.sourceLabel).toBe("Flat");
     expect(s.targets?.macros.proteinG).toBe(144); // 80 * 1.8
     expect(s.targets?.macros.fatG).toBe(67); // 2000 * 0.3 / 9
+  });
+});
+
+describe("meal plans v2 (canvas MP2, NT1, FX1)", () => {
+  const plan = (over: Partial<CoachNutritionPlan>): CoachNutritionPlan => ({ ...createCoachNutritionPlan("Lean bulk"), kcalTarget: 2600, proteinG: 160, createdAtMs: Date.parse("2026-05-01T12:00:00Z"), ...over });
+  const history = (plans: CoachNutritionPlan[]) => ({
+    ...deps(fakeRepo({ goal: goal() })),
+    assignedNutritionPlanRepo: { ...deps(fakeRepo({})).assignedNutritionPlanRepo, async listPlanHistory() { return plans; } },
+  });
+
+  it("each day is measured against the plan that applied then", async () => {
+    // Lean bulk from 1 May; the wrong plan, replaced from 1 June by Fat loss.
+    const wrong = endPlan(plan({ fromIso: "2026-05-01" }), "2026-06-01");
+    const right = plan({ name: "Fat loss", kcalTarget: 1900, fromIso: "2026-06-01" });
+    const d = history([wrong, right]);
+    expect((await getNutritionTargets(d, { now: NOW, dateIso: "2026-05-20" })).targets?.kcal).toBe(2600);
+    expect((await getNutritionTargets(d, { now: NOW, dateIso: "2026-06-02" })).targets?.kcal).toBe(1900);
+    // A plan that starts next week isn't today's.
+    const soon = plan({ name: "Next", kcalTarget: 2200, fromIso: "2026-06-22" });
+    expect((await getNutritionTargets(history([right, soon]), { now: NOW })).coachPlan?.name).toBe("Fat loss");
+  });
+
+  it("training and rest days have their own targets; what the coach didn't set is the client's own", async () => {
+    const p = plan({
+      mode: "training-rest",
+      nutrients: [{ id: "fibreG", kind: "atLeast", amount: 30 }],
+      dayTypes: [
+        { id: "t", name: "Training day", role: "training", kcalTarget: 2400, proteinG: 150, meals: [] },
+        { id: "r", name: "Rest day", role: "rest", kcalTarget: 2000, proteinG: 150, meals: [] },
+      ],
+    });
+    const train = (await getNutritionTargets(history([p]), { now: NOW, trainingDay: true, fallbackWeightKg: 80 })).targets!;
+    const rest = (await getNutritionTargets(history([p]), { now: NOW, trainingDay: false, fallbackWeightKg: 80 })).targets!;
+    expect([train.kcal, rest.kcal]).toEqual([2400, 2000]);
+    expect(train.dayName).toBe("Training day");
+    expect(train.coachSet).toEqual(["kcal", "proteinG"]);
+    expect(train.macros.proteinG).toBe(150);
+    expect(train.macros.fatG).toBeGreaterThan(0); // from her own goal's fat %
+    expect(train.nutrients).toEqual([{ id: "fibreG", kind: "atLeast", amount: 30 }]);
+  });
+
+  it("adaptive calories follow the client's own targets, keeping a day type's difference", async () => {
+    const p = plan({ kcalMode: "adaptive", kcalTarget: 2200, mode: "training-rest", dayTypes: [
+      { id: "t", name: "Training day", role: "training", kcalTarget: 2400, meals: [] },
+      { id: "r", name: "Rest day", role: "rest", kcalTarget: 2200, meals: [] },
+    ] });
+    const own = (await getNutritionTargets(deps(fakeRepo({ goal: goal() })), { now: NOW, fallbackWeightKg: 80 })).targets!.kcal;
+    const t = await getNutritionTargets(history([p]), { now: NOW, trainingDay: true, fallbackWeightKg: 80 });
+    expect(t.targets?.kcal).toBe(own + 200);
   });
 });

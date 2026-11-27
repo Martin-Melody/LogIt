@@ -19,12 +19,34 @@ public static class ModerationEndpoints
             .RequireAuthorization().RequireRateLimiting("social-write");
     }
 
-    private static async Task<IResult> Block(string username, ClaimsPrincipal caller, AppDbContext db)
+    private static async Task<IResult> Block(string username, ClaimsPrincipal caller, AppDbContext db,
+        Logit.Api.Features.Coach.CoachingEnd coaching, CancellationToken ct)
     {
         var callerId = caller.GetUserId();
         var target = await db.Users.FirstOrDefaultAsync(u => u.Username == username.ToLowerInvariant() && !u.IsSample);
         if (target is null) return Results.NotFound();
         if (target.Id == callerId) return Results.BadRequest(new { error = "Cannot block yourself." });
+
+        // Canvas Z5: you can't be coached by someone you've blocked, so coaching between you ends
+        // first, unused days refunded whichever side blocks. Requests just close.
+        var now = DateTime.UtcNow;
+        var coachingRels = await db.CoachClientRelationships.Include(r => r.Payment).Include(r => r.Coach)
+            .Where(r => ((r.CoachId == callerId && r.ClientId == target.Id) || (r.CoachId == target.Id && r.ClientId == callerId))
+                && r.Status != CoachClientStatus.Revoked)
+            .ToListAsync(ct);
+        foreach (var rel in coachingRels)
+        {
+            if (rel.Status == CoachClientStatus.Pending)
+            {
+                rel.Status = CoachClientStatus.Revoked;
+                rel.UpdatedAt = now;
+                continue;
+            }
+            var reason = rel.CoachId == callerId ? Logit.Api.Features.Coach.EndReason.CoachEnded : Logit.Api.Features.Coach.EndReason.ClientStopped;
+            await coaching.EndAsync(rel, reason, Logit.Api.Features.Coach.Payments.RefundRule.Unused, now, ct);
+            Logit.Api.Features.Coach.CoachIntake.Post(db, rel, callerId, Logit.Api.Features.Coach.CoachIntake.Events.Ended,
+                "Coaching has ended.", null, null, now);
+        }
 
         if (!await db.Blocks.AnyAsync(b => b.BlockerId == callerId && b.BlockedId == target.Id))
             db.Blocks.Add(new Block { BlockerId = callerId, BlockedId = target.Id });
@@ -42,7 +64,6 @@ public static class ModerationEndpoints
 
         // As on Instagram: their likes and comments on your posts go (replies to those comments
         // with them, as when a comment is deleted), and so do the notifications between you.
-        var now = DateTime.UtcNow;
         var theirComments = await db.Comments
             .Where(c => c.AuthorId == target.Id && c.Post.AuthorId == callerId && c.DeletedAt == null)
             .ToListAsync();

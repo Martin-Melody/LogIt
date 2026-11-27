@@ -87,7 +87,7 @@ function toFoodRef(p: OffProduct): FoodRef | null {
     id: `off:${barcode}`,
     source: "off",
     name,
-    brand: (Array.isArray(p.brands) ? String(p.brands[0] ?? "") : String(p.brands ?? "").split(",")[0]).trim() || undefined,
+    brand: brandName(Array.isArray(p.brands) ? String(p.brands[0] ?? "") : String(p.brands ?? "").split(",")[0]),
     barcode,
     per100g: {
       kcal: Math.round(Math.min(energy, 950) * 10) / 10,
@@ -186,4 +186,13 @@ export function createOpenFoodFactsRepo(): FoodDbRepo {
       }
     },
   };
+}
+
+/** A brand as people write it. The server search returns brand tags ("xx:kirkland",
+ * "en:tesco-finest"); the old search returns the name ("Arla"). */
+export function brandName(raw: string): string | undefined {
+  const s = raw.trim();
+  if (!/^[a-z]{2}:/.test(s)) return s || undefined;
+  const words = s.slice(3).split("-").filter(Boolean);
+  return words.length ? words.map((w) => w[0]!.toUpperCase() + w.slice(1)).join(" ") : undefined;
 }

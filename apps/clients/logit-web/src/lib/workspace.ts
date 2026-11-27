@@ -5,10 +5,17 @@ import { sandbox } from "$lib/features/guide/sandbox.svelte";
  * accounts: your clients). Which one a page belongs to follows from its path. */
 const COACHING_PREFIXES = ["/coaching", "/clients", "/roster", "/messages"];
 
+/** Pages that belong to whichever workspace you came from: opening Account from Coaching keeps
+ * the Coaching sidebar (canvas N), so a coach doesn't lose their place. */
+const SHARED_PREFIXES = ["/account"];
+let lastWasCoaching = false;
+
 export function isCoachingPath(pathname: string, search?: URLSearchParams): boolean {
+  if (SHARED_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"))) return lastWasCoaching;
   // A chart a coach builds for a client lives under /insights/charts with ?client=.
-  if (pathname.startsWith("/insights/charts/") && search?.get("client")) return true;
-  return COACHING_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"));
+  lastWasCoaching = (pathname.startsWith("/insights/charts/") && !!search?.get("client"))
+    || COACHING_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"));
+  return lastWasCoaching;
 }
 
 /** Whether this account gets the Coaching workspace: Studio, any account on a self-hosted

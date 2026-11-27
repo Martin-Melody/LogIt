@@ -10,12 +10,134 @@ title: Programs for clients
 
 <FeatureFacts id="coach-programs" />
 
+## Your programs, LogIt's and the community's
+
+Coaching › Programs has three lists. **Yours** are the programs you made or copied, each with
+how many clients have it. **LogIt** has LogIt's own programs, and **Community** has program packs
+from the plugin directory. Those two are read-only: Start from a program shows one with its days,
+and Copy to my programs makes it yours to change. A newer version of a pack never changes your
+copy, or your clients'.
+
 ## Build a program
 
 <HowTo id="studio.program" />
 
+Changes save as you go, so leaving the page loses nothing. If the same program is open on another
+device, changes to different things come across by themselves with a note; only when both changed
+the same exercise does LogIt ask which to keep. Programs made before the builder whose weeks have
+different exercises are still edited week by week.
+
+## Circuits and blocks from plugins
+
+**+ Circuit** adds exercises done one after another, round after round: how many rounds, the
+rest between exercises and between rounds, and reps or a time for each exercise. It moves up the
+same every week, by a round every two weeks, or by each exercise's own rule. Clients run it
+with the circuit timer on their phone.
+
+**+ From a plugin** adds a block from a workout-block plugin you've added, like timed rounds of
+rolling or hangboard hangs. Each plugin asks for its own settings, plus how many rounds (or
+hangs) it starts with. Find more in Plugins › Workout blocks.
+
+Circuits and plugin blocks need LogIt 1.1.0 or newer on the client's phone; older phones say
+"Update LogIt to see this part" and run the rest of the day.
+
+## When a program uses a plugin
+
+A plugin block, or a rule from a plugin, runs on the client's phone, so they're asked first:
+opening the program shows what the plugin is, what it can see (that block's entries, or their
+sets of those exercises) and that it can't read anything else or go online. **Allow** adds it
+for your programs only, even if they keep community plugins off. **Not now** leaves the block as
+a note in their workout and the rule's exercises repeating last time's numbers; the rest of the
+program works. Their Training tab tells you which: not asked yet, not allowed, or removed from
+their phone.
+
+## Rules
+
+A rule decides how the numbers move from week to week. Pick one for the whole program at the
+top of the builder, and a different one for any exercise from its settings. LogIt Adaptive,
+Linear, the 4-week wave and Fixed are built in. Programs › Rules is where you make your own,
+with the same builder lifters have on the phone: where the weight comes from (strength estimate,
+last session or a wave), the rep range, reps left, the set layout, the step, what happens on a
+stall, the number of sets and whether to hold in a calorie deficit. "What it would do" shows the
+numbers on a client's lift, and "In words" is what clients see under "Why this weight?". Your
+programs follow changes to a rule; clients' copies follow when you update them.
+
+A client's copy can follow its own rule: ⋯ › Change their rule… on their Training tab. Clients'
+phones work out each week's numbers from their own lifts when they start the day. Programs ›
+Rules also has what clients can swap to.
+
+## Swaps
+
+What clients can swap to is in Programs › Rules: any exercise, the same main muscles, or only the
+swaps you list on each exercise. On the phone, after a swap they choose just today or for the rest
+of the program, with a reason if they like; the rest of the program tells you, and later days start
+with the swap. On their Training tab, Keep it changes their copy to match, and Put it back… puts the
+original back and tells them. A message asking about a swap has "Swap an exercise in their
+program…" on its menu, to change it in their copy straight from the conversation. Whatever your
+rule, "Do something else today" is always there for them; it logs as a swap you can see.
+
+## Every week
+
+See every week shows what the rule plans for each exercise, week by week. On a client's copy the
+numbers come from their own strength estimates, and weeks they've done show what they did; on your
+own program the rule is said in words ("6–8 reps, from their estimate") until you pick a client
+under Showing to preview it with their lifts.
+
+- **LogIt Adaptive** picks the weight from their estimate for the reps, leaving two in the tank.
+- **Linear** adds a rep a week through the range, then the step (+2.5 kg) and back to the bottom.
+- **4-week wave** runs 5s, 3s and 5/3/1 off a training max, then a light week.
+- **Fixed** keeps the numbers as you typed them.
+- **Lighter weeks** have about half the sets, at the bottom of the range and the same weight.
+
+Double-click a cell, or press Enter, to type over it, like `62.5 × 7`; it stays put whatever the
+rule does, with a blue edge. Clear gives it back to the rule. Copy, paste and Fill to the end of
+the block (up to the next lighter week) are on the cell's menu.
+
 ## Give it to a client
 
 <HowTo id="studio.assign" />
+
+From a program, or from a client's page, Assign gives one or several clients their own copy. It
+starts when they tap Start on their phone, or on a date you choose. Someone already on a program
+can switch now at week 1, or start the new one the day theirs ends. Gave someone the wrong program
+a few weeks ago? **Replace, at week N** starts the right one on the date the wrong one did, as if
+they'd been on it all along. Either way their logged sessions stay in their history as done, and
+their strength estimates and records stay, so the new program plans from their real numbers. A program with a block from a plugin
+says so: without the plugin on their phone, that block shows as a note and the rest of the day
+works.
+
+On a client's Training tab, their program is at the top: which week they're in, its rule, the
+next lighter week, this week's days and what they've done, and any swaps. Their main lifts show
+their best set this week, their strength estimate then and four weeks ago, and what the program
+plans next time. ⋯ on the program has Change program…, Plan the next block… and Stop the
+program.
+
+## When you change a program clients have
+
+Each client has their own copy, so changing your program doesn't change theirs. When copies are
+behind yours, the builder shows **Update N clients…**: it says what you changed and lists each
+client with the week they're on. Ticked copies take your changes; anything you changed for one
+client stays as it is, and the list says so. Clients finishing within a week are left unticked.
+Their start date, the week they're on and everything they've logged stay; the changes apply from
+their next session. **Only the library** keeps the change to your program alone.
+
+Copies made before LogIt kept track of what changed for each client are replaced by your version
+the first time (start and logs kept); after that they update like the rest.
+
+## The next block
+
+In a program's last two weeks, the client's Training tab shows **Plan next block** (also on
+Today, and in Ctrl K on the client). It shows how the block went: sessions done of those planned,
+check-ins, their weight trend, each lift's estimate at the start and now, and any muscle whose
+weekly sets stayed under the usual range. Then pick what's next:
+
+- **Run it again from their new numbers**: the same program from a new start; the rules plan
+  from today's estimates, and numbers you'd typed over are cleared.
+- **Copy it and change things**: the same, then opened in the builder for them.
+- **Something different**: pick another program.
+
+Small changes for a rerun: one more set on each exercise for the muscles that were behind, a
+lighter first week, and keeping their swaps. Choose the start date and length, and whether to send
+them the block's numbers in a message.
 
 <CanCant ids={["coach-programs"]} />

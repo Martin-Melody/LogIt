@@ -15,4 +15,6 @@ export interface MessagesRepo {
   unreadCount(relationshipId?: string): Promise<number>;
   /** Messages tagged as comments on the client's diary for a given date (YYYY-MM-DD), oldest first. */
   listCommentsForDate(dateIso: string): Promise<CoachMessage[]>;
+  /** Messages of one kind across every thread, oldest first (canvas W12: months your coach sent). */
+  listByKind(kind: string): Promise<CoachMessage[]>;
 }

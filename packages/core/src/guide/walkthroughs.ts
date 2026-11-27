@@ -231,27 +231,32 @@ export const STUDIO_CHAPTERS: Chapter[] = [
   {
     id: "studio.invite",
     walkthrough: "studio",
-    title: "Invite a client",
-    blurb: "Make an invite link and accept a request",
-    minutes: 3,
+    title: "Get asked to coach",
+    blurb: "Your profile, an invite link, and answering a request",
+    minutes: 4,
     feature: "invite-links",
     usesSamples: true,
     steps: [
       {
-        id: "new", on: "web", route: "/coaching/links", target: "links-new", kind: "do", signal: "link.created",
-        title: "Make an invite link",
-        body: "Open Coaching › Invite links. Give the link a name only you see, like \"Instagram bio\", choose when it stops working and how many people can use it, then Create link. It's copied, ready to paste anywhere.",
+        id: "profile", on: "web", route: "/coaching/profile", target: "profile-coaching", kind: "look",
+        title: "Your coaching profile",
+        body: "Your coaching › Profile is what people see before they ask: what you coach, who it suits, your packages and your questions for them. Their answers come with the request. Your coaching agreement lives here too.",
       },
       {
-        id: "request", on: "web", route: "/coaching/links", target: "links-requests", kind: "do", signal: "request.accepted",
-        title: "Someone asks to join",
-        body: "People who open your link and ask wait here. You see nothing of theirs until you accept, and the line under their name says what they chose to share. Accept them.",
+        id: "new", on: "web", route: "/coaching/links", target: "links-new", kind: "do", signal: "link.created",
+        title: "Make an invite link",
+        body: "Open Your coaching › Invite links and choose New link. Give it a name only you see, like \"Instagram bio\", so you know where people came from. It opens your profile with Ask to be coached; pick a package if you like, or let people pay and start straight away. Copy it or show its QR code.",
+      },
+      {
+        id: "request", on: "web", route: "/clients?tab=requests", target: "requests-pane", kind: "do", signal: "request.offered",
+        title: "Someone asks to be coached",
+        body: "People who ask answer your questions and wait in Clients › Requests. You see their answers and nothing else. Talk it over in the conversation, then Offer a spot: pick a package, or no payment through LogIt, and how long you hold it. Full? Put them on your waiting list instead. Niamh takes the spot within a few seconds.",
         arrives: "Waiting for Niamh, a sample client, to use your link. It takes a few seconds.",
       },
       {
         id: "links", on: "web", route: "/coaching/links", target: "links-table", kind: "look",
         title: "Your links",
-        body: "Each link shows how many people joined through it. Copy it again, or turn it off: people who already joined stay your clients.",
+        body: "Each link shows how many people asked through it and how many became clients. LogIt doesn't count clicks. Copy it, show its QR code for a poster, edit it, or switch it off: people who asked through it stay.",
       },
     ],
   },
@@ -266,12 +271,12 @@ export const STUDIO_CHAPTERS: Chapter[] = [
       {
         id: "list", on: "web", route: "/clients", target: "clients-list", kind: "look",
         title: "Every client at a glance",
-        body: "Open Coaching › Clients. Each row shows the last 7 days, their last workout, check-ins, program and messages. Sample clients are marked Sample.",
+        body: "Open Coaching › Clients. Each row shows the last 7 days, their last workout, check-ins, program and messages. In Practice view the list shows only your sample clients; outside it, only real ones.",
       },
       {
         id: "sandbox", on: "web", route: "/clients", target: "clients-sandbox", kind: "look",
-        title: "Your sandbox",
-        body: "Sample clients live here. Try a new program or check-in form on them before a real client sees it, reset them to their starting four weeks, or remove them. You can add them back any time.",
+        title: "Your sample clients",
+        body: "In Practice view, reset the samples to their starting four weeks or remove them; you can add them back any time. On a sample's page, Answer as Niamh lets you write what she says, to try a conversation.",
       },
       {
         id: "open", on: "web", route: "/clients", target: "clients-list", kind: "do", signal: "client.opened",
@@ -282,12 +287,17 @@ export const STUDIO_CHAPTERS: Chapter[] = [
       {
         id: "tabs", on: "web", route: "/clients/[id]", target: "client-tabs", kind: "look",
         title: "Only what they share",
-        body: "Training, Insights, Nutrition, Habits, Check-ins, Programs and Messages each have a tab. A lock means the client hasn't shared it, and you see nothing there. Clients change this themselves, any time.",
+        body: "Overview, Training (with their programs and insights), Nutrition, Habits and Check-ins each have a tab. A lock means the client hasn't shared it, and you see nothing there. Clients change this themselves, any time.",
+      },
+      {
+        id: "cards", on: "web", route: "/clients/[id]", target: "client-cards", kind: "look",
+        title: "Their week, month or block",
+        body: "Overview is a set of cards: latest check-in, training, body, food, habits. Switch between this week, this month and the current block. + Card chooses the cards and their order, for this client, everyone on a package, or all clients.",
       },
       {
         id: "actions", on: "web", route: "/clients/[id]", target: "client-actions", kind: "look",
-        title: "Message or give a program",
-        body: "Message them, or give them a program, from the top of their page.",
+        title: "Message, give a program, or pause",
+        body: "Message them or give them a program from the top of their page. ⋯ has Change package, Send a form, their answers from when they asked, and Pause or End coaching: away, ill or injured, or ending with a refund and another coach to suggest.",
       },
     ],
   },
@@ -295,25 +305,25 @@ export const STUDIO_CHAPTERS: Chapter[] = [
     id: "studio.program",
     walkthrough: "studio",
     title: "Build a program",
-    blurb: "Weeks, days, sets, loads and supersets",
+    blurb: "One week of days, a rule, sets and loads",
     minutes: 4,
     feature: "coach-programs",
     steps: [
       {
         id: "new", on: "web", route: "/coaching/programs", target: "programs-new", kind: "do", signal: "program.created",
         title: "Start a program",
-        body: "Open Coaching › Programs and choose New program. It starts with one week and one day.",
+        body: "Open Coaching › Programs and choose New program, or Start from a program to copy one of LogIt's (or a community pack's) and change it. A new one starts with one week and one day.",
       },
       {
         id: "editor", on: "web", route: "/coaching/programs", target: "program-editor", kind: "look",
-        title: "Weeks, days and sets",
-        body: "Name it, then open a day and add exercises. Each set has reps (a number or a range like 8-10), load (kg, or a percent like 75% of the client's own best), RPE, rest and tempo. Copy a week to the next one to build a block quickly.",
+        title: "One week of days",
+        body: "You build one week and it applies to every week. Pick a day, add exercises, supersets, cardio or mobility, and click one to set its sets, reps (8 or 8-10), load (kg, or 75% of their best), rest and tempo, its swaps and a note. Choose the rule that moves the numbers each week, the length, and any lighter weeks.",
       },
       {
         id: "save", on: "web", route: "/coaching/programs", target: "program-save", kind: "do", signal: "program.saved",
-        title: "Save it to your library",
-        body: "Choose Save. Nothing reaches a client until you give it to them, and changes you make later can be sent to clients' copies when you save.",
-        arrives: "Change something in the program first, like its name: then Save appears.",
+        title: "It saves as you go",
+        body: "There's no Save button: every change is saved, and Ctrl Z undoes. Nothing reaches a client until you assign it; later, Update their copies sends your changes to the clients you tick.",
+        arrives: "Change something in the program, like its name.",
       },
     ],
   },
@@ -329,12 +339,13 @@ export const STUDIO_CHAPTERS: Chapter[] = [
       {
         id: "assign", on: "web", route: "/coaching/programs", target: "programs-assign", kind: "do", signal: "program.assigned",
         title: "Assign to a client",
-        body: "Pick the program, choose Assign to client, pick who gets it (Niamh, if you're using the sample clients) and when it starts: a date you choose, or when they tap Start. They get their own copy.",
+        body: "Open the program and choose Assign…. Pick who gets it (Niamh, if you're using the sample clients; you can pick several) and when it starts: when they tap Start, or a date you choose. Someone already on a program can switch now or start this one when theirs ends. Each gets their own copy.",
       },
       {
-        id: "library", on: "web", route: "/coaching/programs", target: "programs-library", kind: "look",
+        // The tab in the route takes them back to the list from the program they just assigned.
+        id: "library", on: "web", route: "/coaching/programs?tab=programs", target: "programs-library", kind: "look",
         title: "Who uses what",
-        body: "Your library shows who has each program. Edit the original and Save offers to update their copies too.",
+        body: "Back in Programs, each of yours shows how many clients have it. Edit the original and Save offers to update their copies too. LogIt's and the community's programs are read-only until you copy one.",
       },
       {
         id: "started", on: "web", route: "/clients", target: "clients-list", kind: "look",
@@ -369,13 +380,13 @@ export const STUDIO_CHAPTERS: Chapter[] = [
       },
       {
         id: "add", on: "web", route: "/clients/[id]", target: "client-forms", kind: "do", signal: "checkin-form.added",
-        title: "Add a form",
-        body: "Choose Add form. It starts as a weekly form with three questions.",
+        title: "Send a form",
+        body: "Choose Send a form, pick one of your forms and how often. The first time, send LogIt's weekly check-in: it becomes a shared form you can change for everyone at once.",
       },
       {
-        id: "edit", on: "web", route: "/clients/[id]/checkins/[scheduleId]", target: "checkin-form-editor", kind: "look",
+        id: "edit", on: "web", route: "/coaching/checkins/forms/[id]", target: "checkin-form-editor", kind: "look",
         title: "Your questions",
-        body: "Change the questions (text, a number, a scale, bodyweight, yes or no, a photo), how often it's due, or archive it. Changes save as you go.",
+        body: "One editor for every form: written answers, numbers, scales, yes or no, choices, body weight, measurements and progress photos, with what the client sees beside it. Changes save as you go and reach everyone on the shared form; \"Change for … only\" makes one client's own version.",
       },
       {
         id: "review", on: "web", route: "/coaching/checkins", target: "checkin-review", kind: "do", signal: "checkin.reviewed",
@@ -429,7 +440,7 @@ export const STUDIO_CHAPTERS: Chapter[] = [
       {
         id: "tabs", on: "web", route: "/clients/[id]", target: "client-tabs", kind: "look",
         title: "Habits and Nutrition",
-        body: "On the Habits tab, give them daily habits to tick off, like 8,000 steps or 3 litres of water; you see how often they hit them. On the Nutrition tab, set calorie and macro targets that show in their food diary.",
+        body: "On the Habits tab, Add a habit gives them something to tick off, like 8,000 steps or 3 litres of water, every day, a few times a week or on set days, to one client or several at once. You see this week as the same day squares their app shows. On the Nutrition tab, set calorie and macro targets that show in their food diary.",
       },
     ],
   },
@@ -437,14 +448,20 @@ export const STUDIO_CHAPTERS: Chapter[] = [
     id: "studio.swaps",
     walkthrough: "studio",
     title: "Exercise swaps",
-    blurb: "Which swaps clients may make",
-    minutes: 1,
+    blurb: "Which swaps clients may make, and each exercise's list",
+    minutes: 2,
     feature: "coach-swaps",
     steps: [
       {
-        id: "default", on: "web", route: "/coaching/programs", target: "swap-default", kind: "look",
+        id: "default", on: "web", route: "/coaching/programs?tab=rules", target: "swap-default", kind: "look",
         title: "Your swap rule",
-        body: "Choose what clients may swap in your programs: any exercise, the same muscles only, or only the swaps you list under each exercise. Set it for everyone here and change it for one client on their page. A swap that isn't allowed becomes a message asking you.",
+        body: "Programs › Rules: choose what clients may swap in your programs: any exercise, the same muscles only, or only the swaps you list under each exercise. Set it for everyone here and change it for one client on their page. A swap that isn't allowed becomes a message asking you.",
+      },
+      {
+        id: "list", on: "web", route: "/coaching/programs", target: "program-swaps", kind: "do", signal: "swap.added",
+        title: "An exercise's swap list",
+        body: "Each exercise in a program has its own list, under Swaps they can use. Add one with + Swap or tap a suggestion. With \"Only my list\" these are the only swaps a client sees; with \"Same muscles only\" they come first.",
+        arrives: "Open one of your programs and click an exercise to see its swaps.",
       },
     ],
   },
@@ -459,12 +476,17 @@ export const STUDIO_CHAPTERS: Chapter[] = [
       {
         id: "needs", on: "web", route: "/coaching", target: "today-needs-you", kind: "look",
         title: "What needs you",
-        body: "Coaching › Today lists new check-ins, unread messages, missed check-ins and programs about to end, newest first. Start your day here.",
+        body: "Coaching › Today lists what needs you, grouped by what you'll do: check-ins to review (a batch is one Start reviewing button), messages to reply to and missed check-ins to nudge, then things to decide: requests, programs about to end, changed exercises and payment problems. Start your day here.",
+      },
+      {
+        id: "ahead", on: "web", route: "/coaching", target: "today-ahead", kind: "look",
+        title: "The week ahead",
+        body: "What's coming in the next 7 days: programs ending, check-ins due, paid-until dates and payment rules about to act.",
       },
       {
         id: "week", on: "web", route: "/coaching", target: "today-week", kind: "look",
-        title: "This week",
-        body: "How your clients' training is going this week, from what they've logged.",
+        title: "This week, or last week on a Monday",
+        body: "How your clients' training is going this week, from what they've logged. On Mondays: last week in numbers, sessions done against planned, check-ins in, who logged food on 5 or more days, and who's gone quiet.",
       },
     ],
   },
@@ -479,7 +501,7 @@ export const STUDIO_CHAPTERS: Chapter[] = [
       {
         id: "tabs", on: "web", route: "/coaching/payments", target: "payments-tabs", kind: "look",
         title: "Paid through your own Stripe",
-        body: "Coaching › Payments connects your own Stripe account. Make packages (monthly, or one-off like 12 weeks), attach one to an invite link, and people pay on the link's page before they join. LogIt takes no cut. Clients tab: who's paid; mark someone who pays you another way as paid elsewhere.",
+        body: "Coaching › Payments is optional: connect your own Stripe account, make packages (monthly, or a block of weeks), and offer one when someone asks to be coached. LogIt takes no cut. Clients tab: who pays what, with Manage to change a package, refund, or mark someone paid elsewhere.",
       },
     ],
   },
@@ -571,6 +593,7 @@ export const PHONE_CHAPTERS: Chapter[] = [
   {
     id: "phone.clients", walkthrough: "studio", title: "Your clients", blurb: "Coaching from your phone", minutes: 1, feature: "coach-clients",
     steps: [
+      ph("needs", "/clients", "phone-needs-you", "What needs you", "At the top of Coaching: messages to reply to, check-ins to look at (reply and mark them reviewed right there), and requests to answer. In a client's conversation, type / for a saved reply, or swap an exercise in their program."),
       ph("list", "/clients", "phone-clients-list", "The same clients as on the web", "Tap one to see their training, check-ins and programs. Programs and check-in forms are built on the web dashboard; here you follow along."),
     ],
   },

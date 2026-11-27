@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { blockLine, canRunBlock, PROGRAM_BLOCKS_THIS_APP_RUNS, UPDATE_LINE } from "@logit/core/domain/CoachProgram";
   import * as Select from "$lib/components/ui/select/index.js";
   import { DateField } from "$lib/components/ui/date-field/index.js";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
@@ -205,8 +206,8 @@
                         {:else}
                           <Activity class="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                         {/if}
-                        <span class="text-sm font-medium flex-1 truncate">
-                          {block.type === "strength" ? block.exerciseName : block.activityName}
+                        <span class="text-sm font-medium flex-1 truncate {canRunBlock(block, PROGRAM_BLOCKS_THIS_APP_RUNS) ? '' : 'text-muted-foreground'}">
+                          {canRunBlock(block, PROGRAM_BLOCKS_THIS_APP_RUNS) ? blockLine(block) : UPDATE_LINE}
                         </span>
                         <button type="button" class="p-1 text-muted-foreground hover:text-destructive"
                           disabled={ui.saving} onclick={() => void run((p) => P.removeBlock(p, week.id, day.id, block.id))}>

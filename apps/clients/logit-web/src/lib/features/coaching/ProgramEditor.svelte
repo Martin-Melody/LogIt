@@ -1,9 +1,10 @@
 <script lang="ts">
+  import { blockLine } from "@logit/core/domain/CoachProgram";
   import * as Table from "$lib/components/ui/table/index.js";
   import ConfirmDialog, { type Ask } from "$lib/components/Dialogs/ConfirmDialog.svelte";
   import { DateField } from "$lib/components/ui/date-field/index.js";
   import { Checkbox } from "$lib/components/ui/checkbox/index.js";
-  import * as NativeSelect from "$lib/components/ui/native-select/index.js";
+  import OptionSelect from "$lib/components/option-select.svelte";
   import { guideSignal } from "$lib/features/guide/signal";
   import { onMount } from "svelte";
   import { beforeNavigate, goto } from "$app/navigation";
@@ -236,11 +237,9 @@
   {#if mode === "copy"}
     <div class="flex flex-wrap items-center gap-2 text-[13px]">
       <label for="start-mode" class="text-muted-foreground">Starts</label>
-      <NativeSelect.Root size="sm" id="start-mode" value={draft.startMode === "fixed-date" ? "fixed-date" : "manual"}
-        onchange={(e) => { const m = e.currentTarget.value; edit((p) => m === "fixed-date" ? P.setProgramStart(p, { mode: "fixed-date", startDateMs: p.startDateMs ?? P.startOfLocalDayMs() }) : P.setProgramStart(p, { mode: "manual" })); }}>
-        <NativeSelect.Option value="manual">When they tap Start</NativeSelect.Option>
-        <NativeSelect.Option value="fixed-date">On a date</NativeSelect.Option>
-      </NativeSelect.Root>
+      <OptionSelect size="sm" id="start-mode" value={draft.startMode === "fixed-date" ? "fixed-date" : "manual"}
+        onValueChange={(m) => edit((p) => m === "fixed-date" ? P.setProgramStart(p, { mode: "fixed-date", startDateMs: p.startDateMs ?? P.startOfLocalDayMs() }) : P.setProgramStart(p, { mode: "manual" }))}
+        options={[{ value: "manual", label: "When they tap Start" }, { value: "fixed-date", label: "On a date" }]} />
       {#if draft.startMode === "fixed-date"}
         <DateField aria-label="Start date" class="h-8 w-auto text-[13px]"
           bind:value={() => (draft.startDateMs != null ? P.toDateInputValue(draft.startDateMs) : undefined), (v) => { const ms = v ? P.fromDateInputValue(v) : null; if (ms != null) edit((p) => P.setProgramStart(p, { mode: "fixed-date", startDateMs: ms })); }} />
@@ -259,11 +258,8 @@
     </div>
     <span class="flex flex-wrap items-center gap-2">
       <label for="copy-week" class="sr-only">Copy this week to</label>
-      <NativeSelect.Root size="sm" id="copy-week" bind:value={copyTo} onchange={copyWeek}>
-        <NativeSelect.Option value="">Copy week {week?.weekNumber} to…</NativeSelect.Option>
-        {#each weeks.filter((w) => w.id !== week?.id) as w (w.id)}<NativeSelect.Option value={w.id}>Week {w.weekNumber} (replaces it)</NativeSelect.Option>{/each}
-        <NativeSelect.Option value="__new">A new week at the end</NativeSelect.Option>
-      </NativeSelect.Root>
+      <OptionSelect size="sm" id="copy-week" bind:value={copyTo} onValueChange={copyWeek}
+        options={[{ value: "", label: `Copy week ${week?.weekNumber} to…` }, ...weeks.filter((w) => w.id !== week?.id).map((w) => ({ value: w.id, label: `Week ${w.weekNumber} (replaces it)` })), { value: "__new", label: "A new week at the end" }]} />
       <button type="button" onclick={addDay} class="h-[30px] rounded-lg border border-border px-2.5 text-xs hover:bg-muted">+ Day</button>
       {#if weeks.length > 1}<button type="button" onclick={removeWeek} class="h-[30px] rounded-lg border border-border px-2.5 text-xs text-destructive hover:bg-muted">Remove week</button>{/if}
     </span>
@@ -286,11 +282,9 @@
             <input id="dayname-{day.id}" value={day.name ?? `Day ${di + 1}`} class="h-8 w-44 rounded-[7px] border border-transparent bg-transparent px-1 text-sm font-semibold hover:border-input focus:border-input"
               oninput={(e) => { const v = e.currentTarget.value; edit((p) => P.updateDay(p, week.id, day.id, { name: v })); }} />
             <label class="sr-only" for="weekday-{day.id}">Weekday</label>
-            <NativeSelect.Root size="sm" id="weekday-{day.id}" value={day.weekday ?? ""}
-              onchange={(e) => { const v = e.currentTarget.value; edit((p) => P.updateDay(p, week.id, day.id, { weekday: v === "" ? undefined : Number(v) })); }}>
-              <NativeSelect.Option value="">Any day</NativeSelect.Option>
-              {#each WEEKDAYS as w, i (w)}<NativeSelect.Option value={i}>{w}</NativeSelect.Option>{/each}
-            </NativeSelect.Root>
+            <OptionSelect size="sm" id="weekday-{day.id}" value={day.weekday == null ? "" : String(day.weekday)}
+              onValueChange={(v) => edit((p) => P.updateDay(p, week.id, day.id, { weekday: v === "" ? undefined : Number(v) }))}
+              options={[{ value: "", label: "Any day" }, ...WEEKDAYS.map((w, i) => ({ value: String(i), label: w }))]} />
           </span>
           <span class="flex gap-3">
             <button type="button" class="text-xs text-destructive hover:underline" onclick={() => { const remove = () => edit((p) => P.removeDay(p, week.id, day.id)); if (!day.blocks.length) remove(); else ask = { title: `Remove ${day.name ?? "this day"}?`, action: "Remove day", run: remove }; }}>Remove day</button>
@@ -306,7 +300,7 @@
                   <Table.Cell colspan={8} class="px-2 pb-1 pt-3">
                     <span class="flex flex-wrap items-center gap-2">
                       {#if labels.get(block.id)}<span class="rounded-[5px] bg-muted-foreground px-1.5 text-[11px] font-bold text-background">{labels.get(block.id)}</span>{/if}
-                      <span class="font-semibold">{block.type === "strength" ? block.exerciseName : block.activityName}</span>
+                      <span class="font-semibold">{blockLine(block)}</span>
                       <span class="ml-auto flex flex-wrap gap-2.5 text-[11px] text-muted-foreground">
                         {#if bi > 0}<button type="button" class="hover:text-foreground" aria-label="Move up" onclick={() => edit((p) => P.moveBlock(p, week.id, day.id, block.id, -1))}>↑</button>{/if}
                         {#if bi < day.blocks.length - 1}<button type="button" class="hover:text-foreground" aria-label="Move down" onclick={() => edit((p) => P.moveBlock(p, week.id, day.id, block.id, 1))}>↓</button>{/if}
@@ -318,7 +312,7 @@
                         <button type="button" class="hover:text-destructive" onclick={() => edit((p) => P.removeBlock(p, week.id, day.id, block.id))}>Remove</button>
                       </span>
                     </span>
-                    <label class="sr-only" for="note-{block.id}">Note for {block.type === "strength" ? block.exerciseName : block.activityName}</label>
+                    <label class="sr-only" for="note-{block.id}">Note for {blockLine(block)}</label>
                     <input id="note-{block.id}" value={block.note ?? ""} placeholder="Note for the client (optional)" class="mt-1 h-7 w-full rounded-[7px] border border-transparent bg-transparent px-1 text-xs text-muted-foreground hover:border-input focus:border-input"
                       oninput={(e) => { const v = e.currentTarget.value; edit((p) => P.updateBlock(p, week.id, day.id, block.id, { note: v || undefined })); }} />
                     {#if block.type === "strength"}
@@ -360,10 +354,9 @@
                       <Table.Cell class="px-2 py-1"><input aria-label="Tempo, set {si + 1}" class="{input} w-[80px]" value={set.tempo ?? ""} onchange={(e) => setField(day, block, set, "tempo", e.currentTarget.value, e.currentTarget)} /></Table.Cell>
                       <Table.Cell class="px-2 py-1">
                         {#if set.setType === "amrap"}<span class="text-xs text-muted-foreground">AMRAP</span>{:else}
-                          <NativeSelect.Root size="sm" aria-label="Set type, set {si + 1}" value={set.setType}
-                            onchange={(e) => { const v = e.currentTarget.value as SetType; edit((p) => P.updateSet(p, week.id, day.id, block.id, set.id, { setType: v })); }}>
-                            {#each setTypes as t (t.type)}<NativeSelect.Option value={t.type}>{t.label}</NativeSelect.Option>{/each}
-                          </NativeSelect.Root>
+                          <OptionSelect size="sm" aria-label="Set type, set {si + 1}" value={set.setType}
+                            onValueChange={(v) => edit((p) => P.updateSet(p, week.id, day.id, block.id, set.id, { setType: v as SetType }))}
+                            options={setTypes.map((t) => ({ value: t.type, label: t.label }))} />
                         {/if}
                       </Table.Cell>
                       <Table.Cell class="px-2 py-1"><button type="button" aria-label="Remove set {si + 1}" class="text-muted-foreground hover:text-destructive" onclick={() => edit((p) => P.removeSet(p, week.id, day.id, block.id, set.id))}>✕</button></Table.Cell>

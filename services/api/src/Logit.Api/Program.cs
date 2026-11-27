@@ -107,6 +107,7 @@ builder.Services.AddHostedService<SubscriptionSweeper>();
 // Coach payments: coaches' own Stripe accounts (Connect), see Features/Coach/Payments.
 builder.Services.AddSingleton<Logit.Api.Features.Coach.Payments.ICoachStripe, Logit.Api.Features.Coach.Payments.CoachStripe>();
 builder.Services.AddScoped<Logit.Api.Features.Coach.Payments.CoachPaymentService>();
+builder.Services.AddScoped<Logit.Api.Features.Coach.CoachingEnd>();
 builder.Services.AddHostedService<Logit.Api.Features.Coach.Payments.CoachPaymentSweeper>();
 // Push notifications: Firebase with this server's own key, else (self-hosted) the relay through
 // getlogit.app, which an admin turns on in the console.
@@ -341,6 +342,16 @@ api.MapAdminEndpoints(builder.Configuration, app.Services.GetRequiredService<ILo
 api.MapSyncEndpoints();
 api.MapBillingEndpoints();
 api.MapCoachEndpoints();
+api.MapCoachProfileEndpoints();
+api.MapCoachRequestEndpoints();
+api.MapRequestEmailEndpoints();
+api.MapCoachEndingEndpoints();
+Logit.Api.Features.Coach.Payments.CoachPaymentManageEndpoints.MapCoachPaymentManageEndpoints(api);
+Logit.Api.Features.Coach.CoachAway.MapCoachAwayEndpoints(api);
+Logit.Api.Features.Coach.CoachPluginConsent.MapCoachPluginConsentEndpoints(api);
+Logit.Api.Features.Coach.SavedReplies.MapSavedReplies(api);
+Logit.Api.Features.Coach.CoachCards.MapCoachCards(api);
+Logit.Api.Features.Coach.CoachMonth.MapCoachMonth(api);
 api.MapDiagnosticsEndpoints();
 api.MapPluginEndpoints();
 api.MapSandboxEndpoints();

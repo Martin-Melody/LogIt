@@ -13,6 +13,14 @@ title: Progress and progression
 Progress lists every exercise you've done at least twice, with its trend and a chart of your estimated
 one-rep max. On the web (Pro) you can put several lifts on one chart with Compare.
 
+## Summary: your week, month or block
+
+Progress › **Summary** sums up a week, a month (the arrows step back) or the block you're on from
+your coach: training (sessions against your program, estimated maxes, records), body (weight trend,
+measurements), food against your targets, and your habits. If your coach sent you a month, their
+note on it sits at the top; their card in your conversation has **See it in Progress**, which opens
+that month here.
+
 ## Progression
 
 After each workout, LogIt suggests the next targets for each exercise. How it does that is up to you,

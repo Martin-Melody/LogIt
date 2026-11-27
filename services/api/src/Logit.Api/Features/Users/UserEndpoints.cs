@@ -111,7 +111,7 @@ public static class UserEndpoints
         return Results.Ok(results);
     }
 
-    private static async Task<IResult> GetProfile(string username, AppDbContext db, ClaimsPrincipal caller)
+    private static async Task<IResult> GetProfile(string username, AppDbContext db, ClaimsPrincipal caller, IConfiguration config)
     {
         var user = await db.Users.FirstOrDefaultAsync(u => u.Username == username.ToLowerInvariant() && !u.IsSample);
         if (user is null) return Results.NotFound();
@@ -149,8 +149,10 @@ public static class UserEndpoints
         }
 
         var postCount = await db.Posts.CountAsync(p => p.AuthorId == user.Id && p.DeletedAt == null);
-        return Results.Ok(user.ToProfileDto(isSelf, followerCount, followingCount, isFollowing, requested, followsYou)
-            with { PostCount = postCount, FollowedBy = followedBy, FollowedByCount = followedByCount });
+        var dto = user.ToProfileDto(isSelf, followerCount, followingCount, isFollowing, requested, followsYou);
+        // A private coach's Coaching section is for their followers, like the rest of the profile.
+        var coaching = dto.CanSeeContent ? await Coach.CoachProfileEndpoints.SectionAsync(db, user, config, DateTime.UtcNow) : null;
+        return Results.Ok(dto with { PostCount = postCount, FollowedBy = followedBy, FollowedByCount = followedByCount, Coaching = coaching });
     }
 }
 

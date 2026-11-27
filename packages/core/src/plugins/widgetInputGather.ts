@@ -1,4 +1,6 @@
-import type { WidgetDataNeed, WidgetInput, WidgetWorkout } from "./widgetView";
+import type { WidgetDataNeed, WidgetInput, WidgetWorkout, WidgetWorkoutBlock } from "./widgetView";
+import { isPluginBlockType, PLUGIN_BLOCK_PREFIX, type PluginBlockData } from "../domain/blockPlugin";
+import type { WorkoutSession } from "../domain/workout";
 import type { WorkoutRepo } from "../data/workoutRepo";
 import type { ExerciseRepo } from "../data/exercise/exerciseRepo";
 import type { HabitRepo } from "../data/habitRepo";
@@ -35,6 +37,17 @@ export type WidgetInputSources = {
 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** A workout's plugin blocks for widgets: values only, at most 100 entries each. */
+function pluginBlocksOf(s: WorkoutSession): { blocks?: WidgetWorkoutBlock[] } {
+  const blocks = s.blocks
+    .filter((b) => isPluginBlockType(b.type))
+    .map((b): WidgetWorkoutBlock => {
+      const d = b.data as PluginBlockData;
+      return { pluginId: b.type.slice(PLUGIN_BLOCK_PREFIX.length), name: d.name, fields: { ...(d.blockFields ?? {}) }, entries: (d.entries ?? []).slice(0, 100).map((e) => ({ ...e.values })) };
+    });
+  return blocks.length ? { blocks } : {};
+}
 
 export function formatTarget(o: ProgressionOutput): string {
   const first = o.sets[0];
@@ -89,6 +102,7 @@ export async function gatherWidgetInputFrom(
                 type: set.setType,
               })),
             })),
+            ...pluginBlocksOf(s),
           }),
         );
       }),
@@ -214,6 +228,24 @@ export async function gatherWidgetInputFrom(
           }),
         );
         input.progressionTargets = rows.filter((r): r is NonNullable<typeof r> => r !== null);
+      }),
+    );
+  }
+
+  if (want.has("nutritionDays") && src.nutritionDeps) {
+    const deps = src.nutritionDeps;
+    tasks.push(
+      slice("nutritionDays", async () => {
+        const from = localDateIso(new Date(now - 27 * DAY_MS));
+        const [days, nut] = await Promise.all([
+          deps.nutritionRepo.listDaysInRange(from, localDateIso(new Date(now))),
+          getNutritionTargets(deps, { fallbackWeightKg: src.fallbackWeightKg, now }).catch(() => null),
+        ]);
+        input.nutritionDays = {
+          days: days.filter((d) => d.items.length > 0).map((d) => { const t = dayTotals(d); return { dateIso: d.dateIso, kcal: Math.round(t.kcal), proteinG: Math.round(t.proteinG) }; }).sort((a, b) => a.dateIso.localeCompare(b.dateIso)),
+          targetKcal: nut?.targets?.kcal,
+          targetProteinG: nut?.targets?.macros.proteinG,
+        };
       }),
     );
   }

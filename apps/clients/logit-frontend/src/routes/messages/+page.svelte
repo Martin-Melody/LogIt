@@ -19,8 +19,10 @@
   import GroupAvatar from "$lib/components/social/GroupAvatar.svelte";
   import GroupFormSheet from "$lib/components/social/GroupFormSheet.svelte";
   import { back } from "$lib/navigation";
-  import { coachApi } from "@logit/core/api/coachApi";
+  import { coachApi, isRealClient } from "@logit/core/api/coachApi";
   import { dmApi } from "@logit/core/api/dmApi";
+  import { groupsApi } from "@logit/core/api/groupsApi";
+  import { requestLine } from "@logit/core/domain/coachRequest";
   import { trainingApi } from "@logit/core/api/trainingApi";
   import { getMessagesRepo } from "$lib/data/repoProvider";
   import { pullAndMergeMessages } from "$lib/sync/syncService";
@@ -40,6 +42,8 @@
     /** A chat with a person: its thread and their account id (report). */
     threadId?: string;
     userId?: string;
+    /** The label beside the name: "Coach", or a request's ("Request", "Waiting list"). */
+    label?: string;
     /** A group's chat: the group's id and member count. */
     groupId?: string;
     members?: number;
@@ -78,19 +82,40 @@
   let rows = $state<Row[] | null>(null);
   let creating = $state(false);
   let requests = $state(0);
+  let sent = $state(0);
   let training = $state<Set<string>>(new Set());
   let error = $state(false);
   let now = $state(Date.now());
 
   async function coachRows(): Promise<Row[]> {
     await pullAndMergeMessages().catch(() => {});
-    const [coaches, clients] = await Promise.all([coachApi.listCoaches().catch(() => []), coachApi.listClients().catch(() => [])]);
+    const [coaches, clients, asking] = await Promise.all([
+      coachApi.listCoaches().catch(() => []),
+      coachApi.listClients().then((xs) => xs.filter(isRealClient)).catch(() => []),
+      coachApi.listRequests().then((xs) => xs.filter(isRealClient)).catch(() => []),
+    ]);
+    // Canvas R3/Z8: people asking you to coach them, as conversations with a label.
+    const requestRows: Row[] = asking.map((q) => {
+      const name = q.client.displayName || q.client.username;
+      return {
+        key: `request:${q.relationshipId}`,
+        href: `/messages/request/${q.relationshipId}?name=${encodeURIComponent(name)}`,
+        name,
+        username: q.client.username,
+        avatarUrl: q.client.avatarUrl ?? null,
+        preview: q.stage === "waiting" ? "On your waiting list" : `Asked you to coach them · ${requestLine(q.stage ?? "asked", q.offer ?? null, Date.now())}`,
+        atMs: Date.parse(q.requestedAt),
+        unread: (q.stage ?? "asked") === "asked",
+        coach: true,
+        label: q.stage === "waiting" ? "Waiting list" : "Request",
+      };
+    });
     const repo = getMessagesRepo();
     const threads = [
       ...coaches.filter((c) => c.status !== "paused").map((c) => ({ id: c.relationshipId, person: c.coach })),
       ...clients.map((c) => ({ id: c.relationshipId, person: c.client })),
     ];
-    return Promise.all(
+    return [...requestRows, ...(await Promise.all(
       threads.map(async ({ id, person }) => {
         const last = (await repo.listThread(id)).at(-1);
         const name = person.displayName || person.username;
@@ -106,7 +131,7 @@
           coach: true,
         };
       }),
-    );
+    ))];
   }
 
   async function load() {
@@ -118,6 +143,7 @@
         trainingApi.friends().catch(() => []),
       ]);
       requests = unread.requests;
+      void Promise.all([coachApi.listMyRequests().catch(() => []), groupsApi.myRequests().catch(() => [])]).then(([c, g]) => (sent = c.length + g.length));
       training = new Set(friends.map((f) => f.username));
       now = Date.now();
       rows = [
@@ -162,10 +188,11 @@
     <button type="button" aria-label="New group" class="flex size-11 items-center justify-center text-muted-foreground" onclick={() => (creating = true)}><Users class="size-5" /></button>
   </PageHeader>
 
-  {#if requests > 0}
-    <a href="/messages/requests" class="flex min-h-13 items-center justify-between gap-3 border-b border-border px-4 text-[15px] font-medium text-inherit no-underline hover:bg-muted/40">
-      Message requests
-      <span class="flex items-center gap-1.5 text-sm text-muted-foreground tabular-nums">{requests}<ChevronRight class="size-4" /></span>
+  {#if requests > 0 || sent > 0}
+    <!-- Canvas R4: received message requests, and coaches and groups you asked. -->
+    <a href={requests > 0 ? "/messages/requests" : "/messages/requests?tab=sent"} class="flex min-h-13 items-center justify-between gap-3 border-b border-border px-4 text-[15px] font-medium text-inherit no-underline hover:bg-muted/40">
+      Requests
+      <span class="flex items-center gap-1.5 text-sm text-muted-foreground tabular-nums">{requests > 0 ? requests : `${sent} sent`}<ChevronRight class="size-4" /></span>
     </a>
   {/if}
   {#if waiting > 0}
@@ -195,7 +222,7 @@
               <span class="flex items-center gap-2 text-[15px] {r.unread ? 'font-semibold' : 'font-medium'}">
                 <span class="truncate">{r.name}</span>
                 {#if r.members}<span class="shrink-0 text-[13px] font-normal text-muted-foreground tabular-nums">· {r.members}</span>{/if}
-                {#if r.coach}<span class="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Coach</span>{/if}
+                {#if r.coach}<span class="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{r.label ?? "Coach"}</span>{/if}
               </span>
               <span class="flex min-w-0 gap-1 text-sm {r.unread ? 'font-semibold text-foreground' : 'text-muted-foreground'}">
                 <span class="truncate">{r.preview}</span>{#if r.atMs}<span class="shrink-0 font-normal text-muted-foreground">· {shortAgo(r.atMs, now)}</span>{/if}

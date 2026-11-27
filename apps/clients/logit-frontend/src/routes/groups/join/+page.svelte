@@ -1,6 +1,6 @@
 <!-- Joining a group (design canvas G5, G13): from its link or QR (?c=), or from search or a
      member's invite (?id=). What members see, "Show me on the board", then Join, or Ask to join
-     for a findable group that wants approval. Signed out, it asks for an account first and comes
+     for a findable group that wants approval, with its questions if it asks any (R6). Signed out, it asks for an account first and comes
      back here. -->
 <script lang="ts">
   import { Spinner } from "$lib/components/ui/spinner/index.js";
@@ -13,6 +13,8 @@
   import { groupsApi, parseGroupInvite, type GroupPreview } from "@logit/core/api/groupsApi";
   import { authStore } from "$lib/api/authStore.svelte";
   import Switch from "$lib/components/ui/switch/Switch.svelte";
+  import { Textarea } from "$lib/components/ui/textarea/index.js";
+  import { chip } from "$lib/components/ui/choice";
   import GroupAvatar from "$lib/components/social/GroupAvatar.svelte";
   import PersonAvatar from "$lib/components/social/PersonAvatar.svelte";
   import { holdRoute } from "$lib/features/friends/invite.svelte";
@@ -20,12 +22,16 @@
 
   const raw = $derived(page.url.searchParams.get("c") ?? "");
   const groupId = $derived(page.url.searchParams.get("id"));
+  // Asked from an event (canvas R6): going to it once let in.
+  const eventId = $derived(page.url.searchParams.get("event") ?? undefined);
   const invite = $derived(parseGroupInvite(raw));
   const sameServer = $derived(!!invite && invite.server === apiBaseUrl().replace(/\/+$/, ""));
   let preview = $state<GroupPreview | null>(null);
   let error = $state<string | null>(null);
   let onBoard = $state(true);
   let joining = $state(false);
+  // Canvas R6: the organisers' questions, answered when asking.
+  let answers = $state<Record<string, string>>({});
 
   onMount(async () => {
     if (groupId) {
@@ -56,6 +62,8 @@
 
   // With the link or an invite you're straight in; a findable group may want approval first.
   const asks = $derived(!!preview && !invite && !preview.invitedBy && preview.access === "Request");
+  const questions = $derived(asks ? (preview?.questions ?? []) : []);
+  const unanswered = $derived(questions.find((q) => !q.optional && !(answers[q.id] ?? "").trim()) ?? null);
 
   async function join() {
     if (!preview) return;
@@ -64,7 +72,8 @@
       if (invite) {
         await groupsApi.join(invite.code, onBoard);
       } else {
-        const { status } = await groupsApi.joinById(preview.id, onBoard);
+        const given = Object.fromEntries(Object.entries(answers).map(([k, v]) => [k, v.trim()]).filter(([, v]) => v));
+        const { status } = await groupsApi.joinById(preview.id, onBoard, eventId, questions.length ? given : undefined);
         if (status === "requested") {
           preview = { ...preview, requested: true };
           toast.success("Asked. You'll get a notification when an organiser lets you in.");
@@ -140,6 +149,28 @@
         <li>Not your weights or your workouts, unless you share them</li>
       </ul>
     </section>
+    {#if questions.length && !preview.requested}
+      <section aria-labelledby="ask-h" class="mt-3 flex flex-col gap-4 rounded-2xl border border-border bg-card px-4 py-3.5">
+        <div class="flex flex-col gap-0.5">
+          <h2 id="ask-h" class="text-[15px] font-semibold">Ask to join</h2>
+          <p class="text-[13px] text-muted-foreground">The organisers ask everyone these. Only organisers see your answers.</p>
+        </div>
+        {#each questions as q (q.id)}
+          <div class="flex flex-col gap-2">
+            <span id="gq-{q.id}" class="text-[15px] font-medium leading-snug">{q.label}{#if q.optional}<span class="ml-1.5 text-sm font-normal text-muted-foreground">Optional</span>{/if}</span>
+            {#if q.kind === "choice" && q.options}
+              <div role="radiogroup" aria-labelledby="gq-{q.id}" class="flex flex-wrap gap-2">
+                {#each q.options as o (o)}
+                  <button type="button" role="radio" aria-checked={answers[q.id] === o} class={chip(answers[q.id] === o)} onclick={() => (answers = { ...answers, [q.id]: o })}>{o}</button>
+                {/each}
+              </div>
+            {:else}
+              <Textarea aria-labelledby="gq-{q.id}" rows={2} maxlength={2000} value={answers[q.id] ?? ""} oninput={(e) => (answers = { ...answers, [q.id]: e.currentTarget.value })} class="text-[15px]" />
+            {/if}
+          </div>
+        {/each}
+      </section>
+    {/if}
     <div class="mt-3 flex min-h-14 items-center gap-3 rounded-2xl border border-border bg-card py-2 pl-4 pr-2">
       <span class="flex flex-1 flex-col gap-0.5"><span class="text-[15px] font-medium">Show me on the board</span><span class="text-[13px] text-muted-foreground">Change it any time in the group's ⋯</span></span>
       <Switch checked={onBoard} label="Show me on the board" onchange={(v) => (onBoard = v)} />
@@ -152,7 +183,8 @@
         <button type="button" class="h-11 rounded-lg text-sm font-medium text-destructive" onclick={cancelRequest}>Cancel request</button>
         <p class="text-center text-[13px] leading-snug text-muted-foreground">An organiser approves requests. You'll get a notification when you're in.</p>
       {:else if authStore.isAuthenticated}
-        <button type="button" disabled={joining} class="h-12 rounded-lg bg-primary text-[15px] font-semibold text-primary-foreground disabled:opacity-60" onclick={join}>{asks ? "Ask to join" : `Join ${preview.name}`}</button>
+        <button type="button" disabled={joining || !!unanswered} class="h-12 rounded-lg bg-primary text-[15px] font-semibold text-primary-foreground disabled:opacity-60" onclick={join}>{asks ? (questions.length ? "Send request" : "Ask to join") : `Join ${preview.name}`}</button>
+        {#if unanswered}<p class="text-center text-[13px] text-muted-foreground">Answer "{unanswered.label}" to send it.</p>{/if}
         {#if asks}<p class="text-center text-[13px] leading-snug text-muted-foreground">An organiser approves requests. With a member's invite or the group's link you join straight away.</p>{/if}
       {:else}
         <button type="button" class="h-12 rounded-lg bg-primary text-[15px] font-semibold text-primary-foreground" onclick={signIn}>Sign in or make an account</button>

@@ -11,6 +11,7 @@ import type { InstalledPlugin, PluginManifest } from "./types";
 import { removeStoredPack } from "./packStore";
 import { removeStoredMobilityPack } from "./mobilityPackStore";
 import { removeStoredBundle } from "./bundleStore";
+import { removeBlockDeclaration, setBlockPluginOffCheck } from "./blockPluginStore";
 
 // Families that install from a fetched artifact (code bundle or pack data file)
 // and therefore need a bundleUrl on the manifest.
@@ -28,6 +29,9 @@ const BUNDLED_BUNDLE_FAMILIES = new Set<PluginManifest["family"]>([
 
 const INSTALLED_STORAGE_KEY = "logit:plugins:installed:v1";
 const HOME_STORAGE_KEY = "logit:home-config:v1";
+
+// A block plugin turned off in Plugins isn't offered or run (it stays installed).
+setBlockPluginOffCheck((id) => loadInstalled().some((p) => p.manifest.id === id && !p.enabled));
 
 function loadInstalled(): InstalledPlugin[] {
   if (!browser) return [];
@@ -305,6 +309,8 @@ export async function uninstallPlugin(id: string, opts: InstallChangeOptions = {
       removeStoredPack(id);
     } else if (removed.manifest.family === "mobility-pack") {
       removeStoredMobilityPack(id);
+    } else if (removed.manifest.family === "workout-block") {
+      removeBlockDeclaration(id);
     } else {
       removeStoredBundle(id);
     }

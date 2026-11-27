@@ -3,13 +3,13 @@ import type {
   ListMyProgramsOptions,
   MyCoachProgram,
 } from "../coachProgramRepo";
-import type { CoachProgram } from "../../domain/CoachProgram";
+import { parseProgram, type CoachProgram } from "../../domain/CoachProgram";
 import { coachProgramApi, type RemoteMyCoachProgram } from "../../api/coachProgramApi";
 
 function parse(entry: RemoteMyCoachProgram): MyCoachProgram | null {
   if (entry.deletedAtMs || !entry.dataJson) return null;
   try {
-    const program = JSON.parse(entry.dataJson) as CoachProgram;
+    const program = parseProgram(entry.dataJson);
     // The client's Start lives outside the coach's JSON (see CoachProgram.clientStartedAtMs);
     // put it back so the coach sees which week the client is on.
     return {

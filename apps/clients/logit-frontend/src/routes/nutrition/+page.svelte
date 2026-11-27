@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { trainingDayOn } from "$lib/features/nutrition/trainingDay";
 import { Separator } from "$lib/components/ui/separator/index.js";
 import { Skeleton } from "$lib/components/ui/skeleton/index.js";
 import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
@@ -104,6 +105,16 @@ import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
     dateIso = iso;
     followingToday = iso === localDateIso();
     void loadDay();
+    void loadTargets().catch(() => {});
+  }
+
+  /** That day's plan and day type (canvas MP2, FX1): a past day keeps the plan it had. */
+  async function loadTargets() {
+    const fallbackKg = $profile.weight != null && $profile.weightUnit === "kg" ? $profile.weight : null;
+    const want = dateIso;
+    const trainingDay = await trainingDayOn(want);
+    const n = await getNutritionTargets(getNutritionDeps(), { fallbackWeightKg: fallbackKg, dateIso: want, trainingDay });
+    if (want === dateIso) nut = n;
   }
 
   function shiftWeek(weeks: number) {
@@ -140,13 +151,7 @@ import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
   async function load() {
     ui.error = null;
     try {
-      const fallbackKg = $profile.weight != null && $profile.weightUnit === "kg" ? $profile.weight : null;
-      const [n] = await Promise.all([
-        getNutritionTargets(getNutritionDeps(), { fallbackWeightKg: fallbackKg }),
-        loadDay(),
-        loadWeek(),
-      ]);
-      nut = n;
+      await Promise.all([loadTargets(), loadDay(), loadWeek()]);
     } catch (e) {
       ui.error = e instanceof Error ? e.message : "Failed to load";
     } finally {
@@ -354,7 +359,8 @@ import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
   const sourceBadge = $derived.by(() => {
     if (!nut || (!nut.goal && !nut.coachPlan)) return null;
     if (!nut.targets) return nut.targetsHint ?? "Add height & birth date";
-    return nut.targets.sourceLabel;
+    // A coach's plan with day types says which today is (canvas MP2): "Rest day · From your coach".
+    return nut.targets.dayName ? `${nut.targets.dayName} · ${nut.targets.sourceLabel}` : nut.targets.sourceLabel;
   });
 
   // Right after signing in the diary is still downloading: say so, and show placeholders
@@ -406,11 +412,14 @@ import { getAccountItem, setAccountItem } from "$lib/data/accountStorage";
     if (!items.some((it) => hasLabelNutrients(it.nutrients) || hasMicros(it.nutrients))) return null;
     const totals = dayNutrients(items).totals;
     const fmt = (v: number | undefined, dp: number) => (v === undefined ? "–" : String(Math.round(v * 10 ** dp) / 10 ** dp));
+    // A coach's target wins over the usual guideline (canvas NT1).
+    const coach = nut?.targets?.nutrients ?? [];
+    const goal = (id: string, usual: string) => { const c = coach.find((x) => x.id === id); return c ? String(c.amount) : usual; };
     return [
-      { id: "fibreG", label: "fibre g", value: fmt(totals.fibreG, 0), goal: "30" },
-      { id: "sugarG", label: "sugar g", value: fmt(totals.sugarG, 0), goal: "" },
-      { id: "satFatG", label: "sat fat g", value: fmt(totals.satFatG, 0), goal: "30" },
-      { id: "saltG", label: "salt g", value: fmt(totals.saltG, 1), goal: "6" },
+      { id: "fibreG", label: "fibre g", value: fmt(totals.fibreG, 0), goal: goal("fibreG", "30") },
+      { id: "sugarG", label: "sugar g", value: fmt(totals.sugarG, 0), goal: goal("sugarG", "") },
+      { id: "satFatG", label: "sat fat g", value: fmt(totals.satFatG, 0), goal: goal("satFatG", "30") },
+      { id: "saltG", label: "salt g", value: fmt(totals.saltG, 1), goal: goal("saltG", "6") },
     ];
   });
 </script>

@@ -236,7 +236,7 @@ Settings:
 | Setting | What it is |
 | --- | --- |
 | `Stripe:SecretKey` | The platform's key. A restricted key needs write access to Accounts (v2), Account Links, Checkout Sessions and Subscriptions, on connected accounts too. Without it the Payments page says payments aren't switched on. |
-| `Stripe:ConnectWebhookSecret` | The signing secret of a **Connect** webhook endpoint (events from connected accounts) pointed at `https://<api>/coach/payments/webhook`, with `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `invoice.paid`, `invoice.payment_failed`, `customer.subscription.updated` and `customer.subscription.deleted`. Without it the endpoint answers 404 and payments are only picked up when the client returns to the link page. |
+| `Stripe:ConnectWebhookSecret` | The signing secret of a **Connect** webhook endpoint (events from connected accounts) pointed at `https://<api>/coach/payments/webhook`, with `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `invoice.paid`, `invoice.payment_failed`, `customer.subscription.updated`, `customer.subscription.deleted`, `account.updated` (Stripe needing something from a coach) and `charge.dispute.created` / `charge.dispute.closed`. Without it the endpoint answers 404 and payments are only picked up when the client returns to the link page. |
 
 An hourly sweep (`CoachPaymentSweeper`) ends one-off packages that ran out and applies each coach's
 rule (keep, pause or end coaching N days after a client stopped being paid up). Paused is a

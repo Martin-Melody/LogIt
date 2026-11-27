@@ -1,0 +1,56 @@
+---
+title: Program packs
+description: "Share training programs coaches can copy into their own with a program pack: plain JSON, no code."
+---
+
+A program pack offers **training programs** that coaches copy into their own, from
+Programs › Start from a program › Community. Like the other packs it's pure JSON — no code,
+no sandbox. Copying makes the coach's own program: a newer version of your pack never
+changes a program a coach already copied, or a client's copy of it.
+
+## The pack file
+
+```json
+{
+  "formatVersion": 1,
+  "pluginId": "com.you.upper-lower",
+  "programs": [
+    {
+      "name": "Upper / lower",
+      "description": "4 days a week for lifters with a year or more behind them.",
+      "rule": { "kind": "adaptive" },
+      "weeks": [
+        {
+          "id": "w1",
+          "weekNumber": 1,
+          "days": [
+            {
+              "id": "d1",
+              "orderIndex": 0,
+              "name": "Upper A",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "b1",
+                  "orderIndex": 0,
+                  "exerciseName": "Bench Press",
+                  "sets": [
+                    { "id": "s1", "orderIndex": 0, "setType": "normal", "repsMin": 6, "repsMax": 8 }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+- Each program is a LogIt program: `weeks` of `days` of `blocks`. Blocks are `strength`
+  (with `sets`), `cardio`, `circuit`, `mobility` or `plugin`.
+- **`rule`** (optional, default fixed): how the numbers move week to week. `adaptive`
+  (LogIt Adaptive), `linear` (with `stepKg`), `wave`, or `fixed`.
+- Ids only need to be unique inside the pack; they're replaced when a coach copies it.
+- Up to 20 programs, 52 weeks each, 7 days a week and 40 blocks a day.

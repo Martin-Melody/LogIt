@@ -14,6 +14,8 @@ type Row = {
   context_date_iso: string | null;
   photo_json: string | null;
   voice_json: string | null;
+  kind?: string | null;
+  card_json?: string | null;
 };
 
 function readJson<T>(json: string | null): T | undefined {
@@ -37,6 +39,8 @@ function toMessage(r: Row): CoachMessage {
     contextDateIso: r.context_date_iso ?? undefined,
     photo: readJson(r.photo_json),
     voice: readJson(r.voice_json),
+    ...(r.kind ? { kind: r.kind } : {}),
+    ...(r.card_json ? { cardJson: r.card_json } : {}),
   };
 }
 
@@ -56,9 +60,9 @@ export function createSqliteMessagesRepo(): MessagesRepo {
     async addOutgoing(m: CoachMessage): Promise<void> {
       const db = getDb();
       await db.run(
-        `INSERT OR IGNORE INTO coach_messages(id, owner_id, relationship_id, body, created_at_ms, read_at_ms, mine, synced, context_date_iso, photo_json, voice_json)
-         VALUES(?, ?, ?, ?, ?, NULL, 1, 0, ?, ?, ?)`,
-        [m.id, getActiveOwnerId(), m.relationshipId, m.body, m.createdAtMs, m.contextDateIso ?? null, m.photo ? JSON.stringify(m.photo) : null, m.voice ? JSON.stringify(m.voice) : null],
+        `INSERT OR IGNORE INTO coach_messages(id, owner_id, relationship_id, body, created_at_ms, read_at_ms, mine, synced, context_date_iso, photo_json, voice_json, kind, card_json)
+         VALUES(?, ?, ?, ?, ?, NULL, 1, 0, ?, ?, ?, ?, ?)`,
+        [m.id, getActiveOwnerId(), m.relationshipId, m.body, m.createdAtMs, m.contextDateIso ?? null, m.photo ? JSON.stringify(m.photo) : null, m.voice ? JSON.stringify(m.voice) : null, m.kind ?? null, m.cardJson ?? null],
       );
     },
 
@@ -70,16 +74,18 @@ export function createSqliteMessagesRepo(): MessagesRepo {
     async upsertFromRemote(m: CoachMessage): Promise<void> {
       const db = getDb();
       await db.run(
-        `INSERT INTO coach_messages(id, owner_id, relationship_id, body, created_at_ms, read_at_ms, mine, synced, context_date_iso, photo_json, voice_json)
-         VALUES(?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)
+        `INSERT INTO coach_messages(id, owner_id, relationship_id, body, created_at_ms, read_at_ms, mine, synced, context_date_iso, photo_json, voice_json, kind, card_json)
+         VALUES(?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
            body = excluded.body,
            read_at_ms = excluded.read_at_ms,
            context_date_iso = excluded.context_date_iso,
            photo_json = excluded.photo_json,
            voice_json = excluded.voice_json,
+           kind = excluded.kind,
+           card_json = excluded.card_json,
            synced = 1`,
-        [m.id, getActiveOwnerId(), m.relationshipId, m.body, m.createdAtMs, m.readAtMs ?? null, m.mine ? 1 : 0, m.contextDateIso ?? null, m.photo ? JSON.stringify(m.photo) : null, m.voice ? JSON.stringify(m.voice) : null],
+        [m.id, getActiveOwnerId(), m.relationshipId, m.body, m.createdAtMs, m.readAtMs ?? null, m.mine ? 1 : 0, m.contextDateIso ?? null, m.photo ? JSON.stringify(m.photo) : null, m.voice ? JSON.stringify(m.voice) : null, m.kind ?? null, m.cardJson ?? null],
       );
     },
 
@@ -127,6 +133,13 @@ export function createSqliteMessagesRepo(): MessagesRepo {
          WHERE (owner_id = ? OR owner_id IS NULL) AND context_date_iso = ?
          ORDER BY created_at_ms ASC`,
         [getActiveOwnerId(), dateIso],
+      );
+      return ((res.values ?? []) as Row[]).map(toMessage);
+    },
+    async listByKind(kind: string): Promise<CoachMessage[]> {
+      const res = await getDb().query(
+        `SELECT * FROM coach_messages WHERE (owner_id = ? OR owner_id IS NULL) AND kind = ? ORDER BY created_at_ms ASC`,
+        [getActiveOwnerId(), kind],
       );
       return ((res.values ?? []) as Row[]).map(toMessage);
     },

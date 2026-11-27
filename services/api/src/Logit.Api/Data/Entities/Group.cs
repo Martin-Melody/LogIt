@@ -25,6 +25,9 @@ public class Group
     /// Its name for the web address getlogit.app/groups/{slug}-{first 8 of id} (canvas S4);
     /// only groups anyone can find have that page. Kept in step with the name.
     public string Slug { get; set; } = "";
+    /// Optional questions for people asking to join (canvas R6, K8), in the coach intake's shape
+    /// (written or a choice). Only organisers and moderators see the answers.
+    public string? JoinQuestionsJson { get; set; }
     public ICollection<GroupMember> Members { get; set; } = [];
 }
 
@@ -42,6 +45,8 @@ public class GroupJoinRequest
     public bool OnBoard { get; set; } = true;
     /// Asked from an event in search ("Ask to join"): marked going once let in.
     public Guid? GoingTo { get; set; }
+    /// Their answers to the group's join questions, with each question as it was asked.
+    public string? AnswersJson { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 

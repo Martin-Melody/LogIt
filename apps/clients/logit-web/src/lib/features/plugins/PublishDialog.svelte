@@ -89,6 +89,12 @@
       case "nutrition-analytics": return { family: plugin.family, analyticsId: id };
       case "exercise-pack": return { family: plugin.family, exercisePackId: id };
       case "mobility-pack": return { family: plugin.family, mobilityPackId: id };
+      case "program-pack": return { family: plugin.family, programPackId: id };
+      case "workout-block": return { family: plugin.family, blockId: id };
+      case "meal-plan-pack": return { family: plugin.family, mealPlanPackId: id };
+      case "recipe-pack": return { family: plugin.family, recipePackId: id };
+      case "card-pack": return { family: plugin.family, cardPackId: id, slot: "coaching" };
+      case "question-pack": return { family: plugin.family, questionPackId: id };
       default: return { family: plugin.family, algorithmId: id };
     }
   }

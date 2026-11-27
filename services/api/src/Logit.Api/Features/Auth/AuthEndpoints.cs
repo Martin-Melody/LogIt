@@ -21,6 +21,7 @@ public static class AuthEndpoints
         group.MapPost("/refresh", Refresh);
         group.MapPost("/revoke", Revoke).RequireAuthorization();
         group.MapDelete("/account", DeleteAccount).RequireAuthorization();
+        group.MapGet("/account/coaching", ClosingPreview).RequireAuthorization();
         group.MapPost("/change-password", ChangePassword).RequireAuthorization();
         group.MapPost("/forgot-password", ForgotPassword);
         group.MapPost("/reset-password", ResetPassword);
@@ -242,10 +243,12 @@ public static class AuthEndpoints
         [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] DeleteAccountRequest? req,
         AppDbContext db,
         ClaimsPrincipal caller,
-        Photos.IPhotoStore store)
+        Photos.IPhotoStore store,
+        Coach.CoachingEnd coaching,
+        CancellationToken ct)
     {
         var userId = caller.GetUserId();
-        var user = await db.Users.FindAsync(userId);
+        var user = await db.Users.FindAsync([userId], ct);
         if (user is null) return Results.NotFound();
 
         // Re-authenticate before destroying the account. This is a guardrail against
@@ -259,6 +262,29 @@ public static class AuthEndpoints
         if (!BCrypt.Net.BCrypt.Verify(req.Password, user.PasswordHash))
             return Results.BadRequest(new { error = "Password is incorrect." });
 
+        // Coaching first: deleting the account removes the rows that say who pays whom, so a
+        // plan left running in Stripe would go on charging with nothing in LogIt to stop it.
+        if (req.Message is { Length: > 2000 })
+            return Results.BadRequest(new { error = "Keep the message to your clients under 2,000 characters." });
+        if (req.RefundCents?.Values.Any(c => c < 0) == true)
+            return Results.BadRequest(new { error = "A refund can't be less than nothing." });
+        var rule = req.Refunds switch
+        {
+            null or "unused" => Coach.Payments.RefundRule.Unused,
+            "full" => Coach.Payments.RefundRule.Full,
+            "none" => Coach.Payments.RefundRule.None,
+            _ => null,
+        };
+        if (rule is null) return Results.BadRequest(new { error = "Refunds must be unused, full or none." });
+        var refunds = new Coach.AccountRefunds(rule, req.RefundCents);
+        var stuck = await coaching.EndAllForAccountAsync(user, refunds, req.Message, DateTime.UtcNow, ct);
+        if (stuck.Count > 0)
+            return Results.Conflict(new
+            {
+                error = $"Stripe couldn't stop the payments for {string.Join(", ", stuck)}, so your account wasn't deleted. Try again in a few minutes.",
+                people = stuck,
+            });
+
         await Admin.AdminLog.ForgetAsync(db, user.Id);
         await Sandbox.SandboxEndpoints.RemoveAllAsync(db, user.Id);
         await Social.GroupEndpoints.ForgetAsync(db, store, user.Id);
@@ -267,6 +293,10 @@ public static class AuthEndpoints
 
         return Results.NoContent();
     }
+
+    /// What deleting this account would end (K5, K6): the people it coaches and its coaches.
+    private static async Task<IResult> ClosingPreview(ClaimsPrincipal caller, Coach.CoachingEnd coaching, CancellationToken ct) =>
+        Results.Ok(await coaching.PreviewAsync(caller.GetUserId(), DateTime.UtcNow, ct));
 
     internal static AuthResponse BuildAuthResponse(User user, RefreshToken refresh, TokenService tokens, IConfiguration config) =>
         new(

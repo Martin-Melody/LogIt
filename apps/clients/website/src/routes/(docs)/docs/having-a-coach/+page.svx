@@ -10,13 +10,70 @@ title: Having a coach
 
 <FeatureFacts id="my-coach" />
 
-## Join a coach
+## Ask a coach
 
-Your coach sends you a link (or invites you by username). Open it, choose what they may see, and send
-the request. Nothing is shared until they accept. Some coaches charge through their link: you pay on
-the link's page before coaching starts.
+Tap **Ask to be coached** on a coach's profile, or open the link they shared. You answer a few
+questions (what you want, how long you've trained, any injuries…) and pick the package you're
+interested in. Only the coach sees your answers, and nothing else is shared.
+
+Your request is a conversation with the coach: in **Messages › Requests › Sent** on the phone, or
+**My coach** on the web. They might ask you something first, then:
+
+- **Offer you a spot.** The offer shows as a card with the package, the price and how long they're
+  holding the spot. Take it before then, or ask them to offer it again if it runs out.
+- **Put you on their waiting list** when they're full. They offer you a spot when one opens; you
+  can leave the list any time.
+- **Say it's not a fit.** Nothing was shared or paid. Delete the request and your answers go.
+
+## Take the spot
+
+**Take the spot** opens a page on the web with the package, when you start and when you're first
+charged, what the coach will see (change it any time), and the coach's agreement if they wrote one:
+read it and tick that you agree. Paying needs you to be 18 or over; under 18, ask the coach to sort
+payment outside LogIt. You pay the coach on Stripe's page, then you're straight back, coached. If you
+already have a coach, taking a spot ends that coaching: a plan through LogIt stops renewing, and you
+keep that coach until the end of what you paid for.
+
+You can change your answers or withdraw while the request is open. If you don't have the app yet,
+you get an email when the coach replies (stop them from the link in the email).
+
+If a coach invited you by username, accept it in My coach. Some coaches charge through their link:
+you pay on the link's page before coaching starts.
 
 <HowTo id="pro.coach" />
+
+## Your meal plan
+
+If your coach gives you a meal plan, **Today's food** (Nutrition › meal plan) shows the day's
+meals at their times and your progress against the day's targets. A plan can have training and
+rest days; the day switches by itself from your program (a day you train counts as a training
+day), and meals timed around training follow your session time, so if you move training, they
+move with it. ⋯ shows the other day's plan and the grocery list.
+
+On each meal:
+
+- **Log as planned** logs it all in one go.
+- **Change amounts** lets you log what you really had (0 = skipped); your coach sees "changed
+  amounts", not off plan.
+- **Swap** on a food shows your coach's swaps, at the amount that matches the planned protein.
+  **Log something else** is always allowed; it counts toward your day, and your coach sees it as
+  off plan.
+- Tap a recipe for its ingredients and method.
+
+If you told your coach in your start-up form there's food you don't eat, you see the swap in its
+place. The **grocery list** covers the next 7 days (training and rest), with recipes as their
+ingredients; ticks stay on your phone, and Share sends it as text.
+
+Goals stay yours. If your coach suggests a change to your goal, it shows in your conversation:
+**Use their goal**, or **Keep mine**; they're told either way.
+
+## Stopping
+
+**Stop coaching** on My coach. With a monthly plan it stops renewing, and coaching carries on until
+the end of what you paid for; otherwise it ends straight away. Your program, meal plan and history
+stay yours. If your card fails, **Update card** opens Stripe's page and the payment is tried again as
+soon as you're back. If your coach hasn't replied for a week, you can stop with the unused days
+refunded. Blocking your coach also ends coaching, with the unused days refunded.
 
 ## Check-ins
 

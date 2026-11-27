@@ -1,0 +1,5587 @@
+{
+  "formatVersion": 1,
+  "pluginId": "app.getlogit.meet-prep",
+  "programs": [
+    {
+      "name": "Powerlifting meet prep, 12 weeks",
+      "description": "Four days a week to a meet: four weeks of volume, four of strength, three peaking and a light meet week. Install the AMRAP training max rule (app.getlogit.amrap-tm) so the main lifts' weights come from your training max; without it the weights come from LogIt's own rule.",
+      "rule": {
+        "kind": "adaptive"
+      },
+      "weeks": [
+        {
+          "id": "w1",
+          "weekNumber": 1,
+          "days": [
+            {
+              "id": "w1d0",
+              "orderIndex": 0,
+              "name": "Squat day",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w1d0m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Back squat",
+                  "sets": [
+                    {
+                      "id": "w1d0m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w1d0m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w1d0m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w1d0m0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w1d0m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Paused bench press",
+                  "sets": [
+                    {
+                      "id": "w1d0m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w1d0m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w1d0m1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w1d0a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Leg press",
+                  "sets": [
+                    {
+                      "id": "w1d0a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w1d0a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w1d0a0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w1d0a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Barbell row",
+                  "sets": [
+                    {
+                      "id": "w1d0a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w1d0a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w1d0a1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w1d1",
+              "orderIndex": 1,
+              "name": "Bench day",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w1d1m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Bench press",
+                  "sets": [
+                    {
+                      "id": "w1d1m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w1d1m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w1d1m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w1d1m0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w1d1m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Close-grip bench press",
+                  "sets": [
+                    {
+                      "id": "w1d1m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w1d1m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w1d1m1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w1d1a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Overhead press",
+                  "sets": [
+                    {
+                      "id": "w1d1a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w1d1a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w1d1a0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w1d1a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Lat pulldown",
+                  "sets": [
+                    {
+                      "id": "w1d1a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w1d1a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w1d1a1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w1d2",
+              "orderIndex": 2,
+              "name": "Deadlift day",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w1d2m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Deadlift",
+                  "sets": [
+                    {
+                      "id": "w1d2m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w1d2m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w1d2m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w1d2m0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w1d2m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Front squat",
+                  "sets": [
+                    {
+                      "id": "w1d2m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w1d2m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w1d2m1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w1d2a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Romanian deadlift",
+                  "sets": [
+                    {
+                      "id": "w1d2a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w1d2a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w1d2a0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w1d2a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Hanging leg raise",
+                  "sets": [
+                    {
+                      "id": "w1d2a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w1d2a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w1d2a1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w1d3",
+              "orderIndex": 3,
+              "name": "Bench and squat",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w1d3m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Bench press",
+                  "sets": [
+                    {
+                      "id": "w1d3m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w1d3m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w1d3m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w1d3m0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w1d3m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Back squat",
+                  "sets": [
+                    {
+                      "id": "w1d3m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w1d3m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w1d3m1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w1d3a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Dumbbell row",
+                  "sets": [
+                    {
+                      "id": "w1d3a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w1d3a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w1d3a0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w1d3a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Triceps pushdown",
+                  "sets": [
+                    {
+                      "id": "w1d3a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w1d3a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w1d3a1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "w2",
+          "weekNumber": 2,
+          "days": [
+            {
+              "id": "w2d0",
+              "orderIndex": 0,
+              "name": "Squat day",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w2d0m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Back squat",
+                  "sets": [
+                    {
+                      "id": "w2d0m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w2d0m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w2d0m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w2d0m0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w2d0m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Paused bench press",
+                  "sets": [
+                    {
+                      "id": "w2d0m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w2d0m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w2d0m1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w2d0a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Leg press",
+                  "sets": [
+                    {
+                      "id": "w2d0a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w2d0a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w2d0a0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w2d0a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Barbell row",
+                  "sets": [
+                    {
+                      "id": "w2d0a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w2d0a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w2d0a1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w2d1",
+              "orderIndex": 1,
+              "name": "Bench day",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w2d1m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Bench press",
+                  "sets": [
+                    {
+                      "id": "w2d1m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w2d1m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w2d1m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w2d1m0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w2d1m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Close-grip bench press",
+                  "sets": [
+                    {
+                      "id": "w2d1m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w2d1m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w2d1m1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w2d1a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Overhead press",
+                  "sets": [
+                    {
+                      "id": "w2d1a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w2d1a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w2d1a0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w2d1a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Lat pulldown",
+                  "sets": [
+                    {
+                      "id": "w2d1a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w2d1a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w2d1a1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w2d2",
+              "orderIndex": 2,
+              "name": "Deadlift day",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w2d2m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Deadlift",
+                  "sets": [
+                    {
+                      "id": "w2d2m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w2d2m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w2d2m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w2d2m0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w2d2m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Front squat",
+                  "sets": [
+                    {
+                      "id": "w2d2m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w2d2m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w2d2m1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w2d2a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Romanian deadlift",
+                  "sets": [
+                    {
+                      "id": "w2d2a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w2d2a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w2d2a0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w2d2a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Hanging leg raise",
+                  "sets": [
+                    {
+                      "id": "w2d2a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w2d2a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w2d2a1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w2d3",
+              "orderIndex": 3,
+              "name": "Bench and squat",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w2d3m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Bench press",
+                  "sets": [
+                    {
+                      "id": "w2d3m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w2d3m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w2d3m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w2d3m0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w2d3m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Back squat",
+                  "sets": [
+                    {
+                      "id": "w2d3m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w2d3m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w2d3m1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w2d3a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Dumbbell row",
+                  "sets": [
+                    {
+                      "id": "w2d3a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w2d3a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w2d3a0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w2d3a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Triceps pushdown",
+                  "sets": [
+                    {
+                      "id": "w2d3a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w2d3a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w2d3a1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "w3",
+          "weekNumber": 3,
+          "days": [
+            {
+              "id": "w3d0",
+              "orderIndex": 0,
+              "name": "Squat day",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w3d0m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Back squat",
+                  "sets": [
+                    {
+                      "id": "w3d0m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w3d0m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w3d0m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w3d0m0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w3d0m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Paused bench press",
+                  "sets": [
+                    {
+                      "id": "w3d0m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w3d0m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w3d0m1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w3d0a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Leg press",
+                  "sets": [
+                    {
+                      "id": "w3d0a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w3d0a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w3d0a0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w3d0a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Barbell row",
+                  "sets": [
+                    {
+                      "id": "w3d0a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w3d0a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w3d0a1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w3d1",
+              "orderIndex": 1,
+              "name": "Bench day",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w3d1m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Bench press",
+                  "sets": [
+                    {
+                      "id": "w3d1m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w3d1m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w3d1m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w3d1m0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w3d1m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Close-grip bench press",
+                  "sets": [
+                    {
+                      "id": "w3d1m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w3d1m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w3d1m1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w3d1a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Overhead press",
+                  "sets": [
+                    {
+                      "id": "w3d1a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w3d1a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w3d1a0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w3d1a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Lat pulldown",
+                  "sets": [
+                    {
+                      "id": "w3d1a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w3d1a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w3d1a1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w3d2",
+              "orderIndex": 2,
+              "name": "Deadlift day",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w3d2m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Deadlift",
+                  "sets": [
+                    {
+                      "id": "w3d2m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w3d2m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w3d2m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w3d2m0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w3d2m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Front squat",
+                  "sets": [
+                    {
+                      "id": "w3d2m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w3d2m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w3d2m1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w3d2a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Romanian deadlift",
+                  "sets": [
+                    {
+                      "id": "w3d2a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w3d2a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w3d2a0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w3d2a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Hanging leg raise",
+                  "sets": [
+                    {
+                      "id": "w3d2a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w3d2a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w3d2a1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w3d3",
+              "orderIndex": 3,
+              "name": "Bench and squat",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w3d3m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Bench press",
+                  "sets": [
+                    {
+                      "id": "w3d3m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w3d3m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w3d3m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w3d3m0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w3d3m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Back squat",
+                  "sets": [
+                    {
+                      "id": "w3d3m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w3d3m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w3d3m1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w3d3a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Dumbbell row",
+                  "sets": [
+                    {
+                      "id": "w3d3a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w3d3a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w3d3a0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w3d3a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Triceps pushdown",
+                  "sets": [
+                    {
+                      "id": "w3d3a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w3d3a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w3d3a1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "w4",
+          "weekNumber": 4,
+          "days": [
+            {
+              "id": "w4d0",
+              "orderIndex": 0,
+              "name": "Squat day",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w4d0m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Back squat",
+                  "sets": [
+                    {
+                      "id": "w4d0m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w4d0m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w4d0m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w4d0m0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w4d0m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Paused bench press",
+                  "sets": [
+                    {
+                      "id": "w4d0m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w4d0m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w4d0m1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w4d0a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Leg press",
+                  "sets": [
+                    {
+                      "id": "w4d0a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w4d0a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w4d0a0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w4d0a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Barbell row",
+                  "sets": [
+                    {
+                      "id": "w4d0a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w4d0a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w4d0a1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w4d1",
+              "orderIndex": 1,
+              "name": "Bench day",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w4d1m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Bench press",
+                  "sets": [
+                    {
+                      "id": "w4d1m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w4d1m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w4d1m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w4d1m0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w4d1m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Close-grip bench press",
+                  "sets": [
+                    {
+                      "id": "w4d1m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w4d1m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w4d1m1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w4d1a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Overhead press",
+                  "sets": [
+                    {
+                      "id": "w4d1a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w4d1a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w4d1a0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w4d1a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Lat pulldown",
+                  "sets": [
+                    {
+                      "id": "w4d1a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w4d1a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w4d1a1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w4d2",
+              "orderIndex": 2,
+              "name": "Deadlift day",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w4d2m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Deadlift",
+                  "sets": [
+                    {
+                      "id": "w4d2m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w4d2m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w4d2m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w4d2m0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w4d2m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Front squat",
+                  "sets": [
+                    {
+                      "id": "w4d2m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w4d2m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w4d2m1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w4d2a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Romanian deadlift",
+                  "sets": [
+                    {
+                      "id": "w4d2a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w4d2a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w4d2a0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w4d2a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Hanging leg raise",
+                  "sets": [
+                    {
+                      "id": "w4d2a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w4d2a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w4d2a1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w4d3",
+              "orderIndex": 3,
+              "name": "Bench and squat",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w4d3m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Bench press",
+                  "sets": [
+                    {
+                      "id": "w4d3m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w4d3m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w4d3m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w4d3m0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w4d3m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Back squat",
+                  "sets": [
+                    {
+                      "id": "w4d3m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w4d3m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w4d3m1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w4d3a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Dumbbell row",
+                  "sets": [
+                    {
+                      "id": "w4d3a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w4d3a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w4d3a0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w4d3a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Triceps pushdown",
+                  "sets": [
+                    {
+                      "id": "w4d3a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w4d3a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    },
+                    {
+                      "id": "w4d3a1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 8,
+                      "repsMax": 10
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "w5",
+          "weekNumber": 5,
+          "days": [
+            {
+              "id": "w5d0",
+              "orderIndex": 0,
+              "name": "Squat day",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w5d0m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Back squat",
+                  "sets": [
+                    {
+                      "id": "w5d0m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w5d0m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w5d0m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w5d0m0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w5d0m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Paused bench press",
+                  "sets": [
+                    {
+                      "id": "w5d0m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w5d0m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w5d0m1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w5d0a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Leg press",
+                  "sets": [
+                    {
+                      "id": "w5d0a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w5d0a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w5d0a0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w5d0a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Barbell row",
+                  "sets": [
+                    {
+                      "id": "w5d0a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w5d0a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w5d0a1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w5d1",
+              "orderIndex": 1,
+              "name": "Bench day",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w5d1m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Bench press",
+                  "sets": [
+                    {
+                      "id": "w5d1m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w5d1m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w5d1m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w5d1m0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w5d1m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Close-grip bench press",
+                  "sets": [
+                    {
+                      "id": "w5d1m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w5d1m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w5d1m1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w5d1a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Overhead press",
+                  "sets": [
+                    {
+                      "id": "w5d1a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w5d1a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w5d1a0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w5d1a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Lat pulldown",
+                  "sets": [
+                    {
+                      "id": "w5d1a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w5d1a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w5d1a1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w5d2",
+              "orderIndex": 2,
+              "name": "Deadlift day",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w5d2m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Deadlift",
+                  "sets": [
+                    {
+                      "id": "w5d2m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w5d2m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w5d2m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w5d2m0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w5d2m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Front squat",
+                  "sets": [
+                    {
+                      "id": "w5d2m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w5d2m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w5d2m1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w5d2a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Romanian deadlift",
+                  "sets": [
+                    {
+                      "id": "w5d2a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w5d2a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w5d2a0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w5d2a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Hanging leg raise",
+                  "sets": [
+                    {
+                      "id": "w5d2a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w5d2a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w5d2a1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w5d3",
+              "orderIndex": 3,
+              "name": "Bench and squat",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w5d3m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Bench press",
+                  "sets": [
+                    {
+                      "id": "w5d3m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w5d3m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w5d3m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w5d3m0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w5d3m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Back squat",
+                  "sets": [
+                    {
+                      "id": "w5d3m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w5d3m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w5d3m1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w5d3a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Dumbbell row",
+                  "sets": [
+                    {
+                      "id": "w5d3a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w5d3a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w5d3a0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w5d3a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Triceps pushdown",
+                  "sets": [
+                    {
+                      "id": "w5d3a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w5d3a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w5d3a1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "w6",
+          "weekNumber": 6,
+          "days": [
+            {
+              "id": "w6d0",
+              "orderIndex": 0,
+              "name": "Squat day",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w6d0m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Back squat",
+                  "sets": [
+                    {
+                      "id": "w6d0m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w6d0m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w6d0m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w6d0m0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w6d0m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Paused bench press",
+                  "sets": [
+                    {
+                      "id": "w6d0m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w6d0m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w6d0m1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w6d0a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Leg press",
+                  "sets": [
+                    {
+                      "id": "w6d0a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w6d0a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w6d0a0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w6d0a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Barbell row",
+                  "sets": [
+                    {
+                      "id": "w6d0a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w6d0a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w6d0a1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w6d1",
+              "orderIndex": 1,
+              "name": "Bench day",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w6d1m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Bench press",
+                  "sets": [
+                    {
+                      "id": "w6d1m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w6d1m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w6d1m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w6d1m0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w6d1m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Close-grip bench press",
+                  "sets": [
+                    {
+                      "id": "w6d1m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w6d1m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w6d1m1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w6d1a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Overhead press",
+                  "sets": [
+                    {
+                      "id": "w6d1a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w6d1a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w6d1a0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w6d1a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Lat pulldown",
+                  "sets": [
+                    {
+                      "id": "w6d1a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w6d1a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w6d1a1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w6d2",
+              "orderIndex": 2,
+              "name": "Deadlift day",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w6d2m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Deadlift",
+                  "sets": [
+                    {
+                      "id": "w6d2m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w6d2m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w6d2m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w6d2m0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w6d2m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Front squat",
+                  "sets": [
+                    {
+                      "id": "w6d2m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w6d2m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w6d2m1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w6d2a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Romanian deadlift",
+                  "sets": [
+                    {
+                      "id": "w6d2a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w6d2a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w6d2a0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w6d2a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Hanging leg raise",
+                  "sets": [
+                    {
+                      "id": "w6d2a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w6d2a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w6d2a1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w6d3",
+              "orderIndex": 3,
+              "name": "Bench and squat",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w6d3m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Bench press",
+                  "sets": [
+                    {
+                      "id": "w6d3m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w6d3m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w6d3m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w6d3m0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w6d3m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Back squat",
+                  "sets": [
+                    {
+                      "id": "w6d3m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w6d3m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w6d3m1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w6d3a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Dumbbell row",
+                  "sets": [
+                    {
+                      "id": "w6d3a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w6d3a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w6d3a0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w6d3a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Triceps pushdown",
+                  "sets": [
+                    {
+                      "id": "w6d3a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w6d3a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w6d3a1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "w7",
+          "weekNumber": 7,
+          "days": [
+            {
+              "id": "w7d0",
+              "orderIndex": 0,
+              "name": "Squat day",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w7d0m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Back squat",
+                  "sets": [
+                    {
+                      "id": "w7d0m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w7d0m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w7d0m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w7d0m0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w7d0m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Paused bench press",
+                  "sets": [
+                    {
+                      "id": "w7d0m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w7d0m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w7d0m1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w7d0a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Leg press",
+                  "sets": [
+                    {
+                      "id": "w7d0a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w7d0a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w7d0a0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w7d0a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Barbell row",
+                  "sets": [
+                    {
+                      "id": "w7d0a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w7d0a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w7d0a1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w7d1",
+              "orderIndex": 1,
+              "name": "Bench day",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w7d1m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Bench press",
+                  "sets": [
+                    {
+                      "id": "w7d1m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w7d1m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w7d1m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w7d1m0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w7d1m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Close-grip bench press",
+                  "sets": [
+                    {
+                      "id": "w7d1m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w7d1m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w7d1m1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w7d1a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Overhead press",
+                  "sets": [
+                    {
+                      "id": "w7d1a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w7d1a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w7d1a0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w7d1a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Lat pulldown",
+                  "sets": [
+                    {
+                      "id": "w7d1a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w7d1a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w7d1a1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w7d2",
+              "orderIndex": 2,
+              "name": "Deadlift day",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w7d2m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Deadlift",
+                  "sets": [
+                    {
+                      "id": "w7d2m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w7d2m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w7d2m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w7d2m0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w7d2m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Front squat",
+                  "sets": [
+                    {
+                      "id": "w7d2m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w7d2m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w7d2m1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w7d2a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Romanian deadlift",
+                  "sets": [
+                    {
+                      "id": "w7d2a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w7d2a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w7d2a0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w7d2a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Hanging leg raise",
+                  "sets": [
+                    {
+                      "id": "w7d2a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w7d2a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w7d2a1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w7d3",
+              "orderIndex": 3,
+              "name": "Bench and squat",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w7d3m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Bench press",
+                  "sets": [
+                    {
+                      "id": "w7d3m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w7d3m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w7d3m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w7d3m0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w7d3m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Back squat",
+                  "sets": [
+                    {
+                      "id": "w7d3m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w7d3m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w7d3m1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w7d3a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Dumbbell row",
+                  "sets": [
+                    {
+                      "id": "w7d3a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w7d3a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w7d3a0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w7d3a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Triceps pushdown",
+                  "sets": [
+                    {
+                      "id": "w7d3a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w7d3a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w7d3a1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "w8",
+          "weekNumber": 8,
+          "days": [
+            {
+              "id": "w8d0",
+              "orderIndex": 0,
+              "name": "Squat day",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w8d0m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Back squat",
+                  "sets": [
+                    {
+                      "id": "w8d0m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w8d0m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w8d0m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w8d0m0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w8d0m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Paused bench press",
+                  "sets": [
+                    {
+                      "id": "w8d0m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w8d0m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w8d0m1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w8d0a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Leg press",
+                  "sets": [
+                    {
+                      "id": "w8d0a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w8d0a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w8d0a0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w8d0a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Barbell row",
+                  "sets": [
+                    {
+                      "id": "w8d0a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w8d0a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w8d0a1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w8d1",
+              "orderIndex": 1,
+              "name": "Bench day",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w8d1m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Bench press",
+                  "sets": [
+                    {
+                      "id": "w8d1m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w8d1m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w8d1m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w8d1m0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w8d1m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Close-grip bench press",
+                  "sets": [
+                    {
+                      "id": "w8d1m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w8d1m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w8d1m1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w8d1a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Overhead press",
+                  "sets": [
+                    {
+                      "id": "w8d1a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w8d1a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w8d1a0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w8d1a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Lat pulldown",
+                  "sets": [
+                    {
+                      "id": "w8d1a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w8d1a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w8d1a1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w8d2",
+              "orderIndex": 2,
+              "name": "Deadlift day",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w8d2m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Deadlift",
+                  "sets": [
+                    {
+                      "id": "w8d2m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w8d2m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w8d2m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w8d2m0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w8d2m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Front squat",
+                  "sets": [
+                    {
+                      "id": "w8d2m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w8d2m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w8d2m1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w8d2a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Romanian deadlift",
+                  "sets": [
+                    {
+                      "id": "w8d2a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w8d2a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w8d2a0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w8d2a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Hanging leg raise",
+                  "sets": [
+                    {
+                      "id": "w8d2a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w8d2a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w8d2a1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w8d3",
+              "orderIndex": 3,
+              "name": "Bench and squat",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w8d3m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Bench press",
+                  "sets": [
+                    {
+                      "id": "w8d3m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w8d3m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w8d3m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w8d3m0s3",
+                      "orderIndex": 3,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w8d3m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Back squat",
+                  "sets": [
+                    {
+                      "id": "w8d3m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w8d3m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    },
+                    {
+                      "id": "w8d3m1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 3,
+                      "repsMax": 4
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w8d3a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Dumbbell row",
+                  "sets": [
+                    {
+                      "id": "w8d3a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w8d3a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w8d3a0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w8d3a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Triceps pushdown",
+                  "sets": [
+                    {
+                      "id": "w8d3a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w8d3a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    },
+                    {
+                      "id": "w8d3a1s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 6,
+                      "repsMax": 8
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "w9",
+          "weekNumber": 9,
+          "days": [
+            {
+              "id": "w9d0",
+              "orderIndex": 0,
+              "name": "Squat day",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w9d0m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Back squat",
+                  "sets": [
+                    {
+                      "id": "w9d0m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    },
+                    {
+                      "id": "w9d0m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    },
+                    {
+                      "id": "w9d0m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w9d0m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Paused bench press",
+                  "sets": [
+                    {
+                      "id": "w9d0m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    },
+                    {
+                      "id": "w9d0m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w9d0a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Leg press",
+                  "sets": [
+                    {
+                      "id": "w9d0a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w9d0a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w9d0a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Barbell row",
+                  "sets": [
+                    {
+                      "id": "w9d0a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w9d0a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w9d1",
+              "orderIndex": 1,
+              "name": "Bench day",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w9d1m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Bench press",
+                  "sets": [
+                    {
+                      "id": "w9d1m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    },
+                    {
+                      "id": "w9d1m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    },
+                    {
+                      "id": "w9d1m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w9d1m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Close-grip bench press",
+                  "sets": [
+                    {
+                      "id": "w9d1m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    },
+                    {
+                      "id": "w9d1m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w9d1a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Overhead press",
+                  "sets": [
+                    {
+                      "id": "w9d1a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w9d1a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w9d1a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Lat pulldown",
+                  "sets": [
+                    {
+                      "id": "w9d1a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w9d1a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w9d2",
+              "orderIndex": 2,
+              "name": "Deadlift day",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w9d2m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Deadlift",
+                  "sets": [
+                    {
+                      "id": "w9d2m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    },
+                    {
+                      "id": "w9d2m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    },
+                    {
+                      "id": "w9d2m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w9d2m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Front squat",
+                  "sets": [
+                    {
+                      "id": "w9d2m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    },
+                    {
+                      "id": "w9d2m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w9d2a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Romanian deadlift",
+                  "sets": [
+                    {
+                      "id": "w9d2a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w9d2a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w9d2a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Hanging leg raise",
+                  "sets": [
+                    {
+                      "id": "w9d2a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w9d2a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w9d3",
+              "orderIndex": 3,
+              "name": "Bench and squat",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w9d3m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Bench press",
+                  "sets": [
+                    {
+                      "id": "w9d3m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    },
+                    {
+                      "id": "w9d3m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    },
+                    {
+                      "id": "w9d3m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w9d3m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Back squat",
+                  "sets": [
+                    {
+                      "id": "w9d3m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    },
+                    {
+                      "id": "w9d3m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w9d3a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Dumbbell row",
+                  "sets": [
+                    {
+                      "id": "w9d3a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w9d3a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w9d3a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Triceps pushdown",
+                  "sets": [
+                    {
+                      "id": "w9d3a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w9d3a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "w10",
+          "weekNumber": 10,
+          "days": [
+            {
+              "id": "w10d0",
+              "orderIndex": 0,
+              "name": "Squat day",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w10d0m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Back squat",
+                  "sets": [
+                    {
+                      "id": "w10d0m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    },
+                    {
+                      "id": "w10d0m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    },
+                    {
+                      "id": "w10d0m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w10d0m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Paused bench press",
+                  "sets": [
+                    {
+                      "id": "w10d0m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    },
+                    {
+                      "id": "w10d0m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w10d0a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Leg press",
+                  "sets": [
+                    {
+                      "id": "w10d0a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w10d0a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w10d0a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Barbell row",
+                  "sets": [
+                    {
+                      "id": "w10d0a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w10d0a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w10d1",
+              "orderIndex": 1,
+              "name": "Bench day",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w10d1m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Bench press",
+                  "sets": [
+                    {
+                      "id": "w10d1m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    },
+                    {
+                      "id": "w10d1m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    },
+                    {
+                      "id": "w10d1m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w10d1m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Close-grip bench press",
+                  "sets": [
+                    {
+                      "id": "w10d1m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    },
+                    {
+                      "id": "w10d1m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w10d1a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Overhead press",
+                  "sets": [
+                    {
+                      "id": "w10d1a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w10d1a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w10d1a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Lat pulldown",
+                  "sets": [
+                    {
+                      "id": "w10d1a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w10d1a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w10d2",
+              "orderIndex": 2,
+              "name": "Deadlift day",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w10d2m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Deadlift",
+                  "sets": [
+                    {
+                      "id": "w10d2m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    },
+                    {
+                      "id": "w10d2m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    },
+                    {
+                      "id": "w10d2m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w10d2m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Front squat",
+                  "sets": [
+                    {
+                      "id": "w10d2m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    },
+                    {
+                      "id": "w10d2m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w10d2a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Romanian deadlift",
+                  "sets": [
+                    {
+                      "id": "w10d2a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w10d2a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w10d2a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Hanging leg raise",
+                  "sets": [
+                    {
+                      "id": "w10d2a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w10d2a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w10d3",
+              "orderIndex": 3,
+              "name": "Bench and squat",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w10d3m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Bench press",
+                  "sets": [
+                    {
+                      "id": "w10d3m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    },
+                    {
+                      "id": "w10d3m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    },
+                    {
+                      "id": "w10d3m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w10d3m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Back squat",
+                  "sets": [
+                    {
+                      "id": "w10d3m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    },
+                    {
+                      "id": "w10d3m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w10d3a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Dumbbell row",
+                  "sets": [
+                    {
+                      "id": "w10d3a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w10d3a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w10d3a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Triceps pushdown",
+                  "sets": [
+                    {
+                      "id": "w10d3a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w10d3a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "w11",
+          "weekNumber": 11,
+          "days": [
+            {
+              "id": "w11d0",
+              "orderIndex": 0,
+              "name": "Squat day",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w11d0m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Back squat",
+                  "sets": [
+                    {
+                      "id": "w11d0m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    },
+                    {
+                      "id": "w11d0m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    },
+                    {
+                      "id": "w11d0m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w11d0m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Paused bench press",
+                  "sets": [
+                    {
+                      "id": "w11d0m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    },
+                    {
+                      "id": "w11d0m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w11d0a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Leg press",
+                  "sets": [
+                    {
+                      "id": "w11d0a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w11d0a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w11d0a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Barbell row",
+                  "sets": [
+                    {
+                      "id": "w11d0a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w11d0a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w11d1",
+              "orderIndex": 1,
+              "name": "Bench day",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w11d1m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Bench press",
+                  "sets": [
+                    {
+                      "id": "w11d1m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    },
+                    {
+                      "id": "w11d1m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    },
+                    {
+                      "id": "w11d1m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w11d1m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Close-grip bench press",
+                  "sets": [
+                    {
+                      "id": "w11d1m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    },
+                    {
+                      "id": "w11d1m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w11d1a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Overhead press",
+                  "sets": [
+                    {
+                      "id": "w11d1a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w11d1a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w11d1a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Lat pulldown",
+                  "sets": [
+                    {
+                      "id": "w11d1a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w11d1a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w11d2",
+              "orderIndex": 2,
+              "name": "Deadlift day",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w11d2m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Deadlift",
+                  "sets": [
+                    {
+                      "id": "w11d2m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    },
+                    {
+                      "id": "w11d2m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    },
+                    {
+                      "id": "w11d2m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w11d2m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Front squat",
+                  "sets": [
+                    {
+                      "id": "w11d2m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    },
+                    {
+                      "id": "w11d2m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w11d2a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Romanian deadlift",
+                  "sets": [
+                    {
+                      "id": "w11d2a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w11d2a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w11d2a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Hanging leg raise",
+                  "sets": [
+                    {
+                      "id": "w11d2a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w11d2a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w11d3",
+              "orderIndex": 3,
+              "name": "Bench and squat",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w11d3m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Bench press",
+                  "sets": [
+                    {
+                      "id": "w11d3m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    },
+                    {
+                      "id": "w11d3m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    },
+                    {
+                      "id": "w11d3m0s2",
+                      "orderIndex": 2,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w11d3m1",
+                  "orderIndex": 1,
+                  "exerciseName": "Back squat",
+                  "sets": [
+                    {
+                      "id": "w11d3m1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    },
+                    {
+                      "id": "w11d3m1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 2
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w11d3a0",
+                  "orderIndex": 2,
+                  "exerciseName": "Dumbbell row",
+                  "sets": [
+                    {
+                      "id": "w11d3a0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w11d3a0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "strength",
+                  "id": "w11d3a1",
+                  "orderIndex": 3,
+                  "exerciseName": "Triceps pushdown",
+                  "sets": [
+                    {
+                      "id": "w11d3a1s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    },
+                    {
+                      "id": "w11d3a1s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 5,
+                      "repsMax": 6
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "w12",
+          "weekNumber": 12,
+          "days": [
+            {
+              "id": "w12d0",
+              "orderIndex": 0,
+              "name": "Squat day",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w12d0m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Back squat",
+                  "sets": [
+                    {
+                      "id": "w12d0m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 1
+                    },
+                    {
+                      "id": "w12d0m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 1
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w12d1",
+              "orderIndex": 1,
+              "name": "Bench day",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w12d1m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Bench press",
+                  "sets": [
+                    {
+                      "id": "w12d1m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 1
+                    },
+                    {
+                      "id": "w12d1m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 1
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w12d2",
+              "orderIndex": 2,
+              "name": "Deadlift day",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w12d2m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Deadlift",
+                  "sets": [
+                    {
+                      "id": "w12d2m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 1
+                    },
+                    {
+                      "id": "w12d2m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 1
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "w12d3",
+              "orderIndex": 3,
+              "name": "Bench and squat",
+              "blocks": [
+                {
+                  "type": "strength",
+                  "id": "w12d3m0",
+                  "orderIndex": 0,
+                  "exerciseName": "Bench press",
+                  "sets": [
+                    {
+                      "id": "w12d3m0s0",
+                      "orderIndex": 0,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 1
+                    },
+                    {
+                      "id": "w12d3m0s1",
+                      "orderIndex": 1,
+                      "setType": "normal",
+                      "repsMin": 1,
+                      "repsMax": 1
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -21,9 +21,22 @@ public interface ICoachStripe
     Task<string> CreateBillingPortalAsync(string accountId, string customerId, string returnUrl, CancellationToken ct);
     Task SetCancelAtPeriodEndAsync(string accountId, string subscriptionId, bool cancel, CancellationToken ct);
     Task CancelNowAsync(string accountId, string subscriptionId, CancellationToken ct);
+    /// The coach paused coaching (canvas E1): no charges until `resumesAt`; null resumes now.
+    Task PauseCollectionAsync(string accountId, string subscriptionId, DateTime? resumesAt, CancellationToken ct);
+    /// After a new card (canvas Z3): try the unpaid payment now rather than at Stripe's next
+    /// retry. True when it's paid.
+    Task<bool> RetryUnpaidAsync(string accountId, string subscriptionId, CancellationToken ct);
+    /// A change of package (canvas K14) between two monthly prices: the new price from the next
+    /// payment, nothing charged or credited now.
+    /// The customer a payment came from (a dispute names only the payment).
+    Task<string?> CustomerOfPaymentAsync(string accountId, string paymentIntentId, CancellationToken ct);
+    Task ChangeMonthlyPriceAsync(string accountId, string subscriptionId, long amountCents, string currency, string productName, CancellationToken ct);
+    /// Give back part of a payment. `paymentRef` is what a receipt stores: the invoice or the
+    /// checkout session the money came from. `idempotencyKey` makes a retry return the same refund.
+    Task<StripeRefund> RefundAsync(string accountId, string paymentRef, long amountCents, string idempotencyKey, CancellationToken ct);
 }
 
-public record ConnectAccountStatus(bool CardPaymentsActive, bool RequirementsDue, string? DisplayName, string? Currency);
+public record ConnectAccountStatus(bool CardPaymentsActive, bool RequirementsDue, string? DisplayName, string? Currency, string? Needs = null);
 
 public record CheckoutStartRequest(
     string AccountId,
@@ -36,7 +49,10 @@ public record CheckoutStartRequest(
     string ClientReferenceId,
     Dictionary<string, string> Metadata,
     string SuccessUrl,
-    string CancelUrl);
+    string CancelUrl,
+    // Monthly only: no charge until this date (a later first charge, canvas C2). Stripe needs it
+    // at least two days ahead; nearer dates charge now.
+    DateTime? FirstChargeAt = null);
 
 public record CheckoutStart(string SessionId, string Url);
 
@@ -48,6 +64,10 @@ public record CheckoutInfo(
     long AmountTotal,
     string Currency,
     IReadOnlyDictionary<string, string> Metadata);
+
+/// Status is Stripe's: "succeeded", "pending" (waiting for money in the coach's balance),
+/// "failed" or "canceled".
+public record StripeRefund(string Id, string Status);
 
 public record StripeSubscriptionInfo(string Id, string Status, bool CancelAtPeriodEnd, DateTime? PeriodEnd);
 
@@ -125,13 +145,14 @@ public class CoachStripe(IConfiguration config) : ICoachStripe
             Include = ["configuration.merchant", "defaults", "requirements"],
         }, cancellationToken: ct);
         var cardStatus = account.Configuration?.Merchant?.Capabilities?.CardPayments?.Status;
-        var due = account.Requirements?.Entries?.Any(e =>
-            e.MinimumDeadline?.Status is "currently_due" or "past_due") ?? false;
+        var dueEntries = account.Requirements?.Entries?.Where(e => e.MinimumDeadline?.Status is "currently_due" or "past_due").ToList() ?? [];
         return new ConnectAccountStatus(
             CardPaymentsActive: cardStatus == "active",
-            RequirementsDue: due,
+            RequirementsDue: dueEntries.Count > 0,
             DisplayName: account.DisplayName,
-            Currency: account.Defaults?.Currency);
+            Currency: account.Defaults?.Currency,
+            // Stripe's own description of the first thing it wants (canvas Z4).
+            Needs: dueEntries.Select(e => e.Description).FirstOrDefault(d => !string.IsNullOrWhiteSpace(d)));
     }
 
     public async Task<CheckoutStart> CreateCheckoutAsync(CheckoutStartRequest req, CancellationToken ct)
@@ -160,7 +181,11 @@ public class CoachStripe(IConfiguration config) : ICoachStripe
             AllowPromotionCodes = true,
         };
         if (req.Monthly)
-            options.SubscriptionData = new SessionSubscriptionDataOptions { Metadata = req.Metadata };
+            options.SubscriptionData = new SessionSubscriptionDataOptions
+            {
+                Metadata = req.Metadata,
+                TrialEnd = req.FirstChargeAt is { } at && at > DateTime.UtcNow.AddDays(2) ? at : null,
+            };
         else
         {
             options.PaymentIntentData = new SessionPaymentIntentDataOptions { Metadata = req.Metadata };
@@ -212,4 +237,78 @@ public class CoachStripe(IConfiguration config) : ICoachStripe
 
     public Task CancelNowAsync(string accountId, string subscriptionId, CancellationToken ct) =>
         Client.V1.Subscriptions.CancelAsync(subscriptionId, null, On(accountId), ct);
+
+    public Task PauseCollectionAsync(string accountId, string subscriptionId, DateTime? resumesAt, CancellationToken ct)
+    {
+        var options = new SubscriptionUpdateOptions();
+        // "void": nothing is owed for the paused time; Stripe resumes on its own on the date.
+        if (resumesAt is { } at) options.PauseCollection = new SubscriptionPauseCollectionOptions { Behavior = "void", ResumesAt = at };
+        else options.AddExtraParam("pause_collection", "");
+        return Client.V1.Subscriptions.UpdateAsync(subscriptionId, options, On(accountId), ct);
+    }
+
+    public async Task<string?> CustomerOfPaymentAsync(string accountId, string paymentIntentId, CancellationToken ct) =>
+        (await Client.V1.PaymentIntents.GetAsync(paymentIntentId, null, On(accountId), ct)).CustomerId;
+
+    public async Task ChangeMonthlyPriceAsync(string accountId, string subscriptionId, long amountCents, string currency, string productName, CancellationToken ct)
+    {
+        var sub = await Client.V1.Subscriptions.GetAsync(subscriptionId, null, On(accountId), ct);
+        var item = sub.Items.Data[0];
+        var product = await Client.V1.Products.CreateAsync(new ProductCreateOptions { Name = productName }, On(accountId), ct);
+        await Client.V1.Subscriptions.UpdateAsync(subscriptionId, new SubscriptionUpdateOptions
+        {
+            Items =
+            [
+                new SubscriptionItemOptions
+                {
+                    Id = item.Id,
+                    PriceData = new SubscriptionItemPriceDataOptions
+                    {
+                        Currency = currency, UnitAmount = amountCents, Product = product.Id,
+                        Recurring = new SubscriptionItemPriceDataRecurringOptions { Interval = "month" },
+                    },
+                },
+            ],
+            // From the next payment: no charge or credit for the rest of this month.
+            ProrationBehavior = "none",
+        }, On(accountId), ct);
+    }
+
+    public async Task<bool> RetryUnpaidAsync(string accountId, string subscriptionId, CancellationToken ct)
+    {
+        var sub = await Client.V1.Subscriptions.GetAsync(subscriptionId, new SubscriptionGetOptions { Expand = ["latest_invoice"] }, On(accountId), ct);
+        if (sub.LatestInvoice is not { Status: "open" } invoice) return sub.LatestInvoice?.Status == "paid";
+        var paid = await Client.V1.Invoices.PayAsync(invoice.Id, null, On(accountId), ct);
+        return paid.Status == "paid";
+    }
+
+    public async Task<StripeRefund> RefundAsync(
+        string accountId, string paymentRef, long amountCents, string idempotencyKey, CancellationToken ct)
+    {
+        var intent = await PaymentIntentForAsync(accountId, paymentRef, ct)
+            ?? throw new InvalidOperationException($"Stripe has no card payment for {paymentRef}.");
+        // A direct charge lives on the coach's account, so the refund is made there and comes
+        // out of the coach's Stripe balance (Stripe's docs: "Issue refunds" for direct charges).
+        var refund = await Client.V1.Refunds.CreateAsync(
+            new RefundCreateOptions { PaymentIntent = intent, Amount = amountCents },
+            new RequestOptions { StripeAccount = accountId, IdempotencyKey = idempotencyKey }, ct);
+        return new StripeRefund(refund.Id, refund.Status);
+    }
+
+    /// The payment behind a receipt: a one-off checkout has its own payment intent; a monthly
+    /// one is paid through an invoice, whose payments list holds it.
+    private async Task<string?> PaymentIntentForAsync(string accountId, string paymentRef, CancellationToken ct)
+    {
+        var invoiceId = paymentRef;
+        if (paymentRef.StartsWith("cs_", StringComparison.Ordinal))
+        {
+            var session = await Client.V1.Checkout.Sessions.GetAsync(paymentRef, null, On(accountId), ct);
+            if (session.PaymentIntentId is { Length: > 0 } direct) return direct;
+            if (session.InvoiceId is not { Length: > 0 } fromSession) return null;
+            invoiceId = fromSession;
+        }
+        var payments = await Client.V1.InvoicePayments.ListAsync(
+            new InvoicePaymentListOptions { Invoice = invoiceId }, On(accountId), ct);
+        return payments.Data.FirstOrDefault(p => p.Status == "paid")?.Payment?.PaymentIntentId;
+    }
 }

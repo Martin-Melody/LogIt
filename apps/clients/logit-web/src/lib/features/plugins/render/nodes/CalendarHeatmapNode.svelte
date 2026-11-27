@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { WidgetCalendarHeatmapNode } from "@logit/core/plugins/widgetView";
-  import { runWidgetAction } from "../widgetAction";
+  import { widgetActions } from "../widgetAction";
+  const runWidgetAction = widgetActions();
 
   const { node }: { node: WidgetCalendarHeatmapNode } = $props();
 

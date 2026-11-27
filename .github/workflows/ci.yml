@@ -83,9 +83,9 @@ jobs:
         working-directory: apps/clients/logit-frontend
         run: npm run check
 
-      - name: dashboard — build + svelte-check
+      - name: dashboard — build + svelte-check + unit tests
         working-directory: apps/clients/logit-web
-        run: npm run build && npm run check
+        run: npm run build && npm run check && npm test
 
       - name: website — build + svelte-check
         working-directory: apps/clients/website

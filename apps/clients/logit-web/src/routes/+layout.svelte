@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { inView } from "$lib/features/coaching/coachingData";
   import { canCoach, coachTrial } from "$lib/workspace";
   import "./layout.css";
   import { onMount } from "svelte";
@@ -19,10 +20,13 @@
   import GuidePanel from "$lib/features/guide/GuidePanel.svelte";
   import StudioModeDialog from "$lib/features/guide/StudioModeDialog.svelte";
   import StudioFinishDialog from "$lib/features/guide/StudioFinishDialog.svelte";
+  import StudioOnDialog from "$lib/features/guide/StudioOnDialog.svelte";
+  import AwayDialog from "$lib/features/coaching/AwayDialog.svelte";
   import SandboxBanner from "$lib/features/guide/SandboxBanner.svelte";
   import StudioNeeded from "$lib/features/onboarding/StudioNeeded.svelte";
+  import StudioEnded from "$lib/features/onboarding/StudioEnded.svelte";
   import { guide, walkthroughsFor } from "$lib/features/guide/guide.svelte";
-  import { sandbox } from "$lib/features/guide/sandbox.svelte";
+  import { onSampleActivity, sandbox } from "$lib/features/guide/sandbox.svelte";
   import { adminState } from "$lib/features/admin/adminState.svelte";
   import CommandLayer from "$lib/features/commands/CommandLayer.svelte";
 
@@ -36,7 +40,9 @@
     "/nutrition": "Nutrition",
     "/plan": "Plan",
     "/library": "Library",
-    "/coaching/library": "Library",
+    "/coaching/library": "Exercises",
+    "/coaching/nutrition": "Nutrition",
+    "/coaching/plugins": "Plugins",
     "/habits": "Habits & goals",
     "/social": "Social",
     "/social/messages": "Messages",
@@ -80,7 +86,8 @@
   // An invite link from a coach: anyone can open it, signed in or not (it has its own sign-up),
   // and any account can use it (a Free account can be coached). The "update your card" link
   // from a failed-payment email opens signed out too. Both are pages of their own, no sidebar.
-  const isInviteLink = $derived(page.url.pathname.startsWith("/c/"));
+  // Invite links and asking from a profile: their own pages, signed in or not.
+  const isInviteLink = $derived(page.url.pathname.startsWith("/c/") || page.url.pathname.startsWith("/ask/") || page.url.pathname.startsWith("/take/") || page.url.pathname === "/stop-emails");
   const isPayFix = $derived(page.url.pathname.startsWith("/pay/fix/"));
   // A Free account on the hosted server can still reach these: the "plans are in the app"
   // page, and Account (password, deleting the account, which the store listing promises can
@@ -104,7 +111,11 @@
   });
   // Social (feed, messages, groups and their posts) is open to every account on the web (Martin,
   // 25 Nov: anyone can read, any account can take part); the training dashboard stays Pro.
-  const isSocialPath = $derived(page.url.pathname.startsWith("/social") || page.url.pathname.startsWith("/groups"));
+  // Being coached is free too (Studio is for the coach): My coach holds your requests and their
+  // conversations, which the "a coach replied" email opens (canvas R7).
+  const isSocialPath = $derived(
+    page.url.pathname.startsWith("/social") || page.url.pathname.startsWith("/groups") || page.url.pathname.startsWith("/my-coach"),
+  );
   // A Free account trying coaching with sample clients gets the Coaching workspace (W3);
   // its own training dashboard still needs Pro, so "Me" lands on /upgrade.
   const isTrialCoaching = $derived.by(() => {
@@ -116,6 +127,14 @@
     void page.url.pathname;
     return coachTrial();
   });
+  // P9 (coach who stops): below Studio with real clients still attached, the server closes the
+  // coaching pages (403). Asked once; the page shows why instead of a raw error.
+  let studioEnded = $state(false);
+  $effect(() => {
+    // Not known to be Studio yet (the user loads after the first render): the server's answer decides.
+    if (apiClient.getUser()?.tier === "Studio" || apiClient.isSelfHosted() || !isCoachingPath(page.url.pathname, page.url.searchParams)) return;
+    void coachApi.getRoster().then(() => (studioEnded = false), (e) => (studioEnded = e instanceof Error && /requires a Studio/i.test(e.message)));
+  });
   // The admin console: open to any signed-in account whatever its plan; the server decides
   // who is an admin, and the page says "not found" to everyone else.
   const isAdminPath = $derived(page.url.pathname === "/admin" || page.url.pathname.startsWith("/admin/"));
@@ -124,7 +143,8 @@
 
   async function guardRoute() {
     if (!apiClient.isAuthenticated()) {
-      if (isInviteLink || isPayFix) return;
+      // Taking a spot is your own offer: sign in first, then back to it.
+      if ((isInviteLink && !page.url.pathname.startsWith("/take/")) || isPayFix) return;
       // Come back to where you were going after signing in: an invite link, or a docs page's
       // "Show me in the app" (/?guide=<chapter>), or any other page.
       const here = page.url.pathname + page.url.search;
@@ -158,12 +178,18 @@
     await guardRoute();
     if (apiClient.isAuthenticated() && (!isBlockedFreeTier || coachTrial())) {
       try {
-        viewingClient.setClients(await coachApi.listClients());
+        viewingClient.setClients(inView(await coachApi.listClients()));
       } catch {
         // Not fatal — the switcher just won't show. /clients surfaces the real error.
       }
     }
   });
+  // Practice view switched: the client picker lists the other set of clients.
+  onMount(() => onSampleActivity(() => {
+    if (apiClient.isAuthenticated() && canCoach()) {
+      coachApi.listClients().then((l) => viewingClient.setClients(inView(l))).catch(() => {});
+    }
+  }));
 
   $effect(() => {
     // Re-run on every navigation, not just once at mount — apiClient's auth state isn't
@@ -243,7 +269,9 @@
       {/if}
       <main class="flex-1 px-4 py-6 sm:px-8 sm:py-7">
         <div class="mx-auto w-full {isAdminPath ? 'max-w-[1280px]' : 'max-w-[1120px]'}">
-          {#if isTrialCoachingAnyTier && page.url.pathname.startsWith("/coaching/links")}
+          {#if studioEnded && isCoachingPath(page.url.pathname, page.url.searchParams)}
+            <StudioEnded />
+          {:else if isTrialCoachingAnyTier && page.url.pathname.startsWith("/coaching/links")}
             <StudioNeeded what="links" />
           {:else if isTrialCoachingAnyTier && page.url.pathname.startsWith("/coaching/payments")}
             <StudioNeeded what="payments" />
@@ -259,4 +287,6 @@
   <GuideLayer />
   <StudioModeDialog />
   <StudioFinishDialog />
+  <StudioOnDialog />
+  {#if isStudio}<AwayDialog />{/if}
 {/if}

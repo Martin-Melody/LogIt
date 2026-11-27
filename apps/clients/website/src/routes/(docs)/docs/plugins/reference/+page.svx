@@ -13,7 +13,8 @@ type PluginManifest = {
   id: string;
   family: "exercise-pack" | "progression-algorithm" | "mobility-progression"
         | "mobility-pack" | "muscle-group-insight" | "analytics"
-        | "nutrition-algorithm" | "nutrition-analytics" | "widget";
+        | "nutrition-algorithm" | "nutrition-analytics" | "widget"
+        | "program-pack" | "workout-block";
   name: string;
   description: string;
   version: string;                 // semver, bump every change
@@ -23,12 +24,12 @@ type PluginManifest = {
   homepageUrl?: string;
   distribution:
     | { origin: "url"; manifestUrl: string; bundleUrl: string }
-    | { origin: "inline"; data: unknown };   // exercise-pack only
+    | { origin: "inline"; data: unknown };   // data families only (packs, workout blocks)
   capabilities: Array<{ family: string /* = manifest.family */; [idField]: string /* = manifest.id */ }>;
 };
 ```
 
-Capability id field by family: `exercisePackId`, `mobilityPackId`, `algorithmId`
+Capability id field by family: `exercisePackId`, `mobilityPackId`, `programPackId`, `blockId`, `algorithmId`
 (progression, mobility-progression, muscle-group-insight & nutrition),
 `analyticsId` (analytics & nutrition-analytics), `widgetId`.
 

@@ -1,5 +1,5 @@
 import type { CoachProgram, ProgramBlock, ProgramDay, ProgramSet, ProgramWeek } from "./CoachProgram";
-import type { PlannedBlock, PlannedGroup, PlannedTargets, SplitDay, WorkoutSplit } from "./WorkoutSplit";
+import type { PlannedBlock, PlannedCardio, PlannedGroup, PlannedMobility, PlannedStrength, PlannedTargets, SplitDay, WorkoutSplit } from "./WorkoutSplit";
 import { createId } from "./ids";
 import { nowMs } from "./time";
 import { loadFromPercent } from "./oneRepMax";
@@ -65,8 +65,33 @@ function toSplitDay(day: ProgramDay, orderIndex: number, byWeekday: boolean, one
   const groupSets = new Map<string, number>();
   const groupCount = new Map<string, number>();
   for (const b of blocks) if (b.supersetGroup) groupCount.set(b.supersetGroup, (groupCount.get(b.supersetGroup) ?? 0) + 1);
+  const groups: PlannedGroup[] = [];
 
-  const planned: PlannedBlock[] = blocks.map((b, i) => {
+  const planned: PlannedBlock[] = [];
+  const push = (b: Omit<PlannedStrength, "orderIndex"> | Omit<PlannedCardio, "orderIndex"> | Omit<PlannedMobility, "orderIndex">) =>
+    planned.push({ ...b, orderIndex: planned.length } as PlannedBlock);
+
+  for (const b of blocks) {
+    // A circuit becomes its own group: one planned block per member (v2).
+    if (b.type === "circuit") {
+      const groupId = createId("pgroup");
+      groups.push({
+        id: groupId, kind: "circuit", rounds: Math.max(1, b.rounds),
+        ...(b.roundRestSec != null ? { roundRestMs: b.roundRestSec * 1000 } : {}),
+        ...(b.memberRestSec != null ? { memberRestMs: b.memberRestSec * 1000 } : {}),
+      });
+      for (const m of b.members) {
+        if (m.durationSec) {
+          push({ type: "mobility", id: createId("pmob"), drillName: m.exerciseName, metric: "hold", perSide: false, targets: { holdSec: m.durationSec }, groupId });
+        } else {
+          push({ type: "strength", id: createId("pex"), exerciseName: m.exerciseName, ...(m.exerciseId ? { exerciseId: m.exerciseId } : {}), ...(m.reps ? { targets: { reps: m.reps } } : {}), groupId });
+        }
+      }
+      continue;
+    }
+    // A split has no plugin blocks: those stay in the program.
+    if (b.type === "plugin") continue;
+
     // A "group" of one isn't a superset.
     const key = b.supersetGroup && (groupCount.get(b.supersetGroup) ?? 0) > 1 ? b.supersetGroup : undefined;
     let groupId: string | undefined;
@@ -75,22 +100,35 @@ function toSplitDay(day: ProgramDay, orderIndex: number, byWeekday: boolean, one
       groupIds.set(key, groupId);
     }
     if (b.type === "cardio") {
-      return { type: "cardio", id: createId("pcardio"), orderIndex: i, activityName: b.activityName, ...(groupId ? { groupId } : {}) };
+      push({ type: "cardio", id: createId("pcardio"), activityName: b.activityName, ...(groupId ? { groupId } : {}) });
+      continue;
     }
+    if (b.type === "mobility") {
+      const metric = b.metric ?? "hold";
+      push({
+        type: "mobility", id: createId("pmob"), drillName: b.drillName, ...(b.drillId ? { drillId: b.drillId } : {}),
+        metric, perSide: !!b.perSide,
+        targets: { ...(b.sets ? { sets: b.sets } : {}), ...(metric === "hold" && b.targetSec ? { holdSec: b.targetSec } : {}) },
+        ...(groupId ? { groupId } : {}),
+      });
+      if (key) groupSets.set(key, Math.max(groupSets.get(key) ?? 0, b.sets ?? 0));
+      continue;
+    }
+    // A block type this version doesn't know stays in the program.
+    if (b.type !== "strength") continue;
     const targets = targetsFor(b, oneRepMaxKg);
     if (key) groupSets.set(key, Math.max(groupSets.get(key) ?? 0, targets?.sets ?? 0));
-    return {
+    push({
       type: "strength",
       id: createId("pex"),
-      orderIndex: i,
       exerciseName: b.exerciseName,
       ...(b.exerciseId ? { exerciseId: b.exerciseId } : {}),
       ...(targets ? { targets } : {}),
       ...(groupId ? { groupId } : {}),
-    };
-  });
+    });
+  }
 
-  const groups: PlannedGroup[] = [...groupIds.entries()].map(([key, id]) => ({ id, rounds: groupSets.get(key) || 3 }));
+  groups.push(...[...groupIds.entries()].map(([key, id]) => ({ id, rounds: groupSets.get(key) || 3 })));
   return {
     id: createId("day"),
     orderIndex,

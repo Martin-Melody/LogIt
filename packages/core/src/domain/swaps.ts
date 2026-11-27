@@ -6,7 +6,8 @@
 
 import type { Exercise } from "./exercise";
 import type { LibraryEntry } from "./library";
-import type { StrengthBlockData, WorkoutSession } from "./workout";
+import type { LastingSwap, StrengthBlockData, WorkoutSession } from "./workout";
+import type { CoachProgram, ProgramDay } from "./CoachProgram";
 import { comparePlan } from "./sessionHistory";
 
 export type SwapRule = "any" | "muscles" | "list";
@@ -182,6 +183,9 @@ export type ProgramSwap = {
   startedAtMs: number;
   planned: string;
   didInstead: string;
+  /** "For the rest of the program" (canvas SW1), and the reason they gave. */
+  lasting?: boolean;
+  reason?: string;
   /** Worked out from the plan's alternatives and the library: on the coach's list, the same
    * main muscles, or neither (the rule allowed anything then, or an older app swapped). */
   why: "list" | "muscles" | "other";
@@ -203,11 +207,13 @@ export function programSwaps(
       const target: SwapTarget = { name: row.item.name, exerciseId: row.item.exerciseId, alternatives: row.item.alternatives };
       const doneId = (row.block.data as StrengthBlockData).exerciseId;
       const v = swapVerdict("muscles", target, { name: row.doneName, id: doneId }, library);
+      const lasting = s.source.lastingSwaps?.find((l) => l.from.trim().toLowerCase() === row.item.name.trim().toLowerCase());
       out.push({
         sessionId: s.id,
         startedAtMs: s.startedAtMs,
         planned: row.item.name,
         didInstead: row.doneName,
+        ...(lasting ? { lasting: true, ...(lasting.reason ? { reason: lasting.reason } : {}) } : {}),
         why: v.allowed && v.why !== "any" ? v.why : "other",
       });
     }
@@ -220,3 +226,41 @@ export const SWAP_WHY_LABEL: Record<ProgramSwap["why"], string> = {
   muscles: "Same muscles",
   other: "Not on your list, other muscles",
 };
+
+
+// ── Lasting swaps (canvas SW1, Q8) ───────────────────────────────────────────
+
+/**
+ * The client's swaps "for the rest of the program" that still apply: the newest per exercise,
+ * from their workouts of this program, unless the coach put it back since (revertedSwaps) or
+ * the program no longer has that exercise (the coach kept it, so it says `to` now).
+ */
+export function activeLastingSwaps(program: CoachProgram, sessions: WorkoutSession[]): LastingSwap[] {
+  const has = new Set(program.weeks.flatMap((w) => w.days.flatMap((d) => d.blocks.filter((b) => b.type === "strength").map((b) => (b as { exerciseName: string }).exerciseName.trim().toLowerCase()))));
+  const newest = new Map<string, LastingSwap>();
+  for (const s of sessions) {
+    if (s.source?.kind !== "program" || s.source.parentId !== program.id) continue;
+    for (const l of s.source.lastingSwaps ?? []) {
+      const key = l.from.trim().toLowerCase();
+      if ((newest.get(key)?.atMs ?? -1) < l.atMs) newest.set(key, l);
+    }
+  }
+  return [...newest.entries()]
+    .filter(([key, l]) => has.has(key) && !(program.revertedSwaps ?? []).some((r) => r.from.trim().toLowerCase() === key && r.atMs >= l.atMs))
+    .map(([, l]) => l);
+}
+
+/** A day with the client's lasting swaps in it, for starting it. */
+export function applyLastingSwaps(day: ProgramDay, swaps: LastingSwap[]): ProgramDay {
+  if (!swaps.length) return day;
+  return {
+    ...day,
+    blocks: day.blocks.map((b) => {
+      if (b.type !== "strength") return b;
+      const l = swaps.find((x) => x.from.trim().toLowerCase() === b.exerciseName.trim().toLowerCase());
+      if (!l) return b;
+      const { exerciseId: _id, ...rest } = b;
+      return { ...rest, exerciseName: l.to, ...(l.toId ? { exerciseId: l.toId } : {}) };
+    }),
+  };
+}

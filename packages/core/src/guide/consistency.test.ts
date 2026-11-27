@@ -235,7 +235,8 @@ describe("walkthrough steps", () => {
   it("are on pages that exist, and belong to their chapter's feature or a page it links to", () => {
     for (const s of steps) {
       const routes = routeIds(join(APPS[s.on], "routes"), /\+page\.svelte$/);
-      expect(routes, `${s.chapter}/${s.id} route`).toContain(s.route);
+      // A query string only picks a tab on that page (/clients?tab=requests).
+      expect(routes, `${s.chapter}/${s.id} route`).toContain(s.route.split("?")[0]);
     }
   });
 

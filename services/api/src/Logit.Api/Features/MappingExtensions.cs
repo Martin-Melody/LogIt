@@ -22,7 +22,9 @@ public record ProfileDto(
     bool FollowsYou = false,
     // Set on GET /users/{username} only: posts (Instagram's count, shown even when private), and
     // up to two people the caller follows who follow this account, plus how many in all.
-    int? PostCount = null, IReadOnlyList<string>? FollowedBy = null, int FollowedByCount = 0);
+    int? PostCount = null, IReadOnlyList<string>? FollowedBy = null, int FollowedByCount = 0,
+    // Set on GET /users/{username} only, for a coach who shows one (Coach/CoachProfileEndpoints).
+    Coach.CoachProfileEndpoints.CoachingSectionDto? Coaching = null);
 
 public record PostDto(Guid Id, Guid AuthorId, string AuthorUsername, string AuthorDisplayName, string? AuthorAvatarUrl, string Type, string? Body, string? PayloadJson, DateTime CreatedAt, DateTime? EditedAt, int LikeCount, bool IsLikedByMe, int CommentCount, RepostSourceDto? RepostOf, bool AuthorIsPrivate = false);
 

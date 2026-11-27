@@ -1,6 +1,9 @@
+import { coachAway } from "./away.svelte";
 import { coachTrial } from "$lib/workspace";
+import { practice } from "$lib/features/guide/sandbox.svelte";
 import {
   coachApi,
+  awayExcuse,
   SHARE_ALL,
   type CheckinInboxItem,
   type CoachingRequest,
@@ -17,6 +20,7 @@ import { missedCheckin, type CheckinSchedule, type CheckinSubmission } from "@lo
 import type { MyCoachProgram } from "@logit/core/data/coachProgramRepo";
 import type { MyCheckinSchedule } from "@logit/core/data/checkinRepo";
 import { getWebCheckinRepo, getWebCoachProgramRepo } from "$lib/deps";
+import { offerStateNow } from "@logit/core/domain/coachRequest";
 
 const DAY = 86_400_000;
 
@@ -30,7 +34,7 @@ export type ProgramStatus = {
   startsAtMs: number | null;
   /** Planned sessions a week (days in the current or first week). */
   daysPerWeek: number;
-  /** Ms until the last week ends, while running. */
+  /** When the last week ends (epoch ms), while running. */
   endsAtMs: number | null;
 };
 
@@ -45,6 +49,10 @@ export type ClientSummary = {
   sharing: Sharing;
   since: string | null;
   sessions7d: number;
+  /** Canvas K3: their answers when they asked to be coached. */
+  answers: import("@logit/core/domain/coachRequest").RequestAnswer[];
+  /** Canvas W1: days of the last 7 with food logged (null: not shared). */
+  foodDays7d: number | null;
   lastSessionAtMs: number | null;
   unread: number;
   program: ProgramStatus | null;
@@ -53,6 +61,16 @@ export type ClientSummary = {
   lastCheckinAtMs: number | null;
   missed: { schedule: CheckinSchedule; dueMs: number } | null;
   scheduleCount: number;
+  /** Their first message since your last reply (canvas Z2). */
+  waitingSinceMs: number | null;
+  /** You paused coaching until then (canvas E1). */
+  pausedUntil: string | null;
+  /** Coaching ends then (they stopped, or moved coach). */
+  endsAt: string | null;
+  /** Canvas Q8: an unread "for the rest of the program" swap. */
+  lastingSwap: boolean;
+  /** Canvas PG8: what they said about each plugin your programs use. */
+  pluginConsent: import("@logit/core/api/coachApi").PluginConsent;
 };
 
 export type CoachingOverview = {
@@ -85,6 +103,12 @@ export function programStatus(program: CoachProgram, now = Date.now()): ProgramS
 
 /** The program a client is on now: running first, then the next one scheduled, then one
  * waiting for Start. Archived (ended) and finished ones don't count. */
+/** When a program from you ends (or ended): its start plus its weeks; null before it starts. */
+export function programEndMs(program: CoachProgram): number | null {
+  const start = program.startMode === "fixed-date" ? program.startDateMs : program.clientStartedAtMs;
+  return start ? start + program.weeks.length * 7 * DAY : null;
+}
+
 export function currentProgram(programs: CoachProgram[], now = Date.now()): ProgramStatus | null {
   const order = { running: 0, scheduled: 1, waiting: 2, finished: 3 } as const;
   const live = programs
@@ -113,10 +137,30 @@ export async function loadCoachingOverview(): Promise<CoachingOverview> {
     // Requests come through invite links, which are Studio-only: none while trying samples.
     coachTrial() ? Promise.resolve([] as CoachingRequest[]) : coachApi.listRequests().catch(() => [] as CoachingRequest[]),
     coachApi.listSentInvites().catch(() => [] as SentInvite[]),
+    coachAway.load(),
   ]);
   const now = Date.now();
-  const clients = roster.map((r) => summarise(r, inbox, schedules, programs, now));
-  return { clients, inbox, schedules, programs, requests, sent };
+  // Canvas Z7: check-ins due while you were away aren't missed.
+  const excuse = awayExcuse(coachAway.value);
+  // Practice view: the samples, or everyone else (never both). Programs and schedules
+  // nobody was given (templates) belong to both.
+  const shown = roster.filter((r) => practice.shows(r.client.isSample));
+  const ids = new Set(shown.map((r) => r.client.id));
+  const mine = <T extends { recipientUserId?: string | null }>(x: T) => !x.recipientUserId || ids.has(x.recipientUserId);
+  const clients = shown.map((r) => summarise(r, inbox, schedules, programs, now, excuse));
+  return {
+    clients,
+    inbox: inbox.filter((i) => ids.has(i.clientUserId)),
+    schedules: schedules.filter(mine),
+    programs: programs.filter(mine),
+    requests: requests.filter((r) => practice.shows(r.client.isSample)),
+    sent: practice.on ? [] : sent,
+  };
+}
+
+/** A list of the coach's clients (coachApi.listClients) as Practice view shows it. */
+export function inView<T extends { client: { isSample?: boolean } }>(list: T[]): T[] {
+  return list.filter((r) => practice.shows(r.client.isSample));
 }
 
 function summarise(
@@ -125,15 +169,18 @@ function summarise(
   schedules: MyCheckinSchedule[],
   programs: MyCoachProgram[],
   now: number,
+  excuse: ReturnType<typeof awayExcuse> = null,
 ): ClientSummary {
   const sharing = r.sharing ?? SHARE_ALL;
   const mine = inbox.filter((i) => i.clientUserId === r.client.id);
   const subs = mine.map(parseSubmission).filter((s): s is CheckinSubmission => s != null);
   const clientSchedules = schedules.filter((s) => s.recipientUserId === r.client.id && !s.schedule.archived);
   let missed: ClientSummary["missed"] = null;
-  if (sharing.checkins) {
+  // Paused by you: check-ins due meanwhile aren't missed.
+  const paused = !!r.pausedUntil && Date.parse(r.pausedUntil) > now;
+  if (sharing.checkins && !paused) {
     for (const s of clientSchedules) {
-      const m = missedCheckin(s.schedule, subs, now);
+      const m = missedCheckin(s.schedule, subs, now, excuse);
       if (m && (!missed || m.dueMs > missed.dueMs)) missed = { schedule: s.schedule, dueMs: m.dueMs };
     }
   }
@@ -147,8 +194,12 @@ function summarise(
     sharing,
     since: r.since ?? null,
     sessions7d: r.sessions7d,
+    foodDays7d: r.foodDays7d ?? null,
+    answers: r.answers ?? [],
     lastSessionAtMs: r.lastSessionAtMs,
     unread: r.unreadFromClient,
+    lastingSwap: !!r.lastingSwap,
+    pluginConsent: r.pluginConsent ?? {},
     program: currentProgram(
       programs.filter((p) => p.recipientUserId === r.client.id).map((p) => p.program),
       now,
@@ -157,6 +208,9 @@ function summarise(
     lastCheckinAtMs: r.lastCheckinSubmittedAtMs,
     missed,
     scheduleCount: clientSchedules.length,
+    waitingSinceMs: r.waitingSinceMs ?? null,
+    pausedUntil: r.pausedUntil ?? null,
+    endsAt: r.endsAt ?? null,
   };
 }
 
@@ -166,20 +220,33 @@ export type NeedsYou =
   | { kind: "message"; at: number; client: ClientSummary }
   | { kind: "missed"; at: number; client: ClientSummary; dueMs: number }
   | { kind: "ending"; at: number; client: ClientSummary; program: ProgramStatus }
-  | { kind: "request"; at: number; request: CoachingRequest };
+  | { kind: "request"; at: number; request: CoachingRequest }
+  // Canvas Z2: a client has waited 5+ days for a reply (at 7 they can stop with a refund).
+  | { kind: "waiting"; at: number; client: ClientSummary; days: number }
+  // Canvas Q8: a client changed an exercise for the rest of the program.
+  | { kind: "lasting-swap"; at: number; client: ClientSummary };
 
 export function needsYou(o: CoachingOverview, now = Date.now()): NeedsYou[] {
   const out: NeedsYou[] = [];
   for (const c of o.clients) {
     for (const item of c.toReview) out.push({ kind: "checkin", at: item.submittedAtMs, client: c, item });
-    if (c.unread > 0) out.push({ kind: "message", at: now, client: c });
+    const waitedDays = c.waitingSinceMs ? Math.floor((now - c.waitingSinceMs) / DAY) : 0;
+    if (waitedDays >= 5) out.push({ kind: "waiting", at: c.waitingSinceMs!, client: c, days: waitedDays });
+    else if (c.lastingSwap) out.push({ kind: "lasting-swap", at: now, client: c });
+    else if (c.unread > 0) out.push({ kind: "message", at: now, client: c });
     if (c.missed) out.push({ kind: "missed", at: c.missed.dueMs, client: c, dueMs: c.missed.dueMs });
     const p = c.program;
     if (p?.state === "running" && p.endsAtMs != null && p.endsAtMs - now <= 7 * DAY) {
       out.push({ kind: "ending", at: p.endsAtMs - 7 * DAY, client: c, program: p });
     }
   }
-  for (const r of o.requests) out.push({ kind: "request", at: Date.parse(r.requestedAt), request: r });
+  // A request needs you while it's unanswered or its offer ran out; not while an offer is out or
+  // they're on the waiting list (canvas C1, C4).
+  for (const r of o.requests) {
+    const stage = r.stage ?? "asked";
+    const ranOut = stage === "offered" && r.offer && offerStateNow(r.offer, now) === "expired";
+    if (stage === "asked" || ranOut) out.push({ kind: "request", at: Date.parse(r.requestedAt), request: r });
+  }
   return out.sort((a, b) => b.at - a.at);
 }
 

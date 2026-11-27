@@ -129,7 +129,8 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
             var wanted = new List<CoachMessage>();
             foreach (var m in group)
             {
-                if (settings.Messages && !(settings.PausedUntil > now) && m.ReadAtMs is null) wanted.Add(m);
+                // Sample clients are played by the coach's own web app (Practice view): never a push.
+                if (settings.Messages && !(settings.PausedUntil > now) && m.ReadAtMs is null && !m.Sender.IsSample) wanted.Add(m);
                 else m.PushedAt = now;
             }
             if (wanted.Count == 0 || InQuiet(settings, now)) continue;
@@ -137,7 +138,9 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
             var names = wanted.AsEnumerable().Reverse().Select(m => m.Sender).DistinctBy(u => u.Id).Select(NameOf).ToList();
             var message = new PushMessage(
                 names.Count == 1 ? names[0] : names.Count == 2 ? $"{names[0]} and {names[1]}" : $"{names[0]} and {names.Count - 1} others",
-                names.Count > 1 ? $"{wanted.Count} messages" : wanted.Count == 1 ? "sent you a message" : $"sent you {wanted.Count} messages",
+                names.Count > 1 ? $"{wanted.Count} messages"
+                    : wanted.Count == 1 ? StepText(wanted[0].Kind, wanted[0].CardJson) ?? "sent you a message"
+                    : StepText(wanted[^1].Kind, wanted[^1].CardJson) is { } step ? step : $"sent you {wanted.Count} messages",
                 "messages",
                 wanted.Select(m => m.RelationshipId).Distinct().Count() == 1
                     ? new Dictionary<string, string> { ["type"] = "Message", ["relationshipId"] = wanted[0].RelationshipId.ToString() }
@@ -146,6 +149,33 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
             foreach (var m in wanted) m.PushedAt = now;
         }
         return sent;
+    }
+
+    /// A request step said the way a push says it (who, then what; never the words).
+    private static string? StepText(string? kind, string? card = null) => kind switch
+    {
+        // Canvas W7: "Sam sent you your November".
+        "month-report" => $"sent you your {MonthLabel(card) ?? "month"}",
+        "offer" => "offered you a spot",
+        "offer-changed" => "changed their offer",
+        "offer-withdrawn" => "withdrew their offer",
+        "waitlist" => "put you on their waiting list",
+        "closed" => "answered your request",
+        "reopened" => "reopened your request",
+        "withdrawn" => "withdrew their request",
+        "joined" => "took the spot",
+        _ => null,
+    };
+
+    private static string? MonthLabel(string? card)
+    {
+        if (card is null) return null;
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(card);
+            return doc.RootElement.TryGetProperty("label", out var l) && l.ValueKind == System.Text.Json.JsonValueKind.String ? l.GetString() : null;
+        }
+        catch (System.Text.Json.JsonException) { return null; }
     }
 
     /// Messages between people, like coach messages: straight away, who and never what. A message
@@ -325,7 +355,7 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
         NotificationType.Cheer => Kind.Cheers,
         NotificationType.GroupNote or NotificationType.GroupRequest or NotificationType.GroupApproved or NotificationType.GroupEvent
             or NotificationType.GroupEventChanged or NotificationType.GroupEventCancelled or NotificationType.GroupEventReminder
-            or NotificationType.GroupReport => Kind.Groups,
+            or NotificationType.GroupReport or NotificationType.GroupDeclined => Kind.Groups,
         _ => Kind.Coaching,
     };
 
@@ -372,6 +402,7 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
         NotificationType.FollowAccepted => "accepted your follow request",
         NotificationType.CoachInvite => "wants to coach you",
         NotificationType.CoachProgram => "sent you a program",
+        NotificationType.CoachMealPlan => "sent you a meal plan",
         NotificationType.CoachPaymentFailed => "couldn't take your coaching payment",
         NotificationType.Cheer => "is cheering you on",
         NotificationType.StoryCheer => "cheered your story",
@@ -383,6 +414,7 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
         NotificationType.GroupEventCancelled => $"cancelled {n.Event?.Title ?? "an event"}",
         NotificationType.GroupEventReminder => $"{n.Event?.Title ?? "Your event"} is tomorrow",
         NotificationType.GroupReport => n.Group is null ? "Something in your group was reported" : $"Something in {n.Group.Name} was reported",
+        NotificationType.GroupDeclined => "The organisers didn't approve your request",
         NotificationType.GroupPostReply => n.Group is null ? "replied to you in a group" : $"replied to you in {n.Group.Name}",
         _ => "sent you something",
     };
@@ -405,6 +437,7 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
         NotificationType.GroupEventCancelled => ("cancelled event", "cancelled events"),
         NotificationType.GroupEventReminder => ("event tomorrow", "events tomorrow"),
         NotificationType.GroupReport => ("report", "reports"),
+        NotificationType.GroupDeclined => ("request not approved", "requests not approved"),
         NotificationType.GroupPostReply => ("reply", "replies"),
         _ => ("coaching update", "coaching updates"),
     };
@@ -419,6 +452,10 @@ public class PushDispatcher(IServiceScopeFactory scopes, ILogger<PushDispatcher>
         if (batch.Count == 1 && batch[0] is { Type: NotificationType.GroupReport, Group: not null } report)
             return new PushMessage(report.Group.Name, "Something was reported. Open Reports in the group's ⋯", "social",
                 new Dictionary<string, string> { ["type"] = "GroupReport", ["count"] = "1", ["notificationId"] = report.Id.ToString() });
+        // Not approved: the group's name, never which organiser (canvas K8).
+        if (batch.Count == 1 && batch[0] is { Type: NotificationType.GroupDeclined, Group: not null } declined)
+            return new PushMessage(declined.Group.Name, What(declined), "social",
+                new Dictionary<string, string> { ["type"] = "GroupDeclined", ["count"] = "1", ["notificationId"] = declined.Id.ToString() });
         if (batch.Count == 1 && batch[0] is { Event: not null, Group: not null } one)
             return new PushMessage(one.Group.Name, one.Type == NotificationType.GroupEventReminder ? What(one) : $"{NameOf(one.Actor)} {What(one)}", "social",
                 new Dictionary<string, string> { ["type"] = one.Type.ToString(), ["count"] = "1", ["notificationId"] = one.Id.ToString(), ["eventId"] = one.EventId.ToString()! });

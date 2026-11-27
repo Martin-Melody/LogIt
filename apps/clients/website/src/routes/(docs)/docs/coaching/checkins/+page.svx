@@ -12,6 +12,39 @@ title: Check-ins
 
 <HowTo id="studio.checkins" />
 
+## Reviewing
+
+Check-ins › To review is a queue, oldest first, so a Sunday's check-ins are one sitting. Each one
+shows the answers next to their previous check-in ("was" values), and beside them the client's
+week as plain numbers: sessions against their program, the best set of their main lifts against the
+week before, their 7-day average weight, average calories and protein against their targets, and
+how they did on your habits. A row they don't share says "Not shared".
+
+Write a reply (type **/** for a saved reply) and **Send and go to …** (or Ctrl Enter) moves on to the next person, or
+**Mark reviewed, no reply**. The reply also goes into your conversation with them, marked with the
+check-in it answers.
+
+## Your forms
+
+Check-ins › Forms lists every form you send, with one editor for all of them: the questions people
+answer when they ask to be coached, your start-up form, and your check-in forms. Questions can be
+short or long text, a number, a 1–10 scale, yes or no, choose one or several, body weight, a
+measurement, or progress photos (front, side, back), and you can add headings between them.
+Changes save as you go and apply from then on: check-ins already sent keep the questions they were
+asked.
+
+A check-in form is shared: send it to several clients at once (**Who gets it**, or **Send a form** on a
+client's Check-ins tab), once or every week or month. Change it and everyone on it gets the change.
+To change it for one client, open their Check-ins tab and choose **Change for … only**; **Back to
+shared** puts them on the shared form again.
+
+## New clients
+
+Your **start-up form** is filled in once, after someone takes a spot: health questions, body
+weight, measurements, progress photos, foods they don't eat. In Profile › When someone becomes your
+client you can also pick check-ins every new client starts with. Clients from before can still get
+the start-up form with Send a form.
+
 ## What your client sees
 
 The form shows as Due under Check-ins on their phone, or My coach on the web. After you review it,

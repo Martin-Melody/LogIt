@@ -3,7 +3,7 @@ title: Building plugins
 description: "Build plugins for LogIt: exercise packs, progression and nutrition algorithms, analytics and home-screen widgets."
 ---
 
-A LogIt plugin extends the app with one of nine things:
+A LogIt plugin extends the app with one of these:
 
 | Family | What it does | Runs as |
 |---|---|---|
@@ -16,6 +16,11 @@ A LogIt plugin extends the app with one of nine things:
 | `nutrition-algorithm` | Turns your goal + data into a calorie target | `computeTargets(input)` in the sandbox |
 | `nutrition-analytics` | Weekly recaps, adherence, custom insights | `compute(input)` in the sandbox |
 | `widget` | A home-screen card | `compute(input) => WidgetView` in the sandbox |
+| `program-pack` | Programs coaches copy into their own | Pure data — not code |
+| `workout-block` | A kind of block in workouts, like timed rounds | A declaration — not code |
+| `meal-plan-pack`, `recipe-pack` | Meal plans and recipes coaches copy | Pure data — not code |
+| `question-pack` | Check-in questions coaches add to forms | Pure data — not code |
+| `card-pack` | Cards for a coach's Today and Your month | `compute(input) => WidgetView` in the sandbox |
 
 ## How it works
 

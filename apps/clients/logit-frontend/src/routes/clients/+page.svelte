@@ -1,4 +1,5 @@
 <script lang="ts">
+  const WEB_URL = import.meta.env.VITE_WEB_URL || "https://app.getlogit.app";
   import { replayTour } from "$lib/tour/index";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
@@ -8,10 +9,12 @@
   import { apiClient, ApiError } from "@logit/core/api/client";
   import {
     coachApi,
+    isRealClient,
     SHARE_ALL,
     type ClientRelationship,
     type CoachRelationship,
     type MyCoachingRequest,
+    type ManageCoaching,
     type CoachingRequest,
     type ReceivedInvite,
     type SentInvite,
@@ -22,6 +25,9 @@
   import { Button } from "$lib/components/ui/button";
   import LockCard from "$lib/components/billing/LockCard.svelte";
   import { authStore } from "$lib/api/authStore.svelte";
+  import { loadCoachToday, type CoachToday, type CheckinRow } from "$lib/features/coaching/coachToday";
+  import CheckinQuickSheet from "$lib/features/coaching/CheckinQuickSheet.svelte";
+  import { requestLine, sentLine } from "@logit/core/domain/coachRequest";
   import { coachPaymentsApi } from "@logit/core/api/coachPaymentsApi";
   import { clientPaymentNote } from "@logit/core/domain/coachPayments";
 
@@ -33,6 +39,8 @@
   let received = $state<ReceivedInvite[]>([]);
   let coaches = $state<CoachRelationship[]>([]);
   let requests = $state<MyCoachingRequest[]>([]);
+  // Canvas M1/E2/Z2: each coach's pause, end date and whether they've gone quiet.
+  let manage = $state<Record<string, ManageCoaching>>({});
   // People who used the coach's link or code and wait for an answer.
   let clientRequests = $state<CoachingRequest[]>([]);
   // Accepting an invite first asks what the coach may see.
@@ -50,16 +58,19 @@
     try {
       const [r, c, s, mine, reqs, asks] = await Promise.all([
         coachApi.listReceivedInvites(),
-        isStudio ? coachApi.listClients() : Promise.resolve([]),
+        isStudio ? coachApi.listClients().then((xs) => xs.filter(isRealClient)) : Promise.resolve([]),
         isStudio ? coachApi.listSentInvites() : Promise.resolve([]),
         coachApi.listCoaches().catch(() => []),
         coachApi.listMyRequests().catch(() => []),
-        isStudio ? coachApi.listRequests().catch(() => []) : Promise.resolve([]),
+        isStudio ? coachApi.listRequests().then((xs) => xs.filter(isRealClient)).catch(() => []) : Promise.resolve([]),
       ]);
       clientRequests = asks;
+      if (isStudio) void loadCoachToday(WEB_URL).then((x) => (today = x)).catch(() => {});
       received = r;
       coaches = mine;
       requests = reqs;
+      const m = await Promise.all(mine.map((x) => coachApi.manageCoaching(x.relationshipId).catch(() => null)));
+      manage = Object.fromEntries(mine.flatMap((x, k) => (m[k] ? [[x.relationshipId, m[k]!]] : [])));
       clients = c;
       sent = s;
     } catch (e) {
@@ -133,6 +144,10 @@
   }
 
   onMount(() => void load());
+
+  // Canvas W6: what needs you, on the phone. Replying and a quick check-in here; the rest on the web.
+  let today = $state<CoachToday | null>(null);
+  let looking = $state<CheckinRow | null>(null);
   onMount(() => setTimeout(() => replayTour("phone.clients"), 600));
 </script>
 
@@ -149,6 +164,49 @@
   {#if ui.loading}
     <p class="px-3 py-4 text-sm text-muted-foreground">Loading…</p>
   {:else}
+    {#if isStudio && today && (today.reply.length || today.checkins.length || today.decide.length)}
+      <section class="border-b border-border pb-2" aria-label="Needs you" data-guide="phone-needs-you">
+        <p class="px-3 pt-3 text-[13px] text-muted-foreground">{new Date().toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })}</p>
+        {#if today.reply.length}
+          <p class="px-3 pt-3 pb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">Reply</p>
+          <ul class="divide-y divide-border">
+            {#each today.reply as x (x.relationshipId)}
+              <li><a href="/messages/{x.relationshipId}" class="flex min-h-14 items-center gap-3 px-3 py-2.5 text-inherit no-underline active:bg-muted/40">
+                <span class="min-w-0 flex-1"><span class="block text-[15px] font-medium">{x.name}</span><span class="block truncate text-[13px] text-muted-foreground">{x.line}</span></span>
+                <span class="text-muted-foreground">›</span>
+              </a></li>
+            {/each}
+          </ul>
+        {/if}
+        {#if today.checkins.length}
+          <p class="px-3 pt-3 pb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">Check-ins · {today.checkins.length}</p>
+          <ul class="divide-y divide-border">
+            {#each today.checkins as x (x.item.clientUserId + x.item.id)}
+              <li class="flex min-h-14 items-center gap-3 px-3 py-2.5">
+                <span class="min-w-0 flex-1"><span class="block text-[15px] font-medium">{x.name}</span><span class="block truncate text-[13px] text-muted-foreground">{x.line}</span></span>
+                <Button size="sm" variant="outline" class="h-9" onclick={() => (looking = x)}>Look</Button>
+              </li>
+            {/each}
+          </ul>
+        {/if}
+        {#if today.decide.length}
+          <p class="px-3 pt-3 pb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">Decide</p>
+          <ul class="divide-y divide-border">
+            {#each today.decide as x (x.key)}
+              <li class="flex min-h-14 items-center gap-3 px-3 py-2.5">
+                <span class="min-w-0 flex-1 text-[15px]">{x.line}</span>
+                {#if x.web}<Button size="sm" variant="outline" class="h-9" href={x.href} target="_blank" rel="noopener">Plan it on the web</Button>
+                {:else}<Button size="sm" class="h-9" href={x.href}>Open</Button>{/if}
+              </li>
+            {/each}
+          </ul>
+        {/if}
+        <div class="flex flex-col gap-2 px-3 pt-3">
+          <p class="text-[13px] text-muted-foreground">Programs, meal plans, forms and payments are on the web.</p>
+          <Button variant="outline" class="h-11" href={WEB_URL} target="_blank" rel="noopener">Sign in on a computer</Button>
+        </div>
+      </section>
+    {/if}
     {#if received.length > 0}
       <div class="border-b border-border">
         <p class="px-3 pt-3 pb-1 text-xs font-medium text-muted-foreground uppercase tracking-wide">Coach invites</p>
@@ -157,7 +215,15 @@
             <li class="flex flex-col text-sm">
               <div class="flex items-center justify-between px-3 py-2.5">
                 <span>{inv.coach.displayName || inv.coach.username}</span>
-                {#if accepting !== inv.relationshipId}
+                {#if inv.offer && inv.offer.state === "open"}
+                  <!-- K13: an invite with an offer is taken on the web, like any offer. -->
+                  <div class="flex gap-2">
+                    <a href="{WEB_URL}/take/{inv.offer.card.offerId}" target="_blank" rel="noopener"
+                      class="inline-flex h-9 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground">See the offer</a>
+                    <Button size="sm" variant="outline" disabled={ui.busyId === inv.relationshipId}
+                      onclick={() => act(inv.relationshipId, () => coachApi.declineInvite(inv.relationshipId))}>Decline</Button>
+                  </div>
+                {:else if accepting !== inv.relationshipId}
                   <div class="flex gap-2">
                     <Button size="sm" disabled={ui.busyId === inv.relationshipId}
                       onclick={() => { accepting = inv.relationshipId; acceptSharing = { ...SHARE_ALL }; }}>Accept</Button>
@@ -189,6 +255,7 @@
             {@const name = c.coach.displayName || c.coach.username}
             {@const note = clientPaymentNote(c.payment, c.status, name)}
             {@const problem = note && note.tone !== "ok" ? note : null}
+            {@const m = manage[c.relationshipId]}
             <li class="flex flex-col text-sm">
               <button type="button" class="flex items-center justify-between gap-2 px-3 py-3 text-left hover:bg-muted/40" aria-expanded={openCoach === c.relationshipId}
                 onclick={() => (openCoach = openCoach === c.relationshipId ? null : c.relationshipId)}>
@@ -202,6 +269,37 @@
                   <span class="text-muted-foreground">{openCoach === c.relationshipId ? "⌃" : "›"}</span>
                 </span>
               </button>
+              {#if m?.pausedUntil}
+                <p role="status" class="mx-3 mb-2 rounded-lg bg-warning/10 px-3 py-2 text-xs leading-relaxed">{name} paused coaching until {new Date(m.pausedUntil).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })}. Payments and check-ins pause; your program keeps going.</p>
+              {:else if m?.endsAt}
+                <p role="status" class="mx-3 mb-2 rounded-lg bg-muted px-3 py-2 text-xs">Coaching with {name} ends {new Date(m.endsAt).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })}.</p>
+              {/if}
+              {#if c.away?.now}
+                <!-- Canvas Z7: pinned while the coach is away. -->
+                <div role="status" class="mx-3 mb-2 flex flex-col gap-1 rounded-lg bg-muted px-3 py-2.5">
+                  <span class="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{name} is away until {new Date(c.away.until).toLocaleDateString(undefined, { day: "numeric", month: "short" })}</span>
+                  {#if c.away.note}<span class="text-[13px] leading-relaxed">{c.away.note}</span>{/if}
+                </div>
+              {/if}
+              {#if m?.change || m?.payDue}
+                <!-- Canvas K14: answering a change of package and paying happen on the web (W6). -->
+                <div role="status" class="mx-3 mb-2 flex flex-col gap-2 rounded-lg border border-primary/40 px-3 py-2.5">
+                  <span class="text-sm font-semibold">{m.payDue ? `Time to pay for ${m.payDue.packageName}` : `${name} suggests ${m.change?.packageName}`}</span>
+                  <span class="text-xs text-muted-foreground">{m.payDue ? "Pay on the web; coaching carries on once it's paid." : "Nothing changes unless you accept. Accept or keep your package on the web."}</span>
+                  <a href="{WEB_URL}/my-coach" target="_blank" rel="noopener" class="inline-flex h-9 items-center self-start rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground">{m.payDue ? "Pay on the web" : "See it on the web"}</a>
+                </div>
+              {/if}
+              {#if m?.quiet}
+                <!-- Canvas Z2: the coach hasn't replied for a week. -->
+                <div role="status" class="mx-3 mb-3 flex flex-col gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5">
+                  <span class="text-sm font-semibold">{name} hasn't replied for {m.quiet.days} days</span>
+                  <div class="flex gap-2">
+                    <Button size="sm" variant="outline" onclick={() => goto(`/messages/${c.relationshipId}?name=${encodeURIComponent(name)}`)}>Message again</Button>
+                    <Button size="sm" variant="destructive" disabled={ui.busyId === c.relationshipId}
+                      onclick={() => act(c.relationshipId, async () => { await coachApi.stopCoaching(c.relationshipId, true); })}>{m.plan ? "Stop and get a refund" : "Stop coaching"}</Button>
+                  </div>
+                </div>
+              {/if}
               {#if problem}
                 <!-- No price, no pay button and no link to pay: the app only says what's happening. -->
                 <div role="status" class="mx-3 mb-3 flex flex-col gap-1 rounded-lg border px-3 py-2.5 {problem.tone === 'bad' ? 'border-destructive/30 bg-destructive/5' : 'border-border bg-muted/40'}">
@@ -232,10 +330,15 @@
                 <SharingList sharing={c.sharing ?? SHARE_ALL} onchange={(s) => changeSharing(c, s)} />
                 <div class="px-3 py-3">
                   {#if confirmStop === c.relationshipId}
-                    <p class="pb-2 text-xs text-muted-foreground">{name} stops seeing your data, and their program, check-ins and habits leave your app. Your own logs stay.{c.payment?.mode === "stripe" && c.payment.state !== "ended" ? " Your plan with them is cancelled now, so you won't be charged again." : ""}</p>
+                    {@const plan = manage[c.relationshipId]?.plan}
+                    <p class="pb-2 text-xs text-muted-foreground">
+                      {plan && plan.interval === "month" && plan.state === "paid" && plan.paidUntil && Date.parse(plan.paidUntil) > Date.now()
+                        ? `Your plan stops renewing. Coaching carries on until ${new Date(plan.paidUntil).toLocaleDateString(undefined, { day: "numeric", month: "short" })}, the end of what you paid for.`
+                        : `${name} stops seeing your data, and their program, check-ins and habits leave your app. Your own logs stay.`}
+                    </p>
                     <div class="flex gap-2">
                       <Button size="sm" variant="destructive" disabled={ui.busyId === c.relationshipId}
-                        onclick={() => act(c.relationshipId, () => coachApi.revokeRelationship(c.relationshipId))}>Stop coaching</Button>
+                        onclick={() => act(c.relationshipId, async () => { await coachApi.stopCoaching(c.relationshipId); })}>Stop coaching</Button>
                       <Button size="sm" variant="outline" onclick={() => (confirmStop = null)}>Keep</Button>
                     </div>
                   {:else}
@@ -246,13 +349,19 @@
             </li>
           {/each}
           {#each requests as r (r.relationshipId)}
-            <li class="flex items-center justify-between px-3 py-2.5 text-sm">
-              <span><span>{r.coach.displayName || r.coach.username}</span><span class="block text-xs text-muted-foreground">Waiting for them to accept</span></span>
-              <Button size="sm" variant="outline" disabled={ui.busyId === r.relationshipId}
-                onclick={() => act(r.relationshipId, () => coachApi.revokeRelationship(r.relationshipId))}>Cancel</Button>
+            {@const name = r.coach.displayName || r.coach.username}
+            <!-- R5: a request is its conversation, where it can be withdrawn. -->
+            <li>
+              <a href="/messages/request/{r.relationshipId}?name={encodeURIComponent(name)}" class="flex min-h-14 items-center justify-between gap-2 px-3 py-2.5 text-sm text-inherit no-underline hover:bg-muted/40">
+                <span><span class="font-medium">{name}</span><span class="block text-xs text-muted-foreground">Coach request · {sentLine(r, Date.now())}</span></span>
+                <span class="text-muted-foreground">›</span>
+              </a>
             </li>
           {/each}
         </ul>
+        {#if coaches.length > 0 && requests.length > 0}
+          <p class="px-3 pb-3 text-xs text-muted-foreground">{coaches[0]!.coach.displayName || coaches[0]!.coach.username} can't see your {requests.length === 1 ? "request" : "requests"}.</p>
+        {/if}
       </div>
     {/if}
 
@@ -281,14 +390,13 @@
         {#if clientRequests.length > 0}
           <ul class="divide-y divide-border border-b border-border">
             {#each clientRequests as q (q.relationshipId)}
-              <li class="flex items-center justify-between gap-2 px-3 py-2.5 text-sm">
-                <span class="min-w-0"><span class="font-medium">{q.client.displayName || q.client.username}</span><span class="block text-xs text-muted-foreground">Wants you as their coach{q.linkName ? ` · ${q.linkName}` : ""}</span></span>
-                <span class="flex shrink-0 gap-2">
-                  <Button size="sm" variant="outline" disabled={ui.busyId === q.relationshipId}
-                    onclick={() => act(q.relationshipId, () => coachApi.declineRequest(q.relationshipId))}>Decline</Button>
-                  <Button size="sm" disabled={ui.busyId === q.relationshipId}
-                    onclick={() => act(q.relationshipId, () => coachApi.acceptRequest(q.relationshipId))}>Accept</Button>
-                </span>
+              {@const who = q.client.displayName || q.client.username}
+              <!-- Z8: a request opens as a conversation with their answers and Offer / Waiting list / Not a fit. -->
+              <li>
+                <a href="/messages/request/{q.relationshipId}?name={encodeURIComponent(who)}" class="flex min-h-14 items-center justify-between gap-2 px-3 py-2.5 text-sm text-inherit no-underline hover:bg-muted/40">
+                  <span class="min-w-0"><span class="font-medium">{who}</span><span class="block text-xs text-muted-foreground">{q.stage === "waiting" ? "On your waiting list" : `Asked you to coach them · ${requestLine(q.stage ?? "asked", q.offer ?? null, Date.now())}`}{q.linkName ? ` · ${q.linkName}` : ""}</span></span>
+                  <span class="text-muted-foreground">›</span>
+                </a>
               </li>
             {/each}
           </ul>
@@ -341,3 +449,5 @@
     {/if}
   {/if}
 </div>
+
+<CheckinQuickSheet row={looking} webUrl={WEB_URL} onclose={() => (looking = null)} ondone={() => { looking = null; void loadCoachToday(WEB_URL).then((x) => (today = x)); }} />

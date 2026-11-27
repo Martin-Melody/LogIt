@@ -2,7 +2,7 @@
   import PageCrumbs from "$lib/components/PageCrumbs.svelte";
   import { clientName } from "$lib/features/coaching/clientName";
   import { Checkbox } from "$lib/components/ui/checkbox/index.js";
-  import * as NativeSelect from "$lib/components/ui/native-select/index.js";
+  import OptionSelect from "$lib/components/option-select.svelte";
   import { guideSignal } from "$lib/features/guide/signal";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
@@ -208,13 +208,8 @@
       <section aria-label="What to chart" class="flex flex-[1_1_300px] flex-col gap-4 rounded-[10px] border border-border bg-card px-[18px] py-4">
         <div class="flex flex-col gap-1.5">
           <label class={label} for="chart-show">Show</label>
-          <NativeSelect.Root id="chart-show" class="w-full" value={chart.metric} onchange={(e) => setMetric((e.target as HTMLSelectElement).value as ChartMetric)}>
-            {#each groups as g (g)}
-              <NativeSelect.OptGroup label={g}>
-                {#each CHART_METRICS.filter((m) => m.group === g) as m (m.id)}<NativeSelect.Option value={m.id}>{m.label}</NativeSelect.Option>{/each}
-              </NativeSelect.OptGroup>
-            {/each}
-          </NativeSelect.Root>
+          <OptionSelect id="chart-show" class="w-full" value={chart.metric} onValueChange={(v) => setMetric(v as ChartMetric)}
+            options={groups.flatMap((g) => CHART_METRICS.filter((m) => m.group === g).map((m) => ({ value: m.id, label: m.label, group: g })))} />
         </div>
 
         {#if def?.pick === "lifts"}
@@ -272,9 +267,8 @@
 
         <div class="flex flex-col gap-1.5">
           <label class={label} for="chart-compare">Compare with</label>
-          <NativeSelect.Root id="chart-compare" class="w-full" bind:value={chart.compare}>
-            {#each CHART_COMPARES.filter((c) => c.id !== chart!.metric) as c (c.id)}<NativeSelect.Option value={c.id}>{c.label}</NativeSelect.Option>{/each}
-          </NativeSelect.Root>
+          <OptionSelect id="chart-compare" class="w-full" bind:value={chart.compare}
+            options={CHART_COMPARES.filter((c) => c.id !== chart!.metric).map((c) => ({ value: c.id, label: c.label }))} />
           <span class="text-xs text-muted-foreground">Gets its own scale on the right.</span>
         </div>
 

@@ -7,7 +7,7 @@ namespace Logit.Api.Features.Coach.Payments;
 
 /// What a checkout carries in its metadata, so the webhook (or the success page) can start
 /// coaching without anything stored before the client paid.
-public record CheckoutMeta(Guid CoachId, Guid ClientId, Guid? LinkId, Guid? PackageId, SharingDto Sharing)
+public record CheckoutMeta(Guid CoachId, Guid ClientId, Guid? LinkId, Guid? PackageId, SharingDto Sharing, Guid? OfferId = null)
 {
     public Dictionary<string, string> ToMetadata() => new()
     {
@@ -15,6 +15,8 @@ public record CheckoutMeta(Guid CoachId, Guid ClientId, Guid? LinkId, Guid? Pack
         ["logit_client"] = ClientId.ToString(),
         ["logit_link"] = LinkId?.ToString() ?? "",
         ["logit_package"] = PackageId?.ToString() ?? "",
+        // Paying for a coach's offer (canvas J1): taking it is what the payment does.
+        ["logit_offer"] = OfferId?.ToString() ?? "",
         // One character per area, in SharingDto order.
         ["logit_share"] = string.Concat(new[] { Sharing.Workouts, Sharing.Nutrition, Sharing.Bodyweight, Sharing.Habits, Sharing.Checkins }
             .Select(b => b ? '1' : '0')),
@@ -26,9 +28,10 @@ public record CheckoutMeta(Guid CoachId, Guid ClientId, Guid? LinkId, Guid? Pack
         if (!m.TryGetValue("logit_client", out var k) || !Guid.TryParse(k, out var clientId)) return null;
         Guid? link = m.TryGetValue("logit_link", out var l) && Guid.TryParse(l, out var lid) ? lid : null;
         Guid? package = m.TryGetValue("logit_package", out var p) && Guid.TryParse(p, out var pid) ? pid : null;
+        Guid? offer = m.TryGetValue("logit_offer", out var o) && Guid.TryParse(o, out var oid) ? oid : null;
         var s = m.TryGetValue("logit_share", out var share) && share.Length == 5 ? share : "11111";
         return new CheckoutMeta(coachId, clientId, link, package,
-            new SharingDto(s[0] == '1', s[1] == '1', s[2] == '1', s[3] == '1', s[4] == '1'));
+            new SharingDto(s[0] == '1', s[1] == '1', s[2] == '1', s[3] == '1', s[4] == '1'), offer);
     }
 }
 
@@ -117,6 +120,10 @@ public class CoachPaymentService(
         }
 
         payment.Mode = PaymentModes.Stripe;
+        payment.PendingPayPackageId = null;
+        payment.PendingPackageId = null;
+        payment.PendingNoPayment = false;
+        payment.Disputed = false;
         payment.PackageId = package?.Id;
         payment.PackageName = package?.Name ?? payment.PackageName;
         payment.AmountCents = package?.AmountCents ?? info.AmountTotal;
@@ -143,6 +150,24 @@ public class CoachPaymentService(
             payment.PaidUntil = now.AddDays(7 * (package?.Weeks ?? 4));
             // Monthly receipts come from invoice.paid; a one-off payment has no invoice.
             await AddReceipt(meta.CoachId, rel.Id, info.SessionId, info.AmountTotal, info.Currency, now, ct);
+        }
+
+        if (meta.OfferId is { } offerId)
+        {
+            // Paying took the spot, even if the offer ran out meanwhile (canvas C2: a little late
+            // is still hers). The request becomes coaching; other coaches end (one at a time).
+            var offer = await db.CoachOffers.FirstOrDefaultAsync(o => o.Id == offerId && o.RelationshipId == rel.Id, ct);
+            if (offer is not null && offer.State != OfferStates.Taken)
+            {
+                offer.State = OfferStates.Taken;
+                offer.ClosedAt = now;
+                rel.RequestStage = null;
+                var client = await db.Users.FirstAsync(u => u.Id == meta.ClientId, ct);
+                CoachIntake.Post(db, rel, meta.ClientId, CoachIntake.Events.Joined,
+                    $"{CoachIntake.NameOf(client)} paid and took the spot. Coaching has started.", new { offerId }, null, now);
+            }
+            await SwitchCoachesAsync(meta.ClientId, meta.CoachId, now, ct);
+            await CoachForms.StartAsync(db, rel, now, ct);
         }
 
         await db.SaveChangesAsync(ct);
@@ -249,12 +274,146 @@ public class CoachPaymentService(
         await db.SaveChangesAsync(ct);
     }
 
+    // ── One coach at a time ──────────────────────────────────────────────────
+
+    /// Taking a spot with `newCoachId` ends coaching with anyone else (canvas J1). A plan paid
+    /// through LogIt stops renewing and coaching runs to the end of what was paid; otherwise it
+    /// ends now. Each old coach is told in their conversation. The caller saves.
+    public async Task SwitchCoachesAsync(Guid clientId, Guid newCoachId, DateTime now, CancellationToken ct)
+    {
+        var client = await db.Users.FirstAsync(u => u.Id == clientId, ct);
+        if (client.IsSample) return;
+        var others = await db.CoachClientRelationships.Include(r => r.Payment).Include(r => r.Coach)
+            .Where(r => r.ClientId == clientId && r.CoachId != newCoachId && !r.Coach.IsSample
+                && (r.Status == CoachClientStatus.Active || r.Status == CoachClientStatus.Paused))
+            .ToListAsync(ct);
+        foreach (var rel in others)
+        {
+            if (rel.Payment is { Mode: PaymentModes.Stripe, State: PaymentStates.Paid, PaidUntil: { } until } && until > now)
+            {
+                await SetStopAtPeriodEndAsync(rel, true, now, ct);
+                rel.EndsAt = until;
+                CoachIntake.Post(db, rel, clientId, CoachIntake.Events.Leaving,
+                    $"{CoachIntake.NameOf(client)} is moving to another coach. Their plan stops renewing, and coaching ends on {until:ddd d MMM}.",
+                    new { endsOnMs = CoachIntake.Ms(until) }, null, now);
+            }
+            else
+            {
+                await StopForEndAsync(rel, RefundRule.None, false, now, ct);
+                rel.Status = CoachClientStatus.Revoked;
+                rel.UpdatedAt = now;
+                CoachIntake.Post(db, rel, clientId, CoachIntake.Events.Leaving,
+                    $"{CoachIntake.NameOf(client)} moved to another coach, so coaching has ended.", null, null, now);
+            }
+        }
+    }
+
+    /// Coaching that was set to end on a date (the client moved to another coach) ends then.
+    private async Task EndScheduledAsync(DateTime now, CancellationToken ct)
+    {
+        var due = await db.CoachClientRelationships.Include(r => r.Payment)
+            .Where(r => r.EndsAt != null && r.EndsAt <= now
+                && (r.Status == CoachClientStatus.Active || r.Status == CoachClientStatus.Paused))
+            .ToListAsync(ct);
+        foreach (var rel in due)
+        {
+            await StopForEndAsync(rel, RefundRule.None, false, now, ct);
+            rel.Status = CoachClientStatus.Revoked;
+            rel.UpdatedAt = now;
+            log.LogInformation("Coaching {RelationshipId} ended on its date (client moved coach)", rel.Id);
+        }
+        if (due.Count > 0) await db.SaveChangesAsync(ct);
+    }
+
+    // ── Stripe telling us things (canvas Z4, K10) ────────────────────────────
+
+    /// The coach's Stripe account changed: read its status again (restricted or fixed).
+    public async Task AccountChangedAsync(string accountId, DateTime now, CancellationToken ct)
+    {
+        var account = await db.CoachPaymentAccounts.FirstOrDefaultAsync(a => a.StripeAccountId == accountId, ct);
+        if (account is null || !stripe.Configured) return;
+        await CoachPaymentEndpoints.TryRefresh(db, stripe, account, now, log, ct);
+    }
+
+    /// A payment was disputed with the client's bank (or the dispute closed).
+    public async Task DisputeChangedAsync(string accountId, string? paymentIntentId, bool open, DateTime now, CancellationToken ct)
+    {
+        if (paymentIntentId is null) return;
+        var account = await db.CoachPaymentAccounts.AsNoTracking().FirstOrDefaultAsync(a => a.StripeAccountId == accountId, ct);
+        if (account is null) return;
+        string? customer;
+        try { customer = await stripe.CustomerOfPaymentAsync(accountId, paymentIntentId, ct); }
+        catch (Exception ex) { log.LogWarning("Couldn't read the disputed payment {Pi}: {Reason}", paymentIntentId, ex.Message); return; }
+        if (customer is null) return;
+        var payment = await db.CoachClientPayments.FirstOrDefaultAsync(p => p.StripeCustomerId == customer && p.Relationship.CoachId == account.CoachId, ct);
+        if (payment is null) return;
+        payment.Disputed = open;
+        payment.UpdatedAt = now;
+        await db.SaveChangesAsync(ct);
+    }
+
+    /// Changes of package (canvas K14) and stopped payments (K18) take effect when the month
+    /// paid for ends: no payment through LogIt, or the new package to pay for.
+    private async Task ApplyPendingChangesAsync(DateTime now, CancellationToken ct)
+    {
+        var due = await db.CoachClientPayments.Include(p => p.Relationship).ThenInclude(r => r.Coach)
+            .Where(p => (p.PendingNoPayment || p.PendingPackageId != null) && p.PaidUntil != null && p.PaidUntil <= now
+                && (p.Relationship.Status == CoachClientStatus.Active || p.Relationship.Status == CoachClientStatus.Paused))
+            .ToListAsync(ct);
+        foreach (var p in due)
+        {
+            var coach = CoachIntake.NameOf(p.Relationship.Coach);
+            if (p.PendingNoPayment)
+            {
+                // Paid another way from now on: coaching carries on unless the coach ends it.
+                p.Mode = PaymentModes.Elsewhere;
+                p.State = PaymentStates.Paid;
+                p.UnpaidSince = null;
+                p.PaidUntil = null;
+                p.StripeSubscriptionId = null;
+                p.StopsAtPeriodEnd = false;
+                p.PendingNoPayment = false;
+                CoachIntake.Post(db, p.Relationship, p.Relationship.CoachId, CoachIntake.Events.PlanChanged,
+                    $"Your plan with {coach} has stopped. You now pay {coach} another way.", null, null, now);
+            }
+            else if (p.PendingPackageId is { } next)
+            {
+                var package = await db.CoachPackages.AsNoTracking().FirstOrDefaultAsync(k => k.Id == next, ct);
+                if (package is null) { p.PendingPackageId = null; continue; }
+                CoachIntake.Post(db, p.Relationship, p.Relationship.CoachId, CoachIntake.Events.PayForChange,
+                    $"Time to pay for {package.Name}: {CoachIntake.Money(package.AmountCents, package.Currency)}. Coaching carries on once it's paid.",
+                    new { packageId = package.Id, packageName = package.Name, amountCents = package.AmountCents, currency = package.Currency, interval = package.Interval }, null, now);
+                // The card is posted once; paying it clears the pending change (FulfillCheckout).
+                p.PendingPackageId = null;
+                p.PendingPayPackageId = package.Id;
+            }
+            p.UpdatedAt = now;
+        }
+        if (due.Count > 0) await db.SaveChangesAsync(ct);
+    }
+
+    /// A coach's pause reaches its date: coaching carries on (Stripe resumes charging by itself).
+    private async Task EndPausesAsync(DateTime now, CancellationToken ct)
+    {
+        var due = await db.CoachClientRelationships.Include(r => r.Coach)
+            .Where(r => r.PausedUntil != null && r.PausedUntil <= now).ToListAsync(ct);
+        foreach (var rel in due)
+        {
+            rel.PausedUntil = null;
+            CoachIntake.Post(db, rel, rel.CoachId, CoachIntake.Events.Resumed, $"{CoachIntake.NameOf(rel.Coach)} is back: coaching carries on.", null, null, now);
+        }
+        if (due.Count > 0) await db.SaveChangesAsync(ct);
+    }
+
     // ── The coach's rule, applied over time ──────────────────────────────────
 
     /// Run hourly: one-off packages that ran out, plans stopped at month end, and the coach's
     /// rule (pause or end coaching N days after a client stopped being paid up).
     public async Task SweepAsync(DateTime now, CancellationToken ct)
     {
+        await EndScheduledAsync(now, ct);
+        await EndPausesAsync(now, ct);
+        await ApplyPendingChangesAsync(now, ct);
         var rows = await db.CoachClientPayments
             .Include(p => p.Relationship)
             .Where(p => p.Relationship.Status == CoachClientStatus.Active
@@ -347,14 +506,96 @@ public class CoachPaymentService(
     }
 
     /// Coaching ended (either side left, or the coach removed the client): stop charging.
-    public async Task CoachingEndedAsync(CoachClientRelationship rel, DateTime now, CancellationToken ct)
+    public Task CoachingEndedAsync(CoachClientRelationship rel, DateTime now, CancellationToken ct) =>
+        StopForEndAsync(rel, RefundRule.None, strict: false, now, ct);
+
+    /// Coaching ends: the plan through LogIt stops now and, following `refund`, money goes back
+    /// to the client's card (by default the days paid for but not used). `strict` turns a Stripe error into a
+    /// CoachingPaymentException instead of a log line, for callers that must not go on when the
+    /// money side didn't happen (deleting an account). Safe to run again after a failure: a
+    /// stopped plan isn't stopped twice and a refund is never made twice.
+    public async Task<EndMoney> StopForEndAsync(
+        CoachClientRelationship rel, RefundRule refund, bool strict, DateTime now, CancellationToken ct)
     {
         var p = rel.Payment ?? await db.CoachClientPayments.FirstOrDefaultAsync(x => x.RelationshipId == rel.Id, ct);
-        if (p is null) return;
+        if (p is null) return EndMoney.None;
         var account = await db.CoachPaymentAccounts.AsNoTracking().FirstOrDefaultAsync(a => a.CoachId == rel.CoachId, ct);
-        await StopStripePlanNow(account, p, now, ct);
+        var paidUntil = p.PaidUntil;
+        await StopStripePlanNow(account, p, now, ct, strict);
+        // Saved before the refund, so a refund that fails leaves the plan recorded as stopped.
         await db.SaveChangesAsync(ct);
+
+        if (refund.Kind == RefundKind.None || p.Mode != PaymentModes.Stripe || account?.StripeAccountId is not { } acct
+            || !stripe.Configured)
+            return EndMoney.None;
+        var money = await RefundAsync(acct, rel, refund, paidUntil, now, strict, ct);
+        await db.SaveChangesAsync(ct);
+        return money;
     }
+
+    /// The share of the last payment for the time left: paid on `paidAt` for the time up to
+    /// `paidUntil`, ending at `now`. Rounded down to the cent, never more than was paid.
+    public static long UnusedShare(long amountCents, DateTime paidAt, DateTime paidUntil, DateTime now)
+    {
+        if (amountCents <= 0 || paidUntil <= paidAt || now >= paidUntil) return 0;
+        if (now <= paidAt) return amountCents;
+        var left = (decimal)(paidUntil - now).Ticks / (paidUntil - paidAt).Ticks;
+        return Math.Clamp((long)Math.Floor(amountCents * left), 0, amountCents);
+    }
+
+    /// The payment a refund would come from: the client's latest one through LogIt.
+    public Task<CoachPaymentReceipt?> LastPaymentAsync(Guid relationshipId, CancellationToken ct) =>
+        db.CoachPaymentReceipts.AsNoTracking()
+            .Where(r => r.RelationshipId == relationshipId && r.AmountCents > 0)
+            .OrderByDescending(r => r.PaidAt)
+            .FirstOrDefaultAsync(ct);
+
+    /// How much a rule gives back from `paid` (covering up to `paidUntil`), never more than it.
+    public static long RefundAmount(RefundRule rule, CoachPaymentReceipt paid, DateTime? paidUntil, DateTime now) => rule.Kind switch
+    {
+        RefundKind.Unused => paidUntil is { } until ? UnusedShare(paid.AmountCents, paid.PaidAt, until, now) : 0,
+        RefundKind.Full => paid.AmountCents,
+        RefundKind.Exact => Math.Clamp(rule.Cents, 0, paid.AmountCents),
+        _ => 0,
+    };
+
+    private async Task<EndMoney> RefundAsync(
+        string accountId, CoachClientRelationship rel, RefundRule rule, DateTime? paidUntil, DateTime now, bool strict, CancellationToken ct)
+    {
+        var paid = await LastPaymentAsync(rel.Id, ct);
+        if (paid is null) return EndMoney.None;
+        // The refund is recorded as a negative receipt keyed on the payment it came from, so
+        // "paid to you" counts it and a second run finds it.
+        var key = RefundKey(paid.ExternalId);
+        if (await db.CoachPaymentReceipts.AnyAsync(r => r.ExternalId == key, ct)) return EndMoney.None;
+        var cents = RefundAmount(rule, paid, paidUntil, now);
+        // Never more than what's left of it after refunds given earlier (canvas Q9).
+        var before = -await db.CoachPaymentReceipts.Where(r => r.ExternalId.StartsWith(key + ":")).SumAsync(r => (long?)r.AmountCents, ct) ?? 0;
+        cents = Math.Min(cents, paid.AmountCents - before);
+        if (cents <= 0) return EndMoney.None;
+        try
+        {
+            var refund = await stripe.RefundAsync(accountId, paid.ExternalId, cents, key, ct);
+            db.CoachPaymentReceipts.Add(new CoachPaymentReceipt
+            {
+                CoachId = rel.CoachId,
+                RelationshipId = rel.Id,
+                ExternalId = key,
+                AmountCents = -cents,
+                Currency = paid.Currency,
+                PaidAt = now,
+            });
+            return new EndMoney(cents, paid.Currency, refund.Status);
+        }
+        catch (Exception ex) when (ex is not CoachingPaymentException)
+        {
+            if (strict) throw new CoachingPaymentException($"Stripe couldn't refund {paid.ExternalId}: {ex.Message}", ex);
+            log.LogWarning("Couldn't refund {Payment} on {Account}: {Reason}", paid.ExternalId, accountId, ex.Message);
+            return new EndMoney(0, paid.Currency, "failed");
+        }
+    }
+
+    internal static string RefundKey(string paymentRef) => "refund:" + paymentRef;
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -373,10 +614,17 @@ public class CoachPaymentService(
         db.CoachClientPayments.Include(p => p.Relationship)
             .FirstOrDefaultAsync(p => p.StripeSubscriptionId == subscriptionId && p.Relationship.CoachId == account.CoachId, ct);
 
-    private async Task StopStripePlanNow(CoachPaymentAccount? account, CoachClientPayment p, DateTime now, CancellationToken ct)
+    private async Task StopStripePlanNow(
+        CoachPaymentAccount? account, CoachClientPayment p, DateTime now, CancellationToken ct, bool strict = false)
     {
         if (p.Mode != PaymentModes.Stripe || p.StripeSubscriptionId is null || p.State == PaymentStates.Ended) return;
-        if (account?.StripeAccountId is { } acct) await TryCancelNow(acct, p.StripeSubscriptionId, ct);
+        if (account?.StripeAccountId is { } acct)
+        {
+            // Without a Stripe key on this server nothing here can reach the plan (it can only be
+            // stopped in the coach's own Stripe dashboard), so waiting for it would never end.
+            if (strict && stripe.Configured) await CancelNowOrThrow(acct, p.StripeSubscriptionId, ct);
+            else await TryCancelNow(acct, p.StripeSubscriptionId, ct);
+        }
         p.State = PaymentStates.Ended;
         p.UnpaidSince ??= now;
         p.UpdatedAt = now;
@@ -389,6 +637,23 @@ public class CoachPaymentService(
         {
             // Already cancelled in Stripe, or Stripe is down: log it so it can be checked by hand.
             log.LogWarning("Couldn't cancel subscription {Sub} on {Account}: {Reason}", subscriptionId, accountId, ex.Message);
+        }
+    }
+
+    /// Cancel, or throw if Stripe can't. A plan Stripe already shows as cancelled counts as done,
+    /// so a retry after a half-finished run goes through.
+    private async Task CancelNowOrThrow(string accountId, string subscriptionId, CancellationToken ct)
+    {
+        try { await stripe.CancelNowAsync(accountId, subscriptionId, ct); }
+        catch (Exception ex)
+        {
+            try
+            {
+                var sub = await stripe.GetSubscriptionAsync(accountId, subscriptionId, ct);
+                if (sub.Status is "canceled" or "incomplete_expired") return;
+            }
+            catch (Exception) { /* Stripe unreachable: report the first error */ }
+            throw new CoachingPaymentException($"Stripe couldn't stop {subscriptionId}: {ex.Message}", ex);
         }
     }
 
@@ -477,6 +742,29 @@ public class CoachPaymentService(
     }
 }
 
+public enum RefundKind { None, Unused, Full, Exact }
+
+/// How much goes back when coaching ends: nothing, the days paid for but not used, the last
+/// payment in full, or an exact amount (capped at what was paid).
+public record RefundRule(RefundKind Kind, long Cents = 0)
+{
+    public static readonly RefundRule None = new(RefundKind.None);
+    public static readonly RefundRule Unused = new(RefundKind.Unused);
+    public static readonly RefundRule Full = new(RefundKind.Full);
+    public static RefundRule Exact(long cents) => new(RefundKind.Exact, cents);
+}
+
+/// What ending coaching did with money: how much went back to the client's card and Stripe's
+/// status for that refund ("succeeded", "pending", or "failed" when it couldn't be made).
+public record EndMoney(long RefundedCents, string Currency, string? RefundStatus)
+{
+    public static readonly EndMoney None = new(0, "eur", null);
+}
+
+/// Stripe didn't do what ending coaching needed (stop a plan, make a refund). Only thrown in
+/// strict mode; the message is for logs, not for people.
+public class CoachingPaymentException(string message, Exception inner) : Exception(message, inner);
+
 public static class PaymentEmails
 {
     public static (string Subject, string Body) ForClientFailed(
@@ -508,10 +796,10 @@ public static class PaymentEmails
             $"{client} (@{username}) paid {Money(p.AmountCents, p.Currency)} for {p.PackageName}{via}.{renews}\n\n" +
             "They're on your client list now." + (clientUrl is null ? "" : $" Give them a program:\n{clientUrl}") + "\n\n" +
             "The money goes to your Stripe account as usual. Stripe sends its own receipt.\n\n" +
-            "LogIt · Turn these off in Coaching › Payments › Packages and settings.");
+            "LogIt · Turn these off in Coaching › Payments › Settings.");
     }
 
-    private static string Money(long cents, string currency)
+    internal static string Money(long cents, string currency)
     {
         var symbol = currency.ToLowerInvariant() switch { "eur" => "€", "gbp" => "£", "usd" => "$", _ => "" };
         var amount = cents % 100 == 0 ? (cents / 100).ToString() : (cents / 100m).ToString("0.00");

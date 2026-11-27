@@ -72,6 +72,7 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
     public DbSet<ServerErrorCount> ServerErrorCounts => Set<ServerErrorCount>();
     public DbSet<BillingSubscription> BillingSubscriptions => Set<BillingSubscription>();
     public DbSet<CoachInviteLink> CoachInviteLinks => Set<CoachInviteLink>();
+    public DbSet<CoachOffer> CoachOffers => Set<CoachOffer>();
     public DbSet<CheckinReview> CheckinReviews => Set<CheckinReview>();
     public DbSet<HostedPlugin> HostedPlugins => Set<HostedPlugin>();
     public DbSet<PluginRelease> PluginReleases => Set<PluginRelease>();
@@ -556,6 +557,15 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
              .WithMany()
              .HasForeignKey(r => r.InviteLinkId)
              .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        model.Entity<CoachOffer>(e =>
+        {
+            e.HasIndex(o => o.RelationshipId);
+            e.Property(o => o.State).HasMaxLength(16);
+            e.Property(o => o.PackageName).HasMaxLength(120);
+            // Goes with the request (and so with either person's account).
+            e.HasOne(o => o.Relationship).WithMany().HasForeignKey(o => o.RelationshipId).OnDelete(DeleteBehavior.Cascade);
         });
 
         model.Entity<CoachInviteLink>(e =>

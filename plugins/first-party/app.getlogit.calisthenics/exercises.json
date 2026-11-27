@@ -1,0 +1,275 @@
+{
+  "formatVersion": 1,
+  "pluginId": "app.getlogit.calisthenics",
+  "exercises": [
+    {
+      "name": "Ring dip",
+      "primaryMuscles": [
+        "chest",
+        "triceps"
+      ],
+      "secondaryMuscles": [
+        "shoulders"
+      ],
+      "exerciseType": "bodyweight"
+    },
+    {
+      "name": "Ring support hold",
+      "primaryMuscles": [
+        "shoulders",
+        "triceps"
+      ],
+      "secondaryMuscles": [
+        "core"
+      ],
+      "exerciseType": "bodyweight"
+    },
+    {
+      "name": "Ring push-up",
+      "primaryMuscles": [
+        "chest",
+        "triceps"
+      ],
+      "secondaryMuscles": [
+        "core"
+      ],
+      "exerciseType": "bodyweight"
+    },
+    {
+      "name": "Ring row",
+      "primaryMuscles": [
+        "back"
+      ],
+      "secondaryMuscles": [
+        "biceps"
+      ],
+      "exerciseType": "bodyweight"
+    },
+    {
+      "name": "Ring muscle-up",
+      "primaryMuscles": [
+        "back",
+        "chest"
+      ],
+      "secondaryMuscles": [
+        "triceps",
+        "biceps"
+      ],
+      "exerciseType": "bodyweight"
+    },
+    {
+      "name": "Bar muscle-up",
+      "primaryMuscles": [
+        "back",
+        "chest"
+      ],
+      "secondaryMuscles": [
+        "triceps"
+      ],
+      "exerciseType": "bodyweight"
+    },
+    {
+      "name": "Archer push-up",
+      "primaryMuscles": [
+        "chest"
+      ],
+      "secondaryMuscles": [
+        "triceps",
+        "shoulders"
+      ],
+      "exerciseType": "bodyweight"
+    },
+    {
+      "name": "Pseudo planche push-up",
+      "primaryMuscles": [
+        "shoulders",
+        "chest"
+      ],
+      "secondaryMuscles": [
+        "triceps",
+        "core"
+      ],
+      "exerciseType": "bodyweight"
+    },
+    {
+      "name": "Planche lean",
+      "primaryMuscles": [
+        "shoulders"
+      ],
+      "secondaryMuscles": [
+        "core",
+        "forearms"
+      ],
+      "exerciseType": "bodyweight"
+    },
+    {
+      "name": "Tuck planche",
+      "primaryMuscles": [
+        "shoulders"
+      ],
+      "secondaryMuscles": [
+        "core",
+        "triceps"
+      ],
+      "exerciseType": "bodyweight"
+    },
+    {
+      "name": "Straddle planche",
+      "primaryMuscles": [
+        "shoulders"
+      ],
+      "secondaryMuscles": [
+        "core",
+        "triceps"
+      ],
+      "exerciseType": "bodyweight"
+    },
+    {
+      "name": "Tuck front lever",
+      "primaryMuscles": [
+        "back"
+      ],
+      "secondaryMuscles": [
+        "core"
+      ],
+      "exerciseType": "bodyweight"
+    },
+    {
+      "name": "Advanced tuck front lever",
+      "primaryMuscles": [
+        "back"
+      ],
+      "secondaryMuscles": [
+        "core"
+      ],
+      "exerciseType": "bodyweight"
+    },
+    {
+      "name": "Front lever",
+      "primaryMuscles": [
+        "back"
+      ],
+      "secondaryMuscles": [
+        "core"
+      ],
+      "exerciseType": "bodyweight"
+    },
+    {
+      "name": "Front lever row",
+      "primaryMuscles": [
+        "back"
+      ],
+      "secondaryMuscles": [
+        "biceps",
+        "core"
+      ],
+      "exerciseType": "bodyweight"
+    },
+    {
+      "name": "Back lever",
+      "primaryMuscles": [
+        "back",
+        "shoulders"
+      ],
+      "secondaryMuscles": [
+        "biceps"
+      ],
+      "exerciseType": "bodyweight"
+    },
+    {
+      "name": "Skin the cat",
+      "primaryMuscles": [
+        "shoulders",
+        "back"
+      ],
+      "secondaryMuscles": [
+        "core"
+      ],
+      "exerciseType": "bodyweight"
+    },
+    {
+      "name": "L-sit",
+      "primaryMuscles": [
+        "core"
+      ],
+      "secondaryMuscles": [
+        "triceps",
+        "quads"
+      ],
+      "exerciseType": "bodyweight"
+    },
+    {
+      "name": "Hanging leg raise",
+      "primaryMuscles": [
+        "core"
+      ],
+      "secondaryMuscles": [
+        "forearms"
+      ],
+      "exerciseType": "bodyweight"
+    },
+    {
+      "name": "Dragon flag",
+      "primaryMuscles": [
+        "core"
+      ],
+      "secondaryMuscles": [
+        "back"
+      ],
+      "exerciseType": "bodyweight"
+    },
+    {
+      "name": "Handstand hold",
+      "primaryMuscles": [
+        "shoulders"
+      ],
+      "secondaryMuscles": [
+        "core",
+        "triceps"
+      ],
+      "exerciseType": "bodyweight"
+    },
+    {
+      "name": "Handstand push-up",
+      "primaryMuscles": [
+        "shoulders",
+        "triceps"
+      ],
+      "secondaryMuscles": [
+        "core"
+      ],
+      "exerciseType": "bodyweight"
+    },
+    {
+      "name": "Pike push-up",
+      "primaryMuscles": [
+        "shoulders"
+      ],
+      "secondaryMuscles": [
+        "triceps"
+      ],
+      "exerciseType": "bodyweight"
+    },
+    {
+      "name": "Pistol squat",
+      "primaryMuscles": [
+        "quads",
+        "glutes"
+      ],
+      "secondaryMuscles": [
+        "core"
+      ],
+      "exerciseType": "bodyweight"
+    },
+    {
+      "name": "Nordic curl",
+      "primaryMuscles": [
+        "hamstrings"
+      ],
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "exerciseType": "bodyweight"
+    }
+  ]
+}

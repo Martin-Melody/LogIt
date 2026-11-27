@@ -275,7 +275,7 @@ public class CoachPaymentTests : IAsyncLifetime
 
     [Theory]
     [InlineData(UserTier.Studio, false, "active")]
-    [InlineData(UserTier.Free, false, "off")]
+    [InlineData(UserTier.Free, false, "notlive")] // trying Studio: real, not live yet (canvas V3)
     [InlineData(UserTier.Free, true, "active")] // self-hosted servers need no plan to coach
     public async Task Paid_links_follow_who_can_coach(UserTier tier, bool selfHosted, string expected)
     {
@@ -319,6 +319,10 @@ public class CoachPaymentTests : IAsyncLifetime
             if (Meanwhile is { } meanwhile) { Meanwhile = null; await meanwhile(); }
             return new StripeSubscriptionInfo(subscriptionId, "active", false, PeriodEnd);
         }
+        public Task PauseCollectionAsync(string accountId, string subscriptionId, DateTime? resumesAt, CancellationToken ct) => Task.CompletedTask;
+        public Task<bool> RetryUnpaidAsync(string accountId, string subscriptionId, CancellationToken ct) => Task.FromResult(true);
+        public Task<string?> CustomerOfPaymentAsync(string accountId, string paymentIntentId, CancellationToken ct) => Task.FromResult<string?>(null);
+        public Task ChangeMonthlyPriceAsync(string accountId, string subscriptionId, long amountCents, string currency, string productName, CancellationToken ct) => Task.CompletedTask;
         public Task SetCancelAtPeriodEndAsync(string accountId, string subscriptionId, bool cancel, CancellationToken ct)
         {
             StopAtEnd.Add((subscriptionId, cancel));
@@ -331,6 +335,8 @@ public class CoachPaymentTests : IAsyncLifetime
             Cancelled.Add(subscriptionId);
             return Task.CompletedTask;
         }
+        public Task<StripeRefund> RefundAsync(string accountId, string paymentRef, long amountCents, string idempotencyKey, CancellationToken ct) =>
+            Task.FromResult(new StripeRefund("re_1", "succeeded"));
     }
 
     private class FakeEmail : IEmailSender

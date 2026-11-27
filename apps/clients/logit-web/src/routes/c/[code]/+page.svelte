@@ -12,13 +12,17 @@
   import { Input } from "$lib/components/ui/input";
   import { Label } from "$lib/components/ui/label";
   import Logo from "@logit/ui/Logo.svelte";
+  import { Button } from "$lib/components/ui/button";
+  import AskForm from "$lib/features/coaching/ask/AskForm.svelte";
+  import AskSent from "$lib/features/coaching/ask/AskSent.svelte";
+  import { shortDate } from "$lib/features/coaching/format";
 
   const PLAY_URL = "https://play.google.com/store/apps/details?id=ie.logit.app";
 
-  // Where a coach's invite link lands. Pick what the coach may see, then send a request
-  // (or, if the coach already invited you by username, accept straight away). A link with a
-  // package is paid: pay on Stripe's page, come back here, and coaching starts at once.
-  // Paying only ever happens here on the web, never in the app.
+  // Where a coach's invite link lands. A free link asks the coach's questions (canvas P2, the
+  // same form as asking from their profile); if the coach already invited you by username,
+  // accepting is straight away. A link with a package is paid: pay on Stripe's page, come back
+  // here, and coaching starts at once. Paying only ever happens on the web, never in the app.
 
   const code = $derived(page.params.code ?? "");
   let info = $state<InviteLinkInfo | null>(null);
@@ -26,6 +30,9 @@
   let sharing = $state<Sharing>({ ...SHARE_ALL });
   let sending = $state(false);
   let done = $state<"requested" | "active" | "paid" | null>(null);
+  let asked = $state<{ relationshipId: string; waiting: boolean } | null>(null);
+  let answers = $state<Record<string, string>>({});
+  let interested = $state<string | null>(null);
   let confirming = $state(false);
 
   // Its own page (no dashboard around it), signed in or not: people open these from a
@@ -125,6 +132,23 @@
     }
   }
 
+  async function ask(a: Record<string, string>, pkg: string | null) {
+    const r = await coachApi.requestCoaching(code, SHARE_ALL, a, pkg);
+    if (r.status === "active") done = "active";
+    else asked = { relationshipId: r.relationshipId, waiting: r.stage === "waiting" };
+  }
+
+  async function signedInNow() {
+    signedIn = true;
+    info = await coachApi.openLink(code);
+    if (info.relationship !== "none" && info.relationship !== "invited")
+      throw new Error(info.relationship === "requested" ? `You've already asked ${coachName}. Your request is in My coach.` : `You're already connected to ${coachName}: see My coach.`);
+  }
+
+  const first = $derived(coachName.trim().split(/\s+/)[0] || coachName);
+  // Canvas A4 / R1: the coach is full and stopped taking requests.
+  const stopped = $derived(!!info?.spots?.full && info.spots.whenFull === "stop");
+
   const closedText = {
     off: "has been turned off",
     expired: "has expired",
@@ -147,6 +171,25 @@
       {p.interval === "month" ? "Charged every month until you stop it. Stop any time in My coach, or ask " + coachName + "." : `Paid once. Coaching runs for ${p.weeks} weeks.`}
     </p>
   </div>
+{/snippet}
+
+{#snippet askHere()}
+  {#if stopped}
+    <p class="text-[14px]">{first} isn't taking new clients right now.{info?.spots?.expectSpots ? ` ${first} expects spots in ${info.spots.expectSpots}.` : ""}</p>
+  {:else}
+    <div class="flex flex-col gap-1">
+      <h2 class="text-lg font-bold tracking-tight">{info?.spots?.full ? `Join ${first}'s waiting list` : `Ask ${first} to coach you`}</h2>
+      <p class="text-[13px] text-muted-foreground">{first} reads these before replying. Only {first} sees your answers.</p>
+    </div>
+    <AskForm coachName={coachName} questions={info?.questions ?? []} bind:answers bind:interested {signedIn}
+      waitingList={!!info?.spots?.full} onsignedin={signedInNow} onsend={ask} />
+  {/if}
+{/snippet}
+
+{#snippet linkOff()}
+  <!-- R1: a switched-off link is just the coach's profile, with no package picked. -->
+  <p class="text-[14px] text-muted-foreground">This link isn't active any more. You can still ask {first} from their profile.</p>
+  <Button href="/ask/{info?.coach.username}" class="self-start">Ask to be coached</Button>
 {/snippet}
 
 {#snippet steps(at: 1 | 2 | 3)}
@@ -182,18 +225,22 @@
       <div class="flex items-center gap-3">
         <Avatar name={coachName} url={info.coach.avatarUrl} size={44} />
         <div>
-          <h1 class="text-base font-bold">{info.isSelf ? "This is your own invite link" : pkg ? `Coaching with ${coachName}` : `${coachName} wants to coach you`}</h1>
+          <h1 class="text-base font-bold">{info.isSelf ? "This is your own invite link" : pkg ? `Coaching with ${coachName}` : coachName}</h1>
           <p class="text-xs text-muted-foreground">@{info.coach.username} on LogIt</p>
         </div>
       </div>
 
       {#if info.isSelf}
         <p class="text-[13px] text-muted-foreground">Share it with people you'd like to coach. {pkg ? "They pay on this page, then coaching starts." : "Their requests show up in"} <a href="/coaching/links" class="text-primary hover:underline">Invite links</a>.</p>
+      {:else if asked}
+        <AskSent coachName={coachName} relationshipId={asked.relationshipId} waiting={asked.waiting} />
       {:else if !signedIn}
         {#if info.state !== "active"}
-          <p class="text-[13px] text-muted-foreground">This link {closedText[info.state as keyof typeof closedText]}. Ask {coachName} for a new one.</p>
+          {@render linkOff()}
         {:else if pkg && !info.paymentsReady}
           <p class="text-[13px] text-muted-foreground">{coachName} can't take payments right now. Let them know, or ask for another link.</p>
+        {:else if !pkg}
+          {@render askHere()}
         {:else}
           {#if pkg}{@render packageCard(pkg)}{/if}
           {#if pkg}{@render steps(1)}{/if}
@@ -242,7 +289,15 @@
           </button>
           <p class="text-center text-xs leading-relaxed text-muted-foreground">Card, Google Pay or Apple Pay on Stripe's secure page. You pay {coachName} directly. Got a discount code from {coachName}? Enter it there.</p>
         {/if}
-      {:else if done === "active" || info.relationship === "active" || done === "requested" || info.relationship === "requested"}
+      {:else if info.relationship === "active" && done !== "active"}
+        <!-- R1: already this coach's client. The link's package isn't offered again. -->
+        <p class="text-[14px]">You're coached by {first}{info.coachedSince ? ` since ${shortDate(Date.parse(info.coachedSince))}` : ""}.</p>
+        <div class="flex gap-2"><Button href="/my-coach">Open My coach</Button><Button variant="outline" href="/my-coach">Message {first}</Button></div>
+        <p class="text-xs text-muted-foreground">Changing package is a conversation with {first}.</p>
+      {:else if info.relationship === "requested" && !pkg && info.relationshipId}
+        <p class="text-[14px]">You've asked {first} already{info.stage === "waiting" ? ", and you're on the waiting list" : ""}.</p>
+        <Button href="/my-coach?request={info.relationshipId}">Open the conversation</Button>
+      {:else if done === "active" || done === "requested"}
         {@const connected = done === "active" || info.relationship === "active"}
         <!-- W6: what happens next, with the app as the next step. -->
         <ol aria-label="What happens next" class="flex flex-col gap-3">
@@ -263,24 +318,27 @@
           <a href="/my-coach" class="text-[13px] text-primary hover:underline">{connected ? "Open My coach on the web ›" : "Change what you share or cancel the request in My coach ›"}</a>
         {/if}
       {:else if info.state !== "active" && info.relationship !== "invited"}
-        <p class="text-[13px] text-muted-foreground">This link {closedText[info.state]}. Ask {coachName} for a new one.</p>
+        {@render linkOff()}
+      {:else if info.relationship !== "invited"}
+        {@render askHere()}
       {:else}
         <p class="text-[13px] leading-relaxed text-muted-foreground">
-          {info.relationship === "invited" ? `${coachName} already invited you. ` : ""}Pick what {coachName} can see. You can change this any time in My coach.
+          {coachName} already invited you. Pick what {coachName} can see. You can change this any time in My coach.
         </p>
         <SharingSwitches {sharing} disabled={sending} onchange={(s) => (sharing = s)} />
         {#if error}<p class="text-xs text-destructive">{error}</p>{/if}
         <button type="button" disabled={sending} onclick={send}
           class="h-10 rounded-[9px] bg-primary text-[13px] font-semibold text-primary-foreground disabled:opacity-50">
-          {info.relationship === "invited" ? `Accept ${coachName} as my coach` : `Send request to ${coachName}`}
+          Accept {coachName} as my coach
         </button>
       {/if}
     </section>
-    {#if signedIn && !info.isSelf && done !== "paid" && (done === "active" || done === "requested" || info.relationship === "active" || info.relationship === "requested")}
+    {#if signedIn && !info.isSelf && done !== "paid" && (done === "active" || asked)}
       <GetTheApp title="Get LogIt on your phone">
         <span class="text-[13px] text-slate-400">{coachName}'s program, check-ins and messages all live in the app.</span>
       </GetTheApp>
     {/if}
     {#if isFree}<p class="text-center text-xs text-muted-foreground">Coaching works on the free plan. Everything happens in the LogIt app.</p>{/if}
+    {#if info.otherCoach && info.relationship !== "active"}<p class="text-center text-xs text-muted-foreground">You're coached by {info.otherCoach}</p>{/if}
   {/if}
 </div>

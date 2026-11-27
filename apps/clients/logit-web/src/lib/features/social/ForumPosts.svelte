@@ -1,6 +1,8 @@
 <!-- Forum posts on the web (design canvas F2, F4–F6): the Forum, one group's posts, one tag's or
      one person's, with sort buttons and New post (title, text, #tags, the group when there is one). -->
 <script lang="ts">
+  import RichTextEditor from "$lib/components/rich-text-editor.svelte";
+  import { richTextPlain } from "@logit/core/domain/richText";
   import type { Snippet } from "svelte";
   import { goto } from "$app/navigation";
   import ChevronUpIcon from "@lucide/svelte/icons/chevron-up";
@@ -11,7 +13,6 @@
   import { forumApi, MAX_TAGS, normalizeTag, SUGGESTED_TAGS, type ForumPost, type PostSort } from "@logit/core/api/forumApi";
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
-  import { Textarea } from "$lib/components/ui/textarea";
   import { Skeleton } from "$lib/components/ui/skeleton";
 
   const {
@@ -86,7 +87,7 @@
     <form class="flex flex-col gap-3 rounded-xl border border-border p-4" onsubmit={(e) => { e.preventDefault(); void post(); }}>
       {#if group}<span class="text-sm text-muted-foreground">In {group.name}</span>{/if}
       <Input bind:value={title} maxlength={200} placeholder="Title" aria-label="Title" />
-      <Textarea bind:value={body} rows={4} maxlength={10000} placeholder="Say more (optional)" aria-label="Post" />
+      <RichTextEditor bind:value={body} label="Post" placeholder="Say more (optional)" maxlength={10000} />
       <Input bind:value={tagText} placeholder="#tags, e.g. #sligo #deadlift" aria-label="Tags" />
       <div class="flex flex-wrap items-center gap-1.5 text-[13px]">
         {#each tags as t (t)}<span class="rounded-full bg-muted px-2.5 py-0.5 text-sky-700 dark:text-sky-300">#{t}</span>{/each}
@@ -95,7 +96,7 @@
         {/each}
       </div>
       <p class="text-xs text-muted-foreground">Anyone can read this, in LogIt and on getlogit.app, and find it by its tags.</p>
-      <div class="flex justify-end gap-2"><Button variant="outline" type="button" onclick={() => (writing = false)}>Cancel</Button><Button type="submit" disabled={posting || !title.trim()}>Post</Button></div>
+      <div class="flex justify-end gap-2"><Button variant="outline" type="button" onclick={() => (writing = false)}>Cancel</Button><Button type="submit" disabled={posting || !title.trim() || body.length > 10000}>Post</Button></div>
     </form>
   {/if}
   {@render top?.()}
@@ -114,7 +115,7 @@
             <span class="flex items-center gap-2 text-[11px] text-muted-foreground">{#if p.pinned}<PinIcon class="size-3" />Pinned{/if}{#if p.group && !filter.group}<span class="rounded border border-border px-1.5 py-0.5">{p.group.name}</span>{/if}</span>
           {/if}
           <a href="/social/forum/{p.id}" class="text-[15px] font-semibold after:absolute after:inset-0 after:content-['']">{p.deleted ? "Removed" : p.title}</a>
-          {#if p.body}<span class="line-clamp-2 text-sm text-muted-foreground">{p.body}</span>{/if}
+          {#if p.body}<span class="line-clamp-2 text-sm text-muted-foreground">{richTextPlain(p.body)}</span>{/if}
           {#if p.tags.length}<span class="text-[13px] text-sky-700 dark:text-sky-300">{p.tags.map((t) => `#${t}`).join(" ")}</span>{/if}
           <span class="flex items-center gap-3 text-xs text-muted-foreground"><span class="flex items-center gap-0.5"><ChevronUpIcon class="size-3.5" />{p.upvotes}</span><span class="flex items-center gap-1"><MessageCircleIcon class="size-3.5" />{p.commentCount}</span><span class="ml-auto">{#if p.author}<a href="/social/{p.author.username}" class="relative z-10 font-medium text-foreground hover:underline">{p.author.displayName || p.author.username}</a>{:else}Deleted account{/if} · {ago(p.lastActivityAtMs)}</span></span>
         </div>

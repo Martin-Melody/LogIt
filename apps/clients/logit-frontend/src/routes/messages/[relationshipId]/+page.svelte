@@ -1,4 +1,9 @@
 <script lang="ts">
+  import GoalSuggestionCard from "$lib/features/coaching/GoalSuggestionCard.svelte";
+  import { checkinReplyLabel, parseCheckinReply } from "@logit/core/domain/savedReplies";
+  import { parseMonthReport } from "@logit/core/domain/monthReport";
+  import MonthReportCard from "$lib/features/coaching/MonthReportCard.svelte";
+  import { parseGoalSuggestion } from "@logit/core/domain/goalSuggestion";
   import { Spinner } from "$lib/components/ui/spinner/index.js";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
   import BackButton from "$lib/components/navigation/BackButton.svelte";
@@ -23,9 +28,19 @@
   import { StagedPhoto } from "$lib/features/chat/stagedPhoto.svelte";
   import { back } from "$lib/navigation";
   import type { CoachMessage } from "@logit/core/domain/CoachMessage";
+  import { eventLine, readerOf, type RequestEvent } from "@logit/core/domain/coachRequest";
   import { getMessagesRepo } from "$lib/data/repoProvider";
   import { pullAndMergeMessages, markThreadRead } from "$lib/sync/syncService";
   import { sendMessage } from "$lib/usecases/messages/sendMessage";
+  import { coachApi } from "@logit/core/api/coachApi";
+  import { getProgramProgress } from "@logit/core/domain/CoachProgram";
+  import { createRemoteCoachProgramRepo } from "@logit/core/data/remote/remoteCoachProgramRepo";
+  import { authStore } from "$lib/api/authStore.svelte";
+  import { Button } from "$lib/components/ui/button";
+  import { Repeat } from "lucide-svelte";
+  import { clientLine } from "$lib/features/coaching/coachToday";
+  import SavedReplyPicker from "$lib/features/coaching/SavedReplyPicker.svelte";
+  import SwapInProgramSheet from "$lib/features/coaching/SwapInProgramSheet.svelte";
 
   const props = $props<{ params: { relationshipId: string } }>();
   const relationshipId = $derived(props.params.relationshipId);
@@ -33,6 +48,19 @@
 
   const ui = $state({ loading: true, sending: false, error: null as string | null });
   let messages = $state<CoachMessage[]>([]);
+  // Canvas W6: when you're the coach here, their program week, saved replies and a swap.
+  let coachOf = $state<{ id: string; username: string; name: string; line: string } | null>(null);
+  let repliesOpen = $state(false);
+  let swapping = $state(false);
+  let swapHint = $state("");
+  onMount(async () => {
+    const roster = await coachApi.getRoster().catch(() => []);
+    const r = roster.find((x) => x.relationshipId === relationshipId);
+    if (!r) return;
+    const programs = (await createRemoteCoachProgramRepo().listMyPrograms({ recipientId: r.client.id }).catch(() => [])).map((m) => m.program);
+    const program = programs.filter((p) => !p.archived && getProgramProgress(p).status !== "finished").sort((a, b) => b.updatedAtMs - a.updatedAtMs)[0] ?? null;
+    coachOf = { id: r.client.id, username: r.client.username, name: r.client.displayName || r.client.username, line: clientLine(r, program) };
+  });
   let draft = $state("");
   let attachOpen = $state(false);
   // A picked photo waits above the box so a caption can go with it (canvas boards 18 and 20).
@@ -96,16 +124,27 @@
       toast.error("Reactions need a connection. Try again when you're online.");
     }
   }
+  /** My answer to a goal suggestion in this conversation, if I gave one. */
+  function answerTo(id: string): boolean | null {
+    for (const m of messages) {
+      if (m.kind !== "goal-answer" || !m.mine) continue;
+      try { const a = JSON.parse(m.cardJson ?? "") as { id?: string; used?: boolean }; if (a.id === id) return !!a.used; } catch { /* not ours */ }
+    }
+    return null;
+  }
+
   const reactionsOf = (m: CoachMessage) => (m.reaction ? [{ emoji: m.reaction, count: 1, mine: !m.mine }] : []);
 
   // Runs of messages from one side (shadcn Message): joined corners, one time under the run.
   const runs = $derived.by(() => {
-    const out: { key: string; mine: boolean; time: boolean; items: CoachMessage[] }[] = [];
+    const out: { key: string; mine: boolean; time: boolean; event: boolean; items: CoachMessage[] }[] = [];
     messages.forEach((m, i) => {
       const time = i === 0 || m.createdAtMs - messages[i - 1]!.createdAtMs > 3_600_000;
+      // A step from before coaching started (an offer, the waiting list…): a line of its own.
+      const event = !!m.kind && m.kind !== "checkin-reply";
       const prev = out.at(-1);
-      if (prev && !time && prev.mine === m.mine) prev.items.push(m);
-      else out.push({ key: m.id, mine: m.mine, time, items: [m] });
+      if (prev && !time && !event && !prev.event && prev.mine === m.mine) prev.items.push(m);
+      else out.push({ key: m.id, mine: m.mine, time, event, items: [m] });
     });
     return out;
   });
@@ -125,7 +164,10 @@
 <div class="flex h-full flex-col">
   <PageHeader>
     <BackButton onclick={() => back("/messages")} />
-    <h1 class="page-title">{name}</h1>
+    <span class="flex min-w-0 flex-col">
+      <h1 class="page-title">{coachOf?.name ?? name}</h1>
+      {#if coachOf?.line}<span class="truncate text-[12px] text-muted-foreground">{coachOf.line}</span>{/if}
+    </span>
   </PageHeader>
 
   {#if ui.error}<p class="px-3 py-2 text-sm text-destructive shrink-0">{ui.error}</p>{/if}
@@ -139,6 +181,16 @@
       {#each runs as run (run.key)}
         {@const last = run.items.at(-1)!}
         {#if run.time}<p class="py-2 text-center text-[12px] text-muted-foreground">{fmt(run.items[0]!.createdAtMs)}</p>{/if}
+        {#if run.event && last.kind === "goal-suggestion" && !last.mine && parseGoalSuggestion(last.cardJson)}
+          {@const s = parseGoalSuggestion(last.cardJson)!}
+          <!-- Canvas GL1: the coach suggests a change to my goal. -->
+          <GoalSuggestionCard suggestion={s} coachName={name} {relationshipId} answered={answerTo(s.id)} onanswer={() => void refresh()} />
+        {:else if run.event && last.kind === "month-report" && parseMonthReport(last.cardJson)}
+          <MonthReportCard report={parseMonthReport(last.cardJson)!} coachName={name} />
+        {:else if run.event}
+          {@const k = last.kind as RequestEvent}
+          <p class="px-6 py-1 text-center text-[13px] leading-snug text-muted-foreground">{eventLine(k, readerOf(k, last.mine), name, name) || last.body}</p>
+        {:else}
         <Message.Root align={run.mine ? "end" : "start"} class="shrink-0 text-[15px]">
           <Message.Content class="gap-1">
             {#each run.items as m, k (m.id)}
@@ -157,8 +209,9 @@
                   {#if m.photo}<div class={joinedKids(m.mine, first, end)}><MessagePhoto url={m.photo.url} width={m.photo.width} height={m.photo.height} mine={m.mine} /></div>{/if}
                   {#if m.voice}<div class={joinedKids(m.mine, first, end)}><VoiceMessage voice={m.voice} mine={m.mine} /></div>{/if}
                   {#if m.body}
+                    {@const replyTo = m.kind === "checkin-reply" ? parseCheckinReply(m.cardJson) : null}
                     <Bubble.Root variant={m.mine ? "default" : "muted"} align={m.mine ? "end" : "start"} class="max-w-[78%]">
-                      <Bubble.Content class="rounded-[20px] px-3.5 py-2 text-[15px] leading-snug {joined(m.mine, first, end)}"><ChatText text={m.body} /></Bubble.Content>
+                      <Bubble.Content class="rounded-[20px] px-3.5 py-2 text-[15px] leading-snug {joined(m.mine, first, end)}">{#if replyTo}<span class="mb-1 inline-block rounded-md bg-background/60 px-1.5 py-0.5 text-[12px] font-semibold text-muted-foreground">Check-in · {checkinReplyLabel(replyTo)}</span><br />{/if}<ChatText text={m.body} /></Bubble.Content>
                     </Bubble.Root>
                   {/if}
                 {/if}
@@ -168,6 +221,7 @@
             <Message.Footer class="px-1 text-[12px] font-normal">{new Date(last.createdAtMs).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}{#if run.items.some((m) => m.mine && !m.synced)} · sending…{/if}</Message.Footer>
           </Message.Content>
         </Message.Root>
+        {/if}
       {/each}
     {/if}
   </div>
@@ -176,6 +230,13 @@
     <VoiceRecorderBar onsend={sendVoice} oncancel={() => (recording = false)} />
   {:else}
   <StagedPhotoCard {staged} />
+  {#if coachOf}
+    <SavedReplyPicker bind:draft bind:open={repliesOpen} fill={{ firstName: coachOf.name.split(" ")[0], coachName: authStore.user?.displayName || authStore.user?.username || null }} />
+    <div class="flex shrink-0 gap-2 overflow-x-auto px-3 pt-2">
+      <Button variant="outline" size="sm" class="h-9 rounded-full" aria-expanded={repliesOpen} onclick={() => (repliesOpen = !repliesOpen)}>Saved replies</Button>
+      <Button variant="outline" size="sm" class="h-9 rounded-full" onclick={() => { swapHint = messages.filter((m) => !m.mine).at(-1)?.body ?? ""; swapping = true; }}>Swap it in {coachOf.name.split(" ")[0]}'s program</Button>
+    </div>
+  {/if}
   <form class="flex shrink-0 items-end gap-2 {staged.current ? '' : 'border-t'} border-border px-3 py-2" onsubmit={(e) => { e.preventDefault(); void send(); }}>
     <InputGroup.Root class="min-h-11 flex-1 rounded-[22px] dark:bg-transparent">
       <InputGroup.Addon align="inline-start" class="self-end pb-0.5">
@@ -219,7 +280,10 @@
   open={!!picked}
   onOpenChange={(v) => { if (!v) picked = null; }}
   title={picked?.mine ? "Your message" : `${name}'s message`}
-  items={picked?.body ? [{ icon: Copy, label: "Copy text", onSelect: () => { const b = picked?.body ?? ""; void navigator.clipboard?.writeText(b).then(() => toast.success("Copied")); } }] : []}
+  items={picked?.body ? [
+    { icon: Copy, label: "Copy text", onSelect: () => { const b = picked?.body ?? ""; void navigator.clipboard?.writeText(b).then(() => toast.success("Copied")); } },
+    ...(coachOf && !picked.mine ? [{ icon: Repeat, label: `Swap it in ${coachOf.name.split(" ")[0]}'s program`, onSelect: () => { swapHint = picked?.body ?? ""; swapping = true; } }] : []),
+  ] : []}
 >
   {#snippet header()}
     {#if picked && !picked.mine}
@@ -234,3 +298,6 @@
     {/if}
   {/snippet}
 </ActionSheet>
+{#if coachOf}
+  <SwapInProgramSheet bind:open={swapping} {relationshipId} clientId={coachOf.id} username={coachOf.username} name={coachOf.name} hint={swapHint} />
+{/if}

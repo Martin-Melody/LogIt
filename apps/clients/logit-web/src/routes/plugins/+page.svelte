@@ -22,7 +22,9 @@
   const tab = $derived<Tab>((["installed", "mine"] as const).find((t) => t === page.url.searchParams.get("tab")) ?? "browse");
 
   let query = $state("");
-  let family = $state<string>("all");
+  // ?family=… opens on one kind (the program builder's "Find more" links here).
+  // svelte-ignore state_referenced_locally
+  let family = $state<string>(page.url.searchParams.get("family") ?? "all");
   let mine = $state<MyPlugin[] | null>(null);
   let loadError = $state<string | null>(null);
   let installing = $state<ServedManifest | null>(null);
@@ -37,6 +39,8 @@
     ["nutrition", "Nutrition"],
     ["exercise-pack", "Exercise packs"],
     ["mobility-pack", "Mobility packs"],
+    ["program-pack", "Program packs"],
+    ["workout-block", "Workout blocks"],
   ];
 
   const shown = $derived.by(() => {
@@ -161,7 +165,10 @@
             <span class="text-xs text-muted-foreground">Gets: {getsSummary(e.family, e.needs ?? undefined)}</span>
             <div class="mt-auto flex items-center justify-between gap-2">
               <span class="rounded-full bg-emerald-500/12 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">Reviewed</span>
-              {#if have && have.manifest.version === e.version}
+              {#if e.family === "program-pack"}
+                <!-- Programs coaches copy into their own: nothing to install. -->
+                <a href="/coaching/programs?start=community" class={btnPri}>Open in Programs</a>
+              {:else if have && have.manifest.version === e.version}
                 <span class="text-xs text-muted-foreground">Installed</span>
               {:else}
                 <button type="button" disabled={busyId === e.id} onclick={() => openInstall(e)} class={btnPri}>{have?.source === "draft" ? "Install published" : have ? "Update" : "Install"}</button>

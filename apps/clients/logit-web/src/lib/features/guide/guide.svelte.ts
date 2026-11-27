@@ -8,6 +8,7 @@ import { CHAPTERS } from "@logit/core/guide/walkthroughs";
 import { emptyProgress, markDone, markUndone, routeMatches, type GuideProgress } from "@logit/core/guide/progress";
 import type { Chapter, Step, Walkthrough } from "@logit/core/guide/types";
 import { onGuideSignal } from "./signal";
+import { practice } from "./sandbox.svelte";
 
 const LOCAL_KEY = "logit-web:guide:v1";
 
@@ -145,6 +146,8 @@ class Guide {
     if (this.isDone(chapterId)) this.progress = markUndone(this.progress, chapterId);
     this.panelOpen = false;
     this.paused = false;
+    // A chapter done on the sample clients happens in Practice view, so only they show (V5).
+    if (chapter.usesSamples && this.studioMode === "samples") practice.set(true);
     this.active = { chapterId, index };
     this.goToStepPage();
   }
@@ -153,7 +156,7 @@ class Guide {
   private goToStepPage() {
     const s = this.step;
     if (!s || /\[/.test(s.route)) return;
-    if (!routeMatches(s.route, location.pathname)) void goto(s.route);
+    if (!routeMatches(s.route, location.pathname, location.search)) void goto(s.route);
   }
 
   next() {

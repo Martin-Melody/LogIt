@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { PluginConsent } from "@logit/core/api/coachApi";
   import * as Table from "$lib/components/ui/table/index.js";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
@@ -11,9 +12,28 @@
   import { viewingClient } from "$lib/viewingClient.svelte";
   import { sessionVolumeKg } from "$lib/features/sessionVolume";
   import NotShared from "./NotShared.svelte";
+  import TrainingProgramCard from "./TrainingProgramCard.svelte";
+  import { currentProgram, type ProgramStatus } from "../coachingData";
+  import { getWebCoachProgramRepo } from "$lib/deps";
+  import { loadWebLibrary } from "$lib/features/library/libraryData";
+  import { programSwaps, type ProgramSwap } from "@logit/core/domain/swaps";
   import { weekdayDate } from "../format";
 
-  let { clientId, name, sharing }: { clientId: string; name: string; sharing: Sharing } = $props();
+  let { clientId, relationshipId, username, name, sharing, pluginConsent = {} }: { clientId: string; relationshipId: string; username: string; name: string; sharing: Sharing; pluginConsent?: PluginConsent } = $props();
+
+  // Canvas PG7: the program they're on, at the top.
+  let program = $state<ProgramStatus | null>(null);
+  let swaps = $state<ProgramSwap[]>([]);
+  async function loadProgram() {
+    const mine = await getWebCoachProgramRepo().listMyPrograms({ recipientId: clientId }).catch(() => []);
+    program = currentProgram(mine.map((m) => m.program));
+    if (sharing.workouts && program) {
+      const ids = new Set(mine.map((m) => m.program.id));
+      const fromMine = sessions.filter((x) => x.source?.kind === "program" && ids.has(x.source.parentId));
+      const library = fromMine.length ? await loadWebLibrary().then((l) => l.entries).catch(() => []) : [];
+      swaps = fromMine.length ? programSwaps(fromMine, library, { sinceMs: Date.now() - 28 * 86_400_000 }) : [];
+    }
+  }
 
   const DAY = 86_400_000;
   let sessions = $state<WorkoutSession[]>([]);
@@ -22,11 +42,12 @@
   let open = $state<string | null>(null);
 
   onMount(async () => {
-    if (!sharing.workouts) return;
+    if (!sharing.workouts) return void loadProgram();
     try {
       const all = await getWebDeps(clientId).workoutRepo.listAllSessions();
       sessions = all.filter((s) => s.endedAtMs != null).sort((a, b) => b.startedAtMs - a.startedAtMs);
-      open = sessions[0]?.id ?? null;
+      open = null;
+      await loadProgram();
     } catch (e) {
       error = e instanceof Error ? e.message : "Couldn't load their workouts";
     } finally {
@@ -62,9 +83,45 @@
         const sorted = pts.sort((a, b) => a.t - b.t);
         const first = sorted[0].e1rm;
         const now = Math.max(...sorted.slice(-2).map((p) => p.e1rm));
-        return { lift, pts: sorted, now: Math.round(now), change: Math.round(now - first) };
+        const weekAgo = Date.now() - 7 * DAY;
+        const fourAgo = sorted.filter((p) => p.t <= Date.now() - 28 * DAY).at(-1)?.e1rm ?? null;
+        return { lift, pts: sorted, now: Math.round(now), change: Math.round(now - first), fourAgo: fourAgo == null ? null : Math.round(fourAgo), best: bestThisWeek(lift, weekAgo), next: nextTime(lift) };
       });
   });
+
+  /** Their best working set of a lift in the last 7 days: "80 × 6". */
+  function bestThisWeek(lift: string, since: number): string | null {
+    let best: { weight: number; reps: number } | null = null;
+    for (const s of sessions) {
+      if (s.startedAtMs < since) continue;
+      for (const b of s.blocks) {
+        if (b.type !== "strength" || blockDisplayName(b) !== lift) continue;
+        const set = bestWorkingSet((b.data as StrengthBlockData).sets);
+        if (set && (!best || estimated1RM(set.weight, set.reps) > estimated1RM(best.weight, best.reps))) best = set;
+      }
+    }
+    return best ? `${best.weight} × ${best.reps}` : null;
+  }
+
+  /** What the program plans for a lift next: the first day not done yet this week, else next week. */
+  function nextTime(lift: string): string | null {
+    const p = program?.program;
+    if (!p || program?.state !== "running" || !program.week) return null;
+    const key = lift.trim().toLowerCase();
+    for (const n of [program.week, program.week + 1]) {
+      const w = p.weeks.find((x) => x.weekNumber === n);
+      for (const d of [...(w?.days ?? [])].sort((a, b) => a.orderIndex - b.orderIndex)) {
+        if (n === program.week && sessions.some((s) => s.source?.kind === "program" && s.source.dayId === d.id && s.startedAtMs >= Date.now() - 7 * DAY)) continue;
+        const b = d.blocks.find((x) => x.type === "strength" && x.exerciseName.trim().toLowerCase() === key);
+        if (b?.type !== "strength") continue;
+        const set = [...b.sets].filter((s) => s.setType !== "warmup").sort((a, c) => a.orderIndex - c.orderIndex)[0];
+        if (!set) continue;
+        const reps = set.reps ?? set.repsMin;
+        return set.weight ? `${set.weight} × ${reps ?? "?"}` : reps ? `${reps} reps` : null;
+      }
+    }
+    return null;
+  }
 
   function spark(pts: { e1rm: number }[]): string {
     const lo = Math.min(...pts.map((p) => p.e1rm));
@@ -83,8 +140,11 @@
   }
 </script>
 
+<div class="mb-4">
+  <TrainingProgramCard status={program} {clientId} {relationshipId} {username} {name} {sessions} {swaps} {pluginConsent} shared={sharing.workouts} onchange={loadProgram} />
+</div>
 {#if !sharing.workouts}
-  <NotShared {name} what="their workouts" note="You can still assign them programs." />
+  <NotShared {name} what="their workouts" note="You can still give them programs." />
 {:else if error}
   <p class="text-sm text-destructive">{error}</p>
 {:else if loading}
@@ -93,7 +153,7 @@
   <div class="flex flex-wrap items-start gap-4">
     <section class="min-w-0 flex-[2_1_520px] rounded-[10px] border border-border bg-card px-1.5 py-2">
       <div class="flex items-baseline justify-between px-3 pb-1 pt-2">
-        <h2 class="text-sm font-semibold">Sessions</h2>
+        <h2 class="text-sm font-semibold">Recent sessions</h2>
         <span class="text-xs text-muted-foreground">Last 4 weeks · {recent.length}</span>
       </div>
       <div class="overflow-x-auto">
@@ -133,12 +193,19 @@
 
     <div class="flex flex-[1_1_300px] flex-col gap-4">
       <section class="flex flex-col rounded-[10px] border border-border bg-card px-[18px] py-4">
-        <div class="flex items-baseline justify-between pb-1.5"><h2 class="text-sm font-semibold">Main lifts</h2><span class="text-xs text-muted-foreground">Estimated 1RM · 12 weeks</span></div>
+        <div class="flex items-baseline justify-between pb-1.5"><h2 class="text-sm font-semibold">{name.split(" ")[0]}'s main lifts</h2><span class="text-xs text-muted-foreground">Strength estimate · 12 weeks</span></div>
         {#each lifts as l (l.lift)}
-          <div class="flex items-center justify-between gap-3 border-t border-border py-2.5">
-            <span class="min-w-0 flex-1 truncate text-[13px]">{l.lift}</span>
-            <svg width="90" height="24" viewBox="0 0 90 24" role="img" aria-label="{l.lift} trend"><polyline points={spark(l.pts)} fill="none" stroke="currentColor" stroke-width="1.6" class="text-muted-foreground"></polyline></svg>
-            <span class="whitespace-nowrap text-[13px] font-semibold">{l.now} kg <span class="text-xs font-normal {l.change > 0 ? 'text-success' : 'text-muted-foreground'}">{l.change > 0 ? `+${l.change}` : l.change === 0 ? "±0" : `${l.change}`}</span></span>
+          <div class="flex flex-col gap-1 border-t border-border py-2.5">
+            <div class="flex items-center justify-between gap-3">
+              <span class="min-w-0 flex-1 truncate text-[13px] font-medium">{l.lift}</span>
+              <svg width="70" height="24" viewBox="0 0 90 24" role="img" aria-label="{l.lift} trend"><polyline points={spark(l.pts)} fill="none" stroke="currentColor" stroke-width="1.6" class="text-muted-foreground"></polyline></svg>
+              <span class="whitespace-nowrap text-[13px] font-semibold">{l.now} kg</span>
+            </div>
+            <dl class="grid grid-cols-3 gap-2 text-xs">
+              <div><dt class="text-muted-foreground">Best this week</dt><dd>{l.best ?? "–"}</dd></div>
+              <div><dt class="text-muted-foreground">4 weeks ago</dt><dd>{l.fourAgo != null ? `${l.fourAgo} kg` : "–"}</dd></div>
+              <div><dt class="text-muted-foreground">Next time</dt><dd class={l.next ? "text-info" : ""}>{l.next ?? "–"}</dd></div>
+            </dl>
           </div>
         {:else}
           <p class="border-t border-border py-3 text-[13px] text-muted-foreground">Not enough lifting yet to show a trend.</p>

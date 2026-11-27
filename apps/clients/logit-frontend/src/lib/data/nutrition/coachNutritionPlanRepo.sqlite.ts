@@ -1,5 +1,6 @@
 import type { AssignedNutritionPlanRepo } from "@logit/core/data/coachNutritionPlanRepo";
-import type { CoachNutritionPlan } from "@logit/core/domain/CoachNutritionPlan";
+import { planOn, type CoachNutritionPlan } from "@logit/core/domain/CoachNutritionPlan";
+import { localDateIso } from "@logit/core/domain/nutrition";
 import { getDb } from "$lib/data/db/sqlite";
 import { getActiveOwnerId } from "$lib/data/activeOwner";
 import { nowMs } from "@logit/core/domain/time";
@@ -29,7 +30,15 @@ export function createSqliteCoachNutritionPlanRepo(): AssignedNutritionPlanRepo 
     },
 
     async getAssignedPlan(): Promise<CoachNutritionPlan | null> {
-      return (await this.listAssignedPlans())[0] ?? null;
+      return planOn(await this.listPlanHistory!(), localDateIso());
+    },
+
+    async listPlanHistory(): Promise<CoachNutritionPlan[]> {
+      const res = await getDb().query(
+        `SELECT data_json FROM coach_nutrition_plans WHERE owner_id = ? OR owner_id IS NULL`,
+        [getActiveOwnerId()],
+      );
+      return ((res.values ?? []) as { data_json: string }[]).map((r) => parse(r.data_json)).filter((p): p is CoachNutritionPlan => p !== null);
     },
 
     async upsertFromRemote(plan: CoachNutritionPlan): Promise<void> {

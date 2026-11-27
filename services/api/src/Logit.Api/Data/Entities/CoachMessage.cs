@@ -47,4 +47,10 @@ public class CoachMessage
     public DateTime? ReactedAt { get; set; }
     /// When the push dispatcher dealt with the reaction (null = not yet).
     public DateTime? ReactionPushedAt { get; set; }
+    /// Set when the message records something that happened to the request (CoachIntake.Events:
+    /// "offer", "offer-changed", "offer-withdrawn", "waitlist", "closed", "reopened", "joined").
+    /// Body still says it in words, for apps that don't draw the card.
+    public string? Kind { get; set; }
+    /// What the card shows (an offer's package and price, held-until date…), as JSON.
+    public string? CardJson { get; set; }
 }

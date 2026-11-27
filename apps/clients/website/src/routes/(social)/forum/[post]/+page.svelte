@@ -6,7 +6,9 @@
   import { PLAY_URL, SITE_URL } from "$lib/site";
   import ChevronUp from "@lucide/svelte/icons/chevron-up";
   import { ask, logIn } from "$lib/social/prompt.svelte";
-  import RichText from "$lib/social/RichText.svelte";
+  import RichText from "@logit/ui/RichText.svelte";
+  import PlainText from "$lib/social/RichText.svelte";
+  import { richTextPlain } from "@logit/core/domain/richText";
   import { shortDate } from "$lib/social/publicApi";
   import { page } from "$app/state";
 
@@ -16,12 +18,12 @@
   const photo = (url: string | null) => (url ? (url.startsWith("/") ? `${data.api}${url}` : url) : null);
   const when = shortDate;
   const who = (c: { author: { displayName: string; username: string } | null }) => (c.author ? c.author.displayName || c.author.username : "Deleted account");
-  const description = $derived((post.body || post.title).replace(/\s+/g, " ").slice(0, 155));
+  const description = $derived((richTextPlain(post.body ?? "") || post.title).slice(0, 155));
   const jsonLd = $derived(JSON.stringify({
     "@context": "https://schema.org",
     "@type": "DiscussionForumPosting",
     headline: post.title,
-    text: post.body,
+    text: richTextPlain(post.body ?? ""),
     datePublished: new Date(post.createdAtMs).toISOString(),
     author: { "@type": "Person", name: who(post) },
     url: `${SITE_URL}${page.url.pathname}`,
@@ -44,7 +46,7 @@
   {#each nodes as n (n.comment.id)}
     <li class="flex flex-col gap-1 border-l border-border pl-4">
       <span class="text-sm"><strong class="font-semibold text-heading">{n.comment.deleted ? "Removed" : who(n.comment)}</strong><span class="text-muted-foreground">{" · "}{when(n.comment.createdAtMs)}{n.comment.upvotes ? ` · ${n.comment.upvotes} upvotes` : ""}</span></span>
-      {#if n.comment.deleted}<p class="text-[15px] italic leading-relaxed text-muted-foreground">This comment was removed.</p>{:else}<RichText text={n.comment.body} class="text-[15px] leading-relaxed" />{/if}
+      {#if n.comment.deleted}<p class="text-[15px] italic leading-relaxed text-muted-foreground">This comment was removed.</p>{:else}<PlainText text={n.comment.body} class="text-[15px] leading-relaxed" />{/if}
       {#if n.replies.length}<ul class="mt-2 flex flex-col gap-3">{@render comments(n.replies)}</ul>{/if}
     </li>
   {/each}

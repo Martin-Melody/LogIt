@@ -1,20 +1,15 @@
 // The coach sandbox on the web: the sample clients, adding / resetting / removing them, and
 // the loop that lets them act (sandboxDriver in core). Pages that show what samples do
 // (requests, check-ins, messages, a client's programs) reload on onSampleActivity.
+import { emitSampleActivity } from "./sampleActivity";
 import { sandboxApi, type SandboxClient } from "@logit/core/api/sandboxApi";
 import { addSampleClients, removeSampleClients, resetSampleClients, runSampleClients } from "@logit/core/guide/sandboxDriver";
 import { SAMPLE_CLIENTS } from "@logit/core/guide/sandbox";
+import { apiClient } from "@logit/core/api/client";
 import { coachBadges } from "$lib/features/coaching/badges.svelte";
 
 const TICK_MS = 4_000;
-type Listener = () => void;
-const listeners = new Set<Listener>();
-
-/** Call to reload when a sample client did something (asked to join, sent a check-in, replied). */
-export function onSampleActivity(l: Listener): () => void {
-  listeners.add(l);
-  return () => listeners.delete(l);
-}
+export { onSampleActivity } from "./sampleActivity";
 
 class Sandbox {
   clients = $state<SandboxClient[]>([]);
@@ -40,6 +35,7 @@ class Sandbox {
   }
 
   private async doRefresh() {
+    const before = practice.on;
     try {
       this.clients = await sandboxApi.list();
     } catch {
@@ -47,6 +43,9 @@ class Sandbox {
     }
     this.loaded = true;
     this.loop();
+    // Pages often load before this answers: if Practice view turned out different from what
+    // they assumed, they load again (otherwise real people show in Practice view, or samples outside it).
+    if (practice.on !== before) this.notify();
   }
 
   private async run<T>(work: () => Promise<T>) {
@@ -63,13 +62,14 @@ class Sandbox {
     }
   }
 
-  add = () => this.run(() => addSampleClients());
+  // Adding samples opens Practice view, to see them; removing them closes it.
+  add = () => this.run(() => addSampleClients()).then(() => practice.set(true));
   reset = () => this.run(() => resetSampleClients());
-  remove = () => this.run(() => removeSampleClients());
+  remove = () => this.run(() => removeSampleClients()).then(() => practice.set(false));
 
-  private notify() {
+  notify() {
     void coachBadges.refresh(true, true);
-    for (const l of listeners) l();
+    emitSampleActivity();
   }
 
   /** While there are samples, let them act every few seconds. */
@@ -92,3 +92,44 @@ class Sandbox {
 
 export const sandbox = new Sandbox();
 export const SAMPLES = SAMPLE_CLIENTS;
+
+const PRACTICE_KEY = "logit:practice-view";
+
+/**
+ * Practice view (canvas V1-V5): sample clients live on the coach's own account, but people
+ * pages show either the samples or the real clients, never both. On: only samples. Off: no
+ * samples anywhere, in lists, counts, badges or the client picker. The coach's programs,
+ * forms, packages and links are the same in both. An account trying Studio coaches samples
+ * only, so for it Practice view is always on.
+ */
+class Practice {
+  private chosen = $state(typeof localStorage !== "undefined" && localStorage.getItem(PRACTICE_KEY) === "1");
+
+  /** Trying Studio (below Studio on getlogit.app, samples only): no real clients to switch to. */
+  get locked(): boolean {
+    const tier = apiClient.getUser()?.tier;
+    return sandbox.on && !!tier && tier !== "Studio" && !apiClient.isSelfHosted();
+  }
+
+  get on(): boolean {
+    return sandbox.on && (this.locked || this.chosen);
+  }
+
+  set(on: boolean) {
+    if (on === this.chosen) return;
+    this.chosen = on;
+    try {
+      localStorage.setItem(PRACTICE_KEY, on ? "1" : "0");
+    } catch {
+      /* private mode: it lasts this visit */
+    }
+    sandbox.notify();
+  }
+
+  /** Whether something belonging to a client with this `isSample` is shown right now. */
+  shows(isSample: boolean | undefined): boolean {
+    return this.on ? !!isSample : !isSample;
+  }
+}
+
+export const practice = new Practice();

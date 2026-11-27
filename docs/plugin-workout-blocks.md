@@ -212,6 +212,10 @@ discussed for powerlifting before they're promoted in the catalog.
    work timer is a timed hold, else a Done), and so do strength sets (a rep goal with the weight).
    A plugin block on its own doesn't have a timer yet.
 3. The `workout-block` family in the sandbox, the linter and the registry; split-day planning.
+   **Built 2026-11-27 for declarations** (data only, no functions yet): install on the phone and
+   the web, the builder's checks, the registry, and coaches' programs (Programs › + From a
+   plugin, with how many entries it starts with; clients allow it first). Split-day planning
+   isn't built. LogIt's own blocks live in `plugins/first-party/`.
 4. The first plugin, BJJ rounds, published first-party through this mechanism (not built in), as
    the example to copy.
 5. Later: `suggest` and `stats`, `countsAs`, the other timer patterns, and the event and group

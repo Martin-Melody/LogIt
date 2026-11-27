@@ -13,15 +13,58 @@ title: Start coaching
 With Studio, the dashboard has a Coaching side (switch at the top of the sidebar). The Studio
 walkthrough in Guide takes you through it in ten short chapters, doing each thing for real.
 
+## Today and Your month
+
+**Today** is what needs you, grouped by what you'll do (review, reply, decide), with the week ahead
+beside it. **Your month** sums up a month (the arrows step back): what was paid to you through LogIt
+over six months (before Stripe's fees, with *Best month yet* only when it's true), your clients
+against your spots, who asked to be coached, your clients' wins (records, sessions against their
+programs, check-ins answered) and **Worth a look**: clients whose last two weeks look different from
+the six before. Only you see any of this.
+
+**Edit cards** arranges either page: move cards, remove them, or add Last week, Paid to you, Clients,
+Your clients' wins and Worth a look. Needs you always stays first on Today. *Back to the standard
+layout* undoes it all.
+
+In Practice view, Paid to you is a marked **Example** with made-up numbers (sample clients don't
+pay); everything else is what the samples really did.
+
 ## Practise on sample clients
 
 The first Studio chapter offers three sample clients: Niamh, who asks to join through your first
 invite link; Conor, already your client, who answers check-ins and messages; and Dara, who shares only
 her training. They act on their own a few seconds after you do something, and only you ever see them.
 
-Keep them as a sandbox to try programs and forms on. Manage them from Clients › Sandbox: Reset to fresh
-puts back their starting four weeks, Remove deletes them and everything they sent, and Add sample
-clients brings them back.
+They live in **Practice view**. With it on, a striped band runs across Coaching and every page about
+people (Today, Clients, Check-ins, Messages) shows only the sample clients; nothing you do there
+reaches a real person. With it off, they're out of sight everywhere, including counts and the client
+picker. Your programs, check-in forms, invite links and packages are the same in both. Switch it at
+the bottom of the sidebar, with Turn off on the band, or from ⌘K. Adding sample clients turns it on,
+and so does a walkthrough chapter you do with them.
+
+Keep them to try programs, forms and replies on. Manage them in Practice view, on Clients: Reset
+samples to fresh puts back their starting four weeks, Remove samples deletes them and everything they
+sent, and Add sample clients brings them back. On a sample's page, Answer as Niamh lets you write what
+she says, to try a conversation. Samples never take one of your spots, and never pay: Payments is
+always your real page.
+
+Trying Studio without it, sample clients are your only clients, so Practice view stays on and the
+band has Get Studio. Everything you build is kept: when you get Studio your links go live and your
+profile's Coaching section goes public, and you choose when to switch to real clients.
+
+## Your coaching profile
+
+Your profile gets a Coaching section: a headline, whether you coach online, in person or both, About
+you (with formatting), who you're a good fit for, and the packages you choose to show, with their
+prices. Write it in Coaching › Profile; the preview beside it is what people see. It shows on your
+profile in the app, on the web and at getlogit.app/@you once you have Studio, with a button that opens
+your newest invite link.
+
+<CanCant ids={["coach-profile"]} />
+
+Under **When someone becomes your client**, write your coaching agreement: people tick it before they
+take a spot, and see it as your words, not LogIt's. Make sure it matches your refund rules in
+Payments. If you change it, current clients see the new words but aren't asked to agree again.
 
 ## Your Today page
 

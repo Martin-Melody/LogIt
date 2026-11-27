@@ -150,6 +150,9 @@ export type LoggedItem = {
    * correlation (adaptive-progression-engine.md §9) that needs real clock time; the
    * day-level correlation only needs dateIso and works regardless. */
   loggedAtMs?: number;
+  /** Logged from a coach's meal plan (canvas MP7, SW2, Q7): which food, and whether as planned,
+   * as a swap or with a changed amount. Items without it on a day with a plan are off plan. */
+  plan?: { planId: string; mealId: string; foodId: string; how: "planned" | "swapped" | "changed" };
 };
 
 export type DiaryDay = {
@@ -587,6 +590,17 @@ export type RecipeIngredient = {
   nutrients?: Nutrients;
 };
 
+/** What a recipe or a meal plan is good for (canvas MP3, MP2's dairy check). */
+export const DIET_TAGS = ["dairy-free", "gluten-free", "vegetarian", "vegan", "nut-free"] as const;
+export type DietTag = (typeof DIET_TAGS)[number];
+export const DIET_TAG_LABELS: Record<DietTag, string> = {
+  "dairy-free": "Dairy-free",
+  "gluten-free": "Gluten-free",
+  vegetarian: "Vegetarian",
+  vegan: "Vegan",
+  "nut-free": "Nut-free",
+};
+
 export type RecipePortionMode = "servings" | "weight";
 
 export type Recipe = {
@@ -605,7 +619,14 @@ export type Recipe = {
   cookedWeightG?: number;
   /** Day the current pot was cooked (YYYY-MM-DD), for "what's left in the pot". */
   cookedOn?: string;
+  /** The method, as Markdown (the shared text editor). */
   notes?: string;
+  /** What it's good for, ticked by its author (canvas MP3); LogIt doesn't guess from ingredients. */
+  tags?: DietTag[];
+  /** Minutes it takes. */
+  minutes?: number;
+  /** A photo (uploaded with photosApi). */
+  photoUrl?: string;
   createdAtMs: number;
   updatedAtMs: number;
   deletedAtMs?: number;

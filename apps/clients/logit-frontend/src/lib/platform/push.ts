@@ -124,6 +124,7 @@ export function pushTarget(data: Record<string, string> | undefined): string {
   if (type === "DirectMessage") return data?.threadId ? `/messages/chat?t=${data.threadId}` : "/messages";
   if (type === "CoachInvite" || type === "CoachPaymentFailed") return "/clients";
   if (type === "CoachProgram") return "/splits";
+  if (type === "CoachMealPlan") return "/nutrition/plan";
   if (data?.count === "1" && data.postId) return `/social/post/${data.postId}`;
   return "/inbox";
 }

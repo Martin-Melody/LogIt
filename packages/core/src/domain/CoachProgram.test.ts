@@ -111,7 +111,7 @@ describe("library copies", () => {
     return { ...p, description: "Upper / lower" };
   }
 
-  it("assigning makes a linked copy with new ids and the chosen start", () => {
+  it("assigning makes a linked copy with the chosen start; inside, the library's ids, so updates can merge (Q6)", () => {
     const t = template();
     const copy = copyProgramForClient(t, { mode: "fixed-date", startDateMs: START + 3 * 60 * 60 * 1000 });
     expect(copy.id).not.toBe(t.id);
@@ -119,8 +119,11 @@ describe("library copies", () => {
     expect(copy.startMode).toBe("fixed-date");
     expect(copy.startDateMs).toBe(startOfLocalDayMs(START + 3 * 60 * 60 * 1000));
     expect(copy.weeks).toHaveLength(3);
-    expect(copy.weeks[0].id).not.toBe(t.weeks[0].id);
-    expect(copy.weeks[0].days[0].blocks[0].id).not.toBe(t.weeks[0].days[0].blocks[0].id);
+    expect(copy.weeks[0].days[0].blocks[0].id).toBe(t.weeks[0].days[0].blocks[0].id);
+    expect(copy.libraryBase?.updatedAtMs).toBe(t.updatedAtMs);
+    // A copy is its own data: changing it doesn't touch the library's.
+    copy.weeks[0].days[0].blocks[0] = { ...copy.weeks[0].days[0].blocks[0], note: "x" } as typeof copy.weeks[0].days[0].blocks[0];
+    expect(t.weeks[0].days[0].blocks[0].note).toBeUndefined();
     expect(copy.weeks[0].days[0].blocks[0]).toMatchObject({ type: "strength", exerciseName: "Bench press" });
   });
 

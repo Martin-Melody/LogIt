@@ -1,6 +1,55 @@
 [
   {
     "method": "GET",
+    "route": "/coach/agreement",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": true
+  },
+  {
+    "method": "PUT",
+    "route": "/coach/agreement",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": true
+  },
+  {
+    "method": "DELETE",
+    "route": "/coach/away/",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": true
+  },
+  {
+    "method": "GET",
+    "route": "/coach/away/",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": true
+  },
+  {
+    "method": "PUT",
+    "route": "/coach/away/",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": true
+  },
+  {
+    "method": "GET",
+    "route": "/coach/cards/",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": true
+  },
+  {
+    "method": "PUT",
+    "route": "/coach/cards/",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": true
+  },
+  {
+    "method": "GET",
     "route": "/coach/checkins",
     "plan": "Studio",
     "orActivelyCoached": false,
@@ -49,6 +98,34 @@
     "orSampleCoach": true
   },
   {
+    "method": "POST",
+    "route": "/coach/clients/{relationshipId:guid}/end",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": true
+  },
+  {
+    "method": "GET",
+    "route": "/coach/clients/{relationshipId:guid}/ending",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": true
+  },
+  {
+    "method": "POST",
+    "route": "/coach/clients/{relationshipId:guid}/pause",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": true
+  },
+  {
+    "method": "POST",
+    "route": "/coach/clients/{relationshipId:guid}/resume",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": true
+  },
+  {
     "method": "PUT",
     "route": "/coach/clients/{relationshipId:guid}/swap-rule",
     "plan": "Studio",
@@ -70,6 +147,20 @@
     "orSampleCoach": true
   },
   {
+    "method": "GET",
+    "route": "/coach/intake",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": true
+  },
+  {
+    "method": "PUT",
+    "route": "/coach/intake",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": true
+  },
+  {
     "method": "PUT",
     "route": "/coach/library/sharing",
     "plan": "Studio",
@@ -81,21 +172,28 @@
     "route": "/coach/links",
     "plan": "Studio",
     "orActivelyCoached": false,
-    "orSampleCoach": false
+    "orSampleCoach": true
   },
   {
     "method": "POST",
     "route": "/coach/links",
     "plan": "Studio",
     "orActivelyCoached": false,
-    "orSampleCoach": false
+    "orSampleCoach": true
   },
   {
     "method": "DELETE",
     "route": "/coach/links/{linkId:guid}",
     "plan": "Studio",
     "orActivelyCoached": false,
-    "orSampleCoach": false
+    "orSampleCoach": true
+  },
+  {
+    "method": "PUT",
+    "route": "/coach/links/{linkId:guid}",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": true
   },
   {
     "method": "PUT",
@@ -103,6 +201,13 @@
     "plan": "Studio",
     "orActivelyCoached": false,
     "orSampleCoach": false
+  },
+  {
+    "method": "GET",
+    "route": "/coach/month/",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": true
   },
   {
     "method": "GET",
@@ -127,7 +232,28 @@
   },
   {
     "method": "POST",
+    "route": "/coach/payments/clients/{relationshipId:guid}/change-package",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": false
+  },
+  {
+    "method": "POST",
     "route": "/coach/payments/clients/{relationshipId:guid}/paid-elsewhere",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": false
+  },
+  {
+    "method": "GET",
+    "route": "/coach/payments/clients/{relationshipId:guid}/receipts",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": false
+  },
+  {
+    "method": "POST",
+    "route": "/coach/payments/clients/{relationshipId:guid}/refund",
     "plan": "Studio",
     "orActivelyCoached": false,
     "orSampleCoach": false
@@ -182,6 +308,27 @@
     "orSampleCoach": false
   },
   {
+    "method": "POST",
+    "route": "/coach/payments/stop",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": false
+  },
+  {
+    "method": "GET",
+    "route": "/coach/profile/",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": true
+  },
+  {
+    "method": "PUT",
+    "route": "/coach/profile/",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": true
+  },
+  {
     "method": "GET",
     "route": "/coach/programs",
     "plan": "Studio",
@@ -203,6 +350,13 @@
     "orSampleCoach": false
   },
   {
+    "method": "GET",
+    "route": "/coach/requests/closed",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": false
+  },
+  {
     "method": "POST",
     "route": "/coach/requests/{relationshipId:guid}/accept",
     "plan": "Studio",
@@ -212,6 +366,41 @@
   {
     "method": "POST",
     "route": "/coach/requests/{relationshipId:guid}/decline",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": false
+  },
+  {
+    "method": "POST",
+    "route": "/coach/requests/{relationshipId:guid}/not-a-fit",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": false
+  },
+  {
+    "method": "POST",
+    "route": "/coach/requests/{relationshipId:guid}/offer",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": false
+  },
+  {
+    "method": "POST",
+    "route": "/coach/requests/{relationshipId:guid}/reopen",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": false
+  },
+  {
+    "method": "POST",
+    "route": "/coach/requests/{relationshipId:guid}/waitlist",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": false
+  },
+  {
+    "method": "POST",
+    "route": "/coach/requests/{relationshipId:guid}/withdraw-offer",
     "plan": "Studio",
     "orActivelyCoached": false,
     "orSampleCoach": false
@@ -239,6 +428,20 @@
   },
   {
     "method": "GET",
+    "route": "/coach/saved-replies/",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": true
+  },
+  {
+    "method": "PUT",
+    "route": "/coach/saved-replies/",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": true
+  },
+  {
+    "method": "GET",
     "route": "/coach/settings",
     "plan": "Studio",
     "orActivelyCoached": false,
@@ -247,6 +450,13 @@
   {
     "method": "PUT",
     "route": "/coach/settings",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": true
+  },
+  {
+    "method": "PUT",
+    "route": "/coach/settings/nutrition",
     "plan": "Studio",
     "orActivelyCoached": false,
     "orSampleCoach": true

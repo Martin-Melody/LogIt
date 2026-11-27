@@ -1,3 +1,4 @@
+import type { AskQuestion, RequestAnswer } from "../domain/coachRequest";
 import { apiBaseUrl, apiClient } from "./client";
 import type { DmPerson } from "./dmApi";
 import { groupLink as linkFor, parseGroupInvite, type GroupInvite } from "../domain/groupInvite";
@@ -47,6 +48,8 @@ export interface Group extends GroupBrief {
   reports: number;
   /** You're muted in the chat until then. */
   mutedUntilMs: number | null;
+  /** The group's join questions (organisers only; canvas K8). */
+  joinQuestions?: AskQuestion[] | null;
 }
 
 export interface GroupMember {
@@ -81,6 +84,8 @@ export interface GroupPreview extends GroupBrief {
   requested: boolean;
   /** A member invited you from a chat (you can join straight away). */
   invitedBy: string | null;
+  /** What asking to join asks (canvas R6), when the group wants approval. */
+  questions?: AskQuestion[] | null;
 }
 
 export interface GroupSearchResult extends GroupBrief {
@@ -95,6 +100,8 @@ export interface GroupRequest {
   atMs: number;
   /** A member who follows them. */
   followedBy: string | null;
+  /** Their answers to the join questions, with each question as it was asked. */
+  answers?: RequestAnswer[] | null;
 }
 
 const json = (method: string, body?: unknown) => ({ method, body: body === undefined ? undefined : JSON.stringify(body) });
@@ -103,7 +110,8 @@ export const groupsApi = {
   mine: () => apiClient.fetch<(GroupBrief & { access: GroupAccess })[]>("/groups"),
   create: (g: { name: string; kind: GroupKind; place?: string | null; photoId?: string | null; access?: GroupAccess }) => apiClient.fetch<Group>("/groups", json("POST", g)),
   get: (id: string) => apiClient.fetch<Group>(`/groups/${id}`),
-  edit: (id: string, g: { name?: string; kind?: GroupKind; place?: string; photoId?: string; removePhoto?: boolean; access?: GroupAccess }) =>
+  /** joinQuestions: [] takes them off. */
+  edit: (id: string, g: { name?: string; kind?: GroupKind; place?: string; photoId?: string; removePhoto?: boolean; access?: GroupAccess; joinQuestions?: AskQuestion[] }) =>
     apiClient.fetch<Group>(`/groups/${id}`, json("PATCH", g)),
   remove: (id: string) => apiClient.fetch<void>(`/groups/${id}`, { method: "DELETE" }),
   pin: (id: string, text: string, notify: boolean) => apiClient.fetch<Group>(`/groups/${id}/note`, json("PUT", { text, notify })),
@@ -123,9 +131,13 @@ export const groupsApi = {
   about: (id: string) => apiClient.fetch<GroupPreview>(`/groups/${id}/about`),
   /** Straight in (open, or invited), or a request (ask to join). */
   /** eventId: joining from an event in search, so you're going to it once you're in. */
-  joinById: (id: string, onBoard: boolean, eventId?: string) =>
-    apiClient.fetch<{ id: string; status: "member" | "requested" }>(`/groups/${id}/join`, json("POST", { onBoard, eventId })),
+  /** answers: to the group's join questions, by question id (a 400 with code "answers" when one is missing). */
+  joinById: (id: string, onBoard: boolean, eventId?: string, answers?: Record<string, string>) =>
+    apiClient.fetch<{ id: string; status: "member" | "requested" }>(`/groups/${id}/join`, json("POST", { onBoard, eventId, answers })),
   cancelRequest: (id: string) => apiClient.fetch<void>(`/groups/${id}/request`, { method: "DELETE" }),
+  /** Groups I've asked to join, still waiting for an organiser (Messages › Requests › Sent). */
+  myRequests: async () =>
+    (await apiClient.fetch<{ requests: { groupId: string; name: string; photoUrl: string | null; askedAt: string }[] }>("/groups/requests/mine")).requests,
   requests: (id: string) => apiClient.fetch<GroupRequest[]>(`/groups/${id}/requests`),
   approve: (id: string, username: string) => apiClient.fetch<void>(`/groups/${id}/requests/${encodeURIComponent(username)}`, { method: "POST" }),
   /** Mute someone in the chat for `minutes`, or lift it (null). */

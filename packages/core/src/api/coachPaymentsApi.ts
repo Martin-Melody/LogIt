@@ -16,6 +16,8 @@ export interface PackageInput {
   interval: PaymentInterval;
   weeks: number | null;
   hidden: boolean;
+  /** Listed on the coach's public profile (canvas K17 "Offer it"). */
+  showOnProfile?: boolean;
 }
 
 /** Coach payments (Studio coaches' own Stripe accounts). Paying happens on the web only. */
@@ -91,6 +93,41 @@ export const coachPaymentsApi = {
   },
 
   /** Client: Stripe's billing page for my plan with a coach (change the card, receipts). */
+  /** A client's payments with what's been refunded from each (canvas Q9). */
+  async receipts(relationshipId: string): Promise<{ id: string; amountCents: number; currency: string; paidAt: string; refundedCents: number; packageName: string | null }[]> {
+    return (await apiClient.fetch<{ receipts: { id: string; amountCents: number; currency: string; paidAt: string; refundedCents: number; packageName: string | null }[] }>(`/coach/payments/clients/${relationshipId}/receipts`)).receipts;
+  },
+
+  /** Refund part of a payment; coaching carries on (canvas Q9). */
+  async refund(relationshipId: string, receiptId: string, amountCents: number, reason?: string): Promise<{ refundedCents: number; status: string }> {
+    return apiClient.fetch(`/coach/payments/clients/${relationshipId}/refund`, { method: "POST", body: JSON.stringify({ receiptId, amountCents, reason }) });
+  },
+
+  /** Offer a client a different package (canvas K14): null = no payment through LogIt. */
+  async changePackage(relationshipId: string, packageId: string | null, message?: string): Promise<{ offerId: string }> {
+    return apiClient.fetch(`/coach/payments/clients/${relationshipId}/change-package`, { method: "POST", body: JSON.stringify({ packageId, message }) });
+  },
+
+  /** Stop taking payments through LogIt (canvas K18): plans run out, then "paid elsewhere". */
+  async stopTakingPayments(): Promise<{ plansStopped: number }> {
+    return apiClient.fetch("/coach/payments/stop", { method: "POST" });
+  },
+
+  /** Client: accept or decline a change of package. */
+  async answerPackageChange(relationshipId: string, offerId: string, accept: boolean): Promise<void> {
+    await apiClient.fetch(`/coach/coaches/${relationshipId}/package-change/${offerId}/${accept ? "accept" : "decline"}`, { method: "POST" });
+  },
+
+  /** Client: pay for the package changed to, when it's due. */
+  async payChange(relationshipId: string, successUrl: string, cancelUrl: string): Promise<{ url: string }> {
+    return apiClient.fetch(`/coach/coaches/${relationshipId}/pay-change`, { method: "POST", body: JSON.stringify({ successUrl, cancelUrl }) });
+  },
+
+  /** Client: back from paying for a change of package. */
+  async confirmChangeCheckout(relationshipId: string, sessionId: string): Promise<{ status: "active" | "pending" }> {
+    return apiClient.fetch("/coach/payments/checkout/confirm", { method: "POST", body: JSON.stringify({ relationshipId, sessionId }) });
+  },
+
   async myBillingPage(relationshipId: string): Promise<{ url: string }> {
     return apiClient.fetch(`/coach/payments/mine/${relationshipId}/billing`, { method: "POST" });
   },

@@ -1,9 +1,6 @@
 <script lang="ts">
-  import MoreHorizontalIcon from "@lucide/svelte/icons/more-horizontal";
   import ProfileHoverCard from "./ProfileHoverCard.svelte";
-  import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
-  import * as ContextMenu from "$lib/components/ui/context-menu";
-  import RowMenuItems from "$lib/features/commands/RowMenuItems.svelte";
+  import ActionMenu from "$lib/features/commands/ActionMenu.svelte";
   import type { RowAction } from "$lib/features/commands/commands.svelte";
   import * as AlertDialog from "$lib/components/ui/alert-dialog";
   import { toast } from "$lib/components/ui/sonner";
@@ -165,9 +162,8 @@
   ]);
 </script>
 
-<ContextMenu.Root>
-<ContextMenu.Trigger>
-{#snippet child({ props })}
+<ActionMenu {actions} label="More" menuClass="min-w-48">
+{#snippet children({ props, more })}
 <article {...props} class="flex flex-col gap-2.5 rounded-[10px] border border-border bg-card px-[18px] py-4">
   {#if reason}
     <p class="text-xs text-muted-foreground">{#if suggested}<span class="font-semibold text-foreground/80">Suggested</span>{" · "}{/if}{reason}</p>
@@ -190,14 +186,7 @@
     {#if follow && !isOwn}
       <FollowButton username={author.authorUsername} bind:status={followStatus} isPrivate={!!p.authorIsPrivate} />
     {/if}
-    <DropdownMenu.Root>
-      <DropdownMenu.Trigger>
-        {#snippet child({ props })}
-          <button {...props} type="button" aria-label="More" class="flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted"><MoreHorizontalIcon class="size-4" /></button>
-        {/snippet}
-      </DropdownMenu.Trigger>
-      <DropdownMenu.Content align="end" class="min-w-48"><RowMenuItems {actions} kind="dropdown" /></DropdownMenu.Content>
-    </DropdownMenu.Root>
+    {@render more("rounded-lg")}
   </div>
 
   {#if editing}
@@ -252,9 +241,7 @@
   </div>
 </article>
 {/snippet}
-</ContextMenu.Trigger>
-<ContextMenu.Content class="min-w-48"><RowMenuItems {actions} kind="context" /></ContextMenu.Content>
-</ContextMenu.Root>
+</ActionMenu>
 
 <QuoteDialog bind:open={quoteOpen} post={p} {onposted} />
 <ReportDialog bind:open={reportOpen} targetType="Post" targetId={p.id} what="post" />

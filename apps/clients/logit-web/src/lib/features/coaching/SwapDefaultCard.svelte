@@ -54,5 +54,5 @@
       </label>
     {/each}
   </RadioGroup.Root>
-  <p class="text-xs text-muted-foreground">Anything not allowed shows an "Ask to swap" button instead, which opens a message to you with the exercise filled in. Add alternatives under each exercise below.</p>
+  <p class="text-xs text-muted-foreground">Anything not allowed shows an "Ask to swap" button instead, which opens a message to you with the exercise filled in. Add alternatives to an exercise in the program builder.</p>
 </section>

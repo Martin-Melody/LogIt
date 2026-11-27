@@ -1,6 +1,6 @@
 <script lang="ts">
   import { guideSignal } from "$lib/features/guide/signal";
-  import { onSampleActivity } from "$lib/features/guide/sandbox.svelte";
+  import { onSampleActivity } from "$lib/features/guide/sampleActivity";
   import { onDestroy, tick } from "svelte";
   import { messagesApi, type RemoteMessage } from "@logit/core/api/messagesApi";
   import { createId } from "@logit/core/domain/ids";
@@ -18,6 +18,12 @@
   import ChatReactions from "$lib/features/chat/ChatReactions.svelte";
   import * as ContextMenu from "$lib/components/ui/context-menu";
   import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
+  import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
+  import MessageSquareQuoteIcon from "@lucide/svelte/icons/message-square-quote";
+  import SavedReplyPicker from "./SavedReplyPicker.svelte";
+  import { checkinReplyLabel, parseCheckinReply } from "@logit/core/domain/savedReplies";
+  import { parseMonthReport } from "@logit/core/domain/monthReport";
+  import MonthReportCard from "./MonthReportCard.svelte";
   import SmilePlusIcon from "@lucide/svelte/icons/smile-plus";
   import { DM_REACTIONS } from "@logit/core/api/dmApi";
   import { StagedPhoto, imageFrom } from "$lib/features/chat/stagedPhoto.svelte";
@@ -32,6 +38,10 @@
     compact = false,
     onRead,
     onSent,
+    card,
+    closedNote = null,
+    messageActions,
+    fill = null,
   }: {
     relationshipId: string;
     otherName: string;
@@ -40,6 +50,14 @@
     compact?: boolean;
     onRead?: () => void;
     onSent?: (body: string, atMs: number) => void;
+    /** Draws a request step (a message with a kind: an offer, the waiting list…) as a card. */
+    card?: import("svelte").Snippet<[RemoteMessage]>;
+    /** A closed request: read-only, with this note where the composer was (canvas A3). */
+    closedNote?: string | null;
+    /** More things to do with a message from the other person (right-click, or ⋯). */
+    messageActions?: (m: RemoteMessage) => { label: string; run: () => void }[];
+    /** A coach's box (canvas W10): saved replies with / and what fills them in. */
+    fill?: { firstName?: string | null; exercise?: string | null; coachName?: string | null } | null;
   } = $props();
 
   let messages = $state<RemoteMessage[]>([]);
@@ -47,12 +65,16 @@
   let error = $state<string | null>(null);
   // svelte-ignore state_referenced_locally
   let draft = $state(initialDraft);
+  // Saved replies (canvas W10): "/" at the start of the box, or the button.
+  let repliesOpen = $state(false);
+  let picker = $state<SavedReplyPicker | null>(null);
   let sending = $state(false);
   let listEl = $state<HTMLDivElement | null>(null);
   let currentId = "";
   let poll: ReturnType<typeof setInterval> | undefined;
 
-  async function refresh(scroll = false) {
+  /** Also called by the page after it changes something (an offer taken, a message it sent). */
+  export async function refresh(scroll = false) {
     const id = relationshipId;
     try {
       // In the order they were sent. The server lists them by when they last changed, and
@@ -153,6 +175,7 @@
   }
 
   function onKey(e: KeyboardEvent) {
+    if (picker?.key(e)) return;
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       void send();
@@ -174,16 +197,18 @@
   const shown = $derived(compact ? messages.slice(-4) : messages);
   // Runs from one side (shadcn Message): joined corners, the time once under each run.
   const runs = $derived.by(() => {
-    const out: { key: string; mine: boolean; day: boolean; items: RemoteMessage[] }[] = [];
+    const out: { key: string; mine: boolean; day: boolean; event: boolean; items: RemoteMessage[] }[] = [];
     shown.forEach((m, i) => {
       const day = !compact && (i === 0 || dayLabel(m.createdAtMs) !== dayLabel(shown[i - 1]!.createdAtMs));
+      // Swap messages ("lasting-swap", "program-swap") and check-in replies are ordinary bubbles; only request steps are cards.
+      const event = !!m.kind && !m.kind.endsWith("swap") && m.kind !== "checkin-reply" && m.kind !== "month-report" && !!card;
       const prev = out.at(-1);
-      if (prev && !day && prev.mine === m.mine && m.createdAtMs - prev.items.at(-1)!.createdAtMs < 3_600_000) prev.items.push(m);
-      else out.push({ key: m.messageId, mine: m.mine, day, items: [m] });
+      if (prev && !day && !event && !prev.event && prev.mine === m.mine && m.createdAtMs - prev.items.at(-1)!.createdAtMs < 3_600_000) prev.items.push(m);
+      else out.push({ key: m.messageId, mine: m.mine, day, event, items: [m] });
     });
     return out;
   });
-  const lastMine = $derived(messages.findLast((m) => m.mine));
+  const lastMine = $derived(messages.findLast((m) => m.mine && !m.kind));
   const joined = (mine: boolean, first: boolean, last: boolean) =>
     mine ? `${first ? "" : "rounded-tr-md!"} ${last ? "" : "rounded-br-md!"}` : `${first ? "" : "rounded-tl-md!"} ${last ? "" : "rounded-bl-md!"}`;
   const joinedKids = (mine: boolean, first: boolean, last: boolean) =>
@@ -203,6 +228,9 @@
     {/if}
     {#each runs as run (run.key)}
       {#if run.day}<div class="py-1.5 text-center text-[11px] text-muted-foreground">{dayLabel(run.items[0]!.createdAtMs)}</div>{/if}
+      {#if run.event && card}
+        <div class="shrink-0 py-1">{@render card(run.items[0]!)}</div>
+      {:else}
       <Message.Root align={run.mine ? "end" : "start"} class="shrink-0 text-[13px]">
         <Message.Content class="gap-1">
           {#each run.items as m, k (m.messageId)}
@@ -225,11 +253,18 @@
               {:else}
                 {#if m.photoUrl}<div class={joinedKids(m.mine, first, end)}><ChatPhoto url={m.photoUrl} width={m.photoWidth ?? 0} height={m.photoHeight ?? 0} mine={m.mine} /></div>{/if}
                 {#if m.voiceUrl}<div class={joinedKids(m.mine, first, end)}><ChatVoice voice={{ url: m.voiceUrl, ms: m.voiceMs ?? 0, peaks: m.voicePeaks ?? "" }} mine={m.mine} /></div>{/if}
-                {#if m.body || m.contextDateIso}
+                {@const replyTo = m.kind === "checkin-reply" ? parseCheckinReply(m.cardJson) : null}
+                {@const report = m.kind === "month-report" ? parseMonthReport(m.cardJson) : null}
+                {#if report}
+                  <MonthReportCard {report} mine={m.mine} from={m.mine ? "you" : otherName} />
+                {:else if m.body || m.contextDateIso}
                   <Bubble.Root variant={m.mine ? "default" : "muted"} {align} class="max-w-full">
                     <Bubble.Content class="rounded-[18px] px-3 py-2 text-[13px] leading-relaxed {joined(m.mine, first, end)}">
                       {#if m.contextDateIso}
                         <span class="mb-1 inline-block rounded-md bg-background/60 px-1.5 py-0.5 text-[11px] font-semibold text-muted-foreground">Diary · {contextLabel(m.contextDateIso)}</span><br />
+                      {/if}
+                      {#if replyTo}
+                        <span class="mb-1 inline-block rounded-md bg-background/60 px-1.5 py-0.5 text-[11px] font-semibold text-muted-foreground">Check-in · {checkinReplyLabel(replyTo)}</span><br />
                       {/if}
                       <span class="whitespace-pre-wrap break-words">{m.body}</span>
                     </Bubble.Content>
@@ -251,6 +286,18 @@
                   {/each}
                 </DropdownMenu.Content>
               </DropdownMenu.Root>
+              {#if messageActions}
+                <DropdownMenu.Root>
+                  <DropdownMenu.Trigger>
+                    {#snippet child({ props: p })}
+                      <button {...p} type="button" aria-label="More for this message" class="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground focus-visible:opacity-100 group-hover/row:opacity-100 data-[state=open]:opacity-100"><EllipsisIcon class="size-4" /></button>
+                    {/snippet}
+                  </DropdownMenu.Trigger>
+                  <DropdownMenu.Content side="top" align="start" class="w-60">
+                    {#each messageActions(m) as a (a.label)}<DropdownMenu.Item onSelect={a.run}>{a.label}</DropdownMenu.Item>{/each}
+                  </DropdownMenu.Content>
+                </DropdownMenu.Root>
+              {/if}
             {/if}
             </div>
             {/snippet}
@@ -265,21 +312,29 @@
                 {#if m.body}<ContextMenu.Separator />{/if}
               {/if}
               {#if m.body}<ContextMenu.Item onSelect={() => void navigator.clipboard?.writeText(m.body)}>Copy text</ContextMenu.Item>{/if}
+              {#if !m.mine && messageActions}
+                {#each messageActions(m) as a (a.label)}<ContextMenu.Item onSelect={a.run}>{a.label}</ContextMenu.Item>{/each}
+              {/if}
             </ContextMenu.Content>
             </ContextMenu.Root>
           {/each}
           <Message.Footer class="px-1 text-[10px] font-normal">{time(run.items.at(-1)!.createdAtMs)}{#if run.mine && lastMine && run.items.includes(lastMine) && lastMine.readAtMs != null} · Seen{/if}</Message.Footer>
         </Message.Content>
       </Message.Root>
+      {/if}
     {/each}
     {#if dragging}<div class="pointer-events-none absolute inset-2 grid place-items-center rounded-xl border-2 border-dashed border-ring/60 text-sm text-muted-foreground">Drop the photo to add it</div>{/if}
   </div>
   {#if error}<p class="pt-1 text-xs text-destructive">{error}</p>{/if}
+  {#if closedNote}
+    <p class="border-t border-border pt-3 text-center text-[13px] text-muted-foreground">{closedNote}</p>
+  {:else}
   <form data-guide="message-compose" class="flex flex-col gap-1.5 border-t border-border pt-3" onsubmit={(e) => { e.preventDefault(); void send(); }}>
     {#if recording}
       <VoiceRecorder onsend={sendVoice} oncancel={() => (recording = false)} onerror={(m) => (error = m)} />
     {:else}
     <StagedPhotoCard {staged} />
+    {#if fill}<SavedReplyPicker bind:this={picker} bind:draft bind:open={repliesOpen} {fill} />{/if}
     <div class="flex items-end gap-2">
       <!-- One box (shadcn Input Group): photo inside, mic beside. Paste or drop a photo too. -->
       <InputGroup.Root class="flex-1 rounded-[12px]">
@@ -290,6 +345,7 @@
         <InputGroup.Textarea id="compose-{relationshipId}" bind:value={draft} onkeydown={onKey} onpaste={onPaste} rows={1}
           placeholder={staged.current ? "Add a caption…" : `Message ${otherName}`} class="max-h-40 min-h-9 py-2 text-[13px]" />
         <InputGroup.Addon align="inline-end" class="self-end pb-1.5">
+          {#if fill}<button type="button" onclick={() => (repliesOpen = !repliesOpen)} aria-label="Saved replies" aria-expanded={repliesOpen} class="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"><MessageSquareQuoteIcon class="size-4" /></button>{/if}
           <button type="button" onclick={() => { error = null; recording = true; }} aria-label="Record a voice message" class="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"><MicIcon class="size-4" /></button>
         </InputGroup.Addon>
       </InputGroup.Root>
@@ -297,6 +353,7 @@
         class="h-9 rounded-[9px] bg-primary px-3.5 text-[13px] font-semibold text-primary-foreground disabled:opacity-50">Send</button>
     </div>
     {/if}
-    {#if !compact}<span class="text-[11px] text-muted-foreground">Enter sends · Shift+Enter for a new line · it reaches their phone on its next sync</span>{/if}
+    {#if !compact}<span class="text-[11px] text-muted-foreground">Enter sends · Shift+Enter for a new line{fill ? " · / for a saved reply" : ""} · it reaches their phone on its next sync</span>{/if}
   </form>
+  {/if}
 </div>

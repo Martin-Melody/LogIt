@@ -35,6 +35,44 @@ public class User
     public string? StripeCustomerId { get; set; }
     /// As a coach: the swap rule for every client without their own (see SwapRules). Null = "any".
     public string? CoachSwapRule { get; set; }
+    /// Canvas Q3: which food swaps a client may make in this coach's meal plans ("mine", the
+    /// default, or "close": theirs plus foods close to the plan).
+    public string? CoachFoodSwapRule { get; set; }
+    /// Canvas Q3: the coach's defaults for the built-in Adaptive targets ({ "windowDays": 14 }),
+    /// copied into each new meal plan.
+    public string? CoachNutritionPrefsJson { get; set; }
+    /// Canvas W10: the coach's saved replies ([{ id, shortcut, title, body }]).
+    public string? CoachSavedRepliesJson { get; set; }
+    /// Canvas W11: which cards show on a client's Overview ({ all, packages, clients }).
+    public string? CoachCardsJson { get; set; }
+    /// The Coaching section of this coach's profile (CoachProfileEndpoints.CoachProfile as JSON):
+    /// headline, where they coach, About (Markdown), who they're a good fit for. Shown publicly
+    /// once they coach for real (Studio, or any account on a self-hosted server).
+    public string? CoachProfileJson { get; set; }
+    /// How many clients this coach takes (canvas P3 "Client limit"); null = no limit. Open
+    /// offers hold a spot each until they run out.
+    public int? CoachSpots { get; set; }
+    /// When full: "waitlist" (people join the waiting list) or "stop" (no new requests).
+    public string? CoachWhenFull { get; set; }
+    /// "Expect spots" shown on the profile and to people waiting, e.g. "January".
+    public string? CoachExpectSpots { get; set; }
+    /// The questions people answer when they ask (CoachIntake.Question[] as JSON); null = LogIt's five.
+    public string? CoachAskQuestionsJson { get; set; }
+    /// "Stop these emails" in the email sent when a coach answers a request (RequestEmails).
+    public bool RequestEmailsOff { get; set; }
+    /// Away (canvas Z7): from this day until the "back on" day, a note pinned in clients'
+    /// conversations; ends by itself on AwayUntil. See CoachAway.
+    public DateTime? AwayFrom { get; set; }
+    public DateTime? AwayUntil { get; set; }
+    public string? AwayNote { get; set; }
+    /// Check-ins due while away aren't marked late.
+    public bool AwayExcusesCheckins { get; set; } = true;
+    /// People who ask to be coached are told when the coach is back.
+    public bool AwayTellAskers { get; set; } = true;
+    /// The coach's agreement (canvas J4, K9), Markdown in their own words; new clients tick it
+    /// before taking a spot. Null: no agreement.
+    public string? CoachAgreement { get; set; }
+    public DateTime? CoachAgreementChangedAt { get; set; }
     /// Social privacy (see Features/Social/Privacy.cs). A private account's follows need its
     /// approval, and only accepted followers see its posts, profile cards and follow lists.
     public bool IsPrivate { get; set; }

@@ -16,10 +16,31 @@ Code plugins run in a sandbox with no access to the network or the rest of your 
 
 <HowTo id="pro.plugins" />
 
+## For coaches
+
+<FeatureFacts id="coach-plugins" />
+
+Coaching › Plugins shows the kinds you use with clients: progression rules, nutrition targets,
+workout blocks, and exercise, program, meal plan, recipe, question and card packs. Question packs
+add check-in questions (Add a question › From your plugins); a sport plugin often brings a block,
+a card for a client's page and questions together (see [Coaching packs](/docs/plugins/coaching-packs)). **Installed** is what you
+have; **Community** is the directory. Plugins that run code are marked *Runs code*: clients are
+asked to allow them before they run on their phone. Packs are data, so there's nothing to install:
+program packs open in Programs › Start from a program, and meal plan and recipe packs in Nutrition,
+where **Copy to yours** makes your own copy (a newer pack never changes it).
+
+A plugin's panel says what it's given and what it can do, **Used in** (which of your programs use a
+block or rule) and how many clients allowed it. Uninstalling something a program uses warns you
+first: those blocks turn into plain notes clients log by hand.
+
+**Card packs** add cards to your Today and Your month (Edit cards › Add a card). They only see
+your roster: first names, months with you, check-ins waiting, and sessions and program week for
+clients who share workouts. Never payments, messages, food, weight or photos.
+
 ## Build your own
 
 <FeatureFacts id="plugin-builder" />
 
 For the details of each plugin type, see [Building plugins](/docs/plugins).
 
-<CanCant ids={["plugins", "plugin-builder"]} />
+<CanCant ids={["plugins", "coach-plugins", "plugin-builder"]} />

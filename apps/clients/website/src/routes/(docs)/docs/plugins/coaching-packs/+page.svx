@@ -1,0 +1,97 @@
+---
+title: Coaching packs
+description: "Meal plan, recipe, question and card packs for coaches: what each file looks like and what card packs are given."
+---
+
+Four plugin kinds are for coaches. They show in Coaching › Plugins, next to workout blocks,
+progression rules and program packs. A sport plugin is usually several of these together: the
+climbing example in `plugins/first-party` is a Bouldering workout block, a "Climbing this week"
+widget a coach puts on a client's Overview, and a question pack for their check-in form.
+
+## Meal plan packs
+
+Meal plans coaches copy into their own from Nutrition › Meal plans › Community. Pure JSON.
+
+```json
+{
+  "formatVersion": 1,
+  "pluginId": "com.you.cut-plans",
+  "plans": [
+    {
+      "name": "High-protein cut, 1,900 kcal",
+      "kcalTarget": 1900, "proteinG": 160,
+      "meals": [
+        { "id": "m1", "name": "Breakfast", "foods": [
+          { "id": "f1", "name": "Greek yogurt, 0%", "grams": 300, "computed": { "kcal": 171, "proteinG": 30, "carbsG": 12, "fatG": 0 } }
+        ] }
+      ]
+    }
+  ]
+}
+```
+
+Up to 20 plans, 10 meals each, 30 foods a meal. Each food needs a name, grams and its totals.
+
+## Recipe packs
+
+Recipes coaches copy from Nutrition › Recipes › From the community. Up to 100 recipes of up to 40
+ingredients; per-serving totals are worked out from the ingredients.
+
+```json
+{
+  "formatVersion": 1,
+  "pluginId": "com.you.desserts",
+  "recipes": [
+    { "name": "Protein oats", "servings": 1, "tags": ["vegetarian"], "minutes": 5,
+      "ingredients": [
+        { "id": "i1", "name": "Rolled oats", "grams": 60, "computed": { "kcal": 228, "proteinG": 8, "carbsG": 39, "fatG": 4 } }
+      ] }
+  ]
+}
+```
+
+## Question packs
+
+Check-in questions a coach adds to a form (Add a question › From your plugins). Types:
+`text` (with `long`), `number`, `scale` (`scaleMin`, `scaleMax`), `boolean`, `choice` (`options`,
+`multi`), `weight`, `measurement` and `heading`. Up to 30 questions. Answers are the client's like
+any other question's; the pack reads nothing.
+
+```json
+{
+  "formatVersion": 1,
+  "pluginId": "com.you.climbing-checkin",
+  "questions": [
+    { "prompt": "Finger pain", "type": "scale", "scaleMin": 1, "scaleMax": 10, "help": "1 = none, 10 = stop climbing" },
+    { "prompt": "Skin", "type": "choice", "options": ["Fine", "Thin", "Split"] }
+  ]
+}
+```
+
+## Card packs
+
+Code: one plugin with several cards for a coach's Today and Your month (Edit cards › Add a card).
+`compute(input)` is called once per card and returns a [card view](/docs/plugins/primitives), like
+a widget's.
+
+```js
+export const cards = {
+  id: "com.you.roster",
+  name: "Studio roster",
+  cards: [{ id: "roster", name: "Months with you" }],
+  compute(input) { /* input.card is "roster" */ },
+};
+```
+
+`input` is `{ card, page, now, clients }`, and each client is only:
+`firstName`, `monthsWithYou`, `joinedThisMonth`, `checkinsToReview`; `checkinLateDays` for clients
+who share check-ins; and, for clients who share workouts, `sessions7d`, `plannedPerWeek` and
+`program` (`name`, `week`, `totalWeeks`, `endsInDays`). Never payments,
+messages, food, weight or photos.
+
+## Cards on a client's page
+
+Any [widget](/docs/plugins/widgets) can be a card on a client's Overview (+ Card) and beside their
+check-in. It gets the data slices it declares, from that client, and only those they share; up to
+the end of the week, month or block the coach is looking at. Workouts include plugin blocks as
+`blocks: [{ pluginId, name, fields, entries }]`, so a climbing card can read grades and sends.

@@ -1,3 +1,4 @@
+import { trainingDayOn } from "./trainingDay";
 import {
   addDiaryItem,
   createDiaryDay,
@@ -58,7 +59,7 @@ export async function dayContext(
   const fallbackKg = p.weight != null && p.weightUnit === "kg" ? p.weight : null;
   const [day, nut] = await Promise.all([
     repo.getDay(dateIso),
-    getNutritionTargets(getNutritionDeps(), { fallbackWeightKg: fallbackKg }).catch(() => null),
+    trainingDayOn(dateIso).then((trainingDay) => getNutritionTargets(getNutritionDeps(), { fallbackWeightKg: fallbackKg, dateIso, trainingDay })).catch(() => null),
   ]);
   return {
     day,

@@ -5,6 +5,7 @@
 </script>
 
 <script lang="ts">
+  import { sendMessage } from "$lib/usecases/messages/sendMessage";
   import { carriedWeight } from "./carryWeight";
   import { openAllSignal } from "$lib/features/session/openAll";
   import { effortOpenIn, foldFor } from "$lib/features/session/stage";
@@ -415,6 +416,25 @@
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Couldn't swap the exercise");
     }
+  }
+
+  /** A coach's program (canvas SW1): "for the rest of the program" also goes on the session
+   * (later days start with it) and tells the coach, with their reason. */
+  async function handleCoachSwap(selection: { name: string; exerciseId?: string }, lasting?: { reason?: string } | null) {
+    const from = data.exerciseName;
+    await handleSwap(selection);
+    if (!lasting || !coachSwap) return;
+    const to = selection.name.trim();
+    const swap = { from, to, ...(selection.exerciseId ? { toId: selection.exerciseId } : {}), ...(lasting.reason ? { reason: lasting.reason } : {}), atMs: Date.now() };
+    let programId: string | null = null;
+    await onMutate((s: WorkoutSession) => {
+      if (s.source?.kind !== "program") return s;
+      programId = s.source.parentId;
+      const others = (s.source.lastingSwaps ?? []).filter((l) => l.from.trim().toLowerCase() !== from.trim().toLowerCase());
+      return { ...s, source: { ...s.source, lastingSwaps: [...others, swap] } };
+    });
+    const body = `I've swapped ${from} for ${to} for the rest of the program${lasting.reason ? `: ${lasting.reason}` : "."}`;
+    await sendMessage(coachSwap.coach.relationshipId, body, undefined, undefined, { kind: "lasting-swap", json: JSON.stringify({ programId, from, to, reason: lasting.reason ?? null }) }).catch(() => {});
   }
 
   $effect(() => {
@@ -1404,7 +1424,7 @@
     target={coachSwap.target}
     coach={coachSwap.coach}
     onOpenChange={(v) => (swapOpen = v)}
-    onPick={handleSwap}
+    onPick={handleCoachSwap}
   />
 {:else}
   <SwapSheet

@@ -60,8 +60,15 @@ export function markUndone(p: GuideProgress, chapterId: string): GuideProgress {
 }
 
 /** Does a SvelteKit route id ("/clients/[id]") match a path ("/clients/abc")? */
-export function routeMatches(routeId: string, pathname: string): boolean {
-  const pattern = routeId
+export function routeMatches(routeId: string, pathname: string, search = ""): boolean {
+  // "/clients?tab=requests": the page, and the tab its query picks.
+  const [path, query] = routeId.split("?");
+  if (query) {
+    const want = new URLSearchParams(query);
+    const have = new URLSearchParams(search);
+    for (const [k, v] of want) if (have.get(k) !== v) return false;
+  }
+  const pattern = path!
     .split("/")
     .map((seg) => (/^\[.+\]$/.test(seg) ? "[^/]+" : seg.replace(/[.*+?^${}()|\\]/g, "\\$&")))
     .join("/");

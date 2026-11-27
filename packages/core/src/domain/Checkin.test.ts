@@ -33,6 +33,14 @@ describe("missed check-ins", () => {
     expect(periodDueMs(s, 0)).toBe(ANCHOR + 7 * DAY);
   });
 
+  it("isn't late when it fell due while the coach was away (canvas Z7)", () => {
+    const s = schedule();
+    const away = { fromMs: ANCHOR + 5 * DAY, untilMs: ANCHOR + 9 * DAY };
+    expect(missedCheckin(s, [], ANCHOR + 10 * DAY, away)).toBeNull();
+    // Due before the away started: still missed.
+    expect(missedCheckin(s, [], ANCHOR + 10 * DAY, { fromMs: ANCHOR + 8 * DAY, untilMs: ANCHOR + 12 * DAY })).not.toBeNull();
+  });
+
   it("a draft doesn't count, a sent one does", () => {
     const s = schedule();
     expect(missedCheckin(s, [sub(s.id, 0, false)], ANCHOR + 10 * DAY)).not.toBeNull();
