@@ -345,6 +345,7 @@ api.MapCoachEndpoints();
 api.MapCoachProfileEndpoints();
 api.MapCoachRequestEndpoints();
 api.MapRequestEmailEndpoints();
+api.MapCoachEndingEndpoints();
 api.MapDiagnosticsEndpoints();
 api.MapPluginEndpoints();
 api.MapSandboxEndpoints();

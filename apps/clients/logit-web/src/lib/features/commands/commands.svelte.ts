@@ -33,6 +33,8 @@ export function clientActions(c: ClientSummary): RowAction[] {
       href: review ? `/coaching/checkins?id=${encodeURIComponent(review.id)}&client=${c.id}` : `${page}?tab=checkins`,
       disabled: review ? undefined : !c.sharing.checkins ? "Not shared" : c.scheduleCount ? "Nothing to review" : "No check-in form",
     },
+    // Canvas E1: last, in red.
+    { id: "end", label: "Pause or end coaching…", href: `${page}?end=1`, danger: true, separatorBefore: true, disabled: c.isSample ? "A sample client" : undefined },
   ];
 }
 

@@ -49,7 +49,9 @@ export interface RequestOffer {
 
 /** The kinds of request steps recorded as cards in the conversation (CoachMessage.kind). */
 export type RequestEvent =
-  | "asked" | "offer" | "offer-changed" | "offer-withdrawn" | "waitlist" | "closed" | "withdrawn" | "reopened" | "joined" | "leaving";
+  | "asked" | "offer" | "offer-changed" | "offer-withdrawn" | "waitlist" | "closed" | "withdrawn" | "reopened" | "joined" | "leaving"
+  // Pausing and ending (canvas E1, E2, M1, Z2).
+  | "paused" | "resumed" | "ended" | "stopping" | "stopped";
 
 export interface CoachIntake {
   spots: number | null;
@@ -145,6 +147,16 @@ export function eventLine(kind: RequestEvent, reader: "client" | "coach", coach:
       return reader === "client" ? `${c} reopened your request` : `You reopened ${p}'s request`;
     case "joined":
       return reader === "client" ? `You took the spot. ${c} is your coach now.` : `${p} took the spot. Coaching has started.`;
+    case "paused":
+      return reader === "client" ? `${c} paused coaching` : `You paused coaching with ${p}`;
+    case "resumed":
+      return reader === "client" ? `${c} is back: coaching carries on` : `Coaching with ${p} carries on`;
+    case "ended":
+      return reader === "client" ? `${c} ended coaching` : `Coaching with ${p} ended`;
+    case "stopping":
+    case "stopped":
+      // The server's words carry the end date or the refund.
+      return "";
     case "leaving":
       // The coach reads the server's words, which carry the end date.
       return reader === "client" ? `You moved to another coach. Coaching with ${c} ends when what you paid for runs out.` : "";
@@ -162,7 +174,7 @@ export const ASK_AGAIN_TEXT = "Is the spot still free? Could you offer it again?
 
 /** Who a step reads as for this viewer: the coach sends offers and answers; the client withdraws and joins. */
 export function readerOf(kind: RequestEvent, mine: boolean): "client" | "coach" {
-  const clientSends = kind === "withdrawn" || kind === "joined" || kind === "asked" || kind === "leaving";
+  const clientSends = kind === "withdrawn" || kind === "joined" || kind === "asked" || kind === "leaving" || kind === "stopping" || kind === "stopped";
   return clientSends === mine ? "client" : "coach";
 }
 

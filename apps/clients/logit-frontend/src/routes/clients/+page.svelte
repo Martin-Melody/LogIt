@@ -13,6 +13,7 @@
     type ClientRelationship,
     type CoachRelationship,
     type MyCoachingRequest,
+    type ManageCoaching,
     type CoachingRequest,
     type ReceivedInvite,
     type SentInvite,
@@ -35,6 +36,8 @@
   let received = $state<ReceivedInvite[]>([]);
   let coaches = $state<CoachRelationship[]>([]);
   let requests = $state<MyCoachingRequest[]>([]);
+  // Canvas M1/E2/Z2: each coach's pause, end date and whether they've gone quiet.
+  let manage = $state<Record<string, ManageCoaching>>({});
   // People who used the coach's link or code and wait for an answer.
   let clientRequests = $state<CoachingRequest[]>([]);
   // Accepting an invite first asks what the coach may see.
@@ -62,6 +65,8 @@
       received = r;
       coaches = mine;
       requests = reqs;
+      const m = await Promise.all(mine.map((x) => coachApi.manageCoaching(x.relationshipId).catch(() => null)));
+      manage = Object.fromEntries(mine.flatMap((x, k) => (m[k] ? [[x.relationshipId, m[k]!]] : [])));
       clients = c;
       sent = s;
     } catch (e) {
@@ -199,6 +204,7 @@
             {@const name = c.coach.displayName || c.coach.username}
             {@const note = clientPaymentNote(c.payment, c.status, name)}
             {@const problem = note && note.tone !== "ok" ? note : null}
+            {@const m = manage[c.relationshipId]}
             <li class="flex flex-col text-sm">
               <button type="button" class="flex items-center justify-between gap-2 px-3 py-3 text-left hover:bg-muted/40" aria-expanded={openCoach === c.relationshipId}
                 onclick={() => (openCoach = openCoach === c.relationshipId ? null : c.relationshipId)}>
@@ -212,6 +218,22 @@
                   <span class="text-muted-foreground">{openCoach === c.relationshipId ? "⌃" : "›"}</span>
                 </span>
               </button>
+              {#if m?.pausedUntil}
+                <p role="status" class="mx-3 mb-2 rounded-lg bg-warning/10 px-3 py-2 text-xs leading-relaxed">{name} paused coaching until {new Date(m.pausedUntil).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })}. Payments and check-ins pause; your program keeps going.</p>
+              {:else if m?.endsAt}
+                <p role="status" class="mx-3 mb-2 rounded-lg bg-muted px-3 py-2 text-xs">Coaching with {name} ends {new Date(m.endsAt).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })}.</p>
+              {/if}
+              {#if m?.quiet}
+                <!-- Canvas Z2: the coach hasn't replied for a week. -->
+                <div role="status" class="mx-3 mb-3 flex flex-col gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5">
+                  <span class="text-sm font-semibold">{name} hasn't replied for {m.quiet.days} days</span>
+                  <div class="flex gap-2">
+                    <Button size="sm" variant="outline" onclick={() => goto(`/messages/${c.relationshipId}?name=${encodeURIComponent(name)}`)}>Message again</Button>
+                    <Button size="sm" variant="destructive" disabled={ui.busyId === c.relationshipId}
+                      onclick={() => act(c.relationshipId, async () => { await coachApi.stopCoaching(c.relationshipId, true); })}>{m.plan ? "Stop and get a refund" : "Stop coaching"}</Button>
+                  </div>
+                </div>
+              {/if}
               {#if problem}
                 <!-- No price, no pay button and no link to pay: the app only says what's happening. -->
                 <div role="status" class="mx-3 mb-3 flex flex-col gap-1 rounded-lg border px-3 py-2.5 {problem.tone === 'bad' ? 'border-destructive/30 bg-destructive/5' : 'border-border bg-muted/40'}">
@@ -242,10 +264,15 @@
                 <SharingList sharing={c.sharing ?? SHARE_ALL} onchange={(s) => changeSharing(c, s)} />
                 <div class="px-3 py-3">
                   {#if confirmStop === c.relationshipId}
-                    <p class="pb-2 text-xs text-muted-foreground">{name} stops seeing your data, and their program, check-ins and habits leave your app. Your own logs stay.{c.payment?.mode === "stripe" && c.payment.state !== "ended" ? " Your plan with them is cancelled now, so you won't be charged again." : ""}</p>
+                    {@const plan = manage[c.relationshipId]?.plan}
+                    <p class="pb-2 text-xs text-muted-foreground">
+                      {plan && plan.interval === "month" && plan.state === "paid" && plan.paidUntil && Date.parse(plan.paidUntil) > Date.now()
+                        ? `Your plan stops renewing. Coaching carries on until ${new Date(plan.paidUntil).toLocaleDateString(undefined, { day: "numeric", month: "short" })}, the end of what you paid for.`
+                        : `${name} stops seeing your data, and their program, check-ins and habits leave your app. Your own logs stay.`}
+                    </p>
                     <div class="flex gap-2">
                       <Button size="sm" variant="destructive" disabled={ui.busyId === c.relationshipId}
-                        onclick={() => act(c.relationshipId, () => coachApi.revokeRelationship(c.relationshipId))}>Stop coaching</Button>
+                        onclick={() => act(c.relationshipId, async () => { await coachApi.stopCoaching(c.relationshipId); })}>Stop coaching</Button>
                       <Button size="sm" variant="outline" onclick={() => (confirmStop = null)}>Keep</Button>
                     </div>
                   {:else}

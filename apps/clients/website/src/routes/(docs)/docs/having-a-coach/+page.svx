@@ -42,6 +42,14 @@ you pay on the link's page before coaching starts.
 
 <HowTo id="pro.coach" />
 
+## Stopping
+
+**Stop coaching** on My coach. With a monthly plan it stops renewing, and coaching carries on until
+the end of what you paid for; otherwise it ends straight away. Your program, meal plan and history
+stay yours. If your card fails, **Update card** opens Stripe's page and the payment is tried again as
+soon as you're back. If your coach hasn't replied for a week, you can stop with the unused days
+refunded. Blocking your coach also ends coaching, with the unused days refunded.
+
 ## Check-ins
 
 When your coach gives you a check-in form, it shows as Due under Check-ins on the phone, or My coach on

@@ -82,6 +82,12 @@ export interface RosterEntry {
   unreadFromClient: number;
   sharing?: Sharing;
   since?: string;
+  /** Their first message since your last reply (canvas Z2); missing on older servers. */
+  waitingSinceMs?: number | null;
+  /** You paused coaching until then (canvas E1). */
+  pausedUntil?: string | null;
+  /** Coaching ends then (they stopped, or moved coach). */
+  endsAt?: string | null;
 }
 
 /** "notlive": the coach is trying Studio; only their sample clients can use it (canvas V3). */
@@ -172,6 +178,29 @@ export interface MyCoachingRequest {
   /** "Expect spots" while on the waiting list. */
   expectSpots?: string | null;
   offer?: RequestOffer | null;
+}
+
+export interface EndingPreview {
+  mode: "stripe" | "elsewhere" | "none";
+  lastPayment: { amountCents: number; currency: string; paidAt: string } | null;
+  unusedCents: number;
+  paidUntil: string | null;
+  pausedUntil: string | null;
+}
+
+export interface ManageCoaching {
+  coach: CoachClientUser;
+  since: string;
+  plan: { name: string; amountCents: number; currency: string; interval: "month" | "once"; state: string; paidUntil: string | null; stopsAtPeriodEnd: boolean; receipts: number } | null;
+  paidElsewhere: boolean;
+  sharing: Sharing;
+  answers: RequestAnswer[];
+  agreedAt: string | null;
+  agreedText: string | null;
+  pausedUntil: string | null;
+  endsAt: string | null;
+  /** The coach hasn't replied for a week (canvas Z2). */
+  quiet: { days: number; lastMessage: string | null; lastMessageAt: string | null; refundCents: number } | null;
 }
 
 /** Taking a spot (canvas J1). */
@@ -399,6 +428,42 @@ export function coachApiFor(api: ApiFetcher) {
     /** Delete a closed request: my answers go. */
     async deleteMyRequest(relationshipId: string): Promise<void> {
       await api.fetch(`/coach/requests/mine/${relationshipId}`, { method: "DELETE" });
+    },
+
+    // ── Pausing and ending (canvas E1, M1, Z2, Z3) ──
+
+    /** Coach: what ending would do with money. */
+    async endingPreview(relationshipId: string): Promise<EndingPreview> {
+      return api.fetch(`/coach/clients/${relationshipId}/ending`);
+    },
+
+    /** Coach: end coaching, with a refund ("none" | "unused" | "full" | "exact"), a message and a coach to suggest. */
+    async endCoaching(relationshipId: string, input: { refund: "none" | "unused" | "full" | "exact"; refundCents?: number; message?: string; suggest?: string }): Promise<{ refundedCents: number; currency: string; refundStatus: string | null }> {
+      return api.fetch(`/coach/clients/${relationshipId}/end`, { method: "POST", body: JSON.stringify(input) });
+    },
+
+    /** Coach: pause coaching until a date (YYYY-MM-DD); payments and check-ins pause. */
+    async pauseCoaching(relationshipId: string, until: string, message?: string): Promise<void> {
+      await api.fetch(`/coach/clients/${relationshipId}/pause`, { method: "POST", body: JSON.stringify({ until, message }) });
+    },
+
+    async resumeCoaching(relationshipId: string): Promise<void> {
+      await api.fetch(`/coach/clients/${relationshipId}/resume`, { method: "POST" });
+    },
+
+    /** Client: My coach › Manage (canvas M1). */
+    async manageCoaching(relationshipId: string): Promise<ManageCoaching> {
+      return api.fetch(`/coach/coaches/${relationshipId}/manage`);
+    },
+
+    /** Client: stop coaching; quiet = the coach hasn't replied for a week, with a refund. */
+    async stopCoaching(relationshipId: string, quiet = false): Promise<{ status: "ending" | "ended"; endsAt?: string; refundedCents?: number; currency?: string }> {
+      return api.fetch(`/coach/coaches/${relationshipId}/stop`, { method: "POST", body: JSON.stringify({ quiet }) });
+    },
+
+    /** Client: after a new card, try the unpaid payment now. */
+    async retryPayment(relationshipId: string): Promise<{ paid: boolean; error?: string }> {
+      return api.fetch(`/coach/coaches/${relationshipId}/retry-payment`, { method: "POST" });
     },
 
     /** "Stop these emails" from the request-reply email; the link carries the key. */

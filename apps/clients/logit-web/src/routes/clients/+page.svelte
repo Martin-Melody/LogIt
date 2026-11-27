@@ -104,7 +104,7 @@
     }
   }
 
-  const waiting = $derived(overview ? needsYou(overview).filter((i) => i.kind === "checkin" || i.kind === "message").slice(0, 4) : []);
+  const waiting = $derived(overview ? needsYou(overview).filter((i) => i.kind === "checkin" || i.kind === "message" || i.kind === "waiting").slice(0, 4) : []);
 
   function checkinCell(c: ClientSummary): { text: string; tone: "warn" | "bad" | "" } {
     if (!c.sharing.checkins) return { text: "Not shared", tone: "" };
@@ -199,10 +199,10 @@
                 <Avatar name={i.client.name} url={i.client.avatarUrl} size={30} />
                 <span class="flex flex-col gap-0.5"><span class="text-[13px] font-medium">{i.client.name} sent a check-in</span><span class="text-xs text-muted-foreground">{ago(i.item.submittedAtMs)}</span></span>
               </a>
-            {:else if i.kind === "message"}
+            {:else if i.kind === "message" || i.kind === "waiting"}
               <a href="/messages?c={i.client.relationshipId}" class="flex flex-[1_1_280px] items-center gap-2.5 rounded-lg bg-muted px-3 py-2.5 hover:bg-muted/70">
                 <Avatar name={i.client.name} url={i.client.avatarUrl} size={30} />
-                <span class="flex flex-col gap-0.5"><span class="text-[13px] font-medium">{i.client.name} messaged you</span><span class="text-xs text-muted-foreground">{i.client.unread} unread</span></span>
+                <span class="flex flex-col gap-0.5"><span class="text-[13px] font-medium">{i.kind === "waiting" ? `${i.client.name} has waited ${i.days} days for a reply` : `${i.client.name} messaged you`}</span><span class="text-xs text-muted-foreground">{i.client.unread} unread</span></span>
               </a>
             {/if}
           {/each}

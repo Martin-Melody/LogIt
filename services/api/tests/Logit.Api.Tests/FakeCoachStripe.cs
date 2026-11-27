@@ -41,6 +41,23 @@ public sealed class FakeCoachStripe : ICoachStripe
         Task.FromResult("https://billing.stripe.test/" + customerId);
     public Task SetCancelAtPeriodEndAsync(string accountId, string subscriptionId, bool cancel, CancellationToken ct) => Task.CompletedTask;
 
+    /// Pauses asked for, by subscription: the resume date, or null when resumed.
+    public Dictionary<string, DateTime?> Paused { get; } = [];
+    public Task PauseCollectionAsync(string accountId, string subscriptionId, DateTime? resumesAt, CancellationToken ct)
+    {
+        Paused[subscriptionId] = resumesAt;
+        return Task.CompletedTask;
+    }
+
+    /// What RetryUnpaidAsync answers, and how many times it was asked.
+    public bool RetryPays { get; set; } = true;
+    public int Retries { get; private set; }
+    public Task<bool> RetryUnpaidAsync(string accountId, string subscriptionId, CancellationToken ct)
+    {
+        Retries++;
+        return Task.FromResult(RetryPays);
+    }
+
     public Task CancelNowAsync(string accountId, string subscriptionId, CancellationToken ct)
     {
         if (CancelFails) throw new InvalidOperationException("Stripe is down");

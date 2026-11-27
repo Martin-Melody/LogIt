@@ -275,6 +275,20 @@ public static class CoachEndpoints
             return best;
         }
 
+        // How long each client has waited for a reply (canvas Z2: Today shows it from day 5).
+        var relIds = rels.Select(r => r.Id).ToList();
+        var lastCoachMs = (await db.CoachMessages.Where(m => relIds.Contains(m.RelationshipId) && m.SenderUserId == coachId)
+            .GroupBy(m => m.RelationshipId).Select(g => new { g.Key, Ms = g.Max(m => m.CreatedAtMs) }).ToListAsync())
+            .ToDictionary(x => x.Key, x => x.Ms);
+        var clientMsgs = await db.CoachMessages.Where(m => relIds.Contains(m.RelationshipId) && m.SenderUserId != coachId && m.Kind == null)
+            .Select(m => new { m.RelationshipId, m.CreatedAtMs }).ToListAsync();
+        long? WaitingSince(Guid relId)
+        {
+            var after = lastCoachMs.GetValueOrDefault(relId, 0);
+            var first = clientMsgs.Where(m => m.RelationshipId == relId && m.CreatedAtMs > after).Select(m => (long?)m.CreatedAtMs).Min();
+            return first;
+        }
+
         var roster = rels.Select(r =>
         {
             sessionAgg.TryGetValue(r.ClientId, out var s);
@@ -292,6 +306,9 @@ public static class CoachEndpoints
                 unreadFromClient = unread.GetValueOrDefault(r.ClientId, 0),
                 sharing = r.ToSharingDto(),
                 since = r.UpdatedAt,
+                waitingSinceMs = WaitingSince(r.Id),
+                pausedUntil = r.PausedUntil,
+                endsAt = r.EndsAt,
             };
         });
 

@@ -397,6 +397,9 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<Guid?>("InviteLinkId")
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("PausedUntil")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("RequestStage")
                         .HasColumnType("text");
 

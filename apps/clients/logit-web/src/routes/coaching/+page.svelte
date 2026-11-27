@@ -63,6 +63,7 @@
     switch (i.kind) {
       case "checkin": return `${i.client.name} sent a check-in`;
       case "message": return `${i.client.name} messaged you`;
+      case "waiting": return `${i.client.name} has waited ${i.days} days for a reply`;
       case "missed": {
         const late = daysBetween(i.dueMs, Date.now());
         return `${i.client.name}'s check-in is ${late <= 0 ? "due" : `${late} day${late === 1 ? "" : "s"} late`}`;
@@ -79,6 +80,7 @@
     switch (i.kind) {
       case "checkin": return `Check-in · ${ago(i.item.submittedAtMs)}`;
       case "message": return `${i.client.unread} unread`;
+      case "waiting": return i.days >= 7 ? "They can now stop coaching with a refund" : "After 7 days they can stop coaching with a refund";
       case "missed": return `${i.client.sessions7d} session${i.client.sessions7d === 1 ? "" : "s"} in the last 7 days`;
       case "ending": return `${i.program.program.name}, week ${i.program.week} of ${i.program.totalWeeks}`;
       case "request": return `${i.request.linkName ? `Via "${i.request.linkName}"` : "From your profile"} · ${ago(Date.parse(i.request.requestedAt))}`;
@@ -144,8 +146,8 @@
             </span>
             {#if i.kind === "checkin"}
               <a href="/coaching/checkins?id={encodeURIComponent(i.item.id)}&client={i.client.id}" class="h-8 rounded-[9px] bg-primary px-3 text-xs font-semibold leading-8 text-primary-foreground">Review</a>
-            {:else if i.kind === "message"}
-              <a href="/messages?c={i.client.relationshipId}" class="h-8 rounded-[9px] border border-border px-3 text-xs font-medium leading-8 hover:bg-muted">Reply</a>
+            {:else if i.kind === "message" || i.kind === "waiting"}
+              <a href="/messages?c={i.client.relationshipId}" class="h-8 rounded-[9px] {i.kind === 'waiting' ? 'bg-primary font-semibold text-primary-foreground' : 'border border-border font-medium hover:bg-muted'} px-3 text-xs leading-8">Reply</a>
             {:else if i.kind === "missed"}
               <a href="/messages?c={i.client.relationshipId}&draft={encodeURIComponent(NUDGE)}" class="h-8 rounded-[9px] border border-border px-3 text-xs font-medium leading-8 hover:bg-muted">Nudge</a>
             {:else if i.kind === "ending"}

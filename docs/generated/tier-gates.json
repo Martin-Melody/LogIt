@@ -63,6 +63,34 @@
     "orSampleCoach": true
   },
   {
+    "method": "POST",
+    "route": "/coach/clients/{relationshipId:guid}/end",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": true
+  },
+  {
+    "method": "GET",
+    "route": "/coach/clients/{relationshipId:guid}/ending",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": true
+  },
+  {
+    "method": "POST",
+    "route": "/coach/clients/{relationshipId:guid}/pause",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": true
+  },
+  {
+    "method": "POST",
+    "route": "/coach/clients/{relationshipId:guid}/resume",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": true
+  },
+  {
     "method": "PUT",
     "route": "/coach/clients/{relationshipId:guid}/swap-rule",
     "plan": "Studio",

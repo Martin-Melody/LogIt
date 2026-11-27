@@ -55,6 +55,12 @@ export type ClientSummary = {
   lastCheckinAtMs: number | null;
   missed: { schedule: CheckinSchedule; dueMs: number } | null;
   scheduleCount: number;
+  /** Their first message since your last reply (canvas Z2). */
+  waitingSinceMs: number | null;
+  /** You paused coaching until then (canvas E1). */
+  pausedUntil: string | null;
+  /** Coaching ends then (they stopped, or moved coach). */
+  endsAt: string | null;
 };
 
 export type CoachingOverview = {
@@ -150,7 +156,9 @@ function summarise(
   const subs = mine.map(parseSubmission).filter((s): s is CheckinSubmission => s != null);
   const clientSchedules = schedules.filter((s) => s.recipientUserId === r.client.id && !s.schedule.archived);
   let missed: ClientSummary["missed"] = null;
-  if (sharing.checkins) {
+  // Paused by you: check-ins due meanwhile aren't missed.
+  const paused = !!r.pausedUntil && Date.parse(r.pausedUntil) > now;
+  if (sharing.checkins && !paused) {
     for (const s of clientSchedules) {
       const m = missedCheckin(s.schedule, subs, now);
       if (m && (!missed || m.dueMs > missed.dueMs)) missed = { schedule: s.schedule, dueMs: m.dueMs };
@@ -176,6 +184,9 @@ function summarise(
     lastCheckinAtMs: r.lastCheckinSubmittedAtMs,
     missed,
     scheduleCount: clientSchedules.length,
+    waitingSinceMs: r.waitingSinceMs ?? null,
+    pausedUntil: r.pausedUntil ?? null,
+    endsAt: r.endsAt ?? null,
   };
 }
 
@@ -185,13 +196,17 @@ export type NeedsYou =
   | { kind: "message"; at: number; client: ClientSummary }
   | { kind: "missed"; at: number; client: ClientSummary; dueMs: number }
   | { kind: "ending"; at: number; client: ClientSummary; program: ProgramStatus }
-  | { kind: "request"; at: number; request: CoachingRequest };
+  | { kind: "request"; at: number; request: CoachingRequest }
+  // Canvas Z2: a client has waited 5+ days for a reply (at 7 they can stop with a refund).
+  | { kind: "waiting"; at: number; client: ClientSummary; days: number };
 
 export function needsYou(o: CoachingOverview, now = Date.now()): NeedsYou[] {
   const out: NeedsYou[] = [];
   for (const c of o.clients) {
     for (const item of c.toReview) out.push({ kind: "checkin", at: item.submittedAtMs, client: c, item });
-    if (c.unread > 0) out.push({ kind: "message", at: now, client: c });
+    const waitedDays = c.waitingSinceMs ? Math.floor((now - c.waitingSinceMs) / DAY) : 0;
+    if (waitedDays >= 5) out.push({ kind: "waiting", at: c.waitingSinceMs!, client: c, days: waitedDays });
+    else if (c.unread > 0) out.push({ kind: "message", at: now, client: c });
     if (c.missed) out.push({ kind: "missed", at: c.missed.dueMs, client: c, dueMs: c.missed.dueMs });
     const p = c.program;
     if (p?.state === "running" && p.endsAtMs != null && p.endsAtMs - now <= 7 * DAY) {

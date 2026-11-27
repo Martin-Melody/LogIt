@@ -21,6 +21,11 @@ public interface ICoachStripe
     Task<string> CreateBillingPortalAsync(string accountId, string customerId, string returnUrl, CancellationToken ct);
     Task SetCancelAtPeriodEndAsync(string accountId, string subscriptionId, bool cancel, CancellationToken ct);
     Task CancelNowAsync(string accountId, string subscriptionId, CancellationToken ct);
+    /// The coach paused coaching (canvas E1): no charges until `resumesAt`; null resumes now.
+    Task PauseCollectionAsync(string accountId, string subscriptionId, DateTime? resumesAt, CancellationToken ct);
+    /// After a new card (canvas Z3): try the unpaid payment now rather than at Stripe's next
+    /// retry. True when it's paid.
+    Task<bool> RetryUnpaidAsync(string accountId, string subscriptionId, CancellationToken ct);
     /// Give back part of a payment. `paymentRef` is what a receipt stores: the invoice or the
     /// checkout session the money came from. `idempotencyKey` makes a retry return the same refund.
     Task<StripeRefund> RefundAsync(string accountId, string paymentRef, long amountCents, string idempotencyKey, CancellationToken ct);
@@ -226,6 +231,23 @@ public class CoachStripe(IConfiguration config) : ICoachStripe
 
     public Task CancelNowAsync(string accountId, string subscriptionId, CancellationToken ct) =>
         Client.V1.Subscriptions.CancelAsync(subscriptionId, null, On(accountId), ct);
+
+    public Task PauseCollectionAsync(string accountId, string subscriptionId, DateTime? resumesAt, CancellationToken ct)
+    {
+        var options = new SubscriptionUpdateOptions();
+        // "void": nothing is owed for the paused time; Stripe resumes on its own on the date.
+        if (resumesAt is { } at) options.PauseCollection = new SubscriptionPauseCollectionOptions { Behavior = "void", ResumesAt = at };
+        else options.AddExtraParam("pause_collection", "");
+        return Client.V1.Subscriptions.UpdateAsync(subscriptionId, options, On(accountId), ct);
+    }
+
+    public async Task<bool> RetryUnpaidAsync(string accountId, string subscriptionId, CancellationToken ct)
+    {
+        var sub = await Client.V1.Subscriptions.GetAsync(subscriptionId, new SubscriptionGetOptions { Expand = ["latest_invoice"] }, On(accountId), ct);
+        if (sub.LatestInvoice is not { Status: "open" } invoice) return sub.LatestInvoice?.Status == "paid";
+        var paid = await Client.V1.Invoices.PayAsync(invoice.Id, null, On(accountId), ct);
+        return paid.Status == "paid";
+    }
 
     public async Task<StripeRefund> RefundAsync(
         string accountId, string paymentRef, long amountCents, string idempotencyKey, CancellationToken ct)

@@ -133,6 +133,12 @@ public static class CoachIntake
         public const string Joined = "joined";
         /// In the old coach's conversation: the client moved to another coach.
         public const string Leaving = "leaving";
+        /// Coaching ending and pausing (canvas E1, E2, M1, Z2).
+        public const string Paused = "paused";
+        public const string Resumed = "resumed";
+        public const string Ended = "ended";
+        public const string Stopping = "stopping";
+        public const string Stopped = "stopped";
     }
 
     public record OfferCard(Guid OfferId, string PackageName, string PackageDescription, long AmountCents, string Currency,

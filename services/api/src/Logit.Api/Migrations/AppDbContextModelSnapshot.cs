@@ -392,6 +392,9 @@ namespace Logit.Api.Migrations
                     b.Property<Guid?>("InviteLinkId")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("PausedUntil")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("RequestStage")
                         .HasColumnType("TEXT");
 

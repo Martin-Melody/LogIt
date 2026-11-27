@@ -443,10 +443,15 @@ export const FEATURES: Feature[] = [
     whereWeb: "Coaching › Clients",
     wherePhone: "Settings › Account › Coaching",
     docs: "/docs/coaching/clients",
-    server: ["/coach/roster", "/coach/clients/{clientId}/charts", "/coach/clients/{clientId}/charts/{chartId}"],
+    server: [
+      "/coach/roster", "/coach/clients/{clientId}/charts", "/coach/clients/{clientId}/charts/{chartId}",
+      "/coach/clients/{relationshipId}/ending", "/coach/clients/{relationshipId}/end",
+      "/coach/clients/{relationshipId}/pause", "/coach/clients/{relationshipId}/resume",
+    ],
     can: [
       "Answer requests: offer a spot, keep a waiting list, or say it's not a fit, on the web or the phone",
       "Set a client limit; open offers hold a spot",
+      "Pause coaching until a date, or end it with a refund and another coach to suggest",
     ],
     cant: ["See what a client has turned off; it shows as Not shared"],
   },

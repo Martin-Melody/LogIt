@@ -28,6 +28,10 @@
   import { page } from "$app/state";
   import { tick } from "svelte";
   import MyRequest from "$lib/features/coaching/requests/MyRequest.svelte";
+  import RequestEventCard from "$lib/features/coaching/requests/RequestEventCard.svelte";
+  import AgreementDialog from "$lib/features/coaching/requests/AgreementDialog.svelte";
+  import { Button } from "$lib/components/ui/button";
+  import type { ManageCoaching } from "@logit/core/api/coachApi";
   import { clientPaymentNote, formatMoney, shortDate as payDate } from "@logit/core/domain/coachPayments";
 
   // You as a client: your coach, what they've given you, your check-ins and what they can see.
@@ -45,6 +49,10 @@
   let error = $state<string | null>(null);
   let busy = $state<string | null>(null);
   let stopping = $state<CoachRelationship | null>(null);
+  // Canvas M1, E2, Z2: each coach's pause, end date, agreement, and whether they've gone quiet.
+  let manage = $state<Record<string, ManageCoaching>>({});
+  let stoppingQuiet = $state<CoachRelationship | null>(null);
+  let readingAgreement = $state<string | null>(null);
 
   async function load() {
     try {
@@ -52,6 +60,8 @@
       coaches = c;
       invites = i;
       requests = r;
+      const m = await Promise.all(c.map((x) => coachApi.manageCoaching(x.relationshipId).catch(() => null)));
+      manage = Object.fromEntries(c.flatMap((x, k) => (m[k] ? [[x.relationshipId, m[k]!]] : [])));
       for (const inv of i) inviteSharing[inv.relationshipId] ??= { ...SHARE_ALL };
       if (c.length) {
         const [p, f, s, rv, ss] = await Promise.all([
@@ -78,6 +88,14 @@
   const focusRequest = page.url.searchParams.get("request");
   onMount(async () => {
     await load();
+    // Back from Stripe's card page (canvas Z3): try the unpaid payment now.
+    const card = page.url.searchParams.get("card");
+    if (card && coaches.find((x) => x.relationshipId === card)?.payment?.state === "failed") {
+      const r = await coachApi.retryPayment(card).catch(() => ({ paid: false, error: undefined as string | undefined }));
+      if (r.paid) toast.success("Paid. Coaching is back on.");
+      else toast.error(r.error ?? "The payment didn't go through yet. Stripe tries again over the next few days.");
+      await load();
+    }
     if (focusRequest) {
       await tick();
       document.getElementById(`request-${focusRequest}`)?.scrollIntoView({ block: "start" });
@@ -145,8 +163,10 @@
     stopping = null;
     if (!c) return;
     try {
-      await coachApi.revokeRelationship(c.relationshipId);
-      toast.success(`You've stopped coaching with ${c.coach.displayName || c.coach.username}`);
+      const r = await coachApi.stopCoaching(c.relationshipId);
+      toast.success(r.status === "ending" && r.endsAt
+        ? `Your plan stops renewing. Coaching with ${coachName(c)} carries on until ${shortDate(Date.parse(r.endsAt))}.`
+        : `You've stopped coaching with ${coachName(c)}`);
       loading = true;
       await load();
     } catch (e) {
@@ -155,6 +175,20 @@
   }
 
   const coachName = (c: { coach: { displayName: string; username: string } }) => c.coach.displayName || c.coach.username;
+
+  async function stopQuiet() {
+    const c = stoppingQuiet;
+    stoppingQuiet = null;
+    if (!c) return;
+    try {
+      const r = await coachApi.stopCoaching(c.relationshipId, true);
+      toast.success(r.refundedCents ? `Coaching stopped. ${formatMoney(r.refundedCents, r.currency ?? "eur")} is on its way back to your card.` : "Coaching stopped");
+      loading = true;
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't stop coaching");
+    }
+  }
 
   // Stripe's billing page for this plan: change a card that failed (Stripe takes the overdue
   // payment straight away), see receipts. Only on the web; the app never links to paying.
@@ -273,6 +307,33 @@
         </section>
       {/if}
 
+      {@const m = manage[c.relationshipId]}
+      {#if m?.pausedUntil}
+        <!-- E2: pinned while the coach has paused coaching. -->
+        <section role="status" class="flex flex-col gap-2 rounded-[10px] border border-warning/40 bg-warning/5 px-[18px] py-4">
+          <h2 class="text-sm font-semibold">{name} paused coaching until {weekdayDate(Date.parse(m.pausedUntil))}</h2>
+          <dl class="grid gap-x-6 gap-y-1 text-[13px] sm:grid-cols-[auto_1fr]">
+            {#if m.plan}<dt class="text-muted-foreground">Payments</dt><dd>Paused, next charge after {shortDate(Date.parse(m.pausedUntil))}</dd>{/if}
+            <dt class="text-muted-foreground">Check-ins</dt><dd>Paused</dd>
+            <dt class="text-muted-foreground">Your program</dt><dd>Keeps going as planned</dd>
+          </dl>
+          <p class="text-xs text-muted-foreground">{name} still sees what you share. You can stop coaching instead, below.</p>
+        </section>
+      {:else if m?.endsAt}
+        <p role="status" class="rounded-[10px] bg-muted px-[18px] py-3 text-[13px]">Coaching with {name} ends {weekdayDate(Date.parse(m.endsAt))}. Your program and history stay yours.</p>
+      {/if}
+      {#if m?.quiet}
+        <!-- Z2: the coach hasn't replied for a week. -->
+        <section role="status" class="flex flex-col gap-2.5 rounded-[10px] border border-destructive/30 bg-destructive/5 px-[18px] py-4">
+          <h2 class="text-sm font-semibold">{name} hasn't replied for {m.quiet.days} days</h2>
+          {#if m.quiet.lastMessage}<p class="text-[13px] text-muted-foreground">Your last message{m.quiet.lastMessageAt ? `, ${shortDate(Date.parse(m.quiet.lastMessageAt))}` : ""}: "{m.quiet.lastMessage}"</p>{/if}
+          <div class="flex flex-wrap gap-2">
+            <Button size="sm" href="#messages-{c.relationshipId}">Message {name} again</Button>
+            <Button size="sm" variant="outline" onclick={() => (stoppingQuiet = c)}>{m.plan ? "Stop and get a refund…" : "Stop coaching…"}</Button>
+          </div>
+        </section>
+      {/if}
+
       <div class="flex flex-wrap items-start gap-4">
         <div class="flex min-w-0 flex-[2_1_520px] flex-col gap-4">
           {#if coaches.length === 1 && !paused}
@@ -303,9 +364,13 @@
           {/if}
 
           {#if !paused}
-            <section class="flex flex-col rounded-[10px] border border-border bg-card px-[18px] pb-4 pt-3">
+            <section id="messages-{c.relationshipId}" class="flex scroll-mt-4 flex-col rounded-[10px] border border-border bg-card px-[18px] pb-4 pt-3">
               <h2 class="pb-1 text-sm font-semibold">Messages</h2>
-              <MessageThread relationshipId={c.relationshipId} otherName={name} onRead={() => void coachBadges.refresh(undefined, true)} />
+              <MessageThread relationshipId={c.relationshipId} otherName={name} onRead={() => void coachBadges.refresh(undefined, true)}>
+                {#snippet card(m)}
+                  <RequestEventCard message={m} reader="client" coach={name} client={apiClient.getUser()?.displayName ?? "You"} stateOf={() => "taken"} />
+                {/snippet}
+              </MessageThread>
             </section>
           {/if}
         </div>
@@ -354,7 +419,15 @@
             <h2 class="text-sm font-semibold">What {name} can see</h2>
             <p class="pb-2 text-xs leading-relaxed text-muted-foreground">Switching one off hides it from {name} straight away, past entries too. Switch it back on and they see it all again.</p>
             <SharingSwitches {sharing} onchange={(s) => changeSharing(c, s)} />
-            <button type="button" onclick={() => (stopping = c)} class="mt-2.5 h-[34px] w-fit rounded-[9px] border border-destructive/45 px-3 text-[13px] text-destructive hover:bg-destructive/10">Stop coaching with {name}</button>
+            {#if m?.agreedAt}
+              <div class="mt-2 flex items-center justify-between gap-2 border-t border-border pt-2.5 text-[13px]">
+                <span>{name}'s coaching agreement <span class="text-muted-foreground">· agreed {shortDate(Date.parse(m.agreedAt))}</span></span>
+                <Button size="sm" variant="ghost" onclick={() => (readingAgreement = c.relationshipId)}>Read</Button>
+              </div>
+            {/if}
+            {#if !m?.endsAt}
+              <button type="button" onclick={() => (stopping = c)} class="mt-2.5 h-[34px] w-fit rounded-[9px] border border-destructive/45 px-3 text-[13px] text-destructive hover:bg-destructive/10">Stop coaching with {name}</button>
+            {/if}
           </section>
         </div>
       </div>
@@ -366,7 +439,14 @@
   <AlertDialog.Content>
     <AlertDialog.Header>
       <AlertDialog.Title>Stop coaching with {stopping ? coachName(stopping) : ""}?</AlertDialog.Title>
-      <AlertDialog.Description>They stop seeing your data straight away, and their program, check-ins and habits leave your app. Your own workouts and logs stay.{stopping?.payment?.mode === "stripe" && stopping.payment.state !== "ended" ? " Your plan with them is cancelled now, so you won't be charged again." : ""}</AlertDialog.Description>
+      {@const ends = stopping ? manage[stopping.relationshipId]?.plan : null}
+      <AlertDialog.Description>
+        {#if ends && ends.interval === "month" && ends.state === "paid" && ends.paidUntil && Date.parse(ends.paidUntil) > Date.now()}
+          Your plan stops renewing. Coaching carries on until {shortDate(Date.parse(ends.paidUntil))}, the end of what you paid for. Your program, meal plan and history stay yours.
+        {:else}
+          They stop seeing your data straight away, and their program, check-ins and habits leave your app. Your own workouts and logs stay.
+        {/if}
+      </AlertDialog.Description>
     </AlertDialog.Header>
     <AlertDialog.Footer>
       <AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
@@ -374,6 +454,27 @@
     </AlertDialog.Footer>
   </AlertDialog.Content>
 </AlertDialog.Root>
+
+<AlertDialog.Root open={stoppingQuiet !== null} onOpenChange={(o) => { if (!o) stoppingQuiet = null; }}>
+  <AlertDialog.Content>
+    {@const q = stoppingQuiet ? manage[stoppingQuiet.relationshipId]?.quiet : null}
+    <AlertDialog.Header>
+      <AlertDialog.Title>Stop coaching with {stoppingQuiet ? coachName(stoppingQuiet) : ""}?</AlertDialog.Title>
+      <AlertDialog.Description>
+        {#if q?.refundCents}{formatMoney(q.refundCents, (stoppingQuiet ? manage[stoppingQuiet.relationshipId]?.plan?.currency : null) ?? "eur")} for the days left goes back to your card, and your plan stops now. {/if}Your program and history are yours to keep. They're told "No reply for {q?.days ?? 7} days".
+      </AlertDialog.Description>
+    </AlertDialog.Header>
+    <AlertDialog.Footer>
+      <AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
+      <AlertDialog.Action onclick={() => void stopQuiet()}>{q?.refundCents ? `Stop and get ${formatMoney(q.refundCents, (stoppingQuiet ? manage[stoppingQuiet.relationshipId]?.plan?.currency : null) ?? "eur")} back` : "Stop coaching"}</AlertDialog.Action>
+    </AlertDialog.Footer>
+  </AlertDialog.Content>
+</AlertDialog.Root>
+
+{#if readingAgreement && manage[readingAgreement]?.agreedText}
+  {@const m = manage[readingAgreement]!}
+  <AgreementDialog open={true} coach={m.coach.displayName || m.coach.username} text={m.agreedText!} agreedAt={m.agreedAt} />
+{/if}
 
 <AlertDialog.Root open={stoppingPlan !== null} onOpenChange={(o) => { if (!o) stoppingPlan = null; }}>
   <AlertDialog.Content>

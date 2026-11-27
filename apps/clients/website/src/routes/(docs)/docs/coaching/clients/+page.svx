@@ -30,6 +30,17 @@ Set your **client limit** at the top of Clients: clients and open offers each ta
 full, your profile says "Join the waiting list", or "Not taking new clients" if you stop requests.
 On the phone, requests are in Messages with the same three answers.
 
+## Pausing or ending coaching
+
+From a client's page, ⋯ › **Pause or end coaching**. **Pause** until a date when you're away, ill or
+injured: their payments and check-ins pause, they keep training on their program, and it carries on
+by itself on the date (or Resume coaching now). **End** stops their plan now: choose a refund (the
+days not used, all of it, part of it, or none; it goes through your Stripe account from here), write
+them a message, and suggest another coach if you like. They keep their program and history.
+
+If a client has waited five days for a reply, Today says so. After seven days without one, they can
+stop coaching with the unused days refunded.
+
 ## Sharing
 
 Each client chooses what you see: workouts, nutrition diary, bodyweight, habits and check-ins. They can

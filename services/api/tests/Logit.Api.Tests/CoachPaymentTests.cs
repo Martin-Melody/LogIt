@@ -319,6 +319,8 @@ public class CoachPaymentTests : IAsyncLifetime
             if (Meanwhile is { } meanwhile) { Meanwhile = null; await meanwhile(); }
             return new StripeSubscriptionInfo(subscriptionId, "active", false, PeriodEnd);
         }
+        public Task PauseCollectionAsync(string accountId, string subscriptionId, DateTime? resumesAt, CancellationToken ct) => Task.CompletedTask;
+        public Task<bool> RetryUnpaidAsync(string accountId, string subscriptionId, CancellationToken ct) => Task.FromResult(true);
         public Task SetCancelAtPeriodEndAsync(string accountId, string subscriptionId, bool cancel, CancellationToken ct)
         {
             StopAtEnd.Add((subscriptionId, cancel));

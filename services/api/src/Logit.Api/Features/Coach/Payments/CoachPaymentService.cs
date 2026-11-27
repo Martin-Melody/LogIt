@@ -321,6 +321,19 @@ public class CoachPaymentService(
         if (due.Count > 0) await db.SaveChangesAsync(ct);
     }
 
+    /// A coach's pause reaches its date: coaching carries on (Stripe resumes charging by itself).
+    private async Task EndPausesAsync(DateTime now, CancellationToken ct)
+    {
+        var due = await db.CoachClientRelationships.Include(r => r.Coach)
+            .Where(r => r.PausedUntil != null && r.PausedUntil <= now).ToListAsync(ct);
+        foreach (var rel in due)
+        {
+            rel.PausedUntil = null;
+            CoachIntake.Post(db, rel, rel.CoachId, CoachIntake.Events.Resumed, $"{CoachIntake.NameOf(rel.Coach)} is back: coaching carries on.", null, null, now);
+        }
+        if (due.Count > 0) await db.SaveChangesAsync(ct);
+    }
+
     // ── The coach's rule, applied over time ──────────────────────────────────
 
     /// Run hourly: one-off packages that ran out, plans stopped at month end, and the coach's
@@ -328,6 +341,7 @@ public class CoachPaymentService(
     public async Task SweepAsync(DateTime now, CancellationToken ct)
     {
         await EndScheduledAsync(now, ct);
+        await EndPausesAsync(now, ct);
         var rows = await db.CoachClientPayments
             .Include(p => p.Relationship)
             .Where(p => p.Relationship.Status == CoachClientStatus.Active

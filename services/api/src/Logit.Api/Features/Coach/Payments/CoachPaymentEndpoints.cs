@@ -472,8 +472,9 @@ public static class CoachPaymentEndpoints
             .FirstOrDefaultAsync(a => a.CoachId == payment.Relationship.CoachId, ct);
         if (!stripe.Configured || account?.StripeAccountId is null)
             return Error(409, "payments_not_ready", "Payments aren't available right now. Try again later.");
-        // Back to My coach afterwards; never a URL from the request.
-        var back = $"{(config["Web:Origin"] ?? "").TrimEnd('/')}/my-coach";
+        // Back to My coach afterwards (which retries an unpaid payment at once, canvas Z3);
+        // never a URL from the request.
+        var back = $"{(config["Web:Origin"] ?? "").TrimEnd('/')}/my-coach?card={payment.RelationshipId}";
         try
         {
             return Results.Ok(new { url = await stripe.CreateBillingPortalAsync(account.StripeAccountId, customer, back, ct) });

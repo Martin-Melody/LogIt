@@ -46,6 +46,10 @@ public class CoachClientRelationship
     /// Coaching ends on this date: the client took a spot with another coach and keeps this one
     /// until the end of what they paid for (one coach at a time). The payment sweep ends it.
     public DateTime? EndsAt { get; set; }
+    /// The coach paused coaching until this date (canvas E1: away, ill, injured). Payments and
+    /// check-ins pause; the client keeps training and the coach still sees what's shared.
+    /// Separate from Status.Paused, which is "paused until it's paid".
+    public DateTime? PausedUntil { get; set; }
 
     public User Coach { get; set; } = null!;
     public User Client { get; set; } = null!;

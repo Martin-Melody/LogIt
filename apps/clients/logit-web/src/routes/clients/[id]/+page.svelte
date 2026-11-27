@@ -21,6 +21,12 @@
   import ClientPrograms from "$lib/features/coaching/client/ClientPrograms.svelte";
   import ClientInsights from "$lib/features/coaching/client/ClientInsights.svelte";
   import { coachBadges } from "$lib/features/coaching/badges.svelte";
+  import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
+  import { Button } from "$lib/components/ui/button";
+  import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
+  import { toast } from "$lib/components/ui/sonner";
+  import { coachApi } from "@logit/core/api/coachApi";
+  import EndCoachingDialog from "$lib/features/coaching/client/EndCoachingDialog.svelte";
   import {
     loadCoachingOverview,
     parseSubmission,
@@ -49,6 +55,20 @@
   let programsTab = $state<ClientPrograms | null>(null);
   // "Assign program" from another tab: the Programs tab opens its dialog when it mounts.
   let assignOnOpen = $state(false);
+  // Canvas E1: "Pause or end coaching…" (?end=1 from the clients list or ⌘K opens it).
+  let ending = $state(page.url.searchParams.get("end") === "1");
+
+  async function resume(relationshipId: string) {
+    try {
+      await coachApi.resumeCoaching(relationshipId);
+      toast.success("Coaching carries on");
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't resume");
+    }
+  }
+
+
 
   async function load() {
     try {
@@ -124,11 +144,27 @@
         <div>
           <h1 class="text-2xl font-bold tracking-tight">{c.name}{#if c.isSample}<SampleBadge />{/if}</h1>
           <p class="mt-0.5 text-[13px] text-muted-foreground">{c.isSample ? "Sample client" : `@${c.username}`}{sinceLabel(c.since) ? ` · client since ${sinceLabel(c.since)}` : ""} · {programLine(c)}</p>
+          {#if c.pausedUntil}
+            <p class="mt-1 text-[13px] font-medium text-warning">Paused until {new Date(c.pausedUntil).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })} · payments and check-ins paused</p>
+          {:else if c.endsAt}
+            <p class="mt-1 text-[13px] font-medium text-warning">Coaching ends {new Date(c.endsAt).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })}</p>
+          {/if}
         </div>
       </div>
-      <div class="flex gap-2" data-guide="client-actions">
+      <div class="flex items-center gap-2" data-guide="client-actions">
         <button type="button" onclick={() => setTab("messages")} class="h-[34px] rounded-[9px] border border-border px-3 text-[13px] font-medium hover:bg-muted">Message</button>
         <button type="button" onclick={assign} class="h-[34px] rounded-[9px] bg-primary px-3 text-[13px] font-semibold text-primary-foreground">Assign program</button>
+        {#if !c.isSample}
+          <DropdownMenu.Root>
+            <DropdownMenu.Trigger>
+              {#snippet child({ props })}<Button {...props} variant="ghost" size="icon" aria-label="More for {c.name}"><EllipsisIcon class="size-4" /></Button>{/snippet}
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Content align="end" class="w-56">
+              {#if c.pausedUntil}<DropdownMenu.Item onSelect={() => void resume(c.relationshipId)}>Resume coaching now</DropdownMenu.Item>{/if}
+              <DropdownMenu.Item class="text-destructive" onSelect={() => (ending = true)}>Pause or end coaching…</DropdownMenu.Item>
+            </DropdownMenu.Content>
+          </DropdownMenu.Root>
+        {/if}
       </div>
     </header>
 
@@ -228,3 +264,12 @@
     {/key}
   {/if}
 </div>
+
+{#if c && !c.isSample}
+  <EndCoachingDialog bind:open={ending} relationshipId={c.relationshipId} name={c.name} ondone={async () => {
+    const rid = c?.relationshipId;
+    await load();
+    // Ended: they're no longer a client, so back to the list.
+    if (!overview?.clients.some((x) => x.relationshipId === rid)) await goto("/clients");
+  }} />
+{/if}
