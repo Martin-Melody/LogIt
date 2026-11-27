@@ -65,6 +65,8 @@ export type ClientSummary = {
   endsAt: string | null;
   /** Canvas Q8: an unread "for the rest of the program" swap. */
   lastingSwap: boolean;
+  /** Canvas PG8: what they said about each plugin your programs use. */
+  pluginConsent: import("@logit/core/api/coachApi").PluginConsent;
 };
 
 export type CoachingOverview = {
@@ -185,6 +187,7 @@ function summarise(
     lastSessionAtMs: r.lastSessionAtMs,
     unread: r.unreadFromClient,
     lastingSwap: !!r.lastingSwap,
+    pluginConsent: r.pluginConsent ?? {},
     program: currentProgram(
       programs.filter((p) => p.recipientUserId === r.client.id).map((p) => p.program),
       now,

@@ -1,4 +1,5 @@
 import { parseProgramPack } from "./programPack";
+import { parseBlockDeclaration } from "../domain/blockPlugin";
 import { parseExercisePack } from "./exercisePack";
 import { parseMobilityPack } from "./mobilityPack";
 import { FAMILY_ENTRY, isCodeFamily, isWidgetNeed } from "./pluginInfo";
@@ -164,6 +165,15 @@ function checkPack(family: string, pluginId: string, source: string): CheckResul
     checks.push({ id: "json", label: "Valid JSON", ok: true });
   } catch (e) {
     checks.push({ id: "json", label: "Valid JSON", ok: false, detail: message(e) });
+    return done(checks);
+  }
+  if (family === "workout-block") {
+    try {
+      const d = parseBlockDeclaration(raw, pluginId);
+      checks.push({ id: "pack", label: `"${d.name}" with ${d.fields.length} ${d.fields.length === 1 ? "field" : "fields"}, readable`, ok: true });
+    } catch (e) {
+      checks.push({ id: "pack", label: "The block is readable", ok: false, detail: message(e) });
+    }
     return done(checks);
   }
   try {

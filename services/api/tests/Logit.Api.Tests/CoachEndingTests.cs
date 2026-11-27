@@ -171,6 +171,23 @@ public class CoachEndingTests
     }
 
     [Fact]
+    public async Task The_client_says_whether_they_allow_a_plugin_and_the_coach_sees_it()
+    {
+        await using var w = await CoachedAsync("consent", paying: false);
+        var url = $"/coach/coaches/{w.RelId}/plugins";
+        Assert.Equal(HttpStatusCode.BadRequest, (await w.Client.PutAsJsonAsync(url, new { pluginId = "emom", name = "EMOM timer", state = "maybe" })).StatusCode);
+        // Only the client answers, for their own coaching.
+        Assert.Equal(HttpStatusCode.NotFound, (await w.Coach.PutAsJsonAsync(url, new { pluginId = "emom", name = "EMOM timer", state = "allowed" })).StatusCode);
+        (await w.Client.PutAsJsonAsync(url, new { pluginId = "emom", name = "EMOM timer", state = "declined" })).EnsureSuccessStatusCode();
+        var row = (await Json(await w.Coach.GetAsync("/coach/roster"))).GetProperty("roster")[0];
+        Assert.Equal("declined", row.GetProperty("pluginConsent").GetProperty("emom").GetProperty("state").GetString());
+        (await w.Client.PutAsJsonAsync(url, new { pluginId = "emom", name = "EMOM timer", state = "allowed" })).EnsureSuccessStatusCode();
+        var mine = (await Json(await w.Client.GetAsync("/coach/coaches")))[0];
+        Assert.Equal("allowed", mine.GetProperty("pluginConsent").GetProperty("emom").GetProperty("state").GetString());
+        Assert.Equal("EMOM timer", mine.GetProperty("pluginConsent").GetProperty("emom").GetProperty("name").GetString());
+    }
+
+    [Fact]
     public async Task After_a_week_with_no_reply_the_client_can_stop_with_a_refund()
     {
         await using var w = await CoachedAsync("quiet");

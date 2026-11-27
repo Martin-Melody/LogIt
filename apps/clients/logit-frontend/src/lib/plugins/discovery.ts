@@ -111,7 +111,8 @@ function isPluginFamily(v: unknown): v is PluginFamily {
     v === "analytics" ||
     v === "nutrition-algorithm" ||
     v === "nutrition-analytics" ||
-    v === "muscle-group-insight"
+    v === "muscle-group-insight" ||
+    v === "workout-block"
   );
 }
 
@@ -202,8 +203,15 @@ function isMuscleGroupInsightCapability(v: unknown): boolean {
   return record.family === "muscle-group-insight" && isString(record.algorithmId);
 }
 
+function isWorkoutBlockCapability(v: unknown): boolean {
+  if (!v || typeof v !== "object") return false;
+  const record = v as Record<string, unknown>;
+  return record.family === "workout-block" && isString(record.blockId);
+}
+
 function isPluginCapability(v: unknown): v is PluginCapability {
   return (
+    isWorkoutBlockCapability(v) ||
     isWidgetCapability(v) ||
     isProgressionCapability(v) ||
     isMobilityProgressionCapability(v) ||

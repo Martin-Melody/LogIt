@@ -47,6 +47,9 @@ export interface ClientRelationship {
   swapRule?: SwapRule | null;
 }
 
+/** Canvas PG8: a client's answer per plugin a coach's program uses ("removed": it's gone from their phone). */
+export type PluginConsent = Record<string, { state: "allowed" | "declined" | "removed"; name: string; atMs: number }>;
+
 export interface CoachRelationship {
   relationshipId: string;
   coach: CoachClientUser;
@@ -54,6 +57,8 @@ export interface CoachRelationship {
   since?: string;
   /** The swap rule that applies to me in this coach's programs (missing on older servers = any). */
   swapRule?: SwapRule;
+  /** Canvas PG8: what I said about each plugin this coach's programs use. */
+  pluginConsent?: PluginConsent;
   /** "paused" = coaching stopped until it's paid (missing on older servers = active). */
   status?: "active" | "paused";
   /** How I pay this coach through LogIt, if I do. Never carries a price (app store rules). */
@@ -103,6 +108,8 @@ export interface RosterEntry {
   waitingSinceMs?: number | null;
   /** Canvas Q8: an unread "for the rest of the program" swap from them. */
   lastingSwap?: boolean;
+  /** Canvas PG8: what they said about each plugin your programs use. */
+  pluginConsent?: PluginConsent;
   /** You paused coaching until then (canvas E1). */
   pausedUntil?: string | null;
   /** Coaching ends then (they stopped, or moved coach). */
@@ -322,6 +329,11 @@ export function coachApiFor(api: ApiFetcher) {
     },
 
     /** The current user's active coaches (the mirror of listClients). */
+    /** Canvas PG8: tell the coach whether I allow a plugin their program uses. */
+    async setPluginConsent(relationshipId: string, pluginId: string, name: string, state: "allowed" | "declined" | "removed"): Promise<void> {
+      await api.fetch(`/coach/coaches/${encodeURIComponent(relationshipId)}/plugins`, { method: "PUT", body: JSON.stringify({ pluginId, name, state }) });
+    },
+
     async listCoaches(): Promise<CoachRelationship[]> {
       return api.fetch("/coach/coaches");
     },

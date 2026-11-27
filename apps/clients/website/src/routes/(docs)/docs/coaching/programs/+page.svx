@@ -27,6 +27,30 @@ device, changes to different things come across by themselves with a note; only 
 the same exercise does LogIt ask which to keep. Programs made before the builder whose weeks have
 different exercises are still edited week by week.
 
+## Circuits and blocks from plugins
+
+**+ Circuit** adds exercises done one after another, round after round: how many rounds, the
+rest between exercises and between rounds, and reps or a time for each exercise. It moves up the
+same every week, by a round every two weeks, or by each exercise's own rule. Clients run it
+with the circuit timer on their phone.
+
+**+ From a plugin** adds a block from a workout-block plugin you've added, like timed rounds of
+rolling or hangboard hangs. Each plugin asks for its own settings, plus how many rounds (or
+hangs) it starts with. Find more in Plugins › Workout blocks.
+
+Circuits and plugin blocks need LogIt 1.1.0 or newer on the client's phone; older phones say
+"Update LogIt to see this part" and run the rest of the day.
+
+## When a program uses a plugin
+
+A plugin block, or a rule from a plugin, runs on the client's phone, so they're asked first:
+opening the program shows what the plugin is, what it can see (that block's entries, or their
+sets of those exercises) and that it can't read anything else or go online. **Allow** adds it
+for your programs only, even if they keep community plugins off. **Not now** leaves the block as
+a note in their workout and the rule's exercises repeating last time's numbers; the rest of the
+program works. Their Training tab tells you which: not asked yet, not allowed, or removed from
+their phone.
+
 ## Rules
 
 A rule decides how the numbers move from week to week. Pick one for the whole program at the

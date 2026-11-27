@@ -138,6 +138,10 @@ export type ProgramPluginBlock = V2Block & {
   /** What the coach saw it called, for when the plugin isn't there. */
   name: string;
   values?: Record<string, BlockValue>;
+  /** How many entries it starts with ("6 rounds", "5 hangs"); 1 when unset. */
+  entries?: number;
+  /** The settings in words, with the plugin's labels ("6 rounds · What Rolling"), for when it isn't there. */
+  settingsText?: string;
 };
 
 export type ProgramStrength = {

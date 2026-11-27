@@ -22,7 +22,9 @@
   const tab = $derived<Tab>((["installed", "mine"] as const).find((t) => t === page.url.searchParams.get("tab")) ?? "browse");
 
   let query = $state("");
-  let family = $state<string>("all");
+  // ?family=… opens on one kind (the program builder's "Find more" links here).
+  // svelte-ignore state_referenced_locally
+  let family = $state<string>(page.url.searchParams.get("family") ?? "all");
   let mine = $state<MyPlugin[] | null>(null);
   let loadError = $state<string | null>(null);
   let installing = $state<ServedManifest | null>(null);
@@ -38,6 +40,7 @@
     ["exercise-pack", "Exercise packs"],
     ["mobility-pack", "Mobility packs"],
     ["program-pack", "Program packs"],
+    ["workout-block", "Workout blocks"],
   ];
 
   const shown = $derived.by(() => {

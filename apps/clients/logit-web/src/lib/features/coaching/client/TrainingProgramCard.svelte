@@ -9,6 +9,8 @@
   import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
   import { archiveCoachProgram, getProgramStartMs, renameExercise, revertSwap, ruleLabel, type CoachProgram, type ProgramRule } from "@logit/core/domain/CoachProgram";
   import { activeLastingSwaps } from "@logit/core/domain/swaps";
+  import { pluginsNeeded } from "@logit/core/domain/programPlan";
+  import type { PluginConsent } from "@logit/core/api/coachApi";
   import { messagesApi } from "@logit/core/api/messagesApi";
   import { createId } from "@logit/core/domain/ids";
   import type { StrengthBlockData, WorkoutSession } from "@logit/core/domain/workout";
@@ -19,7 +21,7 @@
   import AssignProgramDialog from "../programs/AssignProgramDialog.svelte";
   import RulePickerDialog from "../programs/RulePickerDialog.svelte";
 
-  let { status, clientId, relationshipId, username, name, sessions, swaps, shared, onchange }: {
+  let { status, clientId, relationshipId, username, name, sessions, swaps, shared, onchange, pluginConsent = {} }: {
     status: ProgramStatus | null;
     clientId: string;
     relationshipId: string;
@@ -28,6 +30,8 @@
     sessions: WorkoutSession[];
     swaps: ProgramSwap[];
     shared: boolean;
+    /** Canvas PG8: what they said about the plugins the program uses. */
+    pluginConsent?: PluginConsent;
     onchange: () => Promise<void> | void;
   } = $props();
 
@@ -67,6 +71,8 @@
   function doneSets(s: WorkoutSession): number {
     return s.blocks.reduce((n, b) => n + (b.type === "strength" ? (b.data as StrengthBlockData).sets.filter((x) => x.completed !== false && (x.reps ?? 0) > 0 && x.setType !== "warmup").length : 0), 0);
   }
+
+  const needed = $derived(p ? pluginsNeeded(p) : []);
 
   // Canvas Q8: a lasting swap, kept (their copy says it now) or put back (and they're told).
   const active = $derived(p ? activeLastingSwaps(p, sessions) : []);
@@ -157,6 +163,16 @@
         {/each}
       </div>
     {/if}
+    {#each needed as n (n.pluginId)}
+      {@const c = pluginConsent[n.pluginId]}
+      {#if c?.state !== "allowed"}
+        <!-- Canvas PG8: what runs on their phone, and what doesn't. -->
+        <p class="flex items-start gap-2 rounded-[9px] bg-muted px-3 py-2 text-[13px]">
+          <span class="flex-1"><b class="font-medium">{c?.state === "removed" ? `${n.name} was removed from ${first}'s phone` : c?.state === "declined" ? `${first} hasn't allowed ${n.name}` : `${first} hasn't been asked about ${n.name} yet`}</b>
+            <span class="block text-xs text-muted-foreground">{n.kind === "block" ? "Until then the block is a note in their workout." : "Until then those exercises repeat last time's numbers."}{c ? "" : " They're asked when they open the program on their phone."}</span></span>
+        </p>
+      {/if}
+    {/each}
     {#if swaps.length}
       <!-- Canvas Q8: their swaps; a lasting one asks to be kept or put back. -->
       <div class="flex flex-col">

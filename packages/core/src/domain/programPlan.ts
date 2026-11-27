@@ -16,6 +16,8 @@
 // they did.
 
 import { loadFromPercent } from "./oneRepMax";
+import { getExercises, type WorkoutSession } from "./workout";
+import type { ProgressionOutput } from "./progression";
 import { ruleFor, type CoachProgram, type ProgramRule, type ProgramSet, type ProgramStrength, type ProgramWeek } from "./CoachProgram";
 
 export type PlanCell = {
@@ -231,4 +233,68 @@ export function planForWeek(program: CoachProgram, weekNumber: number, ctx: Plan
     if (!cache.has(blockId)) cache.set(blockId, planExercise(program, blockId, { e1rm: ctx.e1rm })[index] ?? null);
     return cache.get(blockId)!;
   };
+}
+
+// ── Circuits and plugins (canvas Q4, PG8) ──
+
+/** A circuit's rounds in a week (1-based): "add-round" adds one every two weeks. */
+export function circuitRounds(block: { rounds: number; progression?: "same" | "add-round" | "each" }, weekNumber: number): number {
+  const base = Math.max(1, block.rounds);
+  return block.progression === "add-round" ? base + Math.floor(Math.max(0, weekNumber - 1) / 2) : base;
+}
+
+/** "Same as last time": the heaviest working set the last time they did it, as many sets as planned.
+ * What a plugin rule falls back to when the plugin isn't there (canvas PG8). */
+export function lastTimeCell(exerciseName: string, sessions: WorkoutSession[], sets: number): PlanCell | null {
+  const name = exerciseName.trim().toLowerCase();
+  const done = sessions
+    .filter((s) => s.endedAtMs != null)
+    .sort((a, b) => b.startedAtMs - a.startedAtMs);
+  for (const s of done) {
+    for (const e of getExercises(s)) {
+      if (e.exerciseName.trim().toLowerCase() !== name) continue;
+      const work = e.sets.filter((x) => x.completed && x.setType !== "warmup");
+      if (!work.length) continue;
+      const top = work.reduce((a, b) => (b.weight > a.weight || (b.weight === a.weight && b.reps > a.reps) ? b : a));
+      return { source: "rule", weight: top.weight, reps: String(top.reps), sets };
+    }
+  }
+  return null;
+}
+
+/** A progression plugin's suggestion as a plan cell (its first working set, and how many). */
+export function cellFromSuggestion(out: ProgressionOutput | null): PlanCell | null {
+  const work = (out?.sets ?? []).filter((s) => s.setType !== "warmup");
+  const first = work[0];
+  if (!first) return null;
+  const reps = Array.isArray(first.reps) ? `${first.reps[0]}–${first.reps[1]}` : String(first.reps);
+  return { source: "rule", weight: first.weight, reps, sets: work.length };
+}
+
+export type NeededPlugin = { pluginId: string; name: string; kind: "block" | "rule"; where: string[] };
+
+/** The plugins a program uses (blocks and rules), each once, with where (canvas PG8). */
+export function pluginsNeeded(program: CoachProgram): NeededPlugin[] {
+  const out = new Map<string, NeededPlugin>();
+  const add = (pluginId: string, name: string, kind: NeededPlugin["kind"], where: string) => {
+    const n = out.get(pluginId) ?? { pluginId, name, kind, where: [] };
+    if (!n.where.includes(where)) n.where.push(where);
+    out.set(pluginId, n);
+  };
+  if (program.rule?.kind === "plugin") add(program.rule.pluginId, program.rule.name, "rule", "every exercise");
+  const first = [...program.weeks].sort((a, b) => a.weekNumber - b.weekNumber)[0];
+  for (const d of first?.days ?? []) {
+    for (const b of d.blocks) {
+      const label = d.name || `Day ${d.orderIndex + 1}`;
+      if (b.type === "plugin") add(b.pluginId, b.name, "block", `"${blockSummary(b)}" on ${label}`);
+      if (b.type === "strength" && b.rule?.kind === "plugin") add(b.rule.pluginId, b.rule.name, "rule", `${b.exerciseName} on ${label}`);
+    }
+  }
+  return [...out.values()];
+}
+
+function blockSummary(b: { name: string; values?: Record<string, unknown>; settingsText?: string }): string {
+  if (b.settingsText) return `${b.name}: ${b.settingsText}`;
+  const vals = Object.values(b.values ?? {}).filter((v) => v != null && v !== "").slice(0, 3);
+  return vals.length ? `${b.name}: ${vals.join(", ")}` : b.name;
 }

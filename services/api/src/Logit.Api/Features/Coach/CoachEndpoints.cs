@@ -316,6 +316,7 @@ public static class CoachEndpoints
                 since = r.UpdatedAt,
                 waitingSinceMs = WaitingSince(r.Id),
                 lastingSwap = lastingSwaps.Contains(r.Id),
+                pluginConsent = CoachPluginConsent.Read(r.PluginConsentJson),
                 pausedUntil = r.PausedUntil,
                 endsAt = r.EndsAt,
             };
@@ -347,6 +348,7 @@ public static class CoachEndpoints
             since = r.UpdatedAt,
             // The swap rule that applies to me in this coach's programs.
             swapRule = SwapRules.Effective(r, r.Coach),
+            pluginConsent = CoachPluginConsent.Read(r.PluginConsentJson),
             status = r.Status == CoachClientStatus.Paused ? "paused" : "active",
             payment = CoachPaymentEndpoints.ClientPaymentDto(r.Payment, accounts.GetValueOrDefault(r.CoachId)),
             // Canvas Z7: pinned in the conversation while the coach is away.

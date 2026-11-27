@@ -30,7 +30,7 @@
     <span class="flex flex-[1_1_420px] flex-col gap-1">
       <span class="text-sm font-semibold">Community plugins are off</span>
       <span class="text-[13px] leading-normal text-muted-foreground">
-        Exercise and mobility packs always install. Plugins that run code (widgets, progression, analytics) need this on.
+        Packs and workout blocks always install. Plugins that run code (widgets, progression, analytics) need this on.
         One switch for your account, so it's the same on your phone.
       </span>
     </span>

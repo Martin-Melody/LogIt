@@ -16,6 +16,7 @@ export const PLUGIN_FAMILIES = [
   "exercise-pack",
   "mobility-pack",
   "program-pack",
+  "workout-block",
 ] as const;
 export type BuildablePluginFamily = (typeof PLUGIN_FAMILIES)[number];
 
@@ -42,6 +43,7 @@ export const FAMILY_LABELS: Record<string, string> = {
   "exercise-pack": "Exercise pack",
   "mobility-pack": "Mobility pack",
   "program-pack": "Program pack",
+  "workout-block": "Workout block",
   "muscle-group-insight": "Muscle insight",
 };
 
@@ -144,6 +146,8 @@ export function pluginCan(family: string): string[] {
       return ["Add mobility drills to your library"];
     case "program-pack":
       return ["Offer programs coaches can copy into their own"];
+    case "workout-block":
+      return ["Add a kind of block to your workouts, like timed rounds"];
     default:
       return [];
   }

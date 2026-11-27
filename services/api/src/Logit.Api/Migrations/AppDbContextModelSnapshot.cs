@@ -407,6 +407,9 @@ namespace Logit.Api.Migrations
                     b.Property<DateTime?>("PausedUntil")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("PluginConsentJson")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("RequestStage")
                         .HasColumnType("TEXT");
 

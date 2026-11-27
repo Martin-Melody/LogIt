@@ -220,6 +220,27 @@ export const analytics = {
         null,
         2,
       ) + "\n";
+    case "workout-block":
+      // The declaration is the file (docs/plugin-workout-blocks.md); LogIt draws and times it.
+      return JSON.stringify(
+        {
+          id: pluginId,
+          name,
+          description: "Timed rounds with rest, for rolling, sparring or bag work.",
+          entry: { one: "Round", many: "Rounds" },
+          blockFields: [],
+          fields: [
+            { key: "length", type: "duration", label: "Length", default: 300, timer: "work", column: true },
+            { key: "partner", type: "text", label: "Partner", optional: true, suggestions: "previous", column: true },
+            { key: "effort", type: "scale", label: "How hard", min: 1, max: 5, optional: true },
+            { key: "note", type: "text", label: "Note", multiline: true, optional: true },
+          ],
+          timer: { pattern: "rounds", work: "length", rest: { default: 60, label: "Rest" } },
+          summary: "{count} rounds",
+        },
+        null,
+        2,
+      ) + "\n";
     default:
       return "";
   }
@@ -227,7 +248,7 @@ export const analytics = {
 
 /** File name the builder shows for the source. */
 export function sourceFileName(family: string): string {
-  return isCodeFamily(family) ? "bundle.js" : family === "mobility-pack" ? "drills.json" : family === "program-pack" ? "programs.json" : "exercises.json";
+  return isCodeFamily(family) ? "bundle.js" : family === "mobility-pack" ? "drills.json" : family === "program-pack" ? "programs.json" : family === "workout-block" ? "block.json" : "exercises.json";
 }
 
 /** Turn a name into the last part of an id: "Weekly swings" -> "weekly-swings". */

@@ -412,6 +412,9 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<DateTime?>("PausedUntil")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("PluginConsentJson")
+                        .HasColumnType("text");
+
                     b.Property<string>("RequestStage")
                         .HasColumnType("text");
 

@@ -7,7 +7,8 @@ export type PluginFamily =
   | "analytics"
   | "nutrition-algorithm"
   | "nutrition-analytics"
-  | "muscle-group-insight";
+  | "muscle-group-insight"
+  | "workout-block";
 
 export type PluginOrigin = "builtin" | "manual" | "url" | "activitypub" | "inline";
 
@@ -108,7 +109,14 @@ export type PluginCapability =
   | AnalyticsPluginCapability
   | NutritionAlgorithmPluginCapability
   | NutritionAnalyticsPluginCapability
-  | MuscleGroupInsightAlgorithmPluginCapability;
+  | MuscleGroupInsightAlgorithmPluginCapability
+  | WorkoutBlockPluginCapability;
+
+/** A kind of workout block, declared as data (docs/plugin-workout-blocks.md). */
+export type WorkoutBlockPluginCapability = {
+  family: "workout-block";
+  blockId: string;
+};
 
 export type PluginManifest = {
   id: string;

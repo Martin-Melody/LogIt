@@ -28,6 +28,9 @@ public class CoachClientRelationship
     /// Which exercise swaps this client may make in workouts from this coach's programs
     /// (see SwapRules). Null: the coach's default (User.CoachSwapRule).
     public string? SwapRule { get; set; }
+    /// Canvas PG8: the client's answer per plugin the coach's program uses
+    /// ({ pluginId: { state, name, atMs } }, see CoachPluginConsent).
+    public string? PluginConsentJson { get; set; }
 
     // ── A request (canvas R3, C1–C6): the conversation before coaching starts ──
     /// Where a client's request stands while Pending (RequestStages.*), and why a closed one

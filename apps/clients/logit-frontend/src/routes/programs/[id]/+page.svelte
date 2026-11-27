@@ -17,6 +17,8 @@
   import { startAssignedProgram } from "$lib/usecases/coach/startAssignedProgram";
   import { getCoachProgramRepo } from "$lib/data/repoProvider";
   import { currentSession } from "$lib/stores/currentSession.store";
+  import CoachPluginCard from "$lib/features/coaching/CoachPluginCard.svelte";
+  import { programPlugins, syncProgramPlugins, type ProgramPlugin } from "$lib/features/coaching/programPlugins";
 
   const props = $props<{ params: { id: string } }>();
   const programId = $derived(props.params.id);
@@ -103,6 +105,18 @@
     }
   }
 
+  // Canvas PG8: plugins the program uses that this phone doesn't run yet.
+  let plugins = $state<ProgramPlugin[]>([]);
+  const coach = $derived(program ? coachFor(program.coachId) : undefined);
+  async function loadPlugins() {
+    if (!program) return;
+    plugins = await programPlugins(program).catch(() => []);
+    void syncProgramPlugins(plugins, coach?.relationshipId ?? null);
+  }
+  $effect(() => {
+    if (program) void loadPlugins();
+  });
+
   onMount(() => void load());
 </script>
 
@@ -127,6 +141,10 @@
     {#if program.description}
       <p class="px-3 py-2 text-sm text-muted-foreground border-b border-border">{program.description}</p>
     {/if}
+
+    {#each plugins.filter((p) => !p.ready) as p (p.pluginId)}
+      <CoachPluginCard plugin={p} coachName={coach?.name ?? "Your coach"} relationshipId={coach?.relationshipId ?? null} onchange={() => void loadPlugins()} />
+    {/each}
 
     {#if progress}
       <div class="flex items-center gap-3 px-3 py-2.5 border-b border-border">
@@ -184,7 +202,7 @@
                           {#if !canRunBlock(block, PROGRAM_BLOCKS_THIS_APP_RUNS) || (block.type === "plugin" && !getBlockDeclaration(block.pluginId))}
                             <!-- Program data v2: a part this app can't run; the rest of the day works. -->
                             <Info class="h-3 w-3 shrink-0" />
-                            <span class="truncate">{block.type === "plugin" && canRunBlock(block, PROGRAM_BLOCKS_THIS_APP_RUNS) ? `${block.name} · add the plugin to use it` : UPDATE_LINE}</span>
+                            <span class="truncate">{block.type === "plugin" && canRunBlock(block, PROGRAM_BLOCKS_THIS_APP_RUNS) ? `${block.name} · a note until the plugin is allowed` : UPDATE_LINE}</span>
                           {:else if block.type === "strength"}
                             <Dumbbell class="h-3 w-3 shrink-0" />
                             <span class="truncate">

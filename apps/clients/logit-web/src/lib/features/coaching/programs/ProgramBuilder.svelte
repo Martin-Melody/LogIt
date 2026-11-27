@@ -19,6 +19,8 @@
   import ActionMenu from "$lib/features/commands/ActionMenu.svelte";
   import ProgramWeeks from "./ProgramWeeks.svelte";
   import RulePickerDialog from "./RulePickerDialog.svelte";
+  import CircuitDialog from "./CircuitDialog.svelte";
+  import PluginBlockDialog from "./PluginBlockDialog.svelte";
   import type { RowAction } from "$lib/features/commands/commands.svelte";
   import NamePicker from "$lib/features/plan/NamePicker.svelte";
   import { loadExerciseIndex, type ExerciseIndex } from "$lib/features/plan/exerciseIndex";
@@ -264,6 +266,35 @@
     adding = null;
   }
 
+  // ── Circuits and plugin blocks (canvas Q4) ──
+  let circuitOpen = $state(false);
+  let pluginOpen = $state(false);
+  let editingCircuit = $state<P.ProgramCircuit | null>(null);
+  let editingPlugin = $state<P.ProgramPluginBlock | null>(null);
+  function openCircuit(b: P.ProgramCircuit | null) {
+    editingCircuit = b;
+    circuitOpen = true;
+  }
+  function openPluginBlock(b: P.ProgramPluginBlock | null) {
+    editingPlugin = b;
+    pluginOpen = true;
+  }
+  /** Adds the block to this day, or changes the one being edited. */
+  function putBlock(editing: ProgramBlock | null, fields: Partial<P.ProgramCircuit> | Partial<P.ProgramPluginBlock>, type: "circuit" | "plugin") {
+    if (!day) return;
+    if (editing) {
+      patchBlock(editing.id, fields as Partial<ProgramBlock>);
+      return;
+    }
+    const d = day.id;
+    const id = createId("pblock");
+    edit((p) => mapTemplateDay(p, d, (dd) => ({
+      ...dd,
+      blocks: [...dd.blocks, { ...fields, type, id, orderIndex: dd.blocks.length, minAppVersion: P.V2_BLOCKS_APP_VERSION } as ProgramBlock],
+    })));
+    blockId = id;
+  }
+
   /** Change one day of the built week. */
   function mapTemplateDay(p: CoachProgram, id: string, fn: (d: ProgramDay) => ProgramDay): CoachProgram {
     const w = templateOf(p);
@@ -329,6 +360,7 @@
       b.supersetGroup
         ? { id: "ungroup", label: "Take out of the superset", run: () => edit((p, w) => P.leaveSuperset(p, w, d, b.id)), separatorBefore: true }
         : { id: "superset", label: "Superset with the one above", run: () => edit((p, w) => P.supersetWithPrevious(p, w, d, b.id)), disabled: !prev || prev.type === "circuit" ? "Nothing above to pair with" : undefined, separatorBefore: true },
+      ...(b.type === "circuit" ? [{ id: "edit", label: "Edit circuit…", run: () => openCircuit(b) }] : b.type === "plugin" ? [{ id: "edit", label: `Edit ${b.name}…`, run: () => openPluginBlock(b) }] : []),
       { id: "dup", label: "Duplicate", run: () => duplicateBlock(b) },
       { id: "remove", label: "Remove", danger: true, separatorBefore: true, run: () => { edit((p, w) => P.removeBlock(p, w, d, b.id)); if (blockId === b.id) blockId = null; } },
     ];
@@ -433,7 +465,7 @@
   }
 
   const fieldCls = "h-9 rounded-[8px] border border-input bg-background px-2.5 text-[13px]";
-  const blockMain = (b: ProgramBlock) => (b.type === "strength" ? b.exerciseName : P.blockLine(b));
+  const blockMain = (b: ProgramBlock) => (b.type === "strength" ? b.exerciseName : b.type === "circuit" ? b.members.map((m) => m.exerciseName).join(", ") || "Circuit" : P.blockLine(b));
   function blockSub(b: ProgramBlock): string {
     if (b.type === "strength") {
       const first = b.sets.find((s) => s.setType !== "warmup");
@@ -446,8 +478,8 @@
     }
     if (b.type === "cardio") return [b.targetDurationSec ? `${Math.round(b.targetDurationSec / 60)} min` : "", b.targetDistanceM ? `${b.targetDistanceM / 1000} km` : ""].filter(Boolean).join(" · ") || "Cardio";
     if (b.type === "mobility") return [b.sets ? `${b.sets} × ${b.targetSec ?? 30} s` : "", b.perSide ? "each side" : ""].filter(Boolean).join(" · ");
-    if (b.type === "plugin") return "Block from a plugin";
-    if (b.type === "circuit") return `${b.rounds} rounds`;
+    if (b.type === "plugin") return b.settingsText ?? (Object.values(b.values ?? {}).filter((v) => v != null && v !== "").slice(0, 3).map((v) => (Array.isArray(v) ? v.join(", ") : String(v))).join(" · ") || "Block from a plugin");
+    if (b.type === "circuit") return [`${b.rounds} rounds`, b.members.map((m) => `${m.exerciseName} ${m.durationSec ? P.restText(m.durationSec) : `× ${m.reps ?? ""}`}`).join(", "), b.progression === "add-round" ? "+1 round every 2 weeks" : ""].filter(Boolean).join(" · ");
     return "";
   }
   const labels = $derived(day ? P.supersetLabels(day) : new Map<string, string>());
@@ -600,6 +632,8 @@
           <Button variant="outline" size="sm" disabled={!blocks.length} onclick={() => (adding = "superset")}>+ Superset</Button>
           <Button variant="outline" size="sm" onclick={() => (adding = "cardio")}>+ Cardio</Button>
           <Button variant="outline" size="sm" onclick={() => (adding = "mobility")}>+ Mobility</Button>
+          <Button variant="outline" size="sm" onclick={() => openCircuit(null)}>+ Circuit</Button>
+          <Button variant="outline" size="sm" onclick={() => openPluginBlock(null)}>+ From a plugin</Button>
         </div>
       </section>
     {/if}
@@ -697,6 +731,24 @@
             <label class="flex items-center justify-between gap-3 text-[13px]"><span>Each side</span><Switch checked={!!b.perSide} onCheckedChange={(v) => patchBlock(b.id, { perSide: v } as Partial<ProgramBlock>)} /></label>
             <p class="text-xs text-muted-foreground">Progresses like their own mobility drills. Needs LogIt {P.V2_BLOCKS_APP_VERSION} or newer on their phone.</p>
           {/key}
+        {:else if block.type === "circuit"}
+          {@const b = block}
+          <div class="flex items-start justify-between gap-2">
+            <h3 class="text-[15px] font-bold">Circuit · {b.rounds} {b.rounds === 1 ? "round" : "rounds"}</h3>
+            <Button variant="outline" size="sm" onclick={() => openCircuit(b)}>Edit…</Button>
+          </div>
+          <ul class="flex flex-col gap-1 text-[13px]">
+            {#each b.members as m (m.id)}<li class="flex justify-between gap-2"><span>{m.exerciseName}</span><span class="text-muted-foreground">{m.durationSec ? P.restText(m.durationSec) : `${m.reps ?? ""} reps`}</span></li>{/each}
+          </ul>
+          <p class="text-xs text-muted-foreground">Rest {P.restText(b.memberRestSec ?? 0)} between exercises, {P.restText(b.roundRestSec ?? 0)} between rounds · {b.progression === "add-round" ? "+1 round every 2 weeks" : b.progression === "each" ? "each exercise's own rule" : "same every week"}. Needs LogIt {P.V2_BLOCKS_APP_VERSION} or newer on their phone.</p>
+        {:else if block.type === "plugin"}
+          {@const b = block}
+          <div class="flex items-start justify-between gap-2">
+            <h3 class="text-[15px] font-bold">{b.name}</h3>
+            <Button variant="outline" size="sm" onclick={() => openPluginBlock(b)}>Edit…</Button>
+          </div>
+          <p class="text-[13px]">{blockSub(b)}</p>
+          <p class="text-xs text-muted-foreground">From a plugin. Clients are asked to allow it; until they do, it's a note in their workout.</p>
         {:else}
           <h3 class="text-[15px] font-bold">{blockMain(block)}</h3>
           <p class="text-xs text-muted-foreground">{blockSub(block)}</p>
@@ -752,5 +804,8 @@
     </ul>
   </Dialog.Content>
 </Dialog.Root>
+
+<CircuitDialog bind:open={circuitOpen} dayName={day?.name || "this day"} editing={editingCircuit} {index} onsave={(c) => putBlock(editingCircuit, c, "circuit")} />
+<PluginBlockDialog bind:open={pluginOpen} dayName={day?.name || "this day"} editing={editingPlugin} onsave={(b) => putBlock(editingPlugin, b, "plugin")} />
 
 <RulePickerDialog bind:open={picking} current={pickingFor ? (pickingFor.rule ?? null) : (prog.rule ?? null)} exercise={pickingFor?.exerciseName ?? null} onpick={pickRule} />

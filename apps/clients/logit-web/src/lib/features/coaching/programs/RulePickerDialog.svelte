@@ -89,7 +89,7 @@
         <h3 class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">From your plugins</h3>
         {#each pluginRules as p (p.manifest.id)}{@render option({ kind: "plugin", pluginId: p.manifest.id, name: p.manifest.name }, p.manifest.name, `${p.manifest.description} Runs on their phone; they're asked to allow it.`, "Community")}
         {:else}<p class="text-xs text-muted-foreground">No progression plugins installed.</p>{/each}
-        <Button variant="ghost" size="sm" class="self-start" href="/plugins">Browse community rules</Button>
+        <Button variant="outline" size="sm" class="self-start" href="/plugins?family=progression-algorithm">Browse community rules</Button>
       </section>
     </div>
 

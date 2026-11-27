@@ -9,8 +9,8 @@
 // part" (unrunnableBlocks); the rest of the day works.
 
 import { canRunBlock, type ProgramBlock, type ProgramDay } from "./CoachProgram";
-import type { PlanCell } from "./programPlan";
-import { addPluginBlock, setBlockFieldValue, updatePluginBlock, type BlockDeclaration } from "./blockPlugin";
+import { circuitRounds, type PlanCell } from "./programPlan";
+import { addPluginBlock, repeatLastEntry, setBlockFieldValue, updatePluginBlock, type BlockDeclaration } from "./blockPlugin";
 import {
   type WorkoutSession,
   createSession,
@@ -43,6 +43,8 @@ export type ProgramDayOptions = {
   plan?: (blockId: string) => PlanCell | null;
   /** The plugin's block declaration, when it's installed and allowed (canvas PG8). */
   pluginBlock?: (pluginId: string) => BlockDeclaration | null;
+  /** This week of the program (1-based), for circuits that add a round every two weeks. */
+  weekNumber?: number;
 };
 
 /** The blocks of a day this app can't run, for "Update LogIt to see this part". */
@@ -73,8 +75,14 @@ export function programDaySession(day: ProgramDay, opts: ProgramDayOptions = {})
   const groups = new Map<string, string[]>();
   const skip = new Set(unrunnableBlocks(day, opts).map((b) => b.id));
 
+  // A plugin block that can't run here (not added or not allowed) is a note, so it's still
+  // done, just logged by hand (canvas Q4/PG8). Newer block types say "Update LogIt" on the day.
+  const notes: string[] = [];
   for (const block of sortByOrderIndex(day.blocks)) {
-    if (skip.has(block.id)) continue;
+    if (skip.has(block.id)) {
+      if (block.type === "plugin" && canRunBlock(block, opts.appVersion)) notes.push(pluginNote(block));
+      continue;
+    }
     if (block.type === "strength") {
       session = addExercise(session, {
         exerciseName: block.exerciseName,
@@ -110,9 +118,10 @@ export function programDaySession(day: ProgramDay, opts: ProgramDayOptions = {})
       for (const [key, value] of Object.entries(block.values ?? {})) {
         session = updatePluginBlock(session, blockId, decl, setBlockFieldValue(key, value));
       }
+      for (let i = 1; i < Math.min(50, block.entries ?? 1); i++) session = updatePluginBlock(session, blockId, decl, repeatLastEntry);
     } else if (block.type === "circuit") {
       // Each member gets one set per round; then they run as one circuit.
-      const rounds = Math.max(1, block.rounds);
+      const rounds = circuitRounds(block, opts.weekNumber ?? 1);
       const ids: string[] = [];
       for (const m of block.members) {
         if (m.durationSec) {
@@ -146,5 +155,12 @@ export function programDaySession(day: ProgramDay, opts: ProgramDayOptions = {})
   for (const ids of groups.values()) {
     if (ids.length >= 2) session = groupIntoSuperset(session, ids);
   }
-  return session;
+  return notes.length ? { ...session, note: notes.join("\n") } : session;
+}
+
+/** "From your program: EMOM timer · Minutes 10, Exercise Push-up, Reps 8" */
+function pluginNote(b: Extract<ProgramBlock, { type: "plugin" }>): string {
+  if (b.settingsText) return `From your program: ${b.name} · ${b.settingsText}`;
+  const vals = Object.entries(b.values ?? {}).filter(([, v]) => v != null && v !== "").map(([k, v]) => `${k} ${Array.isArray(v) ? v.join("/") : String(v)}`);
+  return `From your program: ${b.name}${vals.length ? ` · ${vals.join(", ")}` : ""}`;
 }

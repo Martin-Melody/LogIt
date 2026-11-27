@@ -249,7 +249,8 @@ public static class PluginEndpoints
         [FromBody] CreatePluginRequest body, ClaimsPrincipal caller, HttpRequest req, AppDbContext db)
     {
         var userId = caller.GetUserId();
-        if (PluginRules.CheckId(body.PluginId) is { } idError) return Results.BadRequest(new { error = idError });
+        var admin = await db.Users.AnyAsync(u => u.Id == userId && u.IsAdmin);
+        if (PluginRules.CheckId(body.PluginId, admin) is { } idError) return Results.BadRequest(new { error = idError });
         if (!PluginRules.IsFamily(body.Family)) return Results.BadRequest(new { error = "Pick a plugin type." });
         var (fields, error) = PluginRules.ReadDraft(body.Family, body.ManifestJson, body.Source);
         if (error is not null) return Results.BadRequest(new { error });

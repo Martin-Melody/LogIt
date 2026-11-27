@@ -254,7 +254,7 @@
           </div>
         </div>
       {:else if tab === "training"}
-        <ClientTraining clientId={c.id} relationshipId={c.relationshipId} username={c.username} name={c.name} sharing={c.sharing} />
+        <ClientTraining clientId={c.id} relationshipId={c.relationshipId} username={c.username} name={c.name} sharing={c.sharing} pluginConsent={c.pluginConsent} />
       {:else if tab === "insights"}
         <ClientInsights clientId={c.id} name={c.name} sharing={c.sharing} />
       {:else if tab === "nutrition"}

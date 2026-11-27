@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { PluginConsent } from "@logit/core/api/coachApi";
   import * as Table from "$lib/components/ui/table/index.js";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
@@ -18,7 +19,7 @@
   import { programSwaps, type ProgramSwap } from "@logit/core/domain/swaps";
   import { weekdayDate } from "../format";
 
-  let { clientId, relationshipId, username, name, sharing }: { clientId: string; relationshipId: string; username: string; name: string; sharing: Sharing } = $props();
+  let { clientId, relationshipId, username, name, sharing, pluginConsent = {} }: { clientId: string; relationshipId: string; username: string; name: string; sharing: Sharing; pluginConsent?: PluginConsent } = $props();
 
   // Canvas PG7: the program they're on, at the top.
   let program = $state<ProgramStatus | null>(null);
@@ -140,7 +141,7 @@
 </script>
 
 <div class="mb-4">
-  <TrainingProgramCard status={program} {clientId} {relationshipId} {username} {name} {sessions} {swaps} shared={sharing.workouts} onchange={loadProgram} />
+  <TrainingProgramCard status={program} {clientId} {relationshipId} {username} {name} {sessions} {swaps} {pluginConsent} shared={sharing.workouts} onchange={loadProgram} />
 </div>
 {#if !sharing.workouts}
   <NotShared {name} what="their workouts" note="You can still give them programs." />

@@ -1,0 +1,19 @@
+{
+  "id": "app.getlogit.hangboard",
+  "name": "Hangboard",
+  "description": "Hangs with edge size, grip, added weight and time.",
+  "icon": "hand",
+  "entry": { "one": "Hang", "many": "Hangs" },
+  "blockFields": [
+    { "key": "board", "type": "text", "label": "Board", "optional": true, "remember": true }
+  ],
+  "fields": [
+    { "key": "edge", "type": "number", "label": "Edge", "unit": "mm", "default": 20, "step": 1, "min": 4, "max": 60, "column": true },
+    { "key": "grip", "type": "choice", "label": "Grip", "options": ["Half crimp", "Open hand", "Full crimp", "Three finger drag", "Pinch"], "remember": true, "column": true },
+    { "key": "added", "type": "weight", "label": "Added weight", "default": 0, "column": true },
+    { "key": "time", "type": "duration", "label": "Hang", "default": 10, "timer": "work", "column": true },
+    { "key": "note", "type": "text", "label": "Note", "optional": true }
+  ],
+  "timer": { "pattern": "rounds", "work": "time", "rest": { "default": 180, "label": "Rest" } },
+  "summary": "{count} hangs"
+}

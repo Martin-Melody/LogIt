@@ -1,0 +1,71 @@
+{
+  "id": "app.getlogit.rounds",
+  "name": "Rounds",
+  "description": "Timed rounds with rest and notes, for BJJ, wrestling, boxing and bag work.",
+  "icon": "timer",
+  "entry": {
+    "one": "Round",
+    "many": "Rounds"
+  },
+  "blockFields": [
+    {
+      "key": "kind",
+      "type": "choice",
+      "label": "What",
+      "options": [
+        "Rolling",
+        "Sparring",
+        "Drilling",
+        "Bag work",
+        "Pads"
+      ],
+      "remember": true
+    }
+  ],
+  "fields": [
+    {
+      "key": "length",
+      "type": "duration",
+      "label": "Length",
+      "default": 300,
+      "timer": "work",
+      "column": true
+    },
+    {
+      "key": "partner",
+      "type": "text",
+      "label": "Partner",
+      "optional": true,
+      "suggestions": "previous",
+      "column": true
+    },
+    {
+      "key": "effort",
+      "type": "scale",
+      "label": "How hard",
+      "min": 1,
+      "max": 5,
+      "optional": true,
+      "column": true
+    },
+    {
+      "key": "note",
+      "type": "text",
+      "label": "Note",
+      "multiline": true,
+      "optional": true
+    }
+  ],
+  "timer": {
+    "pattern": "rounds",
+    "work": "length",
+    "rest": {
+      "default": 60,
+      "label": "Rest"
+    }
+  },
+  "summary": "{count} rounds",
+  "countsAs": {
+    "activeMinutes": "length"
+  }
+}

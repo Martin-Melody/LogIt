@@ -21,7 +21,7 @@ public static partial class PluginRules
     public static readonly string[] Families =
     [
         "widget", "progression-algorithm", "mobility-progression", "analytics",
-        "nutrition-algorithm", "nutrition-analytics", "exercise-pack", "mobility-pack", "program-pack",
+        "nutrition-algorithm", "nutrition-analytics", "exercise-pack", "mobility-pack", "program-pack", "workout-block",
     ];
 
     public static readonly HashSet<string> CodeFamilies =
@@ -36,8 +36,10 @@ public static partial class PluginRules
         "workouts", "exercises", "session", "todaysPlan", "progressionTargets", "nutrition", "bodyweight", "habits", "mobility",
     ];
 
-    // Prefixes for LogIt's own and built-in plugins.
+    // Prefixes for LogIt's own and built-in plugins. app.getlogit. is LogIt's published ones
+    // (getlogit.app): only admins publish under it, so apps can show them as LogIt's.
     private static readonly string[] ReservedPrefixes = ["builtin.", "logit.", "com.logit.", "ie.logit."];
+    public const string FirstPartyPrefix = "app.getlogit.";
 
     [GeneratedRegex(@"^[a-z0-9][a-z0-9-]*(\.[a-z0-9][a-z0-9-]*)+$")]
     private static partial Regex IdPattern();
@@ -46,13 +48,14 @@ public static partial class PluginRules
     private static partial Regex VersionPattern();
 
     /// Null when the id is usable, else why not.
-    public static string? CheckId(string? id)
+    public static string? CheckId(string? id, bool admin = false)
     {
         if (string.IsNullOrWhiteSpace(id)) return "Give the plugin an id.";
         if (id.Length > 100) return "The id is too long (100 characters at most).";
         if (!IdPattern().IsMatch(id))
             return "Use a reverse-domain id in lower case, like com.yourname.weekly-swings.";
-        if (ReservedPrefixes.Any(p => id.StartsWith(p, StringComparison.Ordinal)))
+        if (ReservedPrefixes.Any(p => id.StartsWith(p, StringComparison.Ordinal))
+            || (!admin && id.StartsWith(FirstPartyPrefix, StringComparison.Ordinal)))
             return "That id is reserved for LogIt's own plugins.";
         return null;
     }
@@ -115,6 +118,8 @@ public static partial class PluginRules
         "mobility-pack" => new JsonObject { ["family"] = family, ["mobilityPackId"] = pluginId },
         // Programs coaches copy into their own (canvas PG1/PG5 "Community").
         "program-pack" => new JsonObject { ["family"] = family, ["programPackId"] = pluginId },
+        // A kind of workout block, declared as data (docs/plugin-workout-blocks.md); coaches put it in programs (canvas Q4).
+        "workout-block" => new JsonObject { ["family"] = family, ["blockId"] = pluginId },
         _ => new JsonObject { ["family"] = family, ["algorithmId"] = pluginId },
     };
 

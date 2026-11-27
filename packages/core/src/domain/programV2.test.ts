@@ -15,7 +15,8 @@ import {
 import { programDaySession, unrunnableBlocks } from "./programDaySession";
 import { programWeekToSplit } from "./programToSplit";
 import type { BlockDeclaration } from "./blockPlugin";
-import { blockGroup } from "./workout";
+import { blockGroup, type WorkoutSession } from "./workout";
+import { cellFromSuggestion, circuitRounds, lastTimeCell, pluginsNeeded } from "./programPlan";
 
 const v1Day: ProgramDay = {
   id: "d1", orderIndex: 0, name: "Upper A",
@@ -144,5 +145,60 @@ describe("lasting swaps (canvas SW1, Q8)", () => {
     // A newer swap after a put-back applies again.
     const later = [...sessions, session(300, [{ from: "Bench Press", to: "Machine Press", atMs: 300 }])];
     expect(activeLastingSwaps(revertSwap(p, "Bench Press", "Dumbbell Press", 200), later).map((l) => l.to)).toEqual(["Machine Press"]);
+  });
+});
+
+describe("circuits and plugins in programs (canvas Q4, PG8)", () => {
+  it("a circuit that adds a round every two weeks starts with more rounds later", () => {
+    const c = { rounds: 3, progression: "add-round" as const };
+    expect([1, 2, 3, 4, 5].map((w) => circuitRounds(c, w))).toEqual([3, 3, 4, 4, 5]);
+    expect(circuitRounds({ rounds: 3 }, 9)).toBe(3);
+    const day: ProgramDay = { ...v2Day, blocks: v2Day.blocks.filter((b) => b.id === "c1").map((b) => ({ ...b, progression: "add-round" }) as ProgramDay["blocks"][number]) };
+    const s = programDaySession(day, { appVersion: "1.1.0", weekNumber: 3 });
+    expect((s.blocks[0]!.data as { sets: unknown[] }).sets).toHaveLength(4);
+  });
+
+  it("a plugin block starts with as many entries as the coach set", () => {
+    const decl = { ...emom, fields: [{ key: "reps", label: "Reps", type: "counter" }] } as unknown as BlockDeclaration;
+    const day: ProgramDay = { ...v2Day, blocks: [{ ...(v2Day.blocks[3] as Extract<ProgramDay["blocks"][number], { type: "plugin" }>), entries: 6 }] };
+    const s = programDaySession(day, { appVersion: "1.1.0", pluginBlock: () => decl });
+    expect((s.blocks[0]!.data as { entries: unknown[] }).entries).toHaveLength(6);
+  });
+
+  it("a plugin block that isn't there is a note on the workout, so it still gets done", () => {
+    const s = programDaySession(v2Day, { appVersion: "1.1.0" });
+    expect(s.blocks.map((b) => b.type)).not.toContain("plugin:emom");
+    expect(s.note).toBe("From your program: EMOM timer · minutes 10");
+    // An older app says "Update LogIt" on the day instead.
+    expect(programDaySession(v2Day, { appVersion: "1.0.3" }).note).toBeUndefined();
+  });
+
+  it("a plugin rule that isn't there plans the same as last time", () => {
+    const done = (at: number, weight: number, reps: number): WorkoutSession => ({
+      id: `s${at}`, startedAtMs: at, endedAtMs: at + 1,
+      blocks: [{ id: `b${at}`, type: "strength", orderIndex: 0, data: { exerciseName: "Squat", sets: [
+        { id: "w", reps: 5, weight: 60, completed: true, setType: "warmup" },
+        { id: "x", reps, weight, completed: true, setType: "normal" },
+        { id: "y", reps: 3, weight: weight + 20, completed: false, setType: "normal" },
+      ] } }],
+    }) as unknown as WorkoutSession;
+    expect(lastTimeCell("squat", [done(1, 90, 5), done(2, 100, 6)], 3)).toEqual({ source: "rule", weight: 100, reps: "6", sets: 3 });
+    expect(lastTimeCell("Bench Press", [done(1, 90, 5)], 3)).toBeNull();
+  });
+
+  it("a plugin's suggestion becomes this week's numbers", () => {
+    expect(cellFromSuggestion({ sets: [{ reps: 5, weight: 40, setType: "warmup" }, { reps: [6, 8], weight: 80 }, { reps: [6, 8], weight: 80 }], nextState: null }))
+      .toEqual({ source: "rule", weight: 80, reps: "6–8", sets: 2 });
+    expect(cellFromSuggestion(null)).toBeNull();
+  });
+
+  it("lists the plugins a program needs, each once, with where", () => {
+    const p: CoachProgram = { ...createCoachProgram("Strength"), weeks: [{ id: "w1", weekNumber: 1, days: [v2Day, {
+      ...v1Day, blocks: [{ ...(v1Day.blocks[0] as Extract<ProgramDay["blocks"][number], { type: "strength" }>), rule: { kind: "plugin", pluginId: "amrap", name: "AMRAP training max" } }],
+    }] }] };
+    expect(pluginsNeeded(p)).toEqual([
+      { pluginId: "emom", name: "EMOM timer", kind: "block", where: ['"EMOM timer: 10" on Lower B'] },
+      { pluginId: "amrap", name: "AMRAP training max", kind: "rule", where: ["Bench Press on Upper A"] },
+    ]);
   });
 });

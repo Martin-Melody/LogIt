@@ -84,6 +84,7 @@
       case "nutrition-algorithm": return "Nutrition algorithm";
       case "nutrition-analytics": return "Nutrition insights";
       case "muscle-group-insight": return "Muscle-group insight";
+      case "workout-block": return "Workout block";
       default: return family;
     }
   }
@@ -279,6 +280,13 @@
         >
           Packs
         </button>
+        <button
+          type="button"
+          class={segment(familyFilter === 'workout-block')} aria-pressed={familyFilter === 'workout-block'}
+          onclick={() => (familyFilter = "workout-block")}
+        >
+          Blocks
+        </button>
       </div>
     </div>
 
@@ -292,7 +300,7 @@
         <span class="flex flex-col gap-2">
           <span>
             Community plugins are off. Widgets, progression and analytics plugins can't be installed
-            until you turn them on. Exercise and mobility packs still install.
+            until you turn them on. Exercise and mobility packs and workout blocks still install.
           </span>
           <Button variant="outline" size="sm" class="h-11 w-fit" onclick={() => void goto("/plugins")}>Turn on community plugins</Button>
         </span>
