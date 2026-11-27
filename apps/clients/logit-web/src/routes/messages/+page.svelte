@@ -1,4 +1,8 @@
 <script lang="ts">
+  import SwapInProgramDialog from "$lib/features/coaching/programs/SwapInProgramDialog.svelte";
+  // Canvas W6: swapping an exercise in their program, from a message.
+  let swapping = $state(false);
+  let swapHint = $state("");
   import { onSampleActivity } from "$lib/features/guide/sandbox.svelte";
   import { inView } from "$lib/features/coaching/coachingData";
   import ClientHoverCard from "$lib/features/coaching/ClientHoverCard.svelte";
@@ -149,7 +153,9 @@
           </div>
           <div class="flex flex-1 flex-col px-[18px] pb-4 pt-2">
             {#key active.relationshipId}
-              <MessageThread relationshipId={active.relationshipId} otherName={active.name} initialDraft={draft} onRead={markOpenRead} onSent={sentInOpen} />
+              <MessageThread relationshipId={active.relationshipId} otherName={active.name} initialDraft={draft} onRead={markOpenRead} onSent={sentInOpen}
+                messageActions={(m) => [{ label: "Swap an exercise in their program…", run: () => { swapHint = m.body; swapping = true; } }]} />
+              <SwapInProgramDialog bind:open={swapping} relationshipId={active.relationshipId} hint={swapHint} />
             {/key}
           </div>
         </section>

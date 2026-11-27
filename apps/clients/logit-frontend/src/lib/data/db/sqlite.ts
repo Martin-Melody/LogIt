@@ -479,7 +479,9 @@ export async function createSchemaAndSeed(db: SQLiteDBConnection): Promise<void>
       synced INTEGER NOT NULL DEFAULT 0,
       context_date_iso TEXT NULL,
       photo_json TEXT NULL,
-      voice_json TEXT NULL
+      voice_json TEXT NULL,
+      kind TEXT NULL,
+      card_json TEXT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_coach_messages_thread
       ON coach_messages(owner_id, relationship_id, created_at_ms);
@@ -810,6 +812,10 @@ async function migrateCoachMessageContext(db: SQLiteDBConnection): Promise<void>
   try {
     await db.run(`ALTER TABLE coach_messages ADD COLUMN voice_json TEXT NULL`, []);
   } catch { /* column already exists */ }
+  // Program swaps (canvas SW1): a message's kind and card, kept for sending later.
+  for (const sql of [`ALTER TABLE coach_messages ADD COLUMN kind TEXT NULL`, `ALTER TABLE coach_messages ADD COLUMN card_json TEXT NULL`]) {
+    try { await db.run(sql, []); } catch { /* column already exists */ }
+  }
 }
 
 async function migrateOwnerIds(db: SQLiteDBConnection): Promise<void> {

@@ -42,6 +42,16 @@ A client's copy can follow its own rule: ⋯ › Change their rule… on their T
 phones work out each week's numbers from their own lifts when they start the day. Programs ›
 Rules also has what clients can swap to.
 
+## Swaps
+
+What clients can swap to is in Programs › Rules: any exercise, the same main muscles, or only the
+swaps you list on each exercise. On the phone, after a swap they choose just today or for the rest
+of the program, with a reason if they like; the rest of the program tells you, and later days start
+with the swap. On their Training tab, Keep it changes their copy to match, and Put it back… puts the
+original back and tells them. A message asking about a swap has "Swap an exercise in their
+program…" on its menu, to change it in their copy straight from the conversation. Whatever your
+rule, "Do something else today" is always there for them; it logs as a swap you can see.
+
 ## Every week
 
 See every week shows what the rule plans for each exercise, week by week. On a client's copy the

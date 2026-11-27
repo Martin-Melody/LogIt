@@ -125,3 +125,24 @@ describe("program data v2", () => {
     expect(day.groups).toEqual([expect.objectContaining({ kind: "circuit", rounds: 3, roundRestMs: 90_000, memberRestMs: 15_000 })]);
   });
 });
+
+describe("lasting swaps (canvas SW1, Q8)", () => {
+  it("later days start with the swap, until the coach keeps it or puts it back", async () => {
+    const { activeLastingSwaps, applyLastingSwaps } = await import("./swaps");
+    const { renameExercise, revertSwap } = await import("./CoachProgram");
+    const p: CoachProgram = { ...upgradeProgram(v1()), id: "prog" };
+    const session = (atMs: number, lasting: { from: string; to: string; atMs: number }[]) =>
+      ({ id: `s${atMs}`, startedAtMs: atMs, blocks: [], source: { kind: "program", parentId: "prog", parentName: "", dayId: "d1", dayName: "", lastingSwaps: lasting } }) as unknown as import("./workout").WorkoutSession;
+    const sessions = [session(100, [{ from: "Bench Press", to: "Dumbbell Press", atMs: 100 }])];
+    const active = activeLastingSwaps(p, sessions);
+    expect(active.map((l) => l.to)).toEqual(["Dumbbell Press"]);
+    const day = applyLastingSwaps(p.weeks[0]!.days[0]!, active);
+    expect(day.blocks[0]!.type === "strength" && day.blocks[0]!.exerciseName).toBe("Dumbbell Press");
+    // Put back after it: gone. Kept (renamed in the program): nothing left to apply.
+    expect(activeLastingSwaps(revertSwap(p, "Bench Press", "Dumbbell Press", 200), sessions)).toEqual([]);
+    expect(activeLastingSwaps(renameExercise(p, "Bench Press", { exerciseName: "Dumbbell Press" }), sessions)).toEqual([]);
+    // A newer swap after a put-back applies again.
+    const later = [...sessions, session(300, [{ from: "Bench Press", to: "Machine Press", atMs: 300 }])];
+    expect(activeLastingSwaps(revertSwap(p, "Bench Press", "Dumbbell Press", 200), later).map((l) => l.to)).toEqual(["Machine Press"]);
+  });
+});

@@ -17,7 +17,7 @@ export interface RemoteMessage {
   /** The other person's reaction (only the person it was sent to reacts). */
   reaction?: string | null;
   /** A step in a request (an offer, the waiting list…); `body` says it in words too. */
-  kind?: RequestEvent | null;
+  kind?: RequestEvent | "lasting-swap" | "program-swap" | null;
   /** What that step's card shows, as JSON (an OfferCard for "offer" and "offer-changed"). */
   cardJson?: string | null;
 }
@@ -32,6 +32,9 @@ export interface SendMessageInput {
   photoId?: string;
   voiceId?: string;
   voicePeaks?: string;
+  /** Program swaps (canvas SW1, Q8): "lasting-swap" from a client, "program-swap" from a coach. */
+  kind?: "lasting-swap" | "program-swap";
+  cardJson?: string;
 }
 
 /** The same calls as `messagesApi`, made with another identity (a sandbox sample client's token). */

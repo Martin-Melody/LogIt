@@ -17,7 +17,9 @@
 
   // Swapping an exercise in a workout from a coach's program: the coach's picks first, then
   // what their rule allows. Anything else is greyed out with "Ask <coach> to swap", which
-  // sends them a message (queued if offline) and leaves the workout as it is.
+  // sends them a message (queued if offline) and leaves the workout as it is. "Do something
+  // else today" is always there: it logs as a swap the coach can see (canvas SW1). After a
+  // swap: just today, or for the rest of the program (which also tells the coach).
 
   let {
     open = false,
@@ -30,8 +32,14 @@
     target: SwapTarget;
     coach: CachedCoach;
     onOpenChange: (v: boolean) => void;
-    onPick: (selection: { name: string; exerciseId?: string }) => void | Promise<void>;
+    /** `lasting`: for the rest of the program, with an optional reason. */
+    onPick: (selection: { name: string; exerciseId?: string }, lasting?: { reason?: string } | null) => void | Promise<void>;
   } = $props();
+  let pending = $state<{ name: string; id?: string } | null>(null);
+  let rest = $state(false);
+  let reason = $state("");
+  /** "Do something else today": any exercise, whatever the coach's rule. */
+  let free = $state(false);
 
   let library = $state<LibraryEntry[]>([]);
   let query = $state("");
@@ -42,26 +50,37 @@
     if (!open) {
       query = "";
       asking = null;
+      pending = null;
+      rest = false;
+      reason = "";
+      free = false;
       return;
     }
     void loadLibrary("strength").then((l) => (library = l)).catch(() => (library = []));
   });
 
-  const choices = $derived(swapChoices(coach.swapRule, target, library, query));
+  const rule = $derived(free ? "any" : coach.swapRule);
+  const choices = $derived(swapChoices(rule, target, library, query));
   const typed = $derived(query.trim());
   const blocked = $derived(choices.results.filter((r) => !r.verdict.allowed));
   const allowed = $derived(choices.results.filter((r) => r.verdict.allowed));
   // "Any exercise": a name that isn't in the library can still be used, as everywhere else.
   const canUseTyped = $derived(
-    coach.swapRule === "any" && typed.length > 0 &&
+    rule === "any" && typed.length > 0 &&
       !choices.results.some((r) => r.name.toLowerCase() === typed.toLowerCase()) &&
       !choices.fromCoach.some((r) => r.name.toLowerCase() === typed.toLowerCase()),
   );
   // What "Ask" offers: the first greyed result, else what's typed (not for "any").
-  const askFor = $derived(blocked[0]?.name ?? (coach.swapRule !== "any" && typed && !allowed.length && !choices.fromCoach.length ? typed : null));
+  const askFor = $derived(blocked[0]?.name ?? (rule !== "any" && typed && !allowed.length && !choices.fromCoach.length ? typed : null));
 
-  async function pick(c: { name: string; id?: string }) {
-    await onPick({ name: c.name, exerciseId: c.id });
+  /** Picked: next, just today or for the rest of the program. */
+  function pick(c: { name: string; id?: string }) {
+    pending = c;
+  }
+  async function confirm() {
+    if (!pending) return;
+    await onPick({ name: pending.name, exerciseId: pending.id }, rest ? { reason: reason.trim() || undefined } : null);
+    if (rest) toast.success(`${coach.name} has been told.`);
     onOpenChange(false);
   }
 
@@ -97,7 +116,28 @@
       <Dialog.Description>{swapRuleExplainer(coach.swapRule, coach.name, target)}</Dialog.Description>
     </Dialog.Header>
 
-    {#if asking !== null}
+    {#if pending}
+      <div class="flex flex-col gap-3 px-4 pb-5 pt-2">
+        <p class="text-[15px]"><b class="font-semibold">{target.name}</b> → <b class="font-semibold">{pending.name}</b></p>
+        <div class="flex flex-col gap-2" role="radiogroup" aria-label="How long">
+          <button type="button" role="radio" aria-checked={!rest} onclick={() => (rest = false)} class="flex min-h-[52px] flex-col justify-center rounded-[12px] border px-3.5 text-left {rest ? 'border-border' : 'border-primary bg-primary/5'}">
+            <span class="text-[15px] font-medium">Just today</span><span class="text-xs text-muted-foreground">The program stays as it is.</span>
+          </button>
+          <button type="button" role="radio" aria-checked={rest} onclick={() => (rest = true)} class="flex min-h-[52px] flex-col justify-center rounded-[12px] border px-3.5 text-left {rest ? 'border-primary bg-primary/5' : 'border-border'}">
+            <span class="text-[15px] font-medium">For the rest of the program</span><span class="text-xs text-muted-foreground">Later days start with {pending.name}. {coach.name} is told.</span>
+          </button>
+        </div>
+        {#if rest}
+          <label for="swap-why" class="text-sm font-medium">Why <span class="font-normal text-muted-foreground">optional, {coach.name} sees it</span></label>
+          <input id="swap-why" bind:value={reason} maxlength="140" placeholder="The hack squat at my gym is always taken"
+            class="h-11 w-full rounded-[12px] border border-border bg-background px-3.5 text-[15px] focus:outline-none focus:ring-1 focus:ring-ring" />
+        {/if}
+        <div class="flex gap-2">
+          <Button variant="outline" class="h-11 flex-1" onclick={() => (pending = null)}>Back</Button>
+          <Button class="h-11 flex-1" onclick={() => void confirm()}>Swap</Button>
+        </div>
+      </div>
+    {:else if asking !== null}
       <div class="flex flex-col gap-2.5 px-4 pb-5 pt-2">
         <label for="ask-msg" class="text-sm font-semibold">Message to {coach.name}</label>
         <textarea id="ask-msg" rows="3" bind:value={asking}
@@ -156,10 +196,14 @@
         {/if}
       </div>
 
-      {#if !askFor && coach.swapRule !== "any"}
-        <div class="border-t border-border px-4 pb-5 pt-2.5">
-          <Button variant="outline" class="h-12 w-full" onclick={() => (asking = askToSwapMessage(target.name))}>Ask {coach.name} for something else</Button>
+      {#if coach.swapRule !== "any" && !free}
+        <div class="flex flex-col gap-2 border-t border-border px-4 pb-5 pt-2.5">
+          {#if !askFor}<Button variant="outline" class="h-12 w-full" onclick={() => (asking = askToSwapMessage(target.name))}>Ask {coach.name} for something else</Button>{/if}
+          <!-- Never blocked: rules shape suggestions, they never stop a set being logged. -->
+          <Button variant="ghost" class="h-11 w-full" onclick={() => { free = true; query = ""; }}>Do something else today</Button>
         </div>
+      {:else if free}
+        <p class="border-t border-border px-4 pb-5 pt-2.5 text-xs text-muted-foreground">Any exercise. {coach.name} sees it as a swap.</p>
       {/if}
     {/if}
   </Dialog.Content>

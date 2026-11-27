@@ -480,7 +480,7 @@ export const FEATURES: Feature[] = [
     freeWithSamples: true,
     summary: "Your own exercises and drills, shared with your clients.",
     web: ["/coaching/library"],
-    whereWeb: "Coaching › Library",
+    whereWeb: "Programs › Exercises",
     docs: "/docs/coaching/library",
     server: ["/coach/library/sharing"],
   },

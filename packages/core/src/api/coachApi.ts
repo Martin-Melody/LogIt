@@ -101,6 +101,8 @@ export interface RosterEntry {
   since?: string;
   /** Their first message since your last reply (canvas Z2); missing on older servers. */
   waitingSinceMs?: number | null;
+  /** Canvas Q8: an unread "for the rest of the program" swap from them. */
+  lastingSwap?: boolean;
   /** You paused coaching until then (canvas E1). */
   pausedUntil?: string | null;
   /** Coaching ends then (they stopped, or moved coach). */

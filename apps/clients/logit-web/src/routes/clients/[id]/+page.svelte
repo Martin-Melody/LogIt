@@ -1,4 +1,8 @@
 <script lang="ts">
+  import SwapInProgramDialog from "$lib/features/coaching/programs/SwapInProgramDialog.svelte";
+  // Canvas W6: swapping an exercise in their program, from a message.
+  let swapping = $state(false);
+  let swapHint = $state("");
   import PageCrumbs from "$lib/components/PageCrumbs.svelte";
   import { clientName } from "$lib/features/coaching/clientName";
   import * as Tabs from "$lib/components/ui/tabs/index.js";
@@ -250,7 +254,7 @@
           </div>
         </div>
       {:else if tab === "training"}
-        <ClientTraining clientId={c.id} username={c.username} name={c.name} sharing={c.sharing} />
+        <ClientTraining clientId={c.id} relationshipId={c.relationshipId} username={c.username} name={c.name} sharing={c.sharing} />
       {:else if tab === "insights"}
         <ClientInsights clientId={c.id} name={c.name} sharing={c.sharing} />
       {:else if tab === "nutrition"}
@@ -263,7 +267,9 @@
         <ClientPrograms bind:this={programsTab} openAssign={assignOnOpen} clientId={c.id} relationshipId={c.relationshipId} username={c.username} name={c.name} sharing={c.sharing} />
       {:else if tab === "messages"}
         <section class="flex flex-col rounded-[10px] border border-border bg-card px-[18px] pb-4 pt-2">
-          <MessageThread relationshipId={c.relationshipId} otherName={c.name} onRead={() => (c.unread = 0)} />
+          <MessageThread relationshipId={c.relationshipId} otherName={c.name} onRead={() => (c.unread = 0)}
+            messageActions={(m) => [{ label: "Swap an exercise in their program…", run: () => { swapHint = m.body; swapping = true; } }]} />
+          <SwapInProgramDialog bind:open={swapping} relationshipId={c.relationshipId} hint={swapHint} />
         </section>
       {/if}
     {/key}

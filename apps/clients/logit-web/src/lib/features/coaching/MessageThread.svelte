@@ -18,6 +18,7 @@
   import ChatReactions from "$lib/features/chat/ChatReactions.svelte";
   import * as ContextMenu from "$lib/components/ui/context-menu";
   import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
+  import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
   import SmilePlusIcon from "@lucide/svelte/icons/smile-plus";
   import { DM_REACTIONS } from "@logit/core/api/dmApi";
   import { StagedPhoto, imageFrom } from "$lib/features/chat/stagedPhoto.svelte";
@@ -34,6 +35,7 @@
     onSent,
     card,
     closedNote = null,
+    messageActions,
   }: {
     relationshipId: string;
     otherName: string;
@@ -46,6 +48,8 @@
     card?: import("svelte").Snippet<[RemoteMessage]>;
     /** A closed request: read-only, with this note where the composer was (canvas A3). */
     closedNote?: string | null;
+    /** More things to do with a message from the other person (right-click, or ⋯). */
+    messageActions?: (m: RemoteMessage) => { label: string; run: () => void }[];
   } = $props();
 
   let messages = $state<RemoteMessage[]>([]);
@@ -184,7 +188,8 @@
     const out: { key: string; mine: boolean; day: boolean; event: boolean; items: RemoteMessage[] }[] = [];
     shown.forEach((m, i) => {
       const day = !compact && (i === 0 || dayLabel(m.createdAtMs) !== dayLabel(shown[i - 1]!.createdAtMs));
-      const event = !!m.kind && !!card;
+      // Swap messages ("lasting-swap", "program-swap") are ordinary bubbles; only request steps are cards.
+      const event = !!m.kind && !m.kind.endsWith("swap") && !!card;
       const prev = out.at(-1);
       if (prev && !day && !event && !prev.event && prev.mine === m.mine && m.createdAtMs - prev.items.at(-1)!.createdAtMs < 3_600_000) prev.items.push(m);
       else out.push({ key: m.messageId, mine: m.mine, day, event, items: [m] });
@@ -262,6 +267,18 @@
                   {/each}
                 </DropdownMenu.Content>
               </DropdownMenu.Root>
+              {#if messageActions}
+                <DropdownMenu.Root>
+                  <DropdownMenu.Trigger>
+                    {#snippet child({ props: p })}
+                      <button {...p} type="button" aria-label="More for this message" class="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground focus-visible:opacity-100 group-hover/row:opacity-100 data-[state=open]:opacity-100"><EllipsisIcon class="size-4" /></button>
+                    {/snippet}
+                  </DropdownMenu.Trigger>
+                  <DropdownMenu.Content side="top" align="start" class="w-60">
+                    {#each messageActions(m) as a (a.label)}<DropdownMenu.Item onSelect={a.run}>{a.label}</DropdownMenu.Item>{/each}
+                  </DropdownMenu.Content>
+                </DropdownMenu.Root>
+              {/if}
             {/if}
             </div>
             {/snippet}
@@ -276,6 +293,9 @@
                 {#if m.body}<ContextMenu.Separator />{/if}
               {/if}
               {#if m.body}<ContextMenu.Item onSelect={() => void navigator.clipboard?.writeText(m.body)}>Copy text</ContextMenu.Item>{/if}
+              {#if !m.mine && messageActions}
+                {#each messageActions(m) as a (a.label)}<ContextMenu.Item onSelect={a.run}>{a.label}</ContextMenu.Item>{/each}
+              {/if}
             </ContextMenu.Content>
             </ContextMenu.Root>
           {/each}

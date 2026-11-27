@@ -150,6 +150,27 @@ public class CoachEndingTests
     }
 
     [Fact]
+    public async Task A_swap_for_the_rest_of_the_program_is_a_card_the_coach_sees_on_Today()
+    {
+        await using var w = await CoachedAsync("swap", paying: false);
+        var card = "{\"from\":\"Hack squat\",\"to\":\"Leg press\"}";
+        // Each side sends only its own kind.
+        Assert.Equal(HttpStatusCode.BadRequest, (await w.Client.PostAsJsonAsync("/coach/messages", new { messageId = "s0", relationshipId = w.RelId, body = "x", createdAtMs = 1L, kind = "program-swap", cardJson = card })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await w.Client.PostAsJsonAsync("/coach/messages", new { messageId = "s1", relationshipId = w.RelId, body = "x", createdAtMs = 1L, kind = "lasting-swap", cardJson = "not json" })).StatusCode);
+        (await w.Client.PostAsJsonAsync("/coach/messages", new { messageId = "s2", relationshipId = w.RelId, body = "I've swapped Hack squat for Leg press for the rest of the program.", createdAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), kind = "lasting-swap", cardJson = card })).EnsureSuccessStatusCode();
+        Assert.True((await Json(await w.Coach.GetAsync("/coach/roster"))).GetProperty("roster")[0].GetProperty("lastingSwap").GetBoolean());
+
+        (await w.Coach.PostAsJsonAsync("/coach/messages", new { messageId = "s3", relationshipId = w.RelId, body = "I've put Hack squat back.", createdAtMs = DateTimeOffset.UtcNow.AddSeconds(1).ToUnixTimeMilliseconds(), kind = "program-swap", cardJson = card })).EnsureSuccessStatusCode();
+        // Answered: off Today, even unread.
+        Assert.False((await Json(await w.Coach.GetAsync("/coach/roster"))).GetProperty("roster")[0].GetProperty("lastingSwap").GetBoolean());
+        // A newer swap is back on; reading it takes it off.
+        (await w.Client.PostAsJsonAsync("/coach/messages", new { messageId = "s4", relationshipId = w.RelId, body = "Swapped again.", createdAtMs = DateTimeOffset.UtcNow.AddSeconds(2).ToUnixTimeMilliseconds(), kind = "lasting-swap", cardJson = card })).EnsureSuccessStatusCode();
+        Assert.True((await Json(await w.Coach.GetAsync("/coach/roster"))).GetProperty("roster")[0].GetProperty("lastingSwap").GetBoolean());
+        (await w.Coach.PostAsJsonAsync("/coach/messages/read", new { relationshipId = w.RelId, upToMs = DateTimeOffset.UtcNow.AddMinutes(1).ToUnixTimeMilliseconds() })).EnsureSuccessStatusCode();
+        Assert.False((await Json(await w.Coach.GetAsync("/coach/roster"))).GetProperty("roster")[0].GetProperty("lastingSwap").GetBoolean());
+    }
+
+    [Fact]
     public async Task After_a_week_with_no_reply_the_client_can_stop_with_a_refund()
     {
         await using var w = await CoachedAsync("quiet");

@@ -7,7 +7,10 @@
   import { Button } from "$lib/components/ui/button";
   import { toast } from "$lib/components/ui/sonner";
   import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
-  import { archiveCoachProgram, getProgramStartMs, ruleLabel, type CoachProgram, type ProgramRule } from "@logit/core/domain/CoachProgram";
+  import { archiveCoachProgram, getProgramStartMs, renameExercise, revertSwap, ruleLabel, type CoachProgram, type ProgramRule } from "@logit/core/domain/CoachProgram";
+  import { activeLastingSwaps } from "@logit/core/domain/swaps";
+  import { messagesApi } from "@logit/core/api/messagesApi";
+  import { createId } from "@logit/core/domain/ids";
   import type { StrengthBlockData, WorkoutSession } from "@logit/core/domain/workout";
   import { SWAP_WHY_LABEL, type ProgramSwap } from "@logit/core/domain/swaps";
   import { getWebCoachProgramRepo } from "$lib/deps";
@@ -16,9 +19,10 @@
   import AssignProgramDialog from "../programs/AssignProgramDialog.svelte";
   import RulePickerDialog from "../programs/RulePickerDialog.svelte";
 
-  let { status, clientId, username, name, sessions, swaps, shared, onchange }: {
+  let { status, clientId, relationshipId, username, name, sessions, swaps, shared, onchange }: {
     status: ProgramStatus | null;
     clientId: string;
+    relationshipId: string;
     username: string;
     name: string;
     sessions: WorkoutSession[];
@@ -62,6 +66,43 @@
   }
   function doneSets(s: WorkoutSession): number {
     return s.blocks.reduce((n, b) => n + (b.type === "strength" ? (b.data as StrengthBlockData).sets.filter((x) => x.completed !== false && (x.reps ?? 0) > 0 && x.setType !== "warmup").length : 0), 0);
+  }
+
+  // Canvas Q8: a lasting swap, kept (their copy says it now) or put back (and they're told).
+  const active = $derived(p ? activeLastingSwaps(p, sessions) : []);
+  let puttingBack = $state<{ from: string; to: string } | null>(null);
+  async function keep(from: string, to: string) {
+    if (!p) return;
+    try {
+      await getWebCoachProgramRepo().saveProgram(renameExercise(p, from, { exerciseName: to }), username);
+      // Telling them also takes it off Today.
+      await messagesApi.send({
+        relationshipId, messageId: createId("msg"), createdAtMs: Date.now(),
+        body: `${to} is in your program now, instead of ${from}.`,
+        kind: "program-swap", cardJson: JSON.stringify({ programId: p.id, from, to }),
+      });
+      toast.success(`${first}'s program says ${to} now. ${first} has been told.`);
+      await onchange();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't change it");
+    }
+  }
+  async function putBack() {
+    const s = puttingBack;
+    puttingBack = null;
+    if (!p || !s) return;
+    try {
+      await getWebCoachProgramRepo().saveProgram(revertSwap(p, s.from, s.to), username);
+      await messagesApi.send({
+        relationshipId, messageId: createId("msg"), createdAtMs: Date.now(),
+        body: `I've put ${s.from} back in your program, instead of ${s.to}.`,
+        kind: "program-swap", cardJson: JSON.stringify({ programId: p.id, from: s.to, to: s.from }),
+      });
+      toast.success(`${s.from} is back. ${first} has been told.`);
+      await onchange();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't put it back");
+    }
   }
 
   async function stop() {
@@ -116,9 +157,27 @@
         {/each}
       </div>
     {/if}
-    {#each swaps.slice(0, 2) as w, i (w.sessionId + i)}
-      <p class="text-xs text-muted-foreground"><b class="font-medium text-foreground">Swapped</b> {w.planned} for {w.didInstead} on {WEEKDAYS[new Date(w.startedAtMs).getDay()]} · {SWAP_WHY_LABEL[w.why].toLowerCase()}</p>
-    {/each}
+    {#if swaps.length}
+      <!-- Canvas Q8: their swaps; a lasting one asks to be kept or put back. -->
+      <div class="flex flex-col">
+        <h3 class="pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{first}'s swaps</h3>
+        {#each swaps as w, i (w.sessionId + i)}
+          {@const live = w.lasting && active.some((l) => l.from.trim().toLowerCase() === w.planned.trim().toLowerCase() && l.to === w.didInstead)}
+          <div class="flex flex-col gap-1.5 border-t border-border py-2 text-[13px]">
+            <span><b class="font-medium">{w.planned} → {w.didInstead}</b> <span class="text-muted-foreground">· {w.lasting ? "for the rest of the program" : "just that day"} · {WEEKDAYS[new Date(w.startedAtMs).getDay()]} {new Date(w.startedAtMs).toLocaleDateString(undefined, { day: "numeric", month: "short" })}</span></span>
+            {#if w.reason}<span class="text-muted-foreground">"{w.reason}"</span>{/if}
+            <span class="text-xs text-muted-foreground">{SWAP_WHY_LABEL[w.why]}</span>
+            {#if live}
+              <span class="flex flex-wrap gap-1.5">
+                <Button size="sm" onclick={() => void keep(w.planned, w.didInstead)}>Keep it</Button>
+                <Button size="sm" variant="outline" onclick={() => (puttingBack = { from: w.planned, to: w.didInstead })}>Put {w.planned} back…</Button>
+                <Button size="sm" variant="outline" href="/messages?c={relationshipId}">Message</Button>
+              </span>
+            {/if}
+          </div>
+        {/each}
+      </div>
+    {/if}
   {:else}
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div>
@@ -132,6 +191,19 @@
 
 <AssignProgramDialog bind:open={assigning} clientIds={[clientId]} onassigned={onchange} />
 <RulePickerDialog bind:open={pickingRule} current={p?.rule ?? null} onpick={(rule) => void setRule(rule)} />
+
+<AlertDialog.Root open={!!puttingBack} onOpenChange={(o) => { if (!o) puttingBack = null; }}>
+  <AlertDialog.Content>
+    <AlertDialog.Header>
+      <AlertDialog.Title>Put {puttingBack?.from} back?</AlertDialog.Title>
+      <AlertDialog.Description>{first}'s later days go back to {puttingBack?.from} instead of {puttingBack?.to}, and {first} gets a message saying so.</AlertDialog.Description>
+    </AlertDialog.Header>
+    <AlertDialog.Footer>
+      <AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
+      <AlertDialog.Action onclick={() => void putBack()}>Put it back</AlertDialog.Action>
+    </AlertDialog.Footer>
+  </AlertDialog.Content>
+</AlertDialog.Root>
 
 <AlertDialog.Root bind:open={stopping}>
   <AlertDialog.Content>

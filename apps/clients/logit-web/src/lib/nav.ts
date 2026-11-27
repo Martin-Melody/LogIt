@@ -78,7 +78,6 @@ export const coachGroups: NavGroup[] = [
       // Next to Clients: ordered by how often coaches use them (canvas N).
       { label: "Messages", href: "/messages", icon: MessageSquareIcon, key: "M", badge: () => coachBadges.messages },
       { label: "Programs", href: "/coaching/programs", icon: ClipboardListIcon, key: "P" },
-      { label: "Library", href: "/coaching/library", icon: LibraryIcon, key: "L" },
       { label: "Check-ins", href: "/coaching/checkins", icon: ClipboardCheckIcon, key: "K", badge: () => coachBadges.checkins },
     ],
   },

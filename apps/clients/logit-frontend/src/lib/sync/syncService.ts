@@ -717,7 +717,7 @@ export async function pullAndMergeMessages(): Promise<boolean> {
         ...(m.photoUrl ? { photo: { url: m.photoUrl, width: m.photoWidth ?? 0, height: m.photoHeight ?? 0 } } : {}),
         ...(m.voiceUrl ? { voice: { url: m.voiceUrl, ms: m.voiceMs ?? 0, peaks: m.voicePeaks ?? "" } } : {}),
         reaction: m.reaction ?? null,
-        ...(m.kind ? { kind: m.kind } : {}),
+        ...(m.kind ? { kind: m.kind, cardJson: m.cardJson ?? null } : {}),
       });
     }
     setTimestamp(MESSAGES_LAST_PULLED_KEY, Date.now());
@@ -740,6 +740,7 @@ export function pushMessage(message: CoachMessage): void {
     photoId: message.photo?.id,
     voiceId: message.voice?.id,
     voicePeaks: message.voice?.peaks,
+    ...(message.kind === "lasting-swap" || message.kind === "program-swap" ? { kind: message.kind as "lasting-swap" | "program-swap", cardJson: message.cardJson ?? undefined } : {}),
   };
   // On failure the message just stays unsynced locally: that flag is its queue, and the next
   // sync re-sends it (pushPendingMessages). It used to also go into the outbox, which sent it
@@ -766,6 +767,7 @@ export async function pushPendingMessages(): Promise<void> {
           photoId: m.photo?.id,
           voiceId: m.voice?.id,
           voicePeaks: m.voice?.peaks,
+          ...(m.kind === "lasting-swap" || m.kind === "program-swap" ? { kind: m.kind as "lasting-swap" | "program-swap", cardJson: m.cardJson ?? undefined } : {}),
         });
         await repo.markSynced(m.id);
       } catch (e) { syncWarn("pushPendingMessages", e); }

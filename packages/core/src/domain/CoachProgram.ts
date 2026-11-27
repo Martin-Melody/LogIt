@@ -43,6 +43,10 @@ export type CoachProgram = {
   /** Copied from LogIt's programs or a community pack (canvas PG1 "From LogIt: …"). The
    * original never changes, so a pack update can't change a client's program. */
   origin?: { kind: "logit" | "community"; id: string; name: string; author?: string };
+  /** On a client's copy: lasting swaps the coach put back (canvas Q8). A client's swap of
+   * `from` made before `atMs` no longer applies. */
+  revertedSwaps?: { from: string; to: string; atMs: number }[];
+
   weeks: ProgramWeek[];
   archived: boolean;
   createdAtMs: number;
@@ -154,6 +158,8 @@ export type ProgramStrength = {
 };
 
 export type SwapAlternative = { exerciseName: string; exerciseId?: string };
+
+
 
 export type ProgramCardio = {
   type: "cardio";
@@ -922,4 +928,31 @@ export function dayPreview(day: ProgramDay): string {
   return [...day.blocks].sort((a, b) => a.orderIndex - b.orderIndex)
     .map((b) => (b.type === "strength" ? [b.exerciseName, strengthSummary(b)].filter(Boolean).join(" ") : blockLine(b)))
     .join(" · ");
+}
+
+
+// ── Swaps (canvas SW1, Q8, W6) ────────────────────────────────────────────────
+
+/** Every week: `from` becomes `to` (the coach keeping a client's swap, or swapping from a message). */
+export function renameExercise(program: CoachProgram, from: string, to: { exerciseName: string; exerciseId?: string }): CoachProgram {
+  const key = from.trim().toLowerCase();
+  return touchCoachProgram({
+    ...program,
+    weeks: program.weeks.map((w) => ({
+      ...w,
+      days: w.days.map((d) => ({
+        ...d,
+        blocks: d.blocks.map((b) => {
+          if (b.type !== "strength" || b.exerciseName.trim().toLowerCase() !== key) return b;
+          const { exerciseId: _old, ...rest } = b;
+          return { ...rest, exerciseName: to.exerciseName, ...(to.exerciseId ? { exerciseId: to.exerciseId } : {}) };
+        }),
+      })),
+    })),
+  });
+}
+
+/** The coach put a client's lasting swap back (canvas Q8). */
+export function revertSwap(program: CoachProgram, from: string, to: string, atMs = nowMs()): CoachProgram {
+  return touchCoachProgram({ ...program, revertedSwaps: [...(program.revertedSwaps ?? []).filter((r) => r.from !== from), { from, to, atMs }] });
 }

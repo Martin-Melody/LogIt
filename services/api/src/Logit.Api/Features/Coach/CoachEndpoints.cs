@@ -282,6 +282,14 @@ public static class CoachEndpoints
             .ToDictionary(x => x.Key, x => x.Ms);
         var clientMsgs = await db.CoachMessages.Where(m => relIds.Contains(m.RelationshipId) && m.SenderUserId != coachId && m.Kind == null)
             .Select(m => new { m.RelationshipId, m.CreatedAtMs }).ToListAsync();
+        // Canvas Q8: a client changed an exercise for the rest of the program, and the coach hasn't
+        // read it or answered it (Keep it / Put back send a "program-swap" message).
+        var swapMsgs = await db.CoachMessages.Where(m => relIds.Contains(m.RelationshipId)
+                && ((m.SenderUserId != coachId && m.Kind == "lasting-swap" && m.ReadAtMs == null) || (m.SenderUserId == coachId && m.Kind == "program-swap")))
+            .Select(m => new { m.RelationshipId, m.Kind, m.CreatedAtMs }).ToListAsync();
+        var lastingSwaps = swapMsgs.Where(m => m.Kind == "lasting-swap"
+                && !swapMsgs.Any(c => c.RelationshipId == m.RelationshipId && c.Kind == "program-swap" && c.CreatedAtMs >= m.CreatedAtMs))
+            .Select(m => m.RelationshipId).ToHashSet();
         long? WaitingSince(Guid relId)
         {
             var after = lastCoachMs.GetValueOrDefault(relId, 0);
@@ -307,6 +315,7 @@ public static class CoachEndpoints
                 sharing = r.ToSharingDto(),
                 since = r.UpdatedAt,
                 waitingSinceMs = WaitingSince(r.Id),
+                lastingSwap = lastingSwaps.Contains(r.Id),
                 pausedUntil = r.PausedUntil,
                 endsAt = r.EndsAt,
             };
@@ -1023,8 +1032,21 @@ public static class CoachEndpoints
         if (req.VoiceId is { } voiceId && (voice = await Logit.Api.Features.Voice.VoiceEndpoints.OwnedAsync(db, callerId, voiceId)) is null)
             return Results.BadRequest(new { error = "That voice message didn't upload. Try again." });
 
+        string? kind = null, card = null;
+        if (req.Kind is { } k)
+        {
+            var allowed = relationship.ClientId == callerId ? "lasting-swap" : "program-swap";
+            if (k != allowed) return Results.BadRequest(new { error = "That kind of message can't be sent." });
+            if (req.CardJson is { Length: > 2000 }) return Results.BadRequest(new { error = "Card too large." });
+            try { if (req.CardJson is not null) using (System.Text.Json.JsonDocument.Parse(req.CardJson)) { } }
+            catch (System.Text.Json.JsonException) { return Results.BadRequest(new { error = "Card isn't JSON." }); }
+            (kind, card) = (k, req.CardJson);
+        }
+
         var message = new CoachMessage
         {
+            Kind = kind,
+            CardJson = card,
             VoiceId = voice?.Id,
             VoiceMs = voice?.DurationMs ?? 0,
             VoicePeaks = voice is null ? null : Logit.Api.Features.Voice.VoiceEndpoints.Peaks(req.VoicePeaks),
@@ -1164,7 +1186,10 @@ public static class CoachEndpoints
 public record AcceptInviteRequest(SharingDto? Sharing);
 
 public record SendMessageRequest(Guid RelationshipId, string MessageId, string? Body, long CreatedAtMs, string? ContextDateIso = null, Guid? PhotoId = null,
-    Guid? VoiceId = null, string? VoicePeaks = null);
+    Guid? VoiceId = null, string? VoicePeaks = null,
+    // Program swaps (canvas SW1, Q8): a client's "for the rest of the program", or the coach
+    // changing an exercise in their copy. Only these two; request steps stay server-made.
+    string? Kind = null, string? CardJson = null);
 public record MarkReadRequest(Guid RelationshipId, long UpToMs);
 public record CoachReactRequest(Guid RelationshipId, string MessageId, string? Emoji);
 public record MessageDto(string MessageId, string Body, long CreatedAtMs, long? ReadAtMs, bool Mine, string? ContextDateIso = null,

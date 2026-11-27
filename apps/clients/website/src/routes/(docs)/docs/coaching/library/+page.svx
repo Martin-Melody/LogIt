@@ -8,5 +8,11 @@ title: Your exercise library
 
 <FeatureFacts id="coach-library" />
 
-Add your own exercises and drills under Coaching › Library, with your cues. Choose whether clients see
-them: shared items show in their library and pickers as yours.
+Programs › Exercises lists your own exercises, cardio and drills, and the exercise and mobility
+packs you've added, each with how many programs use it. LogIt's own exercises are always there.
+
+Anything used in a program you've assigned goes to that client with the program, read-only, so they
+can do it and swap by muscle. For the rest, choose whether clients see them: shared items show in
+their library and pickers as yours. Packs are data, so clients don't have to allow anything.
+
+New exercise opens your library, where you add one with its muscles and your cues.

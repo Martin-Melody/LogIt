@@ -322,7 +322,13 @@ export type SessionSource = {
   dayNumber?: number;
   /** What the plan screen showed: every exercise, drill and activity with its planned sets. */
   plan?: PlannedItem[];
+  /** Swaps the client made "for the rest of the program" in this workout (canvas SW1): later
+   * days of the program start with `to` instead of `from`, until the coach keeps it or puts
+   * it back. */
+  lastingSwaps?: LastingSwap[];
 };
+
+export type LastingSwap = { from: string; to: string; toId?: string; reason?: string; atMs: number };
 
 /** One thing on the plan a workout started from. */
 export type PlannedItem = {

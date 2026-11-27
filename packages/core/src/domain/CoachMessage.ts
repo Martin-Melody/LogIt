@@ -23,6 +23,8 @@ export type CoachMessage = {
   reaction?: string | null;
   /** A step in a request (an offer, the waiting list…), drawn as a line; `body` says it in words too. */
   kind?: string | null;
+  /** What that step's card shows (JSON), e.g. a program swap's exercises. */
+  cardJson?: string | null;
 };
 
 export type MessageVoice = { id?: string; url: string; ms: number; peaks: string };

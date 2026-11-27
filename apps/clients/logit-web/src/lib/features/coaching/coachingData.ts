@@ -63,6 +63,8 @@ export type ClientSummary = {
   pausedUntil: string | null;
   /** Coaching ends then (they stopped, or moved coach). */
   endsAt: string | null;
+  /** Canvas Q8: an unread "for the rest of the program" swap. */
+  lastingSwap: boolean;
 };
 
 export type CoachingOverview = {
@@ -182,6 +184,7 @@ function summarise(
     sessions7d: r.sessions7d,
     lastSessionAtMs: r.lastSessionAtMs,
     unread: r.unreadFromClient,
+    lastingSwap: !!r.lastingSwap,
     program: currentProgram(
       programs.filter((p) => p.recipientUserId === r.client.id).map((p) => p.program),
       now,
@@ -204,7 +207,9 @@ export type NeedsYou =
   | { kind: "ending"; at: number; client: ClientSummary; program: ProgramStatus }
   | { kind: "request"; at: number; request: CoachingRequest }
   // Canvas Z2: a client has waited 5+ days for a reply (at 7 they can stop with a refund).
-  | { kind: "waiting"; at: number; client: ClientSummary; days: number };
+  | { kind: "waiting"; at: number; client: ClientSummary; days: number }
+  // Canvas Q8: a client changed an exercise for the rest of the program.
+  | { kind: "lasting-swap"; at: number; client: ClientSummary };
 
 export function needsYou(o: CoachingOverview, now = Date.now()): NeedsYou[] {
   const out: NeedsYou[] = [];
@@ -212,6 +217,7 @@ export function needsYou(o: CoachingOverview, now = Date.now()): NeedsYou[] {
     for (const item of c.toReview) out.push({ kind: "checkin", at: item.submittedAtMs, client: c, item });
     const waitedDays = c.waitingSinceMs ? Math.floor((now - c.waitingSinceMs) / DAY) : 0;
     if (waitedDays >= 5) out.push({ kind: "waiting", at: c.waitingSinceMs!, client: c, days: waitedDays });
+    else if (c.lastingSwap) out.push({ kind: "lasting-swap", at: now, client: c });
     else if (c.unread > 0) out.push({ kind: "message", at: now, client: c });
     if (c.missed) out.push({ kind: "missed", at: c.missed.dueMs, client: c, dueMs: c.missed.dueMs });
     const p = c.program;

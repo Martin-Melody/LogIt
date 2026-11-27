@@ -104,7 +104,7 @@
     }
   }
 
-  const waiting = $derived(overview ? needsYou(overview).filter((i) => i.kind === "checkin" || i.kind === "message" || i.kind === "waiting").slice(0, 4) : []);
+  const waiting = $derived(overview ? needsYou(overview).filter((i) => i.kind === "checkin" || i.kind === "message" || i.kind === "waiting" || i.kind === "lasting-swap").slice(0, 4) : []);
 
   function checkinCell(c: ClientSummary): { text: string; tone: "warn" | "bad" | "" } {
     if (!c.sharing.checkins) return { text: "Not shared", tone: "" };
@@ -201,6 +201,11 @@
               <a href="/coaching/checkins?id={encodeURIComponent(i.item.id)}&client={i.client.id}" class="flex flex-[1_1_280px] items-center gap-2.5 rounded-lg bg-muted px-3 py-2.5 hover:bg-muted/70">
                 <Avatar name={i.client.name} url={i.client.avatarUrl} size={30} />
                 <span class="flex flex-col gap-0.5"><span class="text-[13px] font-medium">{i.client.name} sent a check-in</span><span class="text-xs text-muted-foreground">{ago(i.item.submittedAtMs)}</span></span>
+              </a>
+            {:else if i.kind === "lasting-swap"}
+              <a href="/clients/{i.client.id}?tab=training" class="flex flex-[1_1_280px] items-center gap-2.5 rounded-lg bg-muted px-3 py-2.5 hover:bg-muted/70">
+                <Avatar name={i.client.name} url={i.client.avatarUrl} size={30} />
+                <span class="flex flex-col gap-0.5"><span class="text-[13px] font-medium">{i.client.name} changed an exercise for the rest of the program</span><span class="text-xs text-muted-foreground">Keep it, or put it back</span></span>
               </a>
             {:else if i.kind === "message" || i.kind === "waiting"}
               <a href="/messages?c={i.client.relationshipId}" class="flex flex-[1_1_280px] items-center gap-2.5 rounded-lg bg-muted px-3 py-2.5 hover:bg-muted/70">

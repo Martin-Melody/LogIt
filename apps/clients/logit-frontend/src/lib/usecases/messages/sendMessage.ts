@@ -4,8 +4,12 @@ import { createOutgoingMessage, type CoachMessage, type MessagePhoto, type Messa
 
 /** Optimistically store an outgoing message locally, then push it (queued if offline). A photo
  * is uploaded before this, so only its address waits in the queue. */
-export async function sendMessage(relationshipId: string, body: string, photo?: MessagePhoto, voice?: MessageVoice): Promise<CoachMessage | null> {
-  const msg = createOutgoingMessage(relationshipId, body, undefined, photo, voice);
+export async function sendMessage(
+  relationshipId: string, body: string, photo?: MessagePhoto, voice?: MessageVoice,
+  /** A program swap (canvas SW1): the message is also a card the coach can act on. */
+  card?: { kind: "lasting-swap"; json: string },
+): Promise<CoachMessage | null> {
+  const msg = { ...createOutgoingMessage(relationshipId, body, undefined, photo, voice), ...(card ? { kind: card.kind, cardJson: card.json } : {}) };
   if (!msg.body && !msg.photo && !msg.voice) return null;
   await getMessagesRepo().addOutgoing(msg);
   pushMessage(msg);

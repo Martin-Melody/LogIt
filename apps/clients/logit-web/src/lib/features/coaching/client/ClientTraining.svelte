@@ -18,7 +18,7 @@
   import { programSwaps, type ProgramSwap } from "@logit/core/domain/swaps";
   import { weekdayDate } from "../format";
 
-  let { clientId, username, name, sharing }: { clientId: string; username: string; name: string; sharing: Sharing } = $props();
+  let { clientId, relationshipId, username, name, sharing }: { clientId: string; relationshipId: string; username: string; name: string; sharing: Sharing } = $props();
 
   // Canvas PG7: the program they're on, at the top.
   let program = $state<ProgramStatus | null>(null);
@@ -30,7 +30,7 @@
       const ids = new Set(mine.map((m) => m.program.id));
       const fromMine = sessions.filter((x) => x.source?.kind === "program" && ids.has(x.source.parentId));
       const library = fromMine.length ? await loadWebLibrary().then((l) => l.entries).catch(() => []) : [];
-      swaps = fromMine.length ? programSwaps(fromMine, library, { sinceMs: Date.now() - 7 * 86_400_000 }) : [];
+      swaps = fromMine.length ? programSwaps(fromMine, library, { sinceMs: Date.now() - 28 * 86_400_000 }) : [];
     }
   }
 
@@ -140,7 +140,7 @@
 </script>
 
 <div class="mb-4">
-  <TrainingProgramCard status={program} {clientId} {username} {name} {sessions} {swaps} shared={sharing.workouts} onchange={loadProgram} />
+  <TrainingProgramCard status={program} {clientId} {relationshipId} {username} {name} {sessions} {swaps} shared={sharing.workouts} onchange={loadProgram} />
 </div>
 {#if !sharing.workouts}
   <NotShared {name} what="their workouts" note="You can still give them programs." />
