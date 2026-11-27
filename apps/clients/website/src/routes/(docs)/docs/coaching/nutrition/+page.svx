@@ -24,6 +24,29 @@ most or about: fibre, salt, sugar, saturated fat, and vitamins and minerals. Man
 vitamins, so a vitamin target is only as good as the labels. Tick what the plan is good for
 (dairy-free, vegetarian…). Changes save as you go.
 
+## Building a meal plan
+
+Open a meal plan to build it. First, how days work:
+
+- **Same every day**: one set of meals and targets.
+- **Training and rest days**: two, by whether the day has training (their program's weekdays, or
+  any day they train). Switching copies today's meals into both, ready to change.
+- **Your own day types**: high carb, low carb, refeed… each on the weekdays you pick. A weekday has
+  one type, so picking it for a new one takes it off the other.
+
+Each day has its targets (calories, and protein, carbs and fat; empty means their own) and its
+meals. A meal has a time: a clock time, so many minutes before training, within so long after, or
+none. "Training" is their session time, the start time they set for each program day on their
+phone, so if their session moves, the meal moves with it; on a rest day, before/after meals use the
+plan's rest-day time (16:30 unless you change it).
+
+**+ Food or recipe** searches the same foods as the diary and your recipes (filtered by the plan's
+"good for" tags). Set the amount (grams, or servings for a recipe) and add swaps clients can have
+instead. A food's ⋯ adds a swap, marks it as not fitting a tag ("not dairy-free"), or moves it.
+The day total shows the meals against the targets, and warns when a food doesn't fit the plan's
+tags; clients who said they don't eat it only see its swap. **Grocery list for a week** adds up
+each day type's meals for its days, with recipes as their ingredients.
+
 ## Recipes
 
 Your recipes are the same ones as in your own diary. Each has its ingredients for the whole recipe,

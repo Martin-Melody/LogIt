@@ -35,11 +35,13 @@ export type PlannedFood = {
   swaps?: PlannedFood[];
   /** One of the coach's recipes (canvas MP2 "Your recipe"): a copy as it was when added, so
    * the client sees the ingredients and method. `grams`/`computed` are for the servings used. */
-  recipe?: Pick<Recipe, "id" | "name" | "servings" | "ingredients" | "perServing" | "notes">;
+  recipe?: Pick<Recipe, "id" | "name" | "servings" | "ingredients" | "perServing" | "notes" | "tags" | "photoUrl" | "minutes">;
   /** Servings of the recipe (recipe foods only). */
   servingsUsed?: number;
   /** Other nutrients for `grams`, when known. */
   nutrients?: Nutrients;
+  /** "Good for" tags this food doesn't fit, as the coach marked it (canvas MP2 "Dairy"). */
+  notFor?: DietTag[];
 };
 
 /** When a meal is (canvas Q5): a clock time, or relative to that day's training session. */
@@ -330,7 +332,7 @@ export function plannedFoodFromRecipe(recipe: Recipe, servings = 1): Omit<Planne
     grams: Math.round(grams),
     servingLabel: `${n === 1 ? "1 serving" : `${n} servings`}`,
     computed: scale(recipe.perServing),
-    recipe: { id: recipe.id, name: recipe.name, servings: recipe.servings, ingredients: recipe.ingredients, perServing: recipe.perServing, ...(recipe.notes ? { notes: recipe.notes } : {}) },
+    recipe: { id: recipe.id, name: recipe.name, servings: recipe.servings, ingredients: recipe.ingredients, perServing: recipe.perServing, ...(recipe.notes ? { notes: recipe.notes } : {}), ...(recipe.tags?.length ? { tags: recipe.tags } : {}), ...(recipe.photoUrl ? { photoUrl: recipe.photoUrl } : {}), ...(recipe.minutes ? { minutes: recipe.minutes } : {}) },
     servingsUsed: n,
   };
 }
@@ -367,4 +369,123 @@ export function recipeUse(recipeId: string, plans: CoachNutritionPlan[]): { plan
     else if (foods.some((f) => f.swaps?.some((s) => s.recipe?.id === recipeId))) asSwap++;
   }
   return { plans: inPlans + asSwap, swapOnly: inPlans === 0 && asSwap > 0 };
+}
+
+// ── The meal plan builder (canvas MP2, MP4, Q5) ──
+
+/** Which meals a builder tab edits: the plan's own (one day type) or a day type's. */
+export type DayRef = string | null;
+
+/** The meals of one day of the builder. */
+export function mealsOf(plan: CoachNutritionPlan, day: DayRef): PlannedMeal[] {
+  if (day == null || !plan.mode || plan.mode === "same") return plan.meals ?? [];
+  return plan.dayTypes?.find((d) => d.id === day)?.meals ?? [];
+}
+
+/** Change the meals of one day of the builder. */
+export function mapMeals(plan: CoachNutritionPlan, day: DayRef, fn: (meals: PlannedMeal[]) => PlannedMeal[]): CoachNutritionPlan {
+  if (day == null || !plan.mode || plan.mode === "same") return touchCoachNutritionPlan({ ...plan, meals: fn(plan.meals ?? []) });
+  return touchCoachNutritionPlan({ ...plan, dayTypes: (plan.dayTypes ?? []).map((d) => (d.id === day ? { ...d, meals: fn(d.meals) } : d)) });
+}
+
+/** Change one day type (its name, targets, weekdays). */
+export function updateDayType(plan: CoachNutritionPlan, day: string, patch: Partial<Omit<PlanDayType, "id">>): CoachNutritionPlan {
+  return touchCoachNutritionPlan({ ...plan, dayTypes: (plan.dayTypes ?? []).map((d) => (d.id === day ? { ...d, ...patch } : d)) });
+}
+
+const cloneMeals = (meals: PlannedMeal[]): PlannedMeal[] =>
+  meals.map((m) => ({ ...m, id: createId("pmeal"), foods: m.foods.map((f) => ({ ...f, id: createId("pfood"), swaps: f.swaps?.map((s) => ({ ...s, id: createId("pfood") })) })) }));
+
+/** Switch how days work (canvas MP2). Going to training and rest days copies today's meals and
+ * targets into both; to your own day types, into one type for every weekday; back to one set,
+ * the first day type's. */
+export function setPlanMode(plan: CoachNutritionPlan, mode: NonNullable<CoachNutritionPlan["mode"]>): CoachNutritionPlan {
+  const current = plan.mode ?? "same";
+  if (mode === current) return plan;
+  const base = { kcalTarget: plan.kcalTarget, proteinG: plan.proteinG, carbsG: plan.carbsG, fatG: plan.fatG };
+  const meals = plan.mode && plan.mode !== "same" ? (plan.dayTypes?.[0]?.meals ?? []) : (plan.meals ?? []);
+  if (mode === "same") {
+    const first = plan.dayTypes?.[0];
+    return touchCoachNutritionPlan({ ...plan, mode, ...(first ? { kcalTarget: first.kcalTarget, proteinG: first.proteinG, carbsG: first.carbsG, fatG: first.fatG } : {}), meals, dayTypes: undefined });
+  }
+  const dayTypes: PlanDayType[] = mode === "training-rest"
+    ? [
+        { id: createId("pday"), name: "Training day", role: "training", ...base, meals: cloneMeals(meals) },
+        { id: createId("pday"), name: "Rest day", role: "rest", ...base, meals: cloneMeals(meals) },
+      ]
+    : [{ id: createId("pday"), name: "Every day", weekdays: [0, 1, 2, 3, 4, 5, 6], ...base, meals: cloneMeals(meals) }];
+  return touchCoachNutritionPlan({ ...plan, mode, dayTypes });
+}
+
+/** A new day type of your own (canvas Q5): its weekdays come off the others. */
+export function addDayType(plan: CoachNutritionPlan, input: { name: string; weekdays: number[]; copyFrom?: string | null }): CoachNutritionPlan {
+  const from = plan.dayTypes?.find((d) => d.id === input.copyFrom);
+  const taken = new Set(input.weekdays);
+  const others = (plan.dayTypes ?? []).map((d) => ({ ...d, weekdays: (d.weekdays ?? []).filter((w) => !taken.has(w)) }));
+  const day: PlanDayType = {
+    id: createId("pday"),
+    name: input.name.trim() || "Day type",
+    weekdays: [...taken].sort(),
+    kcalTarget: from?.kcalTarget ?? plan.kcalTarget,
+    proteinG: from?.proteinG ?? plan.proteinG,
+    carbsG: from?.carbsG ?? plan.carbsG,
+    fatG: from?.fatG ?? plan.fatG,
+    meals: from ? cloneMeals(from.meals) : [],
+  };
+  return touchCoachNutritionPlan({ ...plan, dayTypes: [...others, day] });
+}
+
+export function removeDayType(plan: CoachNutritionPlan, day: string): CoachNutritionPlan {
+  const types = plan.dayTypes ?? [];
+  if (types.length <= 1) return plan;
+  const gone = types.find((d) => d.id === day);
+  const rest = types.filter((d) => d.id !== day);
+  // Its weekdays go to the first of the rest, so every day still has a type.
+  const first = rest[0]!;
+  return touchCoachNutritionPlan({ ...plan, dayTypes: rest.map((d) => (d.id === first.id ? { ...d, weekdays: [...new Set([...(d.weekdays ?? []), ...(gone?.weekdays ?? [])])].sort() } : d)) });
+}
+
+/** What a day's meals add up to. */
+export function dayMealTotals(meals: PlannedMeal[]): MacroTotals {
+  return roundMacros(meals.reduce((acc, m) => addMacros(acc, mealTotals(m)), { ...ZERO_MACROS }));
+}
+
+/** Which of the plan's "good for" tags a food doesn't fit (canvas MP2 "1 food has dairy"): a
+ * recipe without the tag, or a food the coach marked. */
+export function foodBreaks(food: PlannedFood, planTags: DietTag[]): DietTag[] {
+  if (!planTags.length) return [];
+  if (food.recipe) {
+    const has = new Set(food.recipe.tags ?? []);
+    return planTags.filter((t) => !has.has(t));
+  }
+  return planTags.filter((t) => food.notFor?.includes(t));
+}
+
+/** A week's shopping (canvas MP2 "Grocery list for a week"): each day type's meals times how
+ * many days of the week it is. Training days: as many as the program has. */
+export function weekGroceryList(plan: CoachNutritionPlan, trainingDaysPerWeek = 4): { name: string; brand?: string; grams: number }[] {
+  const types = plan.mode && plan.mode !== "same" ? (plan.dayTypes ?? []) : [];
+  const days: { meals: PlannedMeal[]; times: number }[] = !types.length
+    ? [{ meals: plan.meals ?? [], times: 7 }]
+    : plan.mode === "training-rest"
+      ? types.map((d) => ({ meals: d.meals, times: d.role === "rest" ? 7 - trainingDaysPerWeek : trainingDaysPerWeek }))
+      : types.map((d) => ({ meals: d.meals, times: d.weekdays?.length ?? 0 }));
+  const byKey = new Map<string, { name: string; brand?: string; grams: number }>();
+  for (const { meals, times } of days) {
+    for (const m of meals) {
+      for (const f of m.foods) {
+        // A recipe is shopped as its ingredients, for the servings used.
+        const items = f.recipe
+          ? f.recipe.ingredients.map((i) => ({ name: i.name, brand: i.brand, grams: (i.grams / Math.max(1, f.recipe!.servings)) * (f.servingsUsed ?? 1) }))
+          : [{ name: f.name, brand: f.brand, grams: f.grams }];
+        for (const it of items) {
+          const key = `${it.name}::${it.brand ?? ""}`.toLowerCase();
+          const cur = byKey.get(key) ?? { name: it.name, ...(it.brand ? { brand: it.brand } : {}), grams: 0 };
+          cur.grams += it.grams * times;
+          byKey.set(key, cur);
+        }
+      }
+    }
+  }
+  return [...byKey.values()].map((x) => ({ ...x, grams: Math.round(x.grams) })).filter((x) => x.grams > 0).sort((a, b) => a.name.localeCompare(b.name));
 }

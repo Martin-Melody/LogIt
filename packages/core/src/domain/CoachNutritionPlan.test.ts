@@ -12,7 +12,7 @@ import {
   updateMeal,
   type PlannedFood,
 } from "./CoachNutritionPlan";
-import { plannedFoodFromRecipe, mealPlanSummary, recipeUse } from "./CoachNutritionPlan";
+import { plannedFoodFromRecipe, mealPlanSummary, recipeUse, setPlanMode, mapMeals, mealsOf, addDayType, removeDayType, foodBreaks, weekGroceryList, dayMealTotals, type PlannedFood as PlannedFoodV3 } from "./CoachNutritionPlan";
 import { createRecipe as createRecipeV2 } from "./nutrition";
 import { mealClock, mealTimeLabel, planDay, withPlanFallback, createCoachNutritionPlan as createPlanV2, type PlannedMeal as PlannedMealV2 } from "./CoachNutritionPlan";
 
@@ -110,5 +110,34 @@ describe("Nutrition › Meal plans and Recipes (canvas MP1, MP3)", () => {
     ] };
     expect(mealPlanSummary(tr)).toBe("Training day 2,100 kcal · rest day 1,850 · 2 meals · Adaptive targets");
     expect(recipeUse("r1", [tr, targetsOnly])).toEqual({ plans: 1, swapOnly: false });
+  });
+});
+
+describe("the meal plan builder (canvas MP2, Q5)", () => {
+  const food = (name: string, grams: number, kcal: number, extra: Partial<PlannedFoodV3> = {}): PlannedFoodV3 => ({ id: name, name, grams, computed: { kcal, proteinG: 0, carbsG: 0, fatG: 0 }, ...extra });
+  it("switching to training and rest days copies the meals into both; own day types take weekdays from the others", () => {
+    let p = { ...createPlanV2("Fat loss"), kcalTarget: 2100, meals: [{ id: "m", name: "Lunch", foods: [food("Rice", 100, 130)] }] };
+    p = setPlanMode(p, "training-rest");
+    expect(p.dayTypes!.map((d) => [d.name, d.meals.length, d.kcalTarget])).toEqual([["Training day", 1, 2100], ["Rest day", 1, 2100]]);
+    const rest = p.dayTypes![1]!.id;
+    p = mapMeals(p, rest, (ms) => ms.map((m) => ({ ...m, foods: [] })));
+    expect(mealsOf(p, rest)[0]!.foods).toEqual([]);
+    expect(mealsOf(p, p.dayTypes![0]!.id)[0]!.foods).toHaveLength(1);
+
+    let own = setPlanMode({ ...createPlanV2("Carbs") }, "own");
+    own = addDayType(own, { name: "High carb", weekdays: [2, 4], copyFrom: own.dayTypes![0]!.id });
+    expect(own.dayTypes!.map((d) => [d.name, d.weekdays])).toEqual([["Every day", [0, 1, 3, 5, 6]], ["High carb", [2, 4]]]);
+    own = removeDayType(own, own.dayTypes![1]!.id);
+    expect(own.dayTypes![0]!.weekdays).toEqual([0, 1, 2, 3, 4, 5, 6]);
+  });
+
+  it("flags foods that don't fit the plan's tags, and shops for a week", () => {
+    const recipe = { id: "r", name: "Bowl", servings: 2, perServing: { kcal: 300, proteinG: 20, carbsG: 30, fatG: 10 }, ingredients: [{ id: "i", name: "Rice", grams: 200, computed: { kcal: 260, proteinG: 5, carbsG: 56, fatG: 1 } }], tags: ["dairy-free" as const] };
+    expect(foodBreaks(food("Yogurt", 50, 50, { notFor: ["dairy-free"] }), ["dairy-free"])).toEqual(["dairy-free"]);
+    expect(foodBreaks(food("Bowl", 300, 300, { recipe, servingsUsed: 1 }), ["dairy-free", "vegan"])).toEqual(["vegan"]);
+    const p = setPlanMode({ ...createPlanV2("Week"), meals: [{ id: "m", name: "Lunch", foods: [food("Bowl", 300, 300, { recipe, servingsUsed: 1 }), food("Banana", 120, 107)] }] }, "training-rest");
+    const tr = mapMeals(p, p.dayTypes![1]!.id, () => []);
+    expect(weekGroceryList(tr, 4)).toEqual([{ name: "Banana", grams: 480 }, { name: "Rice", grams: 400 }]);
+    expect(dayMealTotals(mealsOf(tr, tr.dayTypes![0]!.id)).kcal).toBe(407);
   });
 });
