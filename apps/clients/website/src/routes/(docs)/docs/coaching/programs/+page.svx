@@ -117,37 +117,45 @@ rule, "Do something else today" is always there for them; it logs as a swap you 
 - **4-week wave** runs 5s, 3s and 5/3/1 off a training max, then a light week.
 - **Fixed** keeps the numbers as you typed them.
 
-## Week types
+## The weeks: stretches
 
-The Weeks strip in the builder shows each week's type; **Edit weeks** sets them. A week's change
-is on top of what the progression works out:
+A program's weeks are set up as **stretches**: a range of weeks, an optional name, and what they
+do. **New program** starts with them: a name, how many weeks, then **Weeks 1 to 3** and what they
+do, in one go; **+ Next stretch** starts where the last one ended. Skip it and every week runs the
+program's progression.
 
-- **Normal**: the progression decides.
-- **Intro**: an easier start, load −10%.
-- **Deload**: half the sets, same weights. The progression pauses, and the week after carries on
-  from the week before.
-- **Heavy**: load +5%, two fewer reps.
-- **Test**: the last set is as many as they can; it sets the next estimate.
-- **Find your weights**: they work up to the weights that fit; the progression pauses.
-- **Your own**: a name, and ± sets, ± load %, ± reps, a last set as many as they can, and whether
-  the progression pauses. Once made, it's offered for every week of the program.
+In the builder the weeks are one bar of stretches, each as wide as its weeks. Click one to change
+it, or drag the edge between two (or focus it and use the arrow keys) to move where one ends and
+the next starts. **Edit weeks** lists them, with **+ Stretch**. A stretch does one of these:
 
-The client's Home shows the week's type with one line on what it means. A progression from a
-plugin is told the week's type; if it doesn't handle it, LogIt applies the change to its numbers.
+- **Find your weights** runs LogIt's Weight finder on each lift: a jump at a time, asking "how many
+  more could you have done?", until they could only do 1 or 2 more. The next stretch plans from
+  what they found.
+- **A progression** gives those weeks their own, like hypertrophy in weeks 1–4 and strength in 5–8,
+  or the program's own when you don't pick one.
+- **A starting phase from a plugin** you've installed (Coaching › Plugins › Starting phases), with
+  the block and progression it comes with.
+- **A kind of week**, on top of the progression it's in:
+  - **Intro**: an easier start, load −10%.
+  - **Deload**: half the sets, same weights. The progression pauses, and the week after carries on
+    from the week before.
+  - **Heavy**: load +5%, two fewer reps.
+  - **Test**: the last set is as many as they can; it sets the next estimate.
+  - **Your own**: a name, and ± sets, ± load %, ± reps, a last set as many as they can, and whether
+    the progression pauses. Once made, it's offered again.
 
-## Phases
+A deload in the middle of a progression is a one-week stretch of its own; the progression carries
+on after it. Making a stretch cover weeks another one has asks first. Remove gives its weeks back
+to the program's progression. Adding weeks to the program makes a stretch that ran to the end
+longer.
 
-A phase is a run of weeks with its own progression: **+ Phase** in the builder. **Find your
-weights** runs LogIt's Weight finder on each lift: a jump at a time, asking "how many more could
-you have done?", until they could only do 1 or 2 more. The next phase plans from what they found.
-Starting phases from plugins you've installed (Coaching › Plugins › Starting phases) are offered
-there too, with the block and progression they come with. **A
-progression** gives those weeks their own, like hypertrophy in weeks 1–4 and strength in 5–8.
-Weeks outside any phase use the program's progression; week types still work inside a phase.
+The client's Home shows the stretch's name ("Week 5 of 8 · Hypertrophy"), and for a kind of week
+one line on what it means. A progression from a plugin is told the week's kind; if it doesn't
+handle it, LogIt applies the change to its numbers.
 
-When a Find your weights phase is done, Today shows "found their weights" under Decide. **Check
+When a Find your weights stretch is done, Today shows "found their weights" under Decide. **Check
 them** lists each lift's top set, its estimated max and how sure that is; change any that look
-wrong and press **Looks right**. If you don't get to it, the next phase plans from what they found
+wrong and press **Looks right**. If you don't get to it, the next stretch plans from what they found
 anyway.
 
 ## Every week

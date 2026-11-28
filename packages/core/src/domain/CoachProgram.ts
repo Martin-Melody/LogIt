@@ -1,3 +1,4 @@
+import { stretchesOf, stretchTitle } from "./stretches";
 import { weekTypeOf, weekTypeLabel } from "./weekTypes";
 import { copyData } from "./copyData";
 import type { MobilityMetric, SetType } from "./workout";
@@ -1301,13 +1302,19 @@ export function programSummary(program: CoachProgram): string {
   const weeks = program.weeks.length;
   const days = daysPerWeek(program);
   const bits = [`${weeks} ${weeks === 1 ? "week" : "weeks"}`, `${days} ${days === 1 ? "day" : "days"} a week`, ruleLabel(program.rule)];
-  // Week types (Phase 6.4): "deload weeks 4 and 8 · test week 6".
-  const by = new Map<string, number[]>();
-  for (const w of [...program.weeks].sort((a, b) => a.weekNumber - b.weekNumber)) {
-    const t = weekTypeOf(w);
-    if (t) by.set(weekTypeLabel(t).toLowerCase(), [...(by.get(weekTypeLabel(t).toLowerCase()) ?? []), w.weekNumber]);
+  // Its stretches (canvas PW2): "find your weights weeks 1–2 · hypertrophy weeks 3–7 · deload weeks 4 and 8".
+  const by = new Map<string, WeekRange[]>();
+  for (const s of stretchesOf(program)) {
+    if (s.plain) continue;
+    // An unnamed progression stretch goes by its progression: "LogIt Adaptive weeks 2–3 and 5".
+    const label = s.what.kind === "progression" ? (s.name ?? ruleLabel(s.what.rule ?? program.rule)) : s.name ?? stretchTitle(s).toLowerCase();
+    by.set(label, [...(by.get(label) ?? []), s]);
   }
-  for (const [label, ns] of by) bits.push(`${label} ${ns.length === 1 ? "week" : "weeks"} ${ns.length === 1 ? ns[0] : `${ns.slice(0, -1).join(", ")} and ${ns.at(-1)}`}`);
+  for (const [label, rs] of by) {
+    const parts = rs.map((r) => (r.from === r.to ? `${r.from}` : `${r.from}–${r.to}`));
+    const many = rs.length > 1 || rs[0]!.from !== rs[0]!.to;
+    bits.push(`${label} ${many ? "weeks" : "week"} ${parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}`}`);
+  }
   return bits.join(" · ");
 }
 

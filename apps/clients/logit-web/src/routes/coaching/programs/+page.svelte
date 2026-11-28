@@ -1,4 +1,8 @@
 <script lang="ts">
+  import NewProgramDialog from "$lib/features/coaching/programs/NewProgramDialog.svelte";
+  import { putStretch, type StretchInput } from "@logit/core/domain/stretches";
+  import { setLength } from "@logit/core/domain/programBuilder";
+  import { createId } from "@logit/core/domain/ids";
   import { updateCopy } from "@logit/core/domain/programBuilder";
   import { forBuilder } from "@logit/core/domain/programBuilder";
   import ProgramBuilder from "$lib/features/coaching/programs/ProgramBuilder.svelte";
@@ -135,11 +139,16 @@
     void goto(`/coaching/programs?id=${id}`, { noScroll: true, keepFocus: true });
   }
 
-  async function create() {
+  // Canvas PW1: New program sets up its weeks first.
+  let newOpen = $state(false);
+  async function create(name = "New program", weeks = 1, stretches: StretchInput[] = []) {
     busy = true;
     try {
-      let p = P.createCoachProgram("New program");
+      let p = P.createCoachProgram(name);
       p = P.addDay(p, p.weeks[0].id, "Day 1");
+      if (weeks > 1) p = setLength(p, weeks);
+      for (const s of stretches) p = putStretch(p, s, () => createId("phase"));
+      newOpen = false;
       await getWebCoachProgramRepo().saveProgram(p);
       rows = [...rows, { program: p, recipientUserId: null }];
       select(p.id);
@@ -154,7 +163,7 @@
   // ?new=1 (from ⌘K): start a new program once the list has loaded.
   $effect(() => {
     if (loading || !page.url.searchParams.has("new")) return;
-    untrack(() => void goto("/coaching/programs", { replaceState: true, noScroll: true }).then(create));
+    untrack(() => void goto("/coaching/programs", { replaceState: true, noScroll: true }).then(() => (newOpen = true)));
   });
 
   const duplicate = () => (selected ? duplicateOf(selected) : Promise.resolve());
@@ -259,7 +268,7 @@
           <Button href="/library">New exercise</Button>
         {:else}
           <Button variant="outline" onclick={() => { startTab = source === "community" ? "community" : "logit"; startOpen = true; }}>Start from a program</Button>
-          <Button data-guide="programs-new" disabled={busy} onclick={() => void create()}>New program</Button>
+          <Button data-guide="programs-new" disabled={busy} onclick={() => (newOpen = true)}>New program</Button>
         {/if}
       </span>
     </header>
@@ -358,3 +367,5 @@
                     <span class="text-[13px] text-muted-foreground">{P.programSummary(p)}</span>
   </button>
 {/snippet}
+
+<NewProgramDialog bind:open={newOpen} {busy} oncreate={(n, w, s) => void create(n, w, s)} />

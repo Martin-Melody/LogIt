@@ -187,6 +187,17 @@ The stack on top of main. Each line names its PR.
 - [ ] Swaps: the section follows the rule; the first list on Programs › Swaps asks once.
 - [ ] Phone: a planned rest is the set's rest; blank uses their settings; Warm-ups Off drops them.
 
+**Weeks as stretches (#207)**
+- [ ] New program: name, 8 weeks, Weeks 1–3 Find your weights, + Next stretch → Hypertrophy 4–7
+      on Adaptive, + Next stretch → Deload; Start building → the bar shows the three.
+- [ ] The edge between two: drag it, or focus and ←/→; a stretch keeps at least a week.
+- [ ] Click a stretch → its editor; widening it over another asks first ("Weeks 6–7 of Hypertrophy
+      become Deload weeks"); Remove gives its weeks to the program's progression.
+- [ ] Edit weeks lists stretches; + Stretch. Length + on a program whose last stretch ran to the end
+      makes it longer.
+- [ ] An old program (Full-Body) shows Find your weights · 2–3 · Deload · 5 · Test, nothing changed.
+- [ ] Phone Home: "week 5 of 8 · Hypertrophy".
+
 ## Findings
 
 Write them here, with the section number.

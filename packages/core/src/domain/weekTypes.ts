@@ -40,7 +40,8 @@ export function weekTypeOf(week: { type?: WeekType; lighter?: boolean }): WeekTy
 /** "Deload", or the coach's own name. */
 export function weekTypeLabel(t: WeekType | null): string {
   if (!t) return "Normal";
-  return t.kind === "own" ? (t.name?.trim() || "Own week") : WEEK_TYPES[t.kind].label;
+  // A name the coach gave a stretch of these weeks ("Peak week") wins over the built-in label.
+  return t.name?.trim() || (t.kind === "own" ? "Own week" : WEEK_TYPES[t.kind].label);
 }
 
 /** What it changes, in words: "Half the sets · load −10% · last set as many as you can". */

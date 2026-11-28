@@ -305,7 +305,7 @@ export const STUDIO_CHAPTERS: Chapter[] = [
     id: "studio.program",
     walkthrough: "studio",
     title: "Build a program",
-    blurb: "One week of days, a progression, week types and phases",
+    blurb: "One week of days, a progression, and the weeks as stretches",
     minutes: 4,
     feature: "coach-programs",
     steps: [
@@ -317,7 +317,7 @@ export const STUDIO_CHAPTERS: Chapter[] = [
       {
         id: "editor", on: "web", route: "/coaching/programs", target: "program-editor", kind: "look",
         title: "One week of days",
-        body: "You build one week and it applies to every week. Pick a day and use + Add to search exercises, cardio and drills; pick several to add them as a superset or circuit. Click an exercise to open it in place: what it measures, sets, reps (8 or 8-10), load (kg, or 75% of their best), rest, tempo, swaps and a note. Drag the grip to reorder. Above the days: the progression that moves the numbers, the length, each week's type (Deload, Test, your own) and phases like Find your weights first. See every week shows it with an example lifter's numbers.",
+        body: "You build one week and it applies to every week. Pick a day and use + Add to search exercises, cardio and drills; pick several to add them as a superset or circuit. Click an exercise to open it in place: what it measures, sets, reps (8 or 8-10), load (kg, or 75% of their best), rest, tempo, swaps and a note. Drag the grip to reorder. Above the days: the progression that moves the numbers, the length, and the weeks as stretches (Find your weights in weeks 1–3, Hypertrophy in 4–7, a Deload); click one to change it or drag its edge. See every week shows it with an example lifter's numbers.",
       },
       {
         id: "save", on: "web", route: "/coaching/programs", target: "program-save", kind: "do", signal: "program.saved",

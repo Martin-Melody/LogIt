@@ -260,7 +260,7 @@
             <h2 class="text-2xl font-bold tracking-tight">{programDayName(day)}</h2>
             <span class="shrink-0 text-[13px] text-muted-foreground">Today</span>
           </div>
-          <p class="text-[13px] text-muted-foreground">{coachName}'s program · {coached.program.name} · week {coached.weekNumber} of {coached.totalWeeks} · {coached.doneThisWeek} of {coached.daysThisWeek} this week</p>
+          <p class="text-[13px] text-muted-foreground">{coachName}'s program · {coached.program.name} · week {coached.weekNumber} of {coached.totalWeeks}{coached.stretch ? ` · ${coached.stretch}` : ""} · {coached.doneThisWeek} of {coached.daysThisWeek} this week</p>
           {#if coached.weekType}
             <p class="flex items-center gap-2 text-[13px]"><span class="rounded-md px-1.5 py-0.5 text-[11px] font-semibold {coached.weekType.type.kind === 'deload' ? 'bg-warning/15 text-warning' : 'bg-muted'}">{coached.weekType.label}</span><span>{coached.weekType.text}.</span></p>
           {/if}
@@ -283,7 +283,7 @@
           {:else}
             <h2 class="text-xl font-bold tracking-tight">This week's done</h2>
           {/if}
-          <p class="text-[13px] text-muted-foreground">{coachName}'s program · week {coached.weekNumber} of {coached.totalWeeks}</p>
+          <p class="text-[13px] text-muted-foreground">{coachName}'s program · week {coached.weekNumber} of {coached.totalWeeks}{coached.stretch ? ` · ${coached.stretch}` : ""}</p>
           {#if coached.weekType}
             <!-- Week types (canvas PB9): the week's type once, with what it means. -->
             <p class="flex items-center gap-2 text-[13px]"><span class="rounded-md px-1.5 py-0.5 text-[11px] font-semibold {coached.weekType.type.kind === 'deload' ? 'bg-warning/15 text-warning' : 'bg-muted'}">{coached.weekType.label}</span><span>{coached.weekType.text}.</span></p>

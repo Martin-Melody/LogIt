@@ -26,8 +26,10 @@
   import AddToDayDialog, { type AddPick } from "./AddToDayDialog.svelte";
   import GroupDialog from "./GroupDialog.svelte";
   import WeekRangeDialog from "./WeekRangeDialog.svelte";
-  import PhaseDialog, { type PhaseChoice } from "./PhaseDialog.svelte";
-  import { parsePhasePack, type PhasePack } from "@logit/core/plugins/phasePack";
+  import StretchDialog, { type StretchPack } from "./StretchDialog.svelte";
+  import StretchBar from "./StretchBar.svelte";
+  import { fitStretches, putStretch, removeStretch, stretchesOf, type Stretch } from "@logit/core/domain/stretches";
+  import { parsePhasePack } from "@logit/core/plugins/phasePack";
   import { plugins as installedPlugins, fetchSource } from "$lib/features/plugins/pluginData.svelte";
   import { cardioPlanned } from "@logit/core/domain/programDaySession";
   import GripVerticalIcon from "@lucide/svelte/icons/grip-vertical";
@@ -39,9 +41,8 @@
   import { getWebCoachProgramRepo } from "$lib/deps";
   import * as P from "@logit/core/domain/CoachProgram";
   import WeeksDialog from "./WeeksDialog.svelte";
-  import { weekTypeOf, weekTypeLabel, weekTypeText } from "@logit/core/domain/weekTypes";
   import type { CoachProgram, ProgramBlock, ProgramDay, ProgramRule, ProgramSet, ProgramStrength } from "@logit/core/domain/CoachProgram";
-  import { applyTemplate, copyOwnChanges, forBuilder, libraryChanges, mergePrograms, setLength, setWeekType, takeTheirs, templateOf, type MergeConflict } from "@logit/core/domain/programBuilder";
+  import { applyTemplate, copyOwnChanges, forBuilder, libraryChanges, mergePrograms, setLength, takeTheirs, templateOf, type MergeConflict } from "@logit/core/domain/programBuilder";
   import { BUILTIN_MOBILITY_DRILLS } from "@logit/core/domain/mobilityDrill";
   import { createId } from "@logit/core/domain/ids";
   import { SET_TYPE_META, type SetType } from "@logit/core/domain/workout";
@@ -488,15 +489,7 @@
   // Canvas PG4: one rule picker, for the program or one exercise.
   let picking = $state(false);
   let pickingFor = $state<ProgramStrength | null>(null);
-  /** Picking a phase's progression (canvas SP5). */
-  let pickingPhase = $state<string | null>(null);
-  $effect(() => { if (!picking) pickingPhase = null; });
   function pickRule(rule: ProgramRule | null, scope: "exercise" | "program") {
-    if (pickingPhase) {
-      const id = pickingPhase;
-      edit((p) => { const ph = p.phases?.find((x) => x.id === id); if (!ph) return p; const { rule: _r, ...rest } = ph; return P.putPhase(p, rule ? { ...rest, rule } : rest); });
-      return;
-    }
     const b = pickingFor;
     if (!b || scope === "program") {
       edit((p) => {
@@ -508,29 +501,39 @@
       patchBlock(b.id, (x) => { if (x.type !== "strength") return x; const { rule: _r, ...rest } = x; return rule ? { ...rest, rule } : rest; });
     }
   }
-  // Week types (canvas PB5): each week's chip shows its type; Edit weeks sets them.
+  // The program's weeks as stretches (canvas PW1–PW4): one idea for phases and week types.
   let weeksOpen = $state(false);
-  // Phases (canvas SP5).
-  let phaseOpen = $state(false);
-  let phaseEditing = $state<P.ProgramPhase | null>(null);
-  const phaseTaken = $derived(new Set((prog.phases ?? []).filter((x) => x.id !== phaseEditing?.id).flatMap((x) => Array.from({ length: x.weeks.to - x.weeks.from + 1 }, (_, i) => x.weeks.from + i))));
-  function savePhase(v: PhaseChoice) {
-    const id = phaseEditing?.id ?? createId("phase");
-    const old = phaseEditing;
-    const rule = v.rule ?? (!v.findsWeights && !v.pack ? old?.rule : undefined);
-    edit((p) => P.putPhase(p, {
-      id, name: v.name, weeks: { from: v.from, to: v.to },
-      ...(v.findsWeights ? { findsWeights: true } : {}),
-      ...(v.blockPluginId ? { blockPluginId: v.blockPluginId } : {}),
-      ...(v.pack ? { pack: v.pack } : {}),
-      ...(rule ? { rule } : {}),
-    }));
-    if (!v.findsWeights && !v.pack && !old) { pickingFor = null; pickingPhase = id; picking = true; }
+  let stretchOpen = $state(false);
+  let stretchEditing = $state<Stretch | null>(null);
+  let stretchStart = $state<{ from: number; to: number }>({ from: 1, to: 1 });
+  const stretches = $derived(stretchesOf(prog));
+  function openStretch(s: Stretch | null) {
+    stretchEditing = s && !s.plain ? s : null;
+    // A plain stretch opens as a new one over its weeks.
+    const free = stretches.find((x) => x.plain);
+    stretchStart = s ? { from: s.from, to: s.to } : free ? { from: free.from, to: free.to } : { from: prog.weeks.length, to: prog.weeks.length };
+    stretchOpen = true;
+  }
+  /** The edge after stretch i moved: the next one now starts at `start`. The one that grows takes
+   * the weeks; if that's the program's plain progression, the other one shrinks instead. */
+  function moveEdge(i: number, start: number) {
+    const left = stretches[i], right = stretches[i + 1];
+    if (!left || !right) return;
+    const leftGrows = start > right.from;
+    const grow = leftGrows ? left : right;
+    const id = () => createId("phase");
+    edit((p) => {
+      if (!grow.plain) return putStretch(p, leftGrows ? { ...left, to: start - 1 } : { ...right, from: start }, id, grow);
+      return leftGrows ? putStretch(p, { ...right, from: start }, id, right) : putStretch(p, { ...left, to: start - 1 }, id, left);
+    });
+  }
+  function setWeeks(n: number) {
+    edit((p) => fitStretches(setLength(p, n), p.weeks.length));
   }
   // Starting phases from installed phase packs (canvas SP8).
-  let phasePacks = $state<(PhasePack & { name: string; description: string })[]>([]);
+  let phasePacks = $state<StretchPack[]>([]);
   $effect(() => {
-    if (!phaseOpen) return;
+    if (!stretchOpen) return;
     void (async () => {
       if (!installedPlugins.installsLoaded) await installedPlugins.loadInstalls().catch(() => {});
       const found = installedPlugins.installed.filter((p) => p.enabled && p.manifest.family === "phase-pack" && p.manifest.id !== P.FIND_YOUR_WEIGHTS_PACK.id);
@@ -540,13 +543,6 @@
       }))).filter((x): x is NonNullable<typeof x> => !!x);
     })();
   });
-  function phaseActions(ph: P.ProgramPhase): RowAction[] {
-    return [
-      { id: "edit", label: "Change…", run: () => { phaseEditing = ph; phaseOpen = true; } },
-      ...(ph.findsWeights ? [] : [{ id: "rule", label: "Change its progression…", run: () => { pickingFor = null; pickingPhase = ph.id; picking = true; } }]),
-      { id: "remove", label: "Remove phase", danger: true, separatorBefore: true, run: () => edit((p) => P.removePhase(p, ph.id)) },
-    ];
-  }
 
   // ── Copies (library, canvas Q6) ──
   let copiesOpen = $state(false);
@@ -795,21 +791,10 @@
     </span>
     <span class="flex items-center gap-2">
       <span class="text-muted-foreground">Length</span>
-      <Button variant="outline" size="icon" class="size-7" aria-label="One week fewer" disabled={prog.weeks.length <= 1} onclick={() => edit((p) => setLength(p, p.weeks.length - 1))}>−</Button>
+      <Button variant="outline" size="icon" class="size-7" aria-label="One week fewer" disabled={prog.weeks.length <= 1} onclick={() => setWeeks(prog.weeks.length - 1)}>−</Button>
       <span class="w-16 text-center tabular-nums">{prog.weeks.length} {prog.weeks.length === 1 ? "week" : "weeks"}</span>
-      <Button variant="outline" size="icon" class="size-7" aria-label="One week more" disabled={prog.weeks.length >= 52} onclick={() => edit((p) => setLength(p, p.weeks.length + 1))}>+</Button>
+      <Button variant="outline" size="icon" class="size-7" aria-label="One week more" disabled={prog.weeks.length >= 52} onclick={() => setWeeks(prog.weeks.length + 1)}>+</Button>
     </span>
-    {#if prog.weeks.length > 1}
-      <span class="flex flex-wrap items-center gap-1.5">
-        <span class="text-muted-foreground">Weeks</span>
-        {#each [...prog.weeks].sort((a, b) => a.weekNumber - b.weekNumber) as w (w.id)}
-          {@const wt = weekTypeOf(w)}
-          <button type="button" onclick={() => (weeksOpen = true)} title={wt ? weekTypeText(wt) : "Normal"}
-            class="h-7 rounded-full border px-2.5 text-xs tabular-nums transition-colors {wt?.kind === 'deload' ? 'border-warning/50 text-warning' : wt?.kind === 'find' ? 'border-info/50 text-info' : wt ? 'border-foreground/40 text-foreground' : 'border-border bg-background text-muted-foreground hover:text-foreground'}">{w.weekNumber}{wt ? ` · ${weekTypeLabel(wt)}` : ""}</button>
-        {/each}
-        <Button variant="ghost" size="sm" onclick={() => (weeksOpen = true)}>Edit weeks</Button>
-      </span>
-    {/if}
     {#if mode === "copy"}
       <span class="flex items-center gap-2">
         <span class="text-muted-foreground">Starts</span>
@@ -831,24 +816,11 @@
         onValueChange={(v) => edit((p) => { const { howtoShow: _h, ...rest } = p; return v === "new" ? rest : { ...rest, howtoShow: v as "always" | "never" }; })}
         options={[{ value: "new", label: "For new lifters" }, { value: "always", label: "Always" }, { value: "never", label: "Never" }]} />
     </span>
-    {#if prog.weeks.length > 1}
-      <span class="flex basis-full flex-wrap items-center gap-1.5">
-        <span class="text-muted-foreground">Phases</span>
-        {#each prog.phases ?? [] as ph (ph.id)}
-          <ActionMenu actions={phaseActions(ph)} label="More for {ph.name}">
-            {#snippet children({ props, more })}
-              <span {...props} class="flex items-center rounded-full border pl-2.5 text-xs {ph.findsWeights ? 'border-info/50 text-info' : 'border-border'}">
-                <button type="button" onclick={() => { phaseEditing = ph; phaseOpen = true; }} class="py-1">{[P.weekRangeText(ph.weeks), ph.name === P.weekRangeText(ph.weeks) ? "" : ph.name, ph.findsWeights ? "" : P.ruleLabel(ph.rule ?? prog.rule)].filter(Boolean).join(" · ")}</button>
-                {@render more()}
-              </span>
-            {/snippet}
-          </ActionMenu>
-        {:else}
-          <span class="text-xs text-muted-foreground">None: one progression all the way</span>
-        {/each}
-        <Button variant="ghost" size="sm" onclick={() => { phaseEditing = null; phaseOpen = true; }}>+ Phase</Button>
-      </span>
-    {/if}
+    <!-- Canvas PW2: the weeks as one bar of stretches. -->
+    <div class="flex basis-full items-center gap-3">
+      <StretchBar {stretches} total={prog.weeks.length} rule={prog.rule} onopen={openStretch} onedge={moveEdge} />
+      <Button variant="outline" size="sm" class="shrink-0" onclick={() => (weeksOpen = true)}>Edit weeks</Button>
+    </div>
   </section>
 
   {#if view === "weeks"}
@@ -1248,10 +1220,12 @@
 
 <PluginBlockDialog bind:open={pluginOpen} dayName={day?.name || "this day"} editing={editingPlugin} onsave={(b) => putBlock(editingPlugin, b, "plugin")} />
 
-<RulePickerDialog bind:open={picking} current={pickingPhase ? (prog.phases?.find((x) => x.id === pickingPhase)?.rule ?? prog.rule ?? null) : pickingFor ? (pickingFor.rule ?? null) : (prog.rule ?? null)} exercise={pickingFor?.exerciseName ?? null} onpick={pickRule} />
-<PhaseDialog bind:open={phaseOpen} phase={phaseEditing} total={prog.weeks.length} taken={phaseTaken} packs={phasePacks} onsave={savePhase} />
+<RulePickerDialog bind:open={picking} current={pickingFor ? (pickingFor.rule ?? null) : (prog.rule ?? null)} exercise={pickingFor?.exerciseName ?? null} onpick={pickRule} />
+<StretchDialog bind:open={stretchOpen} program={prog} stretch={stretchEditing} start={stretchStart} packs={phasePacks}
+  onsave={(s, replacing) => edit((p) => putStretch(p, s, () => createId("phase"), replacing))}
+  onremove={(s) => edit((p) => removeStretch(p, s, () => createId("phase")))} />
 
-<WeeksDialog bind:open={weeksOpen} program={prog} onset={(n, type) => edit((p) => setWeekType(p, n, type))} />
+<WeeksDialog bind:open={weeksOpen} program={prog} onopen={(s) => openStretch(s)} onadd={() => openStretch(null)} />
 
 <AddToDayDialog bind:open={addOpen} dayName={addTo && day ? `${P.groupLabel(day, addTo)} in ${day.name ?? "this day"}` : (day?.name ?? "this day")} {searchExercises} {searchActivities} {searchDrills} onadd={addPicks} onplugin={() => openPluginBlock(null)} />
 

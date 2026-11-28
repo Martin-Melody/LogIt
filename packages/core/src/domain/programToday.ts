@@ -3,6 +3,7 @@
 // started from that day, this program week). All done: the next week's first day, on its date.
 import { dayForWeek, getProgramProgress, getProgramStartMs, type CoachProgram, type ProgramDay } from "./CoachProgram";
 import { weekTypeOf, weekTypeLabel, weekTypeText, type WeekType } from "./weekTypes";
+import { stretchesOf, stretchTitle } from "./stretches";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -14,6 +15,9 @@ export type ProgramToday = {
   totalWeeks: number;
   /** This week's type (Phase 6.4): its label and one line, for "Week 4 of 6 · Deload: …". */
   weekType: { type: WeekType; label: string; text: string } | null;
+  /** The named stretch this week is in (canvas PW1: "Week 5 of 8 · Hypertrophy"), when it isn't
+   * the week's type (that shows on its own). */
+  stretch: string | null;
   /** When the last week ends (epoch ms). */
   endsAtMs: number;
   /** The program's days done this program week, and the days in it. */
@@ -50,6 +54,7 @@ export function programToday(program: CoachProgram, sessions: DoneSession[], now
     weekNumber: progress.weekNumber,
     totalWeeks: weeks.length,
     weekType: (() => { const wt = weekTypeOf(week); return wt ? { type: wt, label: weekTypeLabel(wt), text: weekTypeText(wt) } : null; })(),
+    stretch: (() => { const s = stretchesOf(program).find((x) => x.from <= progress.weekNumber && progress.weekNumber <= x.to); return s && !s.plain && s.what.kind !== "week" && s.what.kind !== "find" ? stretchTitle(s) : null; })(),
     endsAtMs: start + weeks.length * WEEK_MS,
     doneThisWeek: days.filter((d) => doneIds.has(d.id)).length,
     daysThisWeek: days.length,
