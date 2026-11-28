@@ -3,7 +3,7 @@
 // or Find your weights) and week types (Deload, Test, their own). Reading and writing go through
 // here, so everything that runs a program (phaseAt, weekTypeOf, handoffs) keeps working as it is.
 import {
-  FIND_YOUR_WEIGHTS_PACK, WEIGHT_FINDER_ID, phaseAt, putPhase, ruleLabel, touchCoachProgram, weekRangeText,
+  FIND_YOUR_MAX_PACK, FIND_YOUR_WEIGHTS_PACK, MAX_FINDER_ID, WEIGHT_FINDER_ID, phaseAt, putPhase, ruleLabel, touchCoachProgram, weekRangeText,
   type CoachProgram, type ProgramPhase, type ProgramRule, type WeekRange,
 } from "./CoachProgram";
 import { weekTypeLabel, weekTypeOf, weekTypeText, type WeekType } from "./weekTypes";
@@ -11,6 +11,8 @@ import { weekTypeLabel, weekTypeOf, weekTypeText, type WeekType } from "./weekTy
 export type StretchWhat =
   /** LogIt's Find your weights: the Weight finder on each lift. */
   | { kind: "find" }
+  /** Canvas PX4: Find your max, heavy singles on these lifts (absent = every weighted lift). */
+  | { kind: "max"; lifts?: string[] }
   /** A starting phase from a phase pack plugin. */
   | { kind: "pack"; pack: { id: string; name: string }; findsWeights: boolean; blockPluginId?: string; rule?: ProgramRule }
   /** A progression for these weeks; none = the program's own. */
@@ -27,7 +29,12 @@ export type Stretch = StretchInput & {
   plain: boolean;
 };
 
-const named = (p: ProgramPhase) => (p.name && p.name !== weekRangeText(p.weeks) ? p.name : undefined);
+// A phase's default name (its weeks, "Find your weights", "Find your max", its pack's) isn't one
+// the coach gave it: changing what the stretch does shouldn't carry it over.
+const named = (p: ProgramPhase) => {
+  const defaults = [weekRangeText(p.weeks), p.findsMax ? "Find your max" : "", p.findsWeights ? "Find your weights" : "", p.pack?.name ?? ""];
+  return p.name && !defaults.includes(p.name) ? p.name : undefined;
+};
 
 /** The program's weeks, in order, as stretches. Every week is in exactly one. */
 export function stretchesOf(program: CoachProgram): Stretch[] {
@@ -40,7 +47,7 @@ export function stretchesOf(program: CoachProgram): Stretch[] {
     let s: Omit<Stretch, "from" | "to">;
     if (t && t.kind !== "find") s = { key: `w:${t.kind}:${t.name ?? ""}`, what: { kind: "week", type: t }, ...(t.name ? { name: t.name } : {}), plain: false };
     else if (ph) {
-      const what: StretchWhat = ph.pack && ph.pack.id !== FIND_YOUR_WEIGHTS_PACK.id
+      const what: StretchWhat = ph.findsMax ? { kind: "max", ...(ph.lifts ? { lifts: ph.lifts } : {}) } : ph.pack && ph.pack.id !== FIND_YOUR_WEIGHTS_PACK.id
         ? { kind: "pack", pack: ph.pack, findsWeights: !!ph.findsWeights, ...(ph.blockPluginId ? { blockPluginId: ph.blockPluginId } : {}), ...(ph.rule ? { rule: ph.rule } : {}) }
         : ph.findsWeights ? { kind: "find" } : { kind: "progression", ...(ph.rule ? { rule: ph.rule } : {}) };
       const name = named(ph);
@@ -125,6 +132,7 @@ export function putStretch(program: CoachProgram, s: StretchInput, newId: () => 
   const w = s.what;
   let phase: ProgramPhase | null = null;
   if (w.kind === "find") phase = { id, name: name ?? "Find your weights", weeks: r, findsWeights: true, blockPluginId: WEIGHT_FINDER_ID, pack: FIND_YOUR_WEIGHTS_PACK };
+  else if (w.kind === "max") phase = { id, name: name ?? "Find your max", weeks: r, findsMax: true, blockPluginId: MAX_FINDER_ID, pack: FIND_YOUR_MAX_PACK, ...(w.lifts?.length ? { lifts: w.lifts } : {}) };
   else if (w.kind === "pack") phase = { id, name: name ?? w.pack.name, weeks: r, pack: w.pack, ...(w.findsWeights ? { findsWeights: true } : {}), ...(w.blockPluginId ? { blockPluginId: w.blockPluginId } : {}), ...(w.rule ? { rule: w.rule } : {}) };
   else if (w.rule || name) phase = { id, name: name ?? weekRangeText(r), weeks: r, ...(w.rule ? { rule: w.rule } : {}) };
   return touchCoachProgram(joinTwins(phase ? putPhase(p, phase) : p));
@@ -150,6 +158,7 @@ export function fitStretches(program: CoachProgram, oldLength: number): CoachPro
 export function stretchWhatText(s: Pick<Stretch, "what">, programRule: ProgramRule | undefined): string {
   const w = s.what;
   if (w.kind === "find") return "Weight finder";
+  if (w.kind === "max") return w.lifts?.length ? `Heavy singles: ${w.lifts.join(", ")}` : "Heavy singles";
   if (w.kind === "pack") return `From ${w.pack.name}`;
   if (w.kind === "week") return weekTypeText(w.type);
   return ruleLabel(w.rule ?? programRule);
@@ -159,5 +168,5 @@ export function stretchWhatText(s: Pick<Stretch, "what">, programRule: ProgramRu
 export function stretchTitle(s: Pick<Stretch, "from" | "to" | "name" | "what">): string {
   if (s.name) return s.name;
   const w = s.what;
-  return w.kind === "find" ? "Find your weights" : w.kind === "pack" ? w.pack.name : w.kind === "week" ? weekTypeLabel(w.type) : weekRangeText(s);
+  return w.kind === "find" ? "Find your weights" : w.kind === "max" ? "Find your max" : w.kind === "pack" ? w.pack.name : w.kind === "week" ? weekTypeLabel(w.type) : weekRangeText(s);
 }

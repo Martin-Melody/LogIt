@@ -45,3 +45,42 @@ export function foundWeights(program: CoachProgram, phase: ProgramPhase, session
     return { exerciseName: name, top, e1rm: Math.round(best), how: hard && top.reps <= 12 ? "sure" : "rough" };
   });
 }
+
+/** Canvas PX4: what a max test found against where they started. Start: the best estimated max
+ * in the program's first two weeks (or the earliest they logged the lift); now: the heaviest
+ * single in the test (else the best estimate from it). */
+export type MaxFound = { exerciseName: string; startKg: number | null; nowKg: number | null; single: boolean };
+
+export function maxesFound(program: CoachProgram, phase: ProgramPhase, sessions: WorkoutSession[]): MaxFound[] {
+  const start = getProgramStartMs(program);
+  if (start == null) return [];
+  const from = start + (phase.weeks.from - 1) * WEEK, to = start + phase.weeks.to * WEEK;
+  const mine = sessions.filter((s) => s.source?.parentId === program.id);
+  const names = phase.lifts?.length ? phase.lifts : foundWeights(program, phase, []).map((f) => f.exerciseName);
+  const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+  return names.map((name) => {
+    let startKg = 0, nowE = 0, single = 0;
+    for (const s of mine) {
+      const at = s.startedAtMs ?? 0;
+      for (const ex of loggedExercises(s)) {
+        if (!same(ex.exerciseName, name)) continue;
+        for (const set of ex.sets) {
+          if (set.setType === "warmup" || set.reps < 1 || set.weight <= 0) continue;
+          const e = estimated1RM(set.weight, set.reps);
+          if (at >= from && at < to) { nowE = Math.max(nowE, e); if (set.reps === 1) single = Math.max(single, set.weight); }
+          else if (at < start + 2 * WEEK) startKg = Math.max(startKg, e);
+        }
+      }
+    }
+    if (!startKg) {
+      // Not in the first two weeks: the earliest session with the lift, before the test.
+      const early = mine.filter((s) => (s.startedAtMs ?? 0) < from).sort((a, b) => (a.startedAtMs ?? 0) - (b.startedAtMs ?? 0));
+      for (const s of early) {
+        const sets = loggedExercises(s).filter((ex) => same(ex.exerciseName, name)).flatMap((ex) => ex.sets).filter((x) => x.setType !== "warmup" && x.reps >= 1 && x.weight > 0);
+        if (sets.length) { startKg = Math.max(...sets.map((x) => estimated1RM(x.weight, x.reps))); break; }
+      }
+    }
+    const now = single || nowE;
+    return { exerciseName: name, startKg: startKg ? Math.round(startKg) : null, nowKg: now ? Math.round(now) : null, single: !!single };
+  });
+}

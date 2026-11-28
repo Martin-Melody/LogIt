@@ -100,7 +100,7 @@ export function programDaySession(day0: ProgramDay, opts: ProgramDayOptions = {}
       } else {
         session = withPlanned(addCardioBlock(session, block.exerciseName), `${count} × ${first?.distanceM ?? "?"} m${block.perSide ? " each side" : ""}`);
       }
-    } else if (block.type === "strength" && opts.phase && phaseBlock(opts.phase) && (block.measure ?? "weight") !== "reps" && opts.pluginBlock?.(phaseBlock(opts.phase)!)) {
+    } else if (block.type === "strength" && opts.phase && phaseBlock(opts.phase) && (block.measure ?? "weight") !== "reps" && liftIn(opts.phase, block.exerciseName) && opts.pluginBlock?.(phaseBlock(opts.phase)!)) {
       // A phase's block runs the lift (canvas SP6): its exercise field is the lift, one entry a
       // set to start; its entries count as sets of the lift (6.1).
       const decl = opts.pluginBlock(phaseBlock(opts.phase)!)!;
@@ -108,7 +108,8 @@ export function programDaySession(day0: ProgramDay, opts: ProgramDayOptions = {}
       const blockId = session.blocks.at(-1)!.id;
       const liftKey = [...decl.blockFields, ...decl.fields].find((f) => f.type === "exercise")?.key;
       if (liftKey) session = updatePluginBlock(session, blockId, decl, setBlockFieldValue(liftKey, block.exerciseName));
-      const count = Math.max(1, sortByOrderIndex(block.sets).filter((s) => s.setType !== "warmup").length);
+      // A max test starts with three singles to work up through; more are a tap away.
+      const count = Math.max(opts.phase.findsMax ? 3 : 1, sortByOrderIndex(block.sets).filter((s) => s.setType !== "warmup").length);
       for (let i = 1; i < count; i++) session = updatePluginBlock(session, blockId, decl, repeatLastEntry);
     } else if (block.type === "strength") {
       if (opts.phase?.findsWeights) findNote = true;
@@ -211,6 +212,9 @@ export function programDaySession(day0: ProgramDay, opts: ProgramDayOptions = {}
   if (findNote) notes.unshift("Find your weights: go up each set until you could only have done 1 or 2 more reps. That set is the one that counts.");
   return notes.length ? { ...session, note: notes.join("\n") } : session;
 }
+
+/** A phase's block runs on its lifts only (a max test on the big three); others run as usual. */
+const liftIn = (phase: { lifts?: string[] }, name: string) => !phase.lifts || phase.lifts.some((l) => l.trim().toLowerCase() === name.trim().toLowerCase());
 
 /** A group that adds a round every two weeks (6.6 r2): its members get the extra sets. */
 function withGroupRounds(day: ProgramDay, week: number): ProgramDay {

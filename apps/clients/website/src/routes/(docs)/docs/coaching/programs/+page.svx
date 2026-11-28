@@ -134,6 +134,11 @@ the next starts. **Edit weeks** lists them, with **+ Stretch**. A stretch does o
 - **Find your weights** runs LogIt's Weight finder on each lift: a jump at a time, asking "how many
   more could you have done?", until they could only do 1 or 2 more. The next stretch plans from
   what they found.
+- **Find your max** works up in heavy singles on the lifts you tick (the barbell ones to start
+  with), asking "how much more was there?" after each, until there's nothing left; the rest of
+  the day runs as normal. When it's done, Today shows "found their maxes": each lift's start (its
+  best estimate in the first weeks) against the heaviest single, with **Send** to put it in your
+  conversation.
 - **A progression** gives those weeks their own, like hypertrophy in weeks 1–4 and strength in 5–8,
   or the program's own when you don't pick one.
 - **A starting phase from a plugin** you've installed (Coaching › Plugins › Starting phases), with

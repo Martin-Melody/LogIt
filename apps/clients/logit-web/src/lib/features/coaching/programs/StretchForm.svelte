@@ -23,7 +23,19 @@
     placeholder?: string;
   } = $props();
 
-  type Choice = "find" | "progression" | "week" | `pack:${string}`;
+  type Choice = "find" | "max" | "progression" | "week" | `pack:${string}`;
+  // Canvas PX4: the lifts a max test runs on (ticked by default: the barbell ones).
+  const liftsHere = $derived.by(() => {
+    const week = program.weeks.find((w) => w.weekNumber === from) ?? program.weeks[0];
+    const names: string[] = [];
+    for (const d of [...(week?.days ?? [])].sort((a, b) => a.orderIndex - b.orderIndex))
+      for (const b of [...d.blocks].sort((a, c) => a.orderIndex - c.orderIndex))
+        if (b.type === "strength" && (b.measure ?? "weight") === "weight" && (!b.weeks || (from >= b.weeks.from && from <= b.weeks.to)) && !names.includes(b.exerciseName)) names.push(b.exerciseName);
+    return names;
+  });
+  const barbell = (n: string) => /squat|bench|deadlift|overhead press|\bpress\b|row|clean|snatch/i.test(n) && !/dumbbell|cable|machine|smith|kettlebell|band/i.test(n);
+  let lifts = $state<string[] | null>(null);
+  const ticked = $derived(lifts ?? liftsHere.filter(barbell));
   let from = $state(1);
   let to = $state(1);
   let name = $state("");
@@ -56,6 +68,7 @@
     const w = s?.what;
     if (!w) choice = "progression";
     else if (w.kind === "find") choice = "find";
+    else if (w.kind === "max") { choice = "max"; lifts = w.lifts ?? null; }
     else if (w.kind === "pack") choice = `pack:${w.pack.id}`;
     else if (w.kind === "week") {
       choice = "week";
@@ -68,6 +81,7 @@
 
   function what(): StretchWhat | null {
     if (choice === "find") return { kind: "find" };
+    if (choice === "max") return ticked.length ? { kind: "max", lifts: ticked } : null;
     if (choice === "progression") return { kind: "progression", ...(rule ? { rule } : {}) };
     if (choice === "week") {
       if (weekValue === "new") return own.name?.trim() ? { kind: "week", type: { ...own, name: own.name.trim() } } : null;
@@ -83,6 +97,7 @@
   $effect(() => { const w = what(); placeholder = w ? stretchTitle({ from, to, what: w }) : "Name"; });
   const KINDS = $derived<{ id: Choice; title: string; text: string }[]>([
     { id: "find", title: "Find your weights", text: "LogIt's Weight finder on each lift. The next stretch plans from what they find; you check the numbers on Today first." },
+    { id: "max", title: "Find your max", text: "Heavy singles on the lifts you tick, with “how much more was there?” after each. Their new maxes go next to where they started, on your Today." },
     { id: "progression", title: "A progression", text: rule ? ruleLabel(rule) : `The program's: ${ruleLabel(program.rule)}` },
     ...packs.map((p) => ({ id: `pack:${p.pluginId}` as Choice, title: p.phase.name, text: `${p.description} From ${p.name}.` })),
     ...(stretch?.what.kind === "pack" && !packs.some((p) => p.pluginId === (stretch.what as { pack: { id: string } }).pack.id) ? [{ id: `pack:${stretch.what.pack.id}` as Choice, title: stretch.what.pack.name, text: "From a pack" }] : []),
@@ -107,7 +122,18 @@
               <button type="button" role="radio" aria-checked={choice === k.id} onclick={() => (choice = k.id)} class="flex flex-col gap-0.5 text-left">
                 <span class="text-[13px] font-semibold">{k.title}</span><span class="text-xs text-muted-foreground">{k.text}</span>
               </button>
-              {#if choice === k.id && k.id === "progression"}
+              {#if choice === k.id && k.id === "max"}
+                <div class="flex flex-wrap gap-1.5" role="group" aria-label="Lifts to test">
+                  {#each liftsHere as n (n)}
+                    {@const on = ticked.includes(n)}
+                    <button type="button" aria-pressed={on} onclick={() => (lifts = on ? ticked.filter((x) => x !== n) : [...ticked, n])}
+                      class="h-8 rounded-full border px-3 text-xs transition-colors {on ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:text-foreground'}">{n}</button>
+                  {:else}
+                    <span class="text-xs text-muted-foreground">No weighted lifts in week {from} yet. Add some to the days first.</span>
+                  {/each}
+                </div>
+                <span class="text-xs text-muted-foreground">The rest of the day runs as normal.</span>
+              {:else if choice === k.id && k.id === "progression"}
                 <span class="flex gap-2"><Button variant="outline" size="sm" onclick={() => (picking = true)}>Change</Button>{#if rule}<Button variant="ghost" size="sm" onclick={() => (rule = undefined)}>Use the program's</Button>{/if}</span>
               {:else if choice === k.id && k.id === "week"}
                 <OptionSelect size="sm" value={weekValue} aria-label="Kind of week" options={weekOptions} onValueChange={(v) => (weekValue = v)} />

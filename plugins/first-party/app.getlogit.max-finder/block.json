@@ -1,0 +1,17 @@
+{
+  "id": "app.getlogit.max-finder",
+  "name": "Max finder",
+  "description": "Work up to a heavy single: a jump at a time, asking how much more was there, until there's nothing left. The heaviest single is the new max; each one counts as a set of the lift.",
+  "icon": "trophy",
+  "entry": { "one": "Single", "many": "Singles" },
+  "blockFields": [
+    { "key": "lift", "type": "exercise", "label": "Lift" }
+  ],
+  "fields": [
+    { "key": "kg", "type": "weight", "label": "kg", "column": true },
+    { "key": "reps", "type": "number", "label": "Reps", "default": 1, "step": 1, "min": 1, "max": 3, "column": true },
+    { "key": "left", "type": "choice", "label": "How much more was there?", "options": ["Plenty", "A little", "Nothing left"], "column": true }
+  ],
+  "summary": "{count} singles",
+  "countsAs": { "sets": { "exercise": "lift", "weight": "kg", "reps": "reps", "rir": "left", "rirMap": { "Plenty": 3, "A little": 1, "Nothing left": 0 } } }
+}

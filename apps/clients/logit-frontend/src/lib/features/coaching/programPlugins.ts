@@ -11,16 +11,16 @@ import { mayRunPlugin } from "$lib/plugins/sandboxedPlugin";
 import { setCoachAllowed } from "$lib/plugins/coachAllowed";
 import type { PluginManifest } from "$lib/plugins/types";
 import weightFinder from "../../../../../../../plugins/first-party/app.getlogit.weight-finder/block.json";
+import maxFinder from "../../../../../../../plugins/first-party/app.getlogit.max-finder/block.json";
 
-/** LogIt's own data-only blocks, shipped with the app so a Find your weights week works even
- * when the registry doesn't have them (or the phone is offline). */
-const BUNDLED_BLOCKS: Record<string, PluginManifest> = {
-  [weightFinder.id]: {
-    id: weightFinder.id, family: "workout-block", name: weightFinder.name, description: weightFinder.description,
-    version: "1.0.0", author: "LogIt", distribution: { origin: "inline", data: weightFinder },
-    capabilities: [{ family: "workout-block", blockId: weightFinder.id }],
-  } as PluginManifest,
-};
+/** LogIt's own data-only blocks, shipped with the app so a Find your weights (or max) week works
+ * even when the registry doesn't have them (or the phone is offline). */
+const bundled = (b: { id: string; name: string; description: string }): PluginManifest => ({
+  id: b.id, family: "workout-block", name: b.name, description: b.description,
+  version: "1.0.0", author: "LogIt", distribution: { origin: "inline", data: b },
+  capabilities: [{ family: "workout-block", blockId: b.id }],
+}) as PluginManifest;
+const BUNDLED_BLOCKS: Record<string, PluginManifest> = { [weightFinder.id]: bundled(weightFinder), [maxFinder.id]: bundled(maxFinder) };
 
 /**
  * The plugins a coach's program uses and whether they run on this phone (canvas PG8). One

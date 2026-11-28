@@ -124,8 +124,9 @@ export type GroupDraft = {
 
 /** The block a phase runs each lift with. Find your weights made before 6.10 named none: it
  * means LogIt's Weight finder, so it gets that rather than the plain lifts. */
-export function phaseBlock(phase: Pick<ProgramPhase, "blockPluginId" | "findsWeights" | "pack">): string | undefined {
+export function phaseBlock(phase: Pick<ProgramPhase, "blockPluginId" | "findsWeights" | "pack" | "findsMax">): string | undefined {
   if (phase.blockPluginId) return phase.blockPluginId;
+  if (phase.findsMax) return MAX_FINDER_ID;
   return phase.findsWeights && (!phase.pack || phase.pack.id === FIND_YOUR_WEIGHTS_PACK.id) ? WEIGHT_FINDER_ID : undefined;
 }
 
@@ -143,11 +144,18 @@ export type ProgramPhase = {
   blockPluginId?: string;
   /** The pack it came from (canvas SP8), for "From the Find your weights pack". */
   pack?: { id: string; name: string };
+  /** Canvas PX4: a max test: heavy singles on `lifts`; the coach sees start against new max. */
+  findsMax?: boolean;
+  /** The exercises its block runs on (absent = every weighted lift); the rest run as usual. */
+  lifts?: string[];
 };
 
 /** LogIt's own Find your weights: the Weight finder block, one week (canvas SP6). */
 export const WEIGHT_FINDER_ID = "app.getlogit.weight-finder";
 export const FIND_YOUR_WEIGHTS_PACK = { id: "app.getlogit.find-your-weights", name: "Find your weights" };
+/** LogIt's own max test (canvas PX4): heavy singles until there's nothing left. */
+export const MAX_FINDER_ID = "app.getlogit.max-finder";
+export const FIND_YOUR_MAX_PACK = { id: "app.getlogit.find-your-max", name: "Find your max" };
 
 /** What a weight-finding phase found, as the coach checked it. `e1rm` holds only the lifts the
  * coach changed; the rest come from the client's own sets as usual. */
@@ -1307,6 +1315,12 @@ export function addFindWeekFirst(program: CoachProgram): CoachProgram {
 
 /** A weight-finding phase in its last week, or the week after, that the coach hasn't checked:
  * "Niamh found her weights · Check them" (canvas SP4). Unchecked, its numbers apply anyway. */
+/** A max test that's just finished (canvas PX4): the coach sees how far they've come. */
+export function maxTestDue(program: Pick<CoachProgram, "phases" | "handoffs">, n: number): ProgramPhase | null {
+  const p = (program.phases ?? []).find((x) => x.findsMax && (n === x.weeks.to || n === x.weeks.to + 1));
+  return p && !program.handoffs?.some((h) => h.phaseId === p.id) ? p : null;
+}
+
 export function handoffDue(program: Pick<CoachProgram, "phases" | "handoffs">, n: number): ProgramPhase | null {
   const p = (program.phases ?? []).find((x) => x.findsWeights && (n === x.weeks.to || n === x.weeks.to + 1));
   return p && !program.handoffs?.some((h) => h.phaseId === p.id) ? p : null;

@@ -8,7 +8,7 @@
     const w = s.what;
     if (s.plain) return "border-border bg-background";
     if (w.kind === "find" || (w.kind === "pack" && w.findsWeights)) return "border-info/50 bg-info/10 text-info";
-    if (w.kind === "week" && w.type.kind === "test") return "border-success/50 bg-success/10 text-success";
+    if (w.kind === "max" || (w.kind === "week" && w.type.kind === "test")) return "border-success/50 bg-success/10 text-success";
     if (w.kind === "week" && (w.type.kind === "deload" || w.type.kind === "intro")) return "border-warning/50 bg-warning/10 text-warning";
     return "border-foreground/25 bg-muted";
   }

@@ -205,6 +205,13 @@ The stack on top of main. Each line names its PR.
       makes it one again.
 - [ ] Swap for week 4… → Dumbbell bench in week 4 only. + Add while editing → "In: Week 4 / Every week".
 
+**Find your max (#210)**
+- [ ] A stretch → Find your max → the barbell lifts are ticked; Save → the bar says "Find your max".
+- [ ] On the phone in that week: ticked lifts are a Max finder (three singles, "How much more was
+      there?"), the others as usual.
+- [ ] The week after: Today › Decide "… found their maxes" → started / now / %; Send puts it in the
+      conversation; Done clears it.
+
 ## Findings
 
 Write them here, with the section number.
