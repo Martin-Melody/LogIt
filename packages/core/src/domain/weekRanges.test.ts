@@ -46,3 +46,23 @@ describe("Find your weights first (6.11)", () => {
     expect(q.weeks[0]!.type?.kind).toBe("find");
   });
 });
+
+describe("programs whose weeks differ open in the builder (6.7)", () => {
+  it("merges the days and gives each exercise its weeks", async () => {
+    const { forBuilder } = await import("./programBuilder");
+    const s = (k: number, reps = 5) => ({ id: `x${k}`, orderIndex: k, setType: "normal" as const, reps, weight: 100 });
+    const blk = (id: string, name: string, i: number, reps = 5) => ({ type: "strength" as const, id, orderIndex: i, exerciseName: name, sets: [s(0, reps), s(1, reps)] });
+    const p = { id: "p", name: "P", weeks: [
+      { id: "w1", weekNumber: 1, days: [{ id: "d1", orderIndex: 0, blocks: [blk("a1", "Bench", 0), blk("r1", "Row", 1)] }] },
+      { id: "w2", weekNumber: 2, days: [{ id: "d2", orderIndex: 0, blocks: [blk("a2", "Bench", 0, 6), blk("r2", "Row", 1)] }] },
+      { id: "w3", weekNumber: 3, days: [{ id: "d3", orderIndex: 0, blocks: [blk("p3", "Paused bench", 0), blk("r3", "Row", 1)] }] },
+    ] } as unknown as CoachProgram;
+    const b = forBuilder(p)!;
+    expect(b).not.toBeNull();
+    const day = (n: number) => b.weeks[n]!.days[0]!.blocks.map((x) => [x.type === "strength" ? x.exerciseName : "", x.weeks ?? null]);
+    expect(day(0)).toEqual([["Bench", { from: 1, to: 2 }], ["Paused bench", { from: 3, to: 3 }], ["Row", null]]);
+    const bench2 = b.weeks[1]!.days[0]!.blocks[0]!;
+    expect(bench2.type === "strength" && bench2.sets[0]!.pinned && bench2.sets[0]!.reps).toBe(6);
+    expect(b.weeks[2]!.days[0]!.blocks.map((x) => x.id)).toEqual(b.weeks[0]!.days[0]!.blocks.map((x) => x.id));
+  });
+});

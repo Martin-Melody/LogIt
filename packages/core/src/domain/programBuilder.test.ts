@@ -38,11 +38,22 @@ describe("program builder", () => {
     expect(bench(p, 2).sets[1]!.pinned).toBeUndefined();
   });
 
-  it("weeks that differ in shape stay in the week-by-week editor", () => {
+  it("an exercise in some weeks opens in the builder with its weeks (6.7)", () => {
     let old = oldStyle();
     const w3 = old.weeks.find((w) => w.weekNumber === 3)!;
     old = addStrengthBlock(old, w3.id, w3.days[0]!.id, { exerciseName: "Curl" });
-    expect(forBuilder(old)).toBeNull();
+    const p = forBuilder(old)!;
+    const curl = p.weeks[0]!.days[0]!.blocks.find((b) => b.type === "strength" && b.exerciseName === "Curl")!;
+    expect(curl.weeks).toEqual({ from: 3, to: 3 });
+  });
+
+  it("one that comes and goes stays in the week-by-week editor", () => {
+    let old = oldStyle();
+    for (const n of [1, 3]) {
+      const w = old.weeks.find((x) => x.weekNumber === n)!;
+      old = addStrengthBlock(old, w.id, w.days[0]!.id, { exerciseName: "Curl" });
+    }
+    if (old.weeks.length >= 3) expect(forBuilder(old)).toBeNull();
   });
 
   it("editing the built week changes every week, and pinned numbers stay", () => {
