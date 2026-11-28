@@ -114,8 +114,10 @@ export function knownLifts(sessions: WorkoutSession[], now: number, days = 180):
 export const solidLifts = (known: KnownLift[]) => known.filter((k) => (k.sessions ?? 1) >= 2);
 
 /** The smallest estimated max a related start is planned from: below it, 2.5 kg steps and
- * rounding make nonsense ("7.5 kg × 19"), so the first set finds the weight instead. */
+ * rounding make nonsense ("7.5 kg × 19"), so the first set finds the weight instead. Dumbbells and
+ * kettlebells are per hand, so theirs is lower. */
 export const MIN_RELATED_E1RM_KG = 30;
+export const minRelatedE1rm = (name: string) => (/dumbbell|\bdb\b|kettlebell/i.test(name) ? 12 : MIN_RELATED_E1RM_KG);
 
 export type RelatedEstimate = {
   /** A cautious estimated max for the target, kg. */
