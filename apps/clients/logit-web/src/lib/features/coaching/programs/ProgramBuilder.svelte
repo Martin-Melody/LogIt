@@ -27,6 +27,7 @@
   import AddToDayDialog, { type AddPick } from "./AddToDayDialog.svelte";
   import GroupDialog from "./GroupDialog.svelte";
   import WeekRangeDialog from "./WeekRangeDialog.svelte";
+  import PhaseDialog from "./PhaseDialog.svelte";
   import { cardioPlanned } from "@logit/core/domain/programDaySession";
   import GripVerticalIcon from "@lucide/svelte/icons/grip-vertical";
   import { flip } from "svelte/animate";
@@ -469,7 +470,15 @@
   // Canvas PG4: one rule picker, for the program or one exercise.
   let picking = $state(false);
   let pickingFor = $state<ProgramStrength | null>(null);
+  /** Picking a phase's progression (canvas SP5). */
+  let pickingPhase = $state<string | null>(null);
+  $effect(() => { if (!picking) pickingPhase = null; });
   function pickRule(rule: ProgramRule | null, scope: "exercise" | "program") {
+    if (pickingPhase) {
+      const id = pickingPhase;
+      edit((p) => { const ph = p.phases?.find((x) => x.id === id); if (!ph) return p; const { rule: _r, ...rest } = ph; return P.putPhase(p, rule ? { ...rest, rule } : rest); });
+      return;
+    }
     const b = pickingFor;
     if (!b || scope === "program") {
       edit((p) => {
@@ -483,6 +492,23 @@
   }
   // Week types (canvas PB5): each week's chip shows its type; Edit weeks sets them.
   let weeksOpen = $state(false);
+  // Phases (canvas SP5).
+  let phaseOpen = $state(false);
+  let phaseEditing = $state<P.ProgramPhase | null>(null);
+  const phaseTaken = $derived(new Set((prog.phases ?? []).filter((x) => x.id !== phaseEditing?.id).flatMap((x) => Array.from({ length: x.weeks.to - x.weeks.from + 1 }, (_, i) => x.weeks.from + i))));
+  function savePhase(v: { name: string; from: number; to: number; findsWeights: boolean }) {
+    const id = phaseEditing?.id ?? createId("phase");
+    const old = phaseEditing;
+    edit((p) => P.putPhase(p, { id, name: v.name, weeks: { from: v.from, to: v.to }, ...(v.findsWeights ? { findsWeights: true } : old?.rule ? { rule: old.rule } : {}) }));
+    if (!v.findsWeights && !old) { pickingFor = null; pickingPhase = id; picking = true; }
+  }
+  function phaseActions(ph: P.ProgramPhase): RowAction[] {
+    return [
+      { id: "edit", label: "Change…", run: () => { phaseEditing = ph; phaseOpen = true; } },
+      ...(ph.findsWeights ? [] : [{ id: "rule", label: "Change its progression…", run: () => { pickingFor = null; pickingPhase = ph.id; picking = true; } }]),
+      { id: "remove", label: "Remove phase", danger: true, separatorBefore: true, run: () => edit((p) => P.removePhase(p, ph.id)) },
+    ];
+  }
 
   // ── Copies (library, canvas Q6) ──
   let copiesOpen = $state(false);
@@ -668,6 +694,24 @@
       </span>
     {:else}
       <span class="text-muted-foreground">Starts: chosen when you assign it</span>
+    {/if}
+    {#if prog.weeks.length > 1}
+      <span class="flex basis-full flex-wrap items-center gap-1.5">
+        <span class="text-muted-foreground">Phases</span>
+        {#each prog.phases ?? [] as ph (ph.id)}
+          <ActionMenu actions={phaseActions(ph)} label="More for {ph.name}">
+            {#snippet children({ props, more })}
+              <span {...props} class="flex items-center rounded-full border pl-2.5 text-xs {ph.findsWeights ? 'border-info/50 text-info' : 'border-border'}">
+                <button type="button" onclick={() => { phaseEditing = ph; phaseOpen = true; }} class="py-1">{[P.weekRangeText(ph.weeks), ph.name === P.weekRangeText(ph.weeks) ? "" : ph.name, ph.findsWeights ? "" : P.ruleLabel(ph.rule ?? prog.rule)].filter(Boolean).join(" · ")}</button>
+                {@render more()}
+              </span>
+            {/snippet}
+          </ActionMenu>
+        {:else}
+          <span class="text-xs text-muted-foreground">None: one progression all the way</span>
+        {/each}
+        <Button variant="ghost" size="sm" onclick={() => { phaseEditing = null; phaseOpen = true; }}>+ Phase</Button>
+      </span>
     {/if}
   </section>
 
@@ -1001,7 +1045,8 @@
 <CircuitDialog bind:open={circuitOpen} dayName={day?.name || "this day"} editing={editingCircuit} {index} onsave={(c) => putBlock(editingCircuit, c, "circuit")} />
 <PluginBlockDialog bind:open={pluginOpen} dayName={day?.name || "this day"} editing={editingPlugin} onsave={(b) => putBlock(editingPlugin, b, "plugin")} />
 
-<RulePickerDialog bind:open={picking} current={pickingFor ? (pickingFor.rule ?? null) : (prog.rule ?? null)} exercise={pickingFor?.exerciseName ?? null} onpick={pickRule} />
+<RulePickerDialog bind:open={picking} current={pickingPhase ? (prog.phases?.find((x) => x.id === pickingPhase)?.rule ?? prog.rule ?? null) : pickingFor ? (pickingFor.rule ?? null) : (prog.rule ?? null)} exercise={pickingFor?.exerciseName ?? null} onpick={pickRule} />
+<PhaseDialog bind:open={phaseOpen} phase={phaseEditing} total={prog.weeks.length} taken={phaseTaken} onsave={savePhase} />
 
 <WeeksDialog bind:open={weeksOpen} program={prog} onset={(n, type) => edit((p) => setWeekType(p, n, type))} />
 

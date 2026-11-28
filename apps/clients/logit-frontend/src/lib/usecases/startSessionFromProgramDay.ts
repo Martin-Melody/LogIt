@@ -1,7 +1,7 @@
 import { weekTypeOf, weekTypeLabel, weekSets, weekWeight, weekReps } from "@logit/core/domain/weekTypes";
 import { withStartingPlace } from "$lib/features/places/sessionPlace";
 import { getCoachProgramRepo, getWorkoutRepo } from "$lib/data/repoProvider";
-import { getProgramProgress, PROGRAM_BLOCKS_THIS_APP_RUNS, ruleFor, type CoachProgram, type ProgramDay } from "@logit/core/domain/CoachProgram";
+import { getProgramProgress, PROGRAM_BLOCKS_THIS_APP_RUNS, ruleFor, withHandoffs, type CoachProgram, type ProgramDay } from "@logit/core/domain/CoachProgram";
 import { cellFromSuggestion, estimatesFrom, lastTimeCell, planForWeek, type PlanCell } from "@logit/core/domain/programPlan";
 import { getSuggestion } from "@logit/core/usecases/progression/getSuggestion";
 import { getProgressionDeps } from "./progressionDeps";
@@ -16,17 +16,18 @@ import { sourceFromProgramDay } from "@logit/core/domain/sessionHistory";
  * With the program, the session keeps where it came from and the plan, for the history.
  */
 async function weekPlan(full: CoachProgram, day: ProgramDay, weekNumber: number) {
-  const ruled = (full.rule?.kind ?? "fixed") !== "fixed" || full.weeks.some((w) => w.lighter || w.type)
+  const ruled = (full.rule?.kind ?? "fixed") !== "fixed" || full.weeks.some((w) => w.lighter || w.type) || !!full.phases?.length
     || day.blocks.some((b) => b.type === "strength" && b.rule && b.rule.kind !== "fixed");
   if (!ruled) return undefined;
   const sessions = await repo().listAllSessions();
   const estimates = estimatesFrom(sessions);
-  const base = planForWeek(full, weekNumber, { e1rm: (name) => estimates.get(name.trim().toLowerCase()) ?? null });
+  // The coach's checked numbers from a weight-finding phase win over the raw estimates (6.9).
+  const base = planForWeek(full, weekNumber, { e1rm: withHandoffs(full, (name) => estimates.get(name.trim().toLowerCase()) ?? null) });
   // A plugin rule runs its plugin here (canvas PG8); without it, the same as last time.
   const fromPlugins = new Map<string, PlanCell | null>();
   for (const b of day.blocks) {
     if (b.type !== "strength") continue;
-    const rule = ruleFor(full, b);
+    const rule = ruleFor(full, b, weekNumber);
     if (rule.kind !== "plugin") continue;
     const sets = b.sets.filter((s) => s.setType !== "warmup").length || b.sets.length;
     const deps = getProgressionDeps();

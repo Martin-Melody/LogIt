@@ -244,7 +244,7 @@
           <tr class="border-t border-border">
             <th scope="row" class="sticky left-0 bg-card px-3 py-2 text-left font-normal">
               <span class="block font-medium">{b.type === "strength" ? b.exerciseName : b.type === "cardio" ? b.activityName : b.type === "mobility" ? b.drillName : b.type === "plugin" ? b.name : "Circuit"}</span>
-              {#if b.type === "strength"}<span class="text-xs text-muted-foreground">{usual(b)} sets · {ruleLabel(b.rule ?? program.rule)}</span>{/if}
+              {#if b.type === "strength"}<span class="text-xs text-muted-foreground">{usual(b)} sets · {b.rule ? ruleLabel(b.rule) : program.phases?.length ? "by phase" : ruleLabel(program.rule)}</span>{/if}
               {#if b.weeks}<span class="ml-1 rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-semibold">{weekRangeText(b.weeks)}</span>{/if}
             </th>
             {#each weeks as w (w.id)}

@@ -18,7 +18,7 @@
 import { loadFromPercent } from "./oneRepMax";
 import { getExercises, type WorkoutSession } from "./workout";
 import type { ProgressionOutput } from "./progression";
-import { inWeek, ruleFor, type CoachProgram, type ProgramRule, type ProgramSet, type ProgramStrength, type ProgramWeek } from "./CoachProgram";
+import { inWeek, phaseAt, ruleFor, type CoachProgram, type ProgramRule, type ProgramSet, type ProgramStrength, type ProgramWeek } from "./CoachProgram";
 import { weekTypeOf, weekTypeLabel, weekSets, weekWeight, weekReps } from "./weekTypes";
 
 export type PlanCell = {
@@ -68,7 +68,12 @@ export function planExercise(program: CoachProgram, blockId: string, ctx: PlanCo
   const out: (PlanCell | null)[] = [];
   let k = -1; // index among the normal (not lighter) weeks
   let lastWeight: number | undefined;
+  let phaseId: string | null | undefined;
   for (const w of weeks) {
+    // A new phase starts its own progression from the estimate (canvas SP5).
+    const ph = phaseAt(program, w.weekNumber)?.id ?? null;
+    if (phaseId !== undefined && ph !== phaseId) { k = -1; lastWeight = undefined; }
+    phaseId = ph;
     const block = findBlock(w, blockId);
     // Not in this week (6.7): "—", and its progression counts only the weeks it runs.
     if (!block || !inWeek(block, w.weekNumber)) { out.push(null); continue; }
@@ -96,7 +101,7 @@ function planWeek(program: CoachProgram, week: ProgramWeek, block: ProgramStreng
   if (pinned) return { source: "pinned", weight: pinned.weight, reps: repsText(pinned), sets: count };
   if (!first) return { source: "words", sets: 0, words: "No working sets" };
 
-  const rule = ruleFor(program, block);
+  const rule = ruleFor(program, block, week.weekNumber);
   // A rule built from blocks can set its own rep range; it wins over the exercise's.
   const r = (rule.kind === "own" && rule.recipe?.repRange) || range(first);
   // The week's type changes what the progression planned (canvas PB5): sets, load, reps, a test set.

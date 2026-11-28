@@ -24,6 +24,11 @@ export type CoachProgram = {
   /** v2: how the numbers move week to week, for every exercise without its own rule.
    * Missing (v1) = fixed: the numbers are as the coach typed them. */
   rule?: ProgramRule;
+  /** Phase 6.9: week ranges with their own progression ("find your weights, then Adaptive").
+   * Weeks no phase covers use the program's rule. */
+  phases?: ProgramPhase[];
+  /** On a client's copy: the weights a phase found, as the coach checked them (canvas SP4). */
+  handoffs?: PhaseHandoff[];
   id: string;
   name: string;
   description?: string;
@@ -95,6 +100,21 @@ export type ProgramGroup = {
   memberRestSec?: number;
   roundRestSec?: number;
 };
+
+/** A phase (canvas SP5): weeks with their own progression. One that finds weights hands its
+ * numbers to the next; the coach checks them on Today (SP4). */
+export type ProgramPhase = {
+  id: string;
+  name: string;
+  weeks: WeekRange;
+  rule?: ProgramRule;
+  /** It works up to the weights that fit; the next phase plans from what it found. */
+  findsWeights?: boolean;
+};
+
+/** What a weight-finding phase found, as the coach checked it. `e1rm` holds only the lifts the
+ * coach changed; the rest come from the client's own sets as usual. */
+export type PhaseHandoff = { phaseId: string; checkedAtMs: number; e1rm?: Record<string, number> };
 
 /** Weeks from..to, both included (canvas PB7). */
 export type WeekRange = { from: number; to: number };
@@ -998,8 +1018,60 @@ function withMinVersion(b: ProgramBlock): ProgramBlock {
 }
 
 /** The rule an exercise follows: its own, else the program's, else fixed. */
-export function ruleFor(program: Pick<CoachProgram, "rule">, block: ProgramBlock): ProgramRule {
-  return (block.type === "strength" ? block.rule : undefined) ?? program.rule ?? { kind: "fixed" };
+export function ruleFor(program: Pick<CoachProgram, "rule" | "phases">, block: ProgramBlock, weekNumber?: number): ProgramRule {
+  const phase = weekNumber != null ? phaseAt(program, weekNumber) : null;
+  return (block.type === "strength" ? block.rule : undefined) ?? phase?.rule ?? program.rule ?? { kind: "fixed" };
+}
+
+/** The phase week n is in, if any. */
+export function phaseAt(program: Pick<CoachProgram, "phases">, n: number): ProgramPhase | null {
+  return program.phases?.find((p) => n >= p.weeks.from && n <= p.weeks.to) ?? null;
+}
+
+/** Adds or changes a phase. A phase that finds weights makes its weeks "Find your weights". */
+export function putPhase(program: CoachProgram, phase: ProgramPhase): CoachProgram {
+  const others = (program.phases ?? []).filter((p) => p.id !== phase.id);
+  if (others.some((p) => p.weeks.from <= phase.weeks.to && phase.weeks.from <= p.weeks.to)) return program;
+  const old = program.phases?.find((p) => p.id === phase.id);
+  const inRange = (n: number, r?: WeekRange) => !!r && n >= r.from && n <= r.to;
+  return {
+    ...program,
+    phases: [...others, phase].sort((a, b) => a.weeks.from - b.weeks.from),
+    weeks: program.weeks.map((w) => {
+      if (phase.findsWeights && inRange(w.weekNumber, phase.weeks)) return { ...w, type: { kind: "find", progression: "pauses" } };
+      // Weeks that stopped being found by this phase go back to normal.
+      if (old?.findsWeights && inRange(w.weekNumber, old.weeks) && w.type?.kind === "find") { const { type: _t, ...rest } = w; return rest; }
+      return w;
+    }),
+  };
+}
+
+export function removePhase(program: CoachProgram, phaseId: string): CoachProgram {
+  const old = program.phases?.find((p) => p.id === phaseId);
+  if (!old) return program;
+  return {
+    ...program,
+    phases: program.phases!.filter((p) => p.id !== phaseId),
+    weeks: program.weeks.map((w) => {
+      if (!old.findsWeights || w.weekNumber < old.weeks.from || w.weekNumber > old.weeks.to || w.type?.kind !== "find") return w;
+      const { type: _t, ...rest } = w;
+      return rest;
+    }),
+  };
+}
+
+/** A weight-finding phase in its last week, or the week after, that the coach hasn't checked:
+ * "Niamh found her weights · Check them" (canvas SP4). Unchecked, its numbers apply anyway. */
+export function handoffDue(program: Pick<CoachProgram, "phases" | "handoffs">, n: number): ProgramPhase | null {
+  const p = (program.phases ?? []).find((x) => x.findsWeights && (n === x.weeks.to || n === x.weeks.to + 1));
+  return p && !program.handoffs?.some((h) => h.phaseId === p.id) ? p : null;
+}
+
+/** The client's estimates with the coach's checked numbers on top. */
+export function withHandoffs(program: Pick<CoachProgram, "handoffs">, e1rm: (name: string) => number | null): (name: string) => number | null {
+  const over = new Map<string, number>();
+  for (const h of program.handoffs ?? []) for (const [k, v] of Object.entries(h.e1rm ?? {})) over.set(k.trim().toLowerCase(), v);
+  return over.size ? (name) => over.get(name.trim().toLowerCase()) ?? e1rm(name) : e1rm;
 }
 
 /** "1.0.3" < "1.1.0". Anything that isn't a version ("web", "dev") counts as new enough. */

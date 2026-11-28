@@ -100,12 +100,7 @@ original back and tells them. A message asking about a swap has "Swap an exercis
 program…" on its menu, to change it in their copy straight from the conversation. Whatever your
 rule, "Do something else today" is always there for them; it logs as a swap you can see.
 
-## Every week
-
-See every week shows what the rule plans for each exercise, week by week. On a client's copy the
-numbers come from their own strength estimates, and weeks they've done show what they did; on your
-own program the rule is said in words ("6–8 reps, from their estimate") until you pick a client
-under Showing to preview it with their lifts.
+## What the built-in progressions do
 
 - **LogIt Adaptive** picks the weight from their estimate for the reps, leaving two in the tank.
 - **Linear** adds a rep a week through the range, then the step (+2.5 kg) and back to the bottom.
@@ -130,10 +125,23 @@ is on top of what the progression works out:
 The client's Home shows the week's type with one line on what it means. A progression from a
 plugin is told the week's type; if it doesn't handle it, LogIt applies the change to its numbers.
 
+## Phases
+
+A phase is a run of weeks with its own progression: **+ Phase** in the builder. **Find your
+weights** works up to a hard set on each lift, and the next phase plans from what they found. **A
+progression** gives those weeks their own, like hypertrophy in weeks 1–4 and strength in 5–8.
+Weeks outside any phase use the program's progression; week types still work inside a phase.
+
+When a Find your weights phase is done, Today shows "found their weights" under Decide. **Check
+them** lists each lift's top set, its estimated max and how sure that is; change any that look
+wrong and press **Looks right**. If you don't get to it, the next phase plans from what they found
+anyway.
+
 ## Every week
 
 **See every week** shows what each week asks for, with the week types in the headings and a
-deload tinted. On one of your programs there's no lifter yet, so **Numbers for** shows an example
+deload tinted. On a client's copy the numbers come from their own strength estimates, and weeks
+they've done show what they did. On one of your programs there's no lifter yet, so **Numbers for** shows an example
 lifter (bench 80 kg; **Change their lifts** to change them) or any client with a copy; other
 exercises are worked out from those lifts the way their phone would. Blue numbers come from the
 progression and move as they train; black ones with ✎ are typed by you and stay. "+" on the reps

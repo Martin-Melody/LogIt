@@ -7,6 +7,7 @@
   import { Button } from "$lib/components/ui/button";
   import { coachAway } from "../away.svelte";
   import Avatar from "../Avatar.svelte";
+  import HandoffDialog from "./HandoffDialog.svelte";
   import { coachProblemText, type PaymentClient } from "@logit/core/domain/coachPayments";
   import { needsYou, type CoachingOverview, type NeedsYou } from "../coachingData";
   import { ago, daysBetween, weekdayDate, when } from "../format";
@@ -17,13 +18,17 @@
   // Canvas W1: grouped by the kind of work, so a batch of check-ins is one button.
   const review = $derived(items.filter((i) => i.kind === "checkin").sort((a, b) => a.at - b.at));
   const reply = $derived(items.filter((i) => i.kind === "message" || i.kind === "waiting" || i.kind === "missed"));
-  const decide = $derived(items.filter((i) => i.kind === "request" || i.kind === "ending" || i.kind === "lasting-swap"));
+  let checked = $state(new Set<string>());
+  const decide = $derived(items.filter((i) => i.kind === "request" || i.kind === "ending" || i.kind === "lasting-swap" || (i.kind === "weights-found" && !checked.has(`${i.client.id}:${i.phase.id}`))));
+  // Canvas SP4: checking the weights a phase found opens here.
+  let handoff = $state<Extract<NeedsYou, { kind: "weights-found" }> | null>(null);
+  let handoffOpen = $state(false);
 
   /** Where a Needs you item's main button goes (its menu's Open). */
   function openHrefOf(i: NeedsYou): string {
     switch (i.kind) {
       case "checkin": return `/coaching/checkins?id=${encodeURIComponent(i.item.id)}&client=${i.client.id}`;
-      case "lasting-swap": return `/clients/${i.client.id}?tab=training`;
+      case "lasting-swap": case "weights-found": return `/clients/${i.client.id}?tab=training`;
       case "message": case "waiting": return `/messages?c=${i.client.relationshipId}`;
       case "missed": return `/messages?c=${i.client.relationshipId}&draft=${encodeURIComponent(NUDGE)}`;
       case "ending": return `/clients/${i.client.id}/next-block`;
@@ -38,6 +43,7 @@
       case "checkin": return `${i.client.name} sent a check-in`;
       case "message": return `${i.client.name} messaged you`;
       case "lasting-swap": return `${i.client.name} changed an exercise for the rest of the program`;
+      case "weights-found": return `${i.client.name} found their weights`;
       case "waiting": return `${i.client.name} has waited ${i.days} days for a reply`;
       case "missed": {
         const late = daysBetween(i.dueMs, Date.now());
@@ -56,6 +62,7 @@
       case "checkin": return `Check-in · ${ago(i.item.submittedAtMs)}`;
       case "message": return `${i.client.unread} unread`;
       case "lasting-swap": return "Keep it, or put it back";
+      case "weights-found": return `${i.phase.name} is done · week ${i.phase.weeks.to + 1} plans from these numbers`;
       case "waiting": return i.days >= 7 ? "They can now stop coaching with a refund" : "After 7 days they can stop coaching with a refund";
       case "missed": return `${i.client.sessions7d} session${i.client.sessions7d === 1 ? "" : "s"} in the last 7 days`;
       case "ending": return `${i.program.program.name}, week ${i.program.week} of ${i.program.totalWeeks}`;
@@ -140,6 +147,8 @@
     </span>
     {#if i.kind === "checkin"}
       <a href="/coaching/checkins?id={encodeURIComponent(i.item.id)}&client={i.client.id}" class="h-8 shrink-0 rounded-[9px] bg-primary px-3 text-xs font-semibold leading-8 text-primary-foreground">Review</a>
+    {:else if i.kind === "weights-found"}
+      <Button size="sm" class="h-8 shrink-0 text-xs" onclick={() => { handoff = i; handoffOpen = true; }}>Check them</Button>
     {:else if i.kind === "lasting-swap"}
       <a href="/clients/{i.client.id}?tab=training" class="h-8 shrink-0 rounded-[9px] bg-primary px-3 text-xs font-semibold leading-8 text-primary-foreground">Look</a>
     {:else if i.kind === "message" || i.kind === "waiting"}
@@ -156,3 +165,7 @@
   {/snippet}
   </ActionMenu>
 {/snippet}
+
+{#if handoff}
+  <HandoffDialog bind:open={handoffOpen} clientId={handoff.client.id} username={handoff.client.username} name={handoff.client.name} program={handoff.program.program} phase={handoff.phase} onsaved={() => (checked = new Set([...checked, `${handoff!.client.id}:${handoff!.phase.id}`]))} />
+{/if}

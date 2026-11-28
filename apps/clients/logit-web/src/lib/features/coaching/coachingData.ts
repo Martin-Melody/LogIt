@@ -12,7 +12,7 @@ import {
   type Sharing,
 } from "@logit/core/api/coachApi";
 import { messagesApi } from "@logit/core/api/messagesApi";
-import {
+import { handoffDue, type ProgramPhase,
   getProgramProgress,
   type CoachProgram,
 } from "@logit/core/domain/CoachProgram";
@@ -224,7 +224,9 @@ export type NeedsYou =
   // Canvas Z2: a client has waited 5+ days for a reply (at 7 they can stop with a refund).
   | { kind: "waiting"; at: number; client: ClientSummary; days: number }
   // Canvas Q8: a client changed an exercise for the rest of the program.
-  | { kind: "lasting-swap"; at: number; client: ClientSummary };
+  | { kind: "lasting-swap"; at: number; client: ClientSummary }
+  // Canvas SP4: a phase that finds weights is done; check the numbers the next phase starts from.
+  | { kind: "weights-found"; at: number; client: ClientSummary; program: ProgramStatus; phase: ProgramPhase };
 
 export function needsYou(o: CoachingOverview, now = Date.now()): NeedsYou[] {
   const out: NeedsYou[] = [];
@@ -236,6 +238,8 @@ export function needsYou(o: CoachingOverview, now = Date.now()): NeedsYou[] {
     else if (c.unread > 0) out.push({ kind: "message", at: now, client: c });
     if (c.missed) out.push({ kind: "missed", at: c.missed.dueMs, client: c, dueMs: c.missed.dueMs });
     const p = c.program;
+    const found = p?.state === "running" && p.week != null ? handoffDue(p.program, p.week) : null;
+    if (found) out.push({ kind: "weights-found", at: now, client: c, program: p!, phase: found });
     if (p?.state === "running" && p.endsAtMs != null && p.endsAtMs - now <= 7 * DAY) {
       out.push({ kind: "ending", at: p.endsAtMs - 7 * DAY, client: c, program: p });
     }
