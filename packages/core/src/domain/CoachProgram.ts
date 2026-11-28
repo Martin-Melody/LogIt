@@ -224,6 +224,10 @@ export type ProgramStrength = {
   rule?: ProgramRule;
   /** Phase 6.7: the weeks it runs in (absent = every week). */
   weeks?: WeekRange;
+  /** Phase 6.15 (canvas EQ1): what happens when the client's gym runs out (a stack's top): more
+   * reps then a harder version (or slower reps, or ask the coach then), or load past it with their
+   * stack pin. Absent: weight held and reps up while the coach is asked. */
+  atTop?: { then: "harder"; exercise: string } | { then: "slower" } | { then: "ask" } | { then: "pin" };
   /** Phase 6.6: what it measures (absent = weight × reps), and left and right logged apart. */
   measure?: ExerciseMeasure;
   perSide?: boolean;

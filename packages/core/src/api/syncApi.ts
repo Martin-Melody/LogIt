@@ -362,7 +362,8 @@ export function syncApiFor(api: ApiFetcher) {
       return api.fetch("/sync/places", { method: "POST", body: JSON.stringify({ places }) });
     },
 
-    pullPlaces(since: number): Promise<{ places: RemotePlace[] }> {
+    pullPlaces(since: number, clientId?: string): Promise<{ places: RemotePlace[] }> {
+      if (clientId) return api.fetch(`/sync/places?since=${since}&clientId=${encodeURIComponent(clientId)}`);
       return api.fetch(`/sync/places?since=${since}`);
     },
 

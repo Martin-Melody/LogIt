@@ -987,10 +987,17 @@
   const unknownTop = $derived(
     onMachine && !unknownDismissed && !weightSource && plannedTop > 0 && bestOnMachine > 0 && plannedTop > bestOnMachine,
   );
+  // Canvas EQ3 (1): what the coach picked for the top of the stack, from their program.
+  const coachAtTop = $derived.by(() => {
+    for (const w of coachProgram?.weeks ?? []) for (const d of w.days) for (const b of d.blocks) {
+      if (b.type === "strength" && b.atTop && b.exerciseName.trim().toLowerCase() === data.exerciseName.trim().toLowerCase()) return b.atTop;
+    }
+    return null;
+  });
   const sessionCoach = $derived($currentSession?.source?.kind === "program" && $currentSession.source.coachId ? coachFor($currentSession.source.coachId) : undefined);
   // Coached and at the top with no way past it: weight held, reps up, and the coach told once.
   $effect(() => {
-    if (!atTheTop || !sessionCoach || extraLoadAnswer === undefined || extraLoadAnswer.length || !topLabel) return;
+    if (!atTheTop || !sessionCoach || coachAtTop || extraLoadAnswer === undefined || extraLoadAnswer.length || !topLabel) return;
     const key = `logit:at-top-told:${sessionCoach.relationshipId}:${data.exerciseName.toLowerCase()}:${topRung}`;
     if (getAccountItem(key)) return;
     setAccountItem(key, "1");
@@ -1285,6 +1292,9 @@
         <span>Past the stack with your pin.</span>
         <button type="button" class="min-h-9 rounded-lg border border-border bg-background px-3 text-xs font-medium" onclick={() => void notToday()}>Not today</button>
       </div>
+    {:else if atTheTop && topLabel && sessionCoach && coachAtTop && coachAtTop.then !== "pin"}
+      <!-- Canvas EQ3 (1): the coach planned for it. -->
+      <p transition:reveal class="mx-3 my-1.5 rounded-lg bg-muted/40 px-3 py-2 text-xs leading-relaxed"><b class="font-semibold">{sessionCoach.name}'s plan.</b> {topLabel}: more reps up to 15, then {coachAtTop.then === "harder" ? coachAtTop.exercise : coachAtTop.then === "slower" ? "slower reps (3 seconds down, a pause)" : `${sessionCoach.name} picks what's next`}.</p>
     {:else if atTheTop && topLabel && sessionCoach && extraLoadAnswer !== undefined && !extraLoadAnswer.length}
       <!-- Canvas EQ3 (2): coached, the coach hasn't decided: weight held, reps up, coach told. -->
       <p transition:reveal class="mx-3 my-1.5 rounded-lg bg-muted/40 px-3 py-2 text-xs leading-relaxed"><b class="font-semibold">At the top.</b> {topLabel}. More reps for now; {sessionCoach.name} has been told and picks what's next.</p>

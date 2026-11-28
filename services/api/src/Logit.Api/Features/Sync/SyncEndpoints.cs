@@ -760,8 +760,13 @@ public static class SyncEndpoints
         => PushSyncRows(caller.GetUserId(), req.Places, db.SyncedPlaces, db);
 
     private static async Task<IResult> PullPlaces(
-        [FromQuery] long since, ClaimsPrincipal caller, AppDbContext db)
-        => Results.Ok(new { places = await PullSyncRows(caller.GetUserId(), since, db.SyncedPlaces) });
+        [FromQuery] long since, [FromQuery] Guid? clientId, ClaimsPrincipal caller, AppDbContext db)
+    {
+        // A coach reads a client's gyms with their workouts (canvas EQ1: what their gym has).
+        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db, ShareArea.Workouts);
+        if (forbidden is not null) return forbidden;
+        return Results.Ok(new { places = await PullSyncRows(userId!.Value, since, db.SyncedPlaces) });
+    }
 
     // ── Installed plugins ────────────────────────────────────────────────────
     // One row per installed plugin (keyed by manifest id), so installing, switching off or

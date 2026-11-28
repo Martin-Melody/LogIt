@@ -8,6 +8,8 @@
   import { startingPoint, type StartingLift } from "@logit/core/domain/startingPoint";
   import type { WorkoutSession } from "@logit/core/domain/workout";
   import { startupAnswers } from "./startupAnswers";
+  import { syncApi } from "@logit/core/api/syncApi";
+  import { kitText, parseKit, type BringItem } from "@logit/core/domain/kit";
 
   let { clientId, name, sharing, sessions, programExercises = [] }: {
     clientId: string;
@@ -21,6 +23,9 @@
   const first = $derived(name.split(" ")[0] ?? name);
   let muscleOf = $state<((n: string) => string[]) | undefined>(undefined);
   let startup = $state<{ prompt: string; answer: string }[]>([]);
+  let kit = $state<BringItem[]>([]);
+  let experience = $state<string | null>(null);
+  const EXPERIENCE: Record<string, string> = { new: "New to lifting", under2: "Under 2 years", "2plus": "2 years or more", compete: "Competes" };
   onMount(() => {
     void loadWebLibrary().then((lib) => {
       const by = new Map<string, string[]>();
@@ -28,6 +33,8 @@
       muscleOf = (n) => by.get(n.trim().toLowerCase()) ?? [];
     }, () => {});
     if (sharing.checkins) void startupAnswers(clientId).then((a) => (startup = a));
+    // Canvas EQ4/HT3: what they bring, and their experience from their LogIt setup.
+    void syncApi.pullProfile(clientId).then((r) => { kit = parseKit(r.profile?.kitJson); experience = r.profile?.experience ?? null; }, () => {});
   });
 
   const sp = $derived(startingPoint(sessions, Date.now(), { muscleOf, also: programExercises }));
@@ -93,6 +100,13 @@
       </div>
     {/if}
   </div>
+
+  {#if kit.length || experience}
+    <div class="flex flex-col gap-1 text-[13px]">
+      {#if experience}<span><span class="text-muted-foreground">Experience ·</span> {EXPERIENCE[experience] ?? experience} <span class="text-xs text-muted-foreground">(from their LogIt setup)</span></span>{/if}
+      {#if kit.length}<span><span class="text-muted-foreground">Brings ·</span> {kitText(kit)}</span>{/if}
+    </div>
+  {/if}
 
   {#if sp.keeps.length || sp.swaps.length || sp.skips.length}
     <div class="flex flex-col gap-1 text-[13px]">

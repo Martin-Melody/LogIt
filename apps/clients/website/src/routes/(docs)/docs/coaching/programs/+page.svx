@@ -171,6 +171,22 @@ mistake and your note. Saving updates the programs your clients have. How-to pac
 Plugins fill in the ones you haven't written. Each program's **How-tos** setting in the builder
 says who gets them: new lifters (from their LogIt setup; the default), always or never.
 
+## When a plan outgrows their gym
+
+A client's Training tab tells you ahead when their copy is planned past what their gym has, once
+LogIt knows the gym: "Leg extension at Flyefit goes to 100 kg; the plan reaches 105 kg in week 6"
+(or the heaviest dumbbells there). **Decide** picks what happens: more reps, then a harder version
+you choose (or slower reps, or "ask me then"); load past the stack with their pin, if they bring
+one; or swap it from that week in their copy. If you do nothing, the weight stays at the top and
+the reps go up, and you're messaged when they get there.
+
+On their phone, a machine LogIt doesn't know yet asks "Is 90 kg the most this machine goes?" and
+opens the machine's settings, where **Past the top** says whether they can add plates with their
+stack pin. **Settings › Workout › What you bring** lists the kit they carry (stack pin, dip belt,
+straps and the rest); you see it, with their experience from setup, on their Starting point. If
+they forget the pin, **Not today** plans that session at the stack's top with more reps, without
+counting it as a step back.
+
 ## Give it to a client
 
 <HowTo id="studio.assign" />
