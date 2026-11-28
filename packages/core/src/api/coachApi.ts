@@ -29,11 +29,20 @@ export interface Sharing {
   bodyweight: boolean;
   habits: boolean;
   checkins: boolean;
+  /** Canvas SP3: workouts from before coaching. Absent or true = shared (the default); false =
+   * only workouts from when it was turned off. Only means anything while workouts are shared. */
+  pastTraining?: boolean;
 }
 
-export type ShareArea = keyof Sharing;
+export type ShareArea = Exclude<keyof Sharing, "pastTraining">;
 
-export const SHARE_ALL: Sharing = { workouts: true, nutrition: true, bodyweight: true, habits: true, checkins: true };
+export const SHARE_ALL: Sharing = { workouts: true, nutrition: true, bodyweight: true, habits: true, checkins: true, pastTraining: true };
+
+/** "214 workouts since Jan 2025": what "Your training from before" would share. */
+export function pastTrainingText(count: number, sinceMs: number | null): string {
+  const since = sinceMs ? ` since ${new Date(sinceMs).toLocaleDateString(undefined, { month: "short", year: "numeric" })}` : "";
+  return `${count} ${count === 1 ? "workout" : "workouts"}${since}, so your coach can start from your real numbers.`;
+}
 
 /** The switches in the order and words the UI shows them. */
 export const SHARE_AREAS: { key: ShareArea; label: string }[] = [

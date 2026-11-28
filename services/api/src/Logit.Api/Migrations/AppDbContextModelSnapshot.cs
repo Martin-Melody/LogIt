@@ -443,6 +443,9 @@ namespace Logit.Api.Migrations
                     b.Property<DateTime?>("WaitingSince")
                         .HasColumnType("TEXT");
 
+                    b.Property<long?>("WorkoutsSinceMs")
+                        .HasColumnType("INTEGER");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ClientId");

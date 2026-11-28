@@ -448,6 +448,9 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<DateTime?>("WaitingSince")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<long?>("WorkoutsSinceMs")
+                        .HasColumnType("bigint");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ClientId");

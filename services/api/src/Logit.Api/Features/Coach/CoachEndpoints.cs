@@ -205,7 +205,10 @@ public static class CoachEndpoints
         var checkinIds = rels.Where(r => r.ShareCheckins).Select(r => r.ClientId).ToList();
 
         var sessionAgg = (await db.SyncedWorkoutSessions
-            .Where(s => workoutIds.Contains(s.UserId) && s.DeletedAtMs == null)
+            .Where(s => workoutIds.Contains(s.UserId) && s.DeletedAtMs == null
+                // Not workouts from before coaching the client keeps to themselves (canvas SP3).
+                && !db.CoachClientRelationships.Any(r => r.CoachId == coachId && r.ClientId == s.UserId && r.Status == CoachClientStatus.Active
+                    && r.WorkoutsSinceMs != null && s.StartedAtMs < r.WorkoutsSinceMs))
             .GroupBy(s => s.UserId)
             .Select(g => new
             {

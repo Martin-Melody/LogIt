@@ -176,8 +176,10 @@ public static class SyncEndpoints
         // StartedAtMs-based cursor on an already-synced second device. SyncedAt advances
         // on every insert/edit/delete, so it's the correct incremental-sync cursor.
         var sinceUtc = DateTimeOffset.FromUnixTimeMilliseconds(since).UtcDateTime;
+        // A coach sees workouts from before coaching only if the client shares them (canvas SP3).
+        var floor = clientId is { } cid ? await CoachAccess.WorkoutsSince(db, caller.GetUserId(), cid) ?? 0 : 0;
         var sessions = await db.SyncedWorkoutSessions
-            .Where(s => s.UserId == userId && s.SyncedAt > sinceUtc)
+            .Where(s => s.UserId == userId && s.SyncedAt > sinceUtc && s.StartedAtMs >= floor)
             .OrderBy(s => s.SyncedAt)
             .Select(s => new SessionDto(s.ClientId, s.StartedAtMs, s.DeletedAtMs == null ? s.DataJson : null, s.DeletedAtMs, s.UpdatedAtMs))
             .ToListAsync();

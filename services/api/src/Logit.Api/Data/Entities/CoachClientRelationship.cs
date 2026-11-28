@@ -24,6 +24,10 @@ public class CoachClientRelationship
     public bool ShareBodyweight { get; set; } = true;
     public bool ShareHabits { get; set; } = true;
     public bool ShareCheckins { get; set; } = true;
+    /// Canvas SP3: workouts from before coaching. Null = the coach sees their training from before
+    /// (the default); set = only workouts started from then on (epoch ms), when the client turned
+    /// "Your training from before" off.
+    public long? WorkoutsSinceMs { get; set; }
 
     /// Which exercise swaps this client may make in workouts from this coach's programs
     /// (see SwapRules). Null: the coach's default (User.CoachSwapRule).
