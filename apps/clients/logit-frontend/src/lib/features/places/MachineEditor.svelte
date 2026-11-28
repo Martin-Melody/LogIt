@@ -52,7 +52,7 @@
   let runs = $state<StackRun[]>([{ step: 5, to: 100 }]);
   let exact = $state<string | null>(null);
   let addOns = $state<number[]>([]);
-  let pin = $state(false);
+  let pin = $state(get(kit).includes("pin"));
   let noExtra = $state(false);
   let emptyKg = $state<number | null>(null);
   let status = $state<MachineStatus>("in");
@@ -88,7 +88,8 @@
     exerciseIds = [...m.exerciseIds];
     emptyKg = m.emptyKg ?? null;
     addOns = [...(m.addOns ?? [])];
-    pin = m.extraLoad?.includes("pin") ?? false;
+    // Canvas EQ2: not asked yet, and they bring a stack pin: start with it picked.
+    pin = m.extraLoad ? m.extraLoad.includes("pin") : get(kit).includes("pin");
     noExtra = m.extraLoad !== undefined && m.extraLoad.length === 0;
     const w = m.weights;
     const values = w?.kind === "stack" ? w.values : w?.kind === "linear" ? stackFromRuns(w.min, [{ step: w.step, to: w.max ?? w.min + w.step * 20 }]) : [];
@@ -160,6 +161,8 @@
   ];
   // Benches, racks and dip stations don't decide the number, so they're kit, not machines.
   // A machine saved as "no weight to set" before this still opens and saves as it was.
+  import { get } from "svelte/store";
+  import { kit } from "$lib/features/kit/kit";
 </script>
 
 
@@ -263,11 +266,18 @@
               <button type="button" aria-pressed={addOns.includes(a)} onclick={() => { addOns = addOns.includes(a) ? addOns.filter((x) => x !== a) : [...addOns, a]; noExtra = false; }}
                 class="min-h-10 rounded-full border px-3 text-sm {addOns.includes(a) ? 'border-foreground bg-primary font-semibold text-primary-foreground' : 'border-border'}">{a} {unitLabel} add-on</button>
             {/each}
-            <button type="button" aria-pressed={pin} onclick={() => { pin = !pin; noExtra = false; }}
-              class="min-h-10 rounded-full border px-3 text-sm {pin ? 'border-foreground bg-primary font-semibold text-primary-foreground' : 'border-border'}">Pin with plates</button>
-            <button type="button" aria-pressed={noExtra} onclick={() => { noExtra = !noExtra; if (noExtra) { addOns = []; pin = false; } }}
-              class="min-h-10 rounded-full border px-3 text-sm {noExtra ? 'border-foreground bg-primary font-semibold text-primary-foreground' : 'border-border'}">No</button>
           </div>
+        </fieldset>
+        <!-- Canvas EQ2: past the top of the stack. -->
+        <fieldset class="flex flex-col gap-1.5">
+          <legend class="mb-1.5 text-sm font-semibold">Past the top</legend>
+          <div class="flex flex-wrap gap-1.5">
+            <button type="button" aria-pressed={pin} onclick={() => { pin = !pin; noExtra = false; }}
+              class="min-h-10 rounded-full border px-3 text-sm {pin ? 'border-foreground bg-primary font-semibold text-primary-foreground' : 'border-border'}">My stack pin</button>
+            <button type="button" aria-pressed={noExtra} onclick={() => { noExtra = !noExtra; if (noExtra) { addOns = []; pin = false; } }}
+              class="min-h-10 rounded-full border px-3 text-sm {noExtra ? 'border-foreground bg-primary font-semibold text-primary-foreground' : 'border-border'}">No, make it harder</button>
+          </div>
+          {#if $kit.includes("pin")}<p class="text-xs text-muted-foreground">"My stack pin" is picked because you bring one. Untick it if this gym doesn't allow pins.</p>{/if}
         </fieldset>
       {/if}
     {:else if loading === "plates"}

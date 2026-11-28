@@ -30,7 +30,14 @@
   import ShareCardSheet from "$lib/components/social/ShareCardSheet.svelte";
   import ActionSheet from "$lib/components/ActionSheet.svelte";
   import ConfirmDialog from "$lib/components/Dialogs/ConfirmDialog.svelte";
-  import { readCard, readGroupInvite, readStoryPhoto, readStoryQuote } from "@logit/core/domain/messageCard";
+  import { readCard, readCoachInvite, readGroupInvite, readStoryPhoto, readStoryQuote } from "@logit/core/domain/messageCard";
+  import { authStore } from "$lib/api/authStore.svelte";
+  import { apiClient } from "@logit/core/api/client";
+  import CoachInviteCard from "$lib/components/social/CoachInviteCard.svelte";
+  import AskSheet from "$lib/components/coaching/AskSheet.svelte";
+  import { coachApi } from "@logit/core/api/coachApi";
+  import { formatMoney } from "@logit/core/domain/coachPayments";
+  import type { ProfilePackage } from "@logit/core/domain/coachProfile";
   import GroupInviteCard from "$lib/components/social/GroupInviteCard.svelte";
   import { toast } from "svelte-sonner";
   import PageHeader from "$lib/components/navigation/PageHeader.svelte";
@@ -166,6 +173,27 @@
     }
   }
   let menuOpen = $state(false);
+  // Invite to coaching (canvas MS5): an Ask-me card, or an offer for a package.
+  let askingCoach = $state<string | null>(null);
+  let invitePick = $state<"kind" | "package" | null>(null);
+  let myPackages = $state<ProfilePackage[]>([]);
+  const canInvite = $derived(!!chat?.other && !chat?.group && (authStore.user?.tier === "Studio" || apiClient.isSelfHosted()));
+  async function sendCoachInvite(packageId: string | null | undefined) {
+    if (!chat?.other) return;
+    try {
+      let json = "{}";
+      if (packageId !== undefined) {
+        const r = await coachApi.inviteClient(chat.other.username, { packageId });
+        if (!r.offerId) throw new Error("Couldn't make the offer");
+        json = JSON.stringify({ offerId: r.offerId });
+      }
+      await dmApi.send(chat.threadId ? { threadId: chat.threadId } : { username: chat.other.username }, crypto.randomUUID(), "", { card: { type: "CoachInvite", json } });
+      toast.success(packageId !== undefined ? "Offer sent" : "Coaching invite sent");
+      void load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't send it");
+    }
+  }
   let confirmDelete = $state(false);
 
   const group = $derived(chat?.group ?? null);
@@ -341,10 +369,12 @@
   {@const card = story ? readStoryQuote(m.cardJson) : readCard(m.cardType, m.cardJson)}
   {@const storyPhoto = story ? readStoryPhoto(m.cardJson) : null}
   {@const invite = m.cardType === "GroupInvite" ? readGroupInvite(m.cardJson) : null}
+  {@const coachInv = m.cardType === "CoachInvite" ? readCoachInvite(m.cardJson) : null}
   {@const kids = joinedKids(m.mine, first, last)}
   {@const align = m.mine ? "end" : "start"}
   <div class="relative flex w-full flex-col gap-1 {m.mine ? 'items-end' : 'items-start'} {m.reactions?.length && !m.deleted ? 'mb-4' : ''}">
     {#if invite}<div class={kids}><GroupInviteCard {invite} mine={m.mine} /></div>{/if}
+    {#if coachInv}<div class={kids}><CoachInviteCard invite={coachInv} mine={m.mine} onask={() => (askingCoach = coachInv.coachUsername)} /></div>{/if}
     {#if story}<span class="px-1 text-[12px] text-muted-foreground">{m.mine ? `Replied to ${name}'s story` : "Replied to your story"}{card || storyPhoto ? "" : " · no longer available"}</span>{/if}
     {#if storyPhoto}
       <div class="relative aspect-[9/16] w-28 shrink-0 overflow-hidden rounded-xl bg-black"><img src={photoSrc(storyPhoto.url)} alt="The story" loading="lazy" class="size-full object-cover" /></div>
@@ -557,6 +587,7 @@
     { icon: Settings2, label: "Your settings", onSelect: () => void goto(`/groups/${group.id}/settings`) },
   ] : [
     ...(chat?.other ? [{ icon: User, label: "View profile", onSelect: () => void goto(`/social/${chat!.other!.username}`) }] : []),
+    ...(canInvite ? [{ icon: Dumbbell, label: "Invite to coaching", onSelect: () => (invitePick = "kind") }] : []),
     { icon: Trash2, label: "Delete chat", destructive: true, onSelect: () => (confirmDelete = true) },
     ...(chat?.other ? [{ icon: Flag, label: "Report", destructive: true, onSelect: () => (reporting = { type: "User", id: chat!.other!.id!, what: `@${chat!.other!.username}` }) }] : []),
     ...(chat?.other ? [{ icon: Ban, label: `Block ${name}`, destructive: true, onSelect: () => (confirmBlock = true) }] : []),
@@ -618,3 +649,17 @@
   confirmLabel="Block"
   onConfirm={block}
 />
+
+<ActionSheet open={invitePick === "kind"} onOpenChange={(v) => { if (!v && invitePick === "kind") invitePick = null; }} title="Invite to coaching" subtitle="A card goes into this chat"
+  items={[
+    { icon: Send, label: "Ask me to coach you", onSelect: () => { invitePick = null; void sendCoachInvite(undefined); } },
+    { icon: Dumbbell, label: "Offer a spot…", onSelect: () => { void coachApi.getCoachProfile().then((p) => { myPackages = p.packages; invitePick = "package"; }).catch(() => toast.error("Couldn't load your packages")); } },
+  ]} />
+<ActionSheet open={invitePick === "package"} onOpenChange={(v) => { if (!v) invitePick = null; }} title="Offer a spot" subtitle="Pick a package"
+  items={[
+    ...myPackages.map((p) => ({ icon: Dumbbell, label: p.name, value: `${formatMoney(p.amountCents, p.currency)}${p.interval === "month" ? " a month" : ""}`, onSelect: () => { invitePick = null; void sendCoachInvite(p.id); } })),
+    { icon: Dumbbell, label: "No payment through LogIt", onSelect: () => { invitePick = null; void sendCoachInvite(null); } },
+  ]} />
+{#if askingCoach}
+  <AskSheet open={true} username={askingCoach} onclose={() => (askingCoach = null)} />
+{/if}

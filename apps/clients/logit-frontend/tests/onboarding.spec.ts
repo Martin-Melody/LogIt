@@ -228,7 +228,7 @@ test.describe("first workout", () => {
 
     await page.keyboard.press("Escape"); // the workout walkthrough
     // Bench Press is in the 5–8 range: "about 8 times". The first exercise opens by itself.
-    await expect(page.getByText("First time? Pick a weight you could lift about 8 times.").first()).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("First time? Find your working weight.").first()).toBeVisible({ timeout: 10_000 });
   });
 
   test("after workout 3, 'Not now' to saving the training goes home", async ({ page }) => {

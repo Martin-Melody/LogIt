@@ -15,6 +15,8 @@
     startPlannedWorkout,
   } from "$lib/features/session/startWorkout";
   import { splitDayName } from "@logit/core/domain/splitSchedule";
+  import { coachedToday, startCoachedDay } from "$lib/features/coaching/coachedToday";
+  import type { ProgramToday } from "@logit/core/domain/programToday";
 
   // Shown on /session/current when no workout is running, so opening the page (from the
   // nav, or by swiping onto it) never starts a workout by itself.
@@ -23,8 +25,12 @@
   let hasPreviousSession = $state(false);
 
   const today = $derived(plannedDay($activeSplit));
+  // A coach's running program leads here too (decision D2), not the split from onboarding.
+  let coached = $state<ProgramToday | null>(null);
+  const coachDay = $derived(coached?.next && coached.next.atMs <= Date.now() ? coached.next.day : null);
 
   onMount(() => {
+    void coachedToday().then((c) => (coached = c)).catch(() => {});
     void getWorkoutRepo()
       .listRecentSessions({ limit: 1 })
       .then((s) => (hasPreviousSession = s.length > 0))
@@ -53,7 +59,12 @@
     <Dumbbell size={26} />
   </div>
 
-  {#if $activeSplit && today.day}
+  {#if coached && coachDay}
+    <div class="flex flex-col gap-1">
+      <p class="text-xs uppercase tracking-wide text-muted-foreground">{coached.program.name} · week {coached.weekNumber}</p>
+      <p class="text-lg font-semibold">{coachDay.name || "Today's session"}</p>
+    </div>
+  {:else if $activeSplit && today.day}
     <div class="flex flex-col gap-1">
       <p class="text-xs uppercase tracking-wide text-muted-foreground">{$activeSplit.name}</p>
       <p class="text-lg font-semibold">{splitDayLabel(today.day, $activeSplit)}</p>
@@ -63,7 +74,15 @@
   {/if}
 
   <div class="flex w-full max-w-xs flex-col gap-2">
-    {#if $activeSplit && today.day}
+    {#if coached && coachDay}
+      <Button class="w-full" disabled={busy} onclick={() => void run(() => startCoachedDay(coached!, coachDay!))}>Start {coachDay.name || "today's session"}</Button>
+      {#if $activeSplit && today.day}
+        <Button variant="outline" class="w-full" disabled={busy} onclick={() => void run(startPlannedWorkout)}>My own plan: {splitDayName($activeSplit, today.day)}</Button>
+      {/if}
+      <Button variant="outline" class="w-full" disabled={busy} onclick={() => void run(startEmptyWorkout)}>
+        <Plus class="h-4 w-4" /> Empty workout
+      </Button>
+    {:else if $activeSplit && today.day}
       <Button class="w-full" disabled={busy} onclick={() => void run(startPlannedWorkout)}>
         Start {$activeSplit ? splitDayName($activeSplit, today.day) : today.day.name || `Day ${today.day.orderIndex + 1}`}
       </Button>

@@ -17,7 +17,7 @@ export interface RemoteMessage {
   /** The other person's reaction (only the person it was sent to reacts). */
   reaction?: string | null;
   /** A step in a request (an offer, the waiting list…); `body` says it in words too. */
-  kind?: RequestEvent | "lasting-swap" | "program-swap" | "goal-suggestion" | "goal-answer" | "checkin-reply" | "month-report" | null;
+  kind?: RequestEvent | "lasting-swap" | "program-swap" | "goal-suggestion" | "goal-answer" | "checkin-reply" | "month-report" | "auto" | null;
   /** What that step's card shows, as JSON (an OfferCard for "offer" and "offer-changed"). */
   cardJson?: string | null;
 }

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { get } from "svelte/store";
   import { blockLine, canRunBlock, PROGRAM_BLOCKS_THIS_APP_RUNS, UPDATE_LINE } from "@logit/core/domain/CoachProgram";
   import { authStore } from "$lib/api/authStore.svelte";
   import StreakLine from "$lib/features/goals/StreakLine.svelte";
@@ -35,9 +36,12 @@
   import { assignedPrograms } from "$lib/stores/assignedPrograms.store";
   import { getCheckinRepo, getCoachProgramRepo } from "$lib/data/repoProvider";
   import { listRecentSessions } from "$lib/usecases/listRecentSessions";
-  import { cachedReviews, coachFor } from "$lib/features/coaching/coachCache";
-  import { checkinRows, type CheckinRow } from "@logit/core/domain/Checkin";
-  import { programToday, type ProgramToday } from "@logit/core/domain/programToday";
+  import { cachedCoaches, cachedReviews, coachFor } from "$lib/features/coaching/coachCache";
+  import { getProgramProgress, type CoachProgram, type ProgramProgress } from "@logit/core/domain/CoachProgram";
+  import { startAssignedProgram } from "$lib/usecases/coach/startAssignedProgram";
+  import { asksNow, checkinRows, type CheckinRow } from "@logit/core/domain/Checkin";
+  import type { ProgramToday } from "@logit/core/domain/programToday";
+  import { coachedToday, startCoachedDay } from "$lib/features/coaching/coachedToday";
   import type { ProgramDay, ProgramStrength } from "@logit/core/domain/CoachProgram";
 
   const LETTERS = ["S", "M", "T", "W", "T", "F", "S"];
@@ -56,6 +60,13 @@
   let picking = $state(false);
   // A coach's running program leads the card (decision D2); "My own plan today" is a one-off.
   let coached = $state<ProgramToday | null>(null);
+  let waiting = $state<{ program: CoachProgram; progress: ProgramProgress } | null>(null);
+  let startingProgram = $state(false);
+  async function startWaiting() {
+    if (!waiting || startingProgram) return;
+    startingProgram = true;
+    try { await startAssignedProgram(waiting.program.id); await loadCoached(); } finally { startingProgram = false; }
+  }
   let choosing = $state(false);
   let choice = $state<"program" | "plan" | "empty">("program");
   let checkin = $state<CheckinRow | null>(null);
@@ -79,17 +90,11 @@
 
   async function loadCoached() {
     try {
-      const [programs, sessions, activeId] = await Promise.all([
-        assignedPrograms.refresh(),
-        listRecentSessions(30),
-        getCoachProgramRepo().getActiveProgramId().catch(() => null),
-      ]);
       const now = Date.now();
-      const running = programs
-        .map((p) => programToday(p, sessions, now))
-        .filter((t): t is ProgramToday => t !== null)
-        .sort((a, b) => Number(b.program.id === activeId) - Number(a.program.id === activeId));
-      coached = running[0] ?? null;
+      coached = await coachedToday(now);
+      const programs = get(assignedPrograms);
+      // A program from a coach that hasn't started: Home offers Start (or says when it starts).
+      waiting = coached ? null : (programs.map((p) => ({ program: p, progress: getProgramProgress(p, now) })).find((x) => x.progress.status === "not-started" || x.progress.status === "scheduled") ?? null);
       const [schedules, submissions] = await Promise.all([
         getCheckinRepo().listAssignedSchedules(),
         getCheckinRepo().listSubmissions(),
@@ -97,7 +102,7 @@
       // A coach's check-in only while signed in: without a server it can't be sent, and an
       // account kept on the phone after signing out has no coach any more.
       checkin = authStore.isAuthenticated
-        ? checkinRows(schedules, submissions, cachedReviews()).current.find((r) => r.state === "due" || r.state === "draft" || r.state === "late") ?? null
+        ? checkinRows(schedules, submissions, cachedReviews()).current.find((r) => asksNow(r)) ?? null
         : null;
     } catch {
       coached = null;
@@ -106,6 +111,8 @@
 
   // At the start of a line, and mid-sentence, when the coach's name isn't known yet.
   const coachName = $derived(coached ? (coachFor(coached.program.coachId)?.name ?? "Your coach") : "");
+  // Canvas HT1: how-tos for a new program's first week, for new lifters (or as the coach set it).
+  const learning = $derived($assignedPrograms.find((p) => !p.archived && programInFirstWeek(p) && showsHowTos(p)) ?? null);
   const coachRef = $derived(coached ? (coachFor(coached.program.coachId)?.name ?? "your coach") : "");
   const coach = $derived(coached ? coachFor(coached.program.coachId) : undefined);
   const programDayName = (day: ProgramDay) => day.name?.trim() || `Day ${day.orderIndex + 1}`;
@@ -127,11 +134,7 @@
   async function startProgramDay(day: ProgramDay) {
     if (!coached) return;
     choosing = false;
-    if ($currentSession !== null) return void goto("/session/current");
-    const p = coached.program;
-    await getCoachProgramRepo().setActiveProgramId(p.id);
-    await currentSession.startFromProgramDay(day, { id: p.id, name: p.name, coachId: p.coachId ?? coach?.coachId });
-    await goto("/session/current");
+    await startCoachedDay(coached, day, coach?.coachId);
   }
 
   async function startChoice() {
@@ -199,6 +202,8 @@
     selectDayOverride(split.id, day.id);
     await startPlannedWorkout();
   }
+  import BeforeFirstSession from "$lib/features/howto/BeforeFirstSession.svelte";
+  import { inFirstWeek as programInFirstWeek, showsHowTos } from "$lib/features/howto/howtos";
 </script>
 
 <Card.Root class="w-full">
@@ -245,6 +250,9 @@
       </div>
     {/if}
 
+    {#if learning && card.kind !== "continue"}
+      <BeforeFirstSession program={learning} coachName={coachFor(learning.coachId)?.name ?? "your coach"} />
+    {/if}
     {#if coached && card.kind !== "continue" && (coached.next || coached.doneToday.length)}
       {@const day = coached.doneToday.length ? null : coached.next?.day}
       {#if day && coached.next && coached.next.atMs <= Date.now()}
@@ -253,7 +261,10 @@
             <h2 class="text-2xl font-bold tracking-tight">{programDayName(day)}</h2>
             <span class="shrink-0 text-[13px] text-muted-foreground">Today</span>
           </div>
-          <p class="text-[13px] text-muted-foreground">{coachName}'s program · {coached.program.name} · week {coached.weekNumber} of {coached.totalWeeks} · {coached.doneThisWeek} of {coached.daysThisWeek} this week</p>
+          <p class="text-[13px] text-muted-foreground">{coachName}'s program · {coached.program.name} · week {coached.weekNumber} of {coached.totalWeeks}{coached.stretch ? ` · ${coached.stretch}` : ""} · {coached.doneThisWeek} of {coached.daysThisWeek} this week</p>
+          {#if coached.weekType}
+            <p class="flex items-center gap-2 text-[13px]"><span class="rounded-md px-1.5 py-0.5 text-[11px] font-semibold {coached.weekType.type.kind === 'deload' ? 'bg-warning/15 text-warning' : 'bg-muted'}">{coached.weekType.label}</span><span>{coached.weekType.text}.</span></p>
+          {/if}
         </div>
         {@render exerciseList(programLines(day), Math.max(0, day.blocks.length - SHOWN))}
         <button type="button" class="h-[52px] rounded-xl bg-primary text-base font-semibold text-primary-foreground" onclick={() => void startProgramDay(day)}>Start {programDayName(day)}</button>
@@ -273,7 +284,11 @@
           {:else}
             <h2 class="text-xl font-bold tracking-tight">This week's done</h2>
           {/if}
-          <p class="text-[13px] text-muted-foreground">{coachName}'s program · week {coached.weekNumber} of {coached.totalWeeks}</p>
+          <p class="text-[13px] text-muted-foreground">{coachName}'s program · week {coached.weekNumber} of {coached.totalWeeks}{coached.stretch ? ` · ${coached.stretch}` : ""}</p>
+          {#if coached.weekType}
+            <!-- Week types (canvas PB9): the week's type once, with what it means. -->
+            <p class="flex items-center gap-2 text-[13px]"><span class="rounded-md px-1.5 py-0.5 text-[11px] font-semibold {coached.weekType.type.kind === 'deload' ? 'bg-warning/15 text-warning' : 'bg-muted'}">{coached.weekType.label}</span><span>{coached.weekType.text}.</span></p>
+          {/if}
         </div>
         {#if coached.next}
           <div class="flex flex-col gap-2.5 border-t border-border pt-3.5">
@@ -291,6 +306,21 @@
           <button type="button" class="h-11 flex-1 rounded-[10px] border border-border text-sm font-medium" onclick={() => void startEmptyWorkout()}>Empty workout</button>
         </div>
       {/if}
+    {:else if waiting && card.kind !== "continue"}
+      <!-- A coach's program waiting for Start (or its date): it leads Home, not "No plan yet". -->
+      {@const wc = coachFor(waiting.program.coachId)?.name ?? "Your coach"}
+      <div class="flex flex-col gap-1.5">
+        <h2 class="text-2xl font-bold tracking-tight">{waiting.program.name}</h2>
+        <p class="text-[13px] text-muted-foreground">From {wc} · {waiting.program.weeks.length} {waiting.program.weeks.length === 1 ? "week" : "weeks"}{waiting.progress.status === "scheduled" ? ` · starts ${new Date(waiting.progress.startsAtMs).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "short" })}` : ""}</p>
+      </div>
+      {#if waiting.progress.status === "not-started"}
+        <button type="button" disabled={startingProgram} class="h-[52px] rounded-xl bg-primary text-base font-semibold text-primary-foreground disabled:opacity-60" onclick={() => void startWaiting()}>Start the program</button>
+        <p class="text-xs text-muted-foreground">Today becomes week 1, day 1.</p>
+      {/if}
+      <div class="flex gap-2">
+        <button type="button" class="h-11 flex-1 rounded-[10px] border border-border text-sm font-medium" onclick={() => goto(`/programs/${waiting!.program.id}`)}>See the program</button>
+        <button type="button" class="h-11 flex-1 rounded-[10px] border border-border text-sm font-medium" onclick={() => void startEmptyWorkout()}>Empty workout</button>
+      </div>
     {:else if card.kind === "continue"}
       <div class="flex flex-col gap-3">
         <h2 class="text-xl font-bold tracking-tight">Workout in progress</h2>
@@ -345,11 +375,15 @@
         <button type="button" class="h-11 flex-1 rounded-[10px] border border-border text-sm font-medium" onclick={() => void startEmptyWorkout()}>Empty workout</button>
       </div>
     {:else}
+      {@const myCoach = !split && authStore.isAuthenticated ? cachedCoaches()[0] : undefined}
       <div class="flex flex-col gap-3">
         <h2 class="text-xl font-bold tracking-tight">Today</h2>
-        <p class="text-sm text-muted-foreground">{split ? "Nothing planned in your split yet." : "No plan yet. Log a workout as you go, or pick a plan."}</p>
+        <!-- Coached, no program yet: say so, rather than send them off to pick a plan. -->
+        <p class="text-sm text-muted-foreground">{split ? "Nothing planned in your split yet." : myCoach ? `${myCoach.name} is putting your program together. It shows here when it's sent; log a workout as you go until then.` : "No plan yet. Log a workout as you go, or pick a plan."}</p>
         <button type="button" class="h-[52px] rounded-xl bg-primary text-base font-semibold text-primary-foreground" onclick={() => void startEmptyWorkout()}>Empty workout</button>
-        <button type="button" class="h-11 rounded-[10px] border border-border text-sm font-medium" onclick={() => goto(split ? `/splits/${split.id}` : "/splits")}>{split ? "Edit your split" : "Pick a plan"}</button>
+        {#if !myCoach}
+          <button type="button" class="h-11 rounded-[10px] border border-border text-sm font-medium" onclick={() => goto(split ? `/splits/${split.id}` : "/splits")}>{split ? "Edit your split" : "Pick a plan"}</button>
+        {/if}
       </div>
     {/if}
   </Card.Content>

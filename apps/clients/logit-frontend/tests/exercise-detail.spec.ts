@@ -19,7 +19,9 @@ test.describe("exercise detail", () => {
     await expect(page.getByRole("heading", { name: "Bench Press" })).toBeVisible();
     await expect(page.getByRole("tab", { name: "Progress" })).toHaveAttribute("aria-selected", "true");
     await page.getByRole("tab", { name: "How to" }).click();
-    await expect(page.getByText("How to do it")).toBeVisible();
+    // A built-in exercise's How to: LogIt's three cues and the common mistake (6.12).
+    await expect(page.getByText("Three things")).toBeVisible();
+    await expect(page.getByText("Most common mistake:")).toBeVisible();
     // Machines live in places now: no machine list on the exercise.
     await expect(page.getByText("Add a machine…")).toHaveCount(0);
 

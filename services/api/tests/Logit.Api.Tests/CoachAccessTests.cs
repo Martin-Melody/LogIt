@@ -21,7 +21,7 @@ public class CoachAccessTests
         Assert.True(r.Shares(ShareArea.Bodyweight));
         Assert.False(r.Shares(ShareArea.Habits));
         Assert.True(r.Shares(ShareArea.Checkins));
-        Assert.Equal(new SharingDto(true, false, true, false, true), r.ToSharingDto());
+        Assert.Equal(new SharingDto(true, false, true, false, true, true), r.ToSharingDto());
     }
 
     [Fact]
@@ -47,7 +47,7 @@ public class CoachAccessTests
 
         var stored = await CoachAccess.ActiveRelationship(db, coach.Id, client.Id);
         Assert.NotNull(stored);
-        Assert.Equal(new SharingDto(true, false, false, false, false), stored.ToSharingDto());
+        Assert.Equal(new SharingDto(true, false, false, false, false, true), stored.ToSharingDto());
     }
 
     [Fact]

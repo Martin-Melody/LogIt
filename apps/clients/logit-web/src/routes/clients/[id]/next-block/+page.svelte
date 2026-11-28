@@ -155,7 +155,7 @@
   }
 
   const NEXT = [
-    { value: "rerun", label: "Run it again from their new numbers", hint: "Same program; the rules start from today's estimates." },
+    { value: "rerun", label: "Run it again from their new numbers", hint: "Same program; the progressions start from today's estimates." },
     { value: "copy", label: "Copy it and change things", hint: "Opens the new block in the builder, just for them." },
     { value: "different", label: "Something different", hint: "Pick from your programs, LogIt's or the community's." },
   ] as const;

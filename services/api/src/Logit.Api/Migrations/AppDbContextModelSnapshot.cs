@@ -443,6 +443,9 @@ namespace Logit.Api.Migrations
                     b.Property<DateTime?>("WaitingSince")
                         .HasColumnType("TEXT");
 
+                    b.Property<long?>("WorkoutsSinceMs")
+                        .HasColumnType("INTEGER");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ClientId");
@@ -3122,6 +3125,9 @@ namespace Logit.Api.Migrations
                     b.Property<string>("CoachAskQuestionsJson")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("CoachAutoMessagesJson")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("CoachCardsJson")
                         .HasColumnType("TEXT");
 
@@ -3129,6 +3135,9 @@ namespace Logit.Api.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("CoachFoodSwapRule")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CoachHowTosJson")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("CoachNutritionPrefsJson")

@@ -352,3 +352,29 @@ Then every web walkthrough chapter (Pro and Studio) end to end.
 Not fixed, need server state: Mark unread, Pin and Mute for conversations; React and Delete on a
 coach's message; "Save as a saved reply" from a message. P11 (paid package) wasn't rerun: payments
 didn't change in this overhaul's last phases.
+
+## Round 19 — a new client and a new coach, end to end (2026-11-28, fix/new-user-flows)
+
+Nina, a brand-new user, opens Pat's invite link, asks on the web, signs in on the phone, takes the
+spot, gets a program and starts week 1. Pat answers on the web. Local API, phone-sized browser.
+
+| # | Found | What it did to the user | Fix | Status |
+|---|---|---|---|---|
+| 19.1 | Assign dialog with a long program name (Martin) | The dialog widened and its right side was cut off | Selects truncate with … everywhere | fixed (2d8ce4e1) |
+| 19.2 | Fit check asked "Start straight away / Find your weights first" for a program that already opens with Find your weights (Martin) | Asked twice; "Start straight away" meaningless for a client with no history | Reads the program's first stretch: shows it, no question; with nothing known, the choice says the first set finds each weight | fixed (2d8ce4e1) |
+| 19.3 | Start-up form block showed a bare "No" (from "Chest pain or dizziness…") | Looked like a worry with no question | Answers show their question; No/None aren't shown | fixed (2d8ce4e1) |
+| 19.4 | Weekly check-in asked on the day a client joins (Martin) | Asked to check in on a week that hadn't happened | Home asks in the last 2 days of a week (3 of a fortnight, 5 of a month); late and drafts straight away | fixed (2d8ce4e1) |
+| 19.5 | Program assigned, waiting for Start | Home said "No plan yet. Pick a plan"; the program sat in Splits under "No splits yet" | Home leads with it: Start the program (or when it starts) | fixed (982172ff) |
+| 19.6 | Coached, nothing sent yet | "No plan yet… Pick a plan" | "Pat is putting your program together…", no Pick a plan | fixed (982172ff) |
+| 19.7 | Start tab with a coach's program running (Martin: the onboarding split stays active) | Started an empty workout, or the split's day | Starts the coach's day; My own plan and Empty workout under it | fixed (982172ff) |
+| 19.8 | Find your weights week on the phone | Plain lifts: no registry lists LogIt's Weight finder (production's is empty), and phases from before 6.10 named no block | Old phases mean the Weight finder; the app ships it as a fallback | fixed (982172ff) |
+| 19.9 | Signing in with an offer waiting | Generic "What do you want from training?" | — Home/onboarding should open on "Pat offered you a spot" | needs a decision |
+| 19.10 | "I have a coach" | Asks for a code that people who asked through a link never got; with the code it says "Your request is with Pat" though Pat had offered | — find their open request/offer from the account; say "Pat offered you a spot" | needs a decision |
+| 19.11 | Take the spot (no payment) on the phone | Leaves the app for the web, signs in again (dev build points at production) | — take a free spot in the app; web only for paying | needs a decision |
+| 19.12 | Starting point and fit check | Ignore what the client wrote when asking (under a year, sore left knee, 3 days) | — read the ask answers too | open |
+| 19.13 | Client page Training tab | "No program from you" twice | — | open |
+| 19.14 | Today card in a Find your weights week | Lists "Squat 3 × 5" though the Weight finder runs | — | open |
+| 19.15 | Weight finder for a beginner | Titled "Weight finder" not the lift; Up next shows "Weight finder" for every lift; "kg" twice; no starting weight | — | open |
+| 19.16 | Home order in week 1 | Nine how-tos above Start, pushing it down | — | needs a decision |
+| 19.17 | Widgets, This week, streak schedule, profile "current split" | Still read the onboarding split while a coach's program runs | — follow D2 everywhere, or keep them on the own split | needs a decision |
+| 19.18 | Coach Today "Your invite link" | Shows 127.0.0.1:4180/c/FC7K-CXME while Invite links shows getlogit.app/@pat?l=FC7KCXME | — one form | open |

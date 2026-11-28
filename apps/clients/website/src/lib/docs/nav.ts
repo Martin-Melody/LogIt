@@ -29,6 +29,8 @@ export const docsNav: DocSection[] = [
       { title: "Program packs", href: "/docs/plugins/program-packs" },
       { title: "Workout blocks", href: "/docs/plugins/workout-blocks" },
       { title: "Coaching packs", href: "/docs/plugins/coaching-packs" },
+      { title: "Starting phases", href: "/docs/plugins/phases" },
+      { title: "How-to packs", href: "/docs/plugins/howtos" },
       { title: "Progression algorithms", href: "/docs/plugins/progression" },
       { title: "Mobility progression", href: "/docs/plugins/mobility-progression" },
       { title: "Analytics", href: "/docs/plugins/analytics" },

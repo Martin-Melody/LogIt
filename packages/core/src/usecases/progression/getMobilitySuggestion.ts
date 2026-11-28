@@ -38,6 +38,8 @@ const HISTORY_WINDOW = 20;
 
 export type MobilityDrillRef = {
   id?: string;
+  /** A coach's program's pick for this drill (MobilityBlockData.algorithmId). */
+  algorithmId?: string;
   name: string;
   metric: MobilityBlockData["metric"];
   perSide: boolean;
@@ -50,9 +52,10 @@ export function mobilityStateKey(drill: Pick<MobilityDrillRef, "id" | "name">): 
 
 /** This drill's own algorithm ("Same every time" on one drill), else the general one. */
 export async function resolveMobilityAlgorithmId(
-  drill: Pick<MobilityDrillRef, "id" | "name">,
+  drill: Pick<MobilityDrillRef, "id" | "name" | "algorithmId">,
   deps: Pick<ProgressionDeps, "progressionRepo">,
 ): Promise<string> {
+  if (drill.algorithmId) return drill.algorithmId;
   const own = await deps.progressionRepo.getExerciseSettings?.(mobilityStateKey(drill)).catch(() => null);
   if (own?.algorithmId && !own.deletedAtMs) return own.algorithmId;
   return (await deps.progressionRepo.getMobilityConfig())?.algorithmId ?? DEFAULT_MOBILITY_ALGORITHM_ID;

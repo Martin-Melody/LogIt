@@ -47,11 +47,18 @@
   let when = $state<Record<string, "replace" | "backdate" | "after">>({});
   let busy = $state(false);
   let loaded = $state(false);
+  // Canvas SP2: for one client, a "Check it fits" step between who/when and assigning.
+  let step = $state<1 | 2>(1);
+  let swaps = $state<Record<string, { exerciseName: string; exerciseId?: string }>>({});
+  let findFirst = $state(false);
 
   $effect(() => {
     if (!open) return;
     chosen = [...clientIds];
     when = {};
+    step = 1;
+    swaps = {};
+    findFirst = false;
     loaded = false;
     void Promise.all([coachApi.listClients(), getWebCoachProgramRepo().listMyPrograms()]).then(([c, r]) => {
       clients = inView(c);
@@ -85,6 +92,7 @@
     return !cur || (when[c.client.id] ?? defaultWhen(cur)) === "replace";
   }));
 
+  const checking = $derived(people.length === 1 && !!giving && pick !== BLANK);
   const plugins = $derived(giving ? giving.weeks.flatMap((w) => w.days.flatMap((d) => d.blocks.filter((b) => b.type === "plugin").map((b) => ({ name: (b as P.ProgramPluginBlock).name, day: d.name ?? "a day" })))) : []);
   const pluginNames = $derived([...new Set(plugins.map((p) => p.name))]);
 
@@ -103,6 +111,8 @@
         return;
       }
       if (!giving) return;
+      // Your how-tos for its exercises go with each copy (canvas HT4).
+      const howtos = await allHowTos();
       let done = 0;
       for (const c of people) {
         const current = onNow.get(c.client.id);
@@ -116,7 +126,13 @@
         } else if (current && choice === "after" && current.endsAtMs) {
           start = { mode: "fixed-date", startDateMs: P.startOfLocalDayMs(current.endsAtMs) };
         }
-        await repo.saveProgram(P.copyProgramForClient(giving, start), c.client.username);
+        let copy = withHowTos(P.copyProgramForClient(giving, start), howtos);
+        // What the fit check changed, in their copy only (canvas SP2).
+        if (checking) {
+          for (const [from, to] of Object.entries(swaps)) copy = P.renameExercise(copy, from, to);
+          if (findFirst) copy = P.addFindWeekFirst(copy);
+        }
+        await repo.saveProgram(copy, c.client.username);
         done++;
       }
       guideSignal("program.assigned");
@@ -129,10 +145,12 @@
       busy = false;
     }
   }
+  import FitCheck from "./FitCheck.svelte";
+  import { allHowTos, withHowTos } from "./howtoData";
 </script>
 
 <Dialog.Root bind:open>
-  <Dialog.Content class="max-h-[90svh] overflow-y-auto sm:max-w-[520px]">
+  <Dialog.Content class="max-h-[90svh] min-w-0 overflow-y-auto sm:max-w-[520px] [&>*]:min-w-0">
     <Dialog.Header>
       <Dialog.Title>{program ? `Assign ${program.name}` : people.length === 1 ? `Give ${first(people[0]!)} a program` : "Assign a program"}</Dialog.Title>
       <Dialog.Description>Each client gets their own copy. Changing your program later asks which copies to update.</Dialog.Description>
@@ -140,11 +158,14 @@
 
     {#if !loaded}
       <p class="text-[13px] text-muted-foreground">Loading…</p>
+    {:else if step === 2 && checking && giving}
+      {@const c = people[0]!}
+      <FitCheck clientId={c.client.id} name={nameOf(c)} sharesWorkouts={c.sharing?.workouts !== false} sharesCheckins={c.sharing?.checkins !== false} program={giving} bind:swaps bind:findFirst />
     {:else}
       <div class="flex flex-col gap-4">
         {#if !program}
           <label class="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground">Program
-            <OptionSelect bind:value={pick} aria-label="Program"
+            <OptionSelect bind:value={pick} aria-label="Program" class="w-full"
               options={[...library.map((p) => ({ value: p.id, label: `${p.name} · ${P.programSummary(p)}` })), ...(people.length <= 1 ? [{ value: BLANK, label: "Start from scratch, just for them" }] : [])]} />
           </label>
         {/if}
@@ -224,10 +245,18 @@
     {/if}
 
     <Dialog.Footer>
-      <Button variant="outline" onclick={() => (open = false)}>Cancel</Button>
+      {#if step === 2}
+        <Button variant="outline" onclick={() => (step = 1)}>Back</Button>
+      {:else}
+        <Button variant="outline" onclick={() => (open = false)}>Cancel</Button>
+      {/if}
+      {#if step === 1 && checking}
+        <Button disabled={!people.length} onclick={() => (step = 2)}>Next: check it fits</Button>
+      {:else}
       <Button disabled={busy || !people.length || (!giving && pick !== BLANK)} onclick={() => void assign()}>
         {busy ? "Assigning…" : pick === BLANK && !program ? "Create" : people.length > 1 ? `Assign to ${people.length} clients` : "Assign"}
       </Button>
+      {/if}
     </Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>

@@ -14,6 +14,8 @@ import type { PlannedTargets } from "../../domain/WorkoutSplit";
 import { getExerciseHistory } from "./getExerciseHistory";
 import type { ProgressionDeps } from "./deps";
 import { startingLiftEntry, startingLiftLine, type StartingLift } from "../../domain/startingLift";
+import { estimated1RM } from "../../domain/oneRepMax";
+import { knownLifts, minRelatedE1rm, relatedEstimate, solidLifts, type RelatedEstimate } from "../../domain/relatedLifts";
 
 // How many of *this exercise's own* most recent sessions the algorithm sees —
 // not a global cap across every exercise (that was the bug: fetching "the last
@@ -32,7 +34,7 @@ export async function getSuggestion(
   algorithmOverride?: ProgressionAlgorithm,
   /** The machine this is done on today (from the place you're at), when known. Weights are
    * rounded to its settings and start from the last time on it (rebaseForMachine). */
-  options?: { machine?: Machine },
+  options?: { machine?: Machine; week?: ProgressionInput["week"] },
 ): Promise<ProgressionOutput | null> {
   const { progressionRepo, workoutRepo, exerciseRepo, algorithmRegistry: registry } = deps;
 
@@ -76,9 +78,23 @@ export async function getSuggestion(
   // (12 × BW before 6 × BW+5) can be converted. Plain numbers, like analytics.
   const bodyweightAt = await (deps.loadBodyweight?.().catch(() => null) ?? null);
   // Never logged: a best lift typed in at onboarding stands in for the history.
-  const startingLift: StartingLift | null = fullHistory.length === 0 && exerciseSettings?.startingLift
+  const typedLift: StartingLift | null = fullHistory.length === 0 && exerciseSettings?.startingLift
     ? { ...exerciseSettings.startingLift, exerciseId: exercise.id, exerciseName: exercise.name }
     : null;
+  // Never logged and nothing typed: worked out from their other lifts (Phase 6.2), at the low end,
+  // as a 5-rep set it stands for. "From your deadlift 200 × 5 · a guess".
+  let related: RelatedEstimate | null = null;
+  if (fullHistory.length === 0 && !typedLift) {
+    // Best lifts typed in at setup count too: a deliberate heavy set, as solid as two workouts.
+    const typed = ((await deps.progressionRepo.listExerciseSettings?.().catch(() => [])) ?? [])
+      .filter((r) => !r.deletedAtMs && r.startingLift && r.startingLift.weightKg > 0)
+      .map((r) => ({ name: r.exerciseName, e1rm: estimated1RM(r.startingLift!.weightKg, r.startingLift!.reps), weight: r.startingLift!.weightKg, reps: r.startingLift!.reps, atMs: r.startingLift!.enteredAtMs, sessions: 2 }));
+    const logged = solidLifts(knownLifts(await workoutRepo.listAllSessions().catch(() => []), nowMs()));
+    related = relatedEstimate(exercise.name, [...logged, ...typed.filter((t) => !logged.some((l) => l.name.toLowerCase() === t.name.toLowerCase()))]);
+    if (related && related.e1rmKg < minRelatedE1rm(exercise.name)) related = null;
+  }
+  const startingLift: StartingLift | null = typedLift
+    ?? (related ? { exerciseId: exercise.id, exerciseName: exercise.name, weightKg: Math.max(2.5, Math.floor(related.e1rmKg / (1 + 5 / 30) / 2.5) * 2.5), reps: 5, enteredAtMs: nowMs() } : null);
   const history = (startingLift
     ? [startingLiftEntry(startingLift, algorithmId === "linear-progression" ? { workingReps: exerciseSettings?.repRange?.[0] ?? plannedTargets?.reps ?? 5 } : {})]
     : fullHistory)
@@ -209,15 +225,31 @@ export async function getSuggestion(
     strengthEstimate: estimate
       ? { kg: Math.round(estimate.kg * 10) / 10, fromWeightKg: estimate.from.weight, fromReps: estimate.from.reps, performedAtMs: estimate.from.performedAtMs }
       : undefined,
+    estimate: related
+      ? { kg: related.e1rmKg, source: "related", confidence: related.confidence, basis: `${related.basis.name} ${related.basis.weight} × ${related.basis.reps}` }
+      : typedLift
+        ? { kg: estimate ? Math.round(estimate.kg * 10) / 10 : null, source: "typed", confidence: "rough" }
+        : estimate
+          ? { kg: Math.round(estimate.kg * 10) / 10, source: "logged", confidence: "sure" }
+          : { kg: null, source: "none", confidence: "guess" },
     muscleWeek,
     food: food ?? undefined,
+    ...(options?.week ? { week: options.week } : {}),
   });
 
-  if (startingLift) {
+  if (related) {
+    // A guess from another lift: say which, and that the first set checks it.
+    const from = `${related.basis.name.toLowerCase()} ${related.basis.weight} × ${related.basis.reps}`;
+    output = { ...output, change: { kind: "first", text: `From your ${from}`, detail: "A guess from another lift: your first set checks it." } };
+    if (output.reasoning) output = { ...output, reasoning: { ...output.reasoning, inputs: { ...output.reasoning.inputs, relatedTo: from }, summary: [
+      `Not logged yet, so this starts from your ${from}, on the light side${related.confidence === "guess" ? " (a different movement or a machine, so lighter still)" : ""}.`,
+      ...(output.reasoning.summary ?? []).map((l) => l.replace(/( × \d+) (today|on [^.,]+)/, "$1")),
+    ] } };
+  } else if (startingLift) {
     // Not "−17.5 kg" or "+1 rep" against a set nobody logged.
     output = { ...output, change: { kind: "first", text: "From your best lift", detail: startingLiftLine(startingLift) } };
   }
-  if (startingLift && output.reasoning) {
+  if (startingLift && !related && output.reasoning) {
     output = { ...output, reasoning: { ...output.reasoning, inputs: { ...output.reasoning.inputs, startingLift: `${startingLift.weightKg} × ${startingLift.reps}` }, summary: [
       startingLiftLine(startingLift),
       // "from 150 × 5 today" would read as a logged set: it was typed in.

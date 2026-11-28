@@ -118,6 +118,9 @@ export type SetEntry = {
   machineId?: string | null;
   /** Rate of perceived exertion, 6–10 (RPE) or left unset. */
   rpe?: number | null;
+  /** Phase 6.15: done without kit the plan counted on ("pin"): estimates and progressions don't
+   * read it as a step back. */
+  withoutKit?: string[];
   /**
    * What the progression plan asked for on this set. A planned set starts with
    * reps 0 and is logged by ticking it (reps/weight copied from here) or by
@@ -200,6 +203,8 @@ export type CardioInterval = {
 export type CardioBlockData = {
   activityName: string;
   intervals: CardioInterval[];
+  /** What a coach's program planned, in words: "20 min · zone 2", "6 × 1:00 hard, 2:00 easy". */
+  planned?: string;
   superset?: SupersetInfo;
 };
 
@@ -243,6 +248,9 @@ export type MobilitySet = {
 
 export type MobilityBlockData = {
   drillName: string;
+  /** A coach's program picked this drill's progression (builder round 2); wins over the
+   * lifter's own choice for this drill in this workout. */
+  algorithmId?: string;
   /** Catalog reference; undefined for a free-text drill. */
   drillId?: string;
   metric: MobilityMetric;
@@ -507,7 +515,7 @@ export function normalizeSupersets(session: WorkoutSession): WorkoutSession {
 export function addSet(
   session: WorkoutSession,
   exerciseEntryId: string,
-  defaults?: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "machineId" | "target">>,
+  defaults?: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "machineId" | "target" | "restDurationMs">>,
 ): WorkoutSession {
   return updateStrengthBlock(session, exerciseEntryId, (data) => {
     const set: SetEntry = {
@@ -519,6 +527,8 @@ export function addSet(
       orderIndex: data.sets.length,
       machineId: defaults?.machineId,
       ...(defaults?.target ? { target: defaults.target } : {}),
+      // A coach's planned rest (PB17); without one, the client's own rest settings apply.
+      ...(defaults?.restDurationMs ? { restDurationMs: defaults.restDurationMs } : {}),
     };
     return { ...data, sets: [...data.sets, set] };
   });
@@ -528,7 +538,7 @@ export function updateSet(
   session: WorkoutSession,
   exerciseEntryId: string,
   setId: string,
-  patch: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "completed" | "restDurationMs" | "restStartedAtMs" | "machineId" | "rpe" | "target">>,
+  patch: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "completed" | "restDurationMs" | "restStartedAtMs" | "machineId" | "rpe" | "target" | "withoutKit">>,
 ): WorkoutSession {
   return updateStrengthBlock(session, exerciseEntryId, (data) => ({
     ...data,

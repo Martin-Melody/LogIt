@@ -28,6 +28,8 @@ export type ExerciseHistoryEntry = {
   /** The lifter's bodyweight (kg) around that session, when known — for the
    * volume of bodyweight and assisted exercises. */
   bodyweightKg?: number;
+  /** A plugin block that logged these sets ("Weight finder"), shown as a tag in history. */
+  from?: string;
 };
 
 export type PrecedingExercise = {
@@ -88,6 +90,14 @@ export type ProgressionInput = {
   /** The lifter's current strength for this exercise: the best estimated 1RM from the last
    * few sessions (see LogIt Adaptive), with the set it came from. */
   strengthEstimate?: { kg: number; fromWeightKg: number; fromReps: number; performedAtMs: number };
+  /** Where this exercise's numbers come from and how sure they are (Phase 6.2): "logged" (their own
+   * sets), "typed" (a best lift they entered), "related" (worked out from another lift: a guess),
+   * or "none". Plugins read it to stay further from failure while it's a guess. */
+  estimate?: { kg: number | null; source: "logged" | "typed" | "related" | "none"; confidence: "sure" | "rough" | "guess"; basis?: string };
+  /** The program week this is for, when it's a coach's program (Phase 6.4): its number, type
+   * ("deload", "test", "own"…), name and whether the progression moves on that week. A progression
+   * that handles week types says readsWeekTypes; for others LogIt applies the week's change. */
+  week?: { number: number; kind: import("./weekTypes").WeekKind; name: string; progression: "moves" | "pauses" };
   /** This week's hard sets for the exercise's main muscle against that muscle's target
    * (Progress › Sets this week). */
   muscleWeek?: { muscle: MuscleGroup; done: number; lo: number; hi: number };
@@ -199,6 +209,10 @@ export type ProgressionAlgorithm = ProgressionAlgorithmMeta & {
   defaultState: unknown;
   defaultPreferences?: unknown; // used as initial values when no stored prefs exist
   preferencesSchema?: AlgorithmPreferencesField[]; // if present, app renders a settings screen for this algorithm
+  /** It handles input.week itself (a deload, a test week). Without it LogIt applies the week's change. */
+  readsWeekTypes?: boolean;
+  /** It plans how many sets each workout (its output's sets): a coach's builder hides Sets. */
+  decidesSets?: boolean;
   // Built-in algorithms are synchronous; community algorithms run in the
   // interpreter sandbox and resolve asynchronously. Callers must await.
   suggest(input: ProgressionInput): ProgressionOutput | Promise<ProgressionOutput>;

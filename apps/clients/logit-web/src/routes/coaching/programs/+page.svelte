@@ -1,4 +1,8 @@
 <script lang="ts">
+  import NewProgramDialog from "$lib/features/coaching/programs/NewProgramDialog.svelte";
+  import { putStretch, type StretchInput } from "@logit/core/domain/stretches";
+  import { setLength } from "@logit/core/domain/programBuilder";
+  import { createId } from "@logit/core/domain/ids";
   import { updateCopy } from "@logit/core/domain/programBuilder";
   import { forBuilder } from "@logit/core/domain/programBuilder";
   import ProgramBuilder from "$lib/features/coaching/programs/ProgramBuilder.svelte";
@@ -17,7 +21,8 @@
   import type { MyCoachProgram } from "@logit/core/data/coachProgramRepo";
   import { getWebCoachProgramRepo } from "$lib/deps";
   import ProgramEditor from "$lib/features/coaching/ProgramEditor.svelte";
-  import RulesTab from "$lib/features/coaching/programs/RulesTab.svelte";
+  import ProgressionsTab from "$lib/features/coaching/programs/ProgressionsTab.svelte";
+  import SwapsTab from "$lib/features/coaching/programs/SwapsTab.svelte";
   import ExercisesTab from "$lib/features/coaching/programs/ExercisesTab.svelte";
   import AssignProgramDialog from "$lib/features/coaching/programs/AssignProgramDialog.svelte";
   import StartFromProgramDialog from "$lib/features/coaching/programs/StartFromProgramDialog.svelte";
@@ -45,7 +50,8 @@
   let assignFor = $state<CoachProgram | null>(null);
   type Source = "yours" | "logit" | "community";
   // Canvas PG1/PG10: Programs and Rules (Exercises joins them in 2.6).
-  const pageTab = $derived.by(() => { const t = page.url.searchParams.get("tab"); return t === "rules" || t === "exercises" ? t : "programs"; });
+  // "rules" is the old name of Progressions (and its swaps half), kept for old links.
+  const pageTab = $derived.by(() => { const t = page.url.searchParams.get("tab"); return t === "rules" ? "progressions" : t === "progressions" || t === "swaps" || t === "exercises" ? t : "programs"; });
   const setPageTab = (v: string) => void goto(v === "programs" ? "/coaching/programs" : `/coaching/programs?tab=${v}`, { replaceState: true, noScroll: true, keepFocus: true });
   let source = $state<Source>("yours");
   let startOpen = $state(false);
@@ -133,11 +139,16 @@
     void goto(`/coaching/programs?id=${id}`, { noScroll: true, keepFocus: true });
   }
 
-  async function create() {
+  // Canvas PW1: New program sets up its weeks first.
+  let newOpen = $state(false);
+  async function create(name = "New program", weeks = 1, stretches: StretchInput[] = []) {
     busy = true;
     try {
-      let p = P.createCoachProgram("New program");
+      let p = P.createCoachProgram(name);
       p = P.addDay(p, p.weeks[0].id, "Day 1");
+      if (weeks > 1) p = setLength(p, weeks);
+      for (const s of stretches) p = putStretch(p, s, () => createId("phase"));
+      newOpen = false;
       await getWebCoachProgramRepo().saveProgram(p);
       rows = [...rows, { program: p, recipientUserId: null }];
       select(p.id);
@@ -152,7 +163,7 @@
   // ?new=1 (from ⌘K): start a new program once the list has loaded.
   $effect(() => {
     if (loading || !page.url.searchParams.has("new")) return;
-    untrack(() => void goto("/coaching/programs", { replaceState: true, noScroll: true }).then(create));
+    untrack(() => void goto("/coaching/programs", { replaceState: true, noScroll: true }).then(() => (newOpen = true)));
   });
 
   const duplicate = () => (selected ? duplicateOf(selected) : Promise.resolve());
@@ -251,13 +262,13 @@
         <p class="mt-1 text-[13px] text-muted-foreground">Build once, assign to anyone. Each client gets their own copy.</p>
       </div>
       <span class="flex flex-wrap gap-2">
-        {#if pageTab === "rules"}
-          <Button href="/coaching/programs/rules/new">New rule</Button>
+        {#if pageTab === "progressions"}
+          <Button href="/coaching/programs/rules/new">New progression</Button>
         {:else if pageTab === "exercises"}
           <Button href="/library">New exercise</Button>
         {:else}
           <Button variant="outline" onclick={() => { startTab = source === "community" ? "community" : "logit"; startOpen = true; }}>Start from a program</Button>
-          <Button data-guide="programs-new" disabled={busy} onclick={() => void create()}>New program</Button>
+          <Button data-guide="programs-new" disabled={busy} onclick={() => (newOpen = true)}>New program</Button>
         {/if}
       </span>
     </header>
@@ -268,14 +279,17 @@
       <Skeleton class="h-72" />
     {:else}
       <Tabs.Root value={pageTab} onValueChange={setPageTab}>
-        <Tabs.List variant="line" aria-label="Programs, exercises and rules">
+        <Tabs.List variant="line" aria-label="Programs, exercises, progressions and swaps">
           <Tabs.Trigger value="programs">Programs</Tabs.Trigger>
           <Tabs.Trigger value="exercises">Exercises</Tabs.Trigger>
-          <Tabs.Trigger value="rules">Rules</Tabs.Trigger>
+          <Tabs.Trigger value="progressions">Progressions</Tabs.Trigger>
+          <Tabs.Trigger value="swaps">Swaps</Tabs.Trigger>
         </Tabs.List>
       </Tabs.Root>
-      {#if pageTab === "rules"}
-        <RulesTab programs={library} {clients} bind:swapRule />
+      {#if pageTab === "progressions"}
+        <ProgressionsTab programs={library} />
+      {:else if pageTab === "swaps"}
+        <SwapsTab programs={library} {clients} bind:swapRule onchange={(next) => { const byId = new Map(next.map((p) => [p.id, p])); rows = rows.map((r) => (byId.has(r.program.id) ? { ...r, program: byId.get(r.program.id)! } : r)); }} />
       {:else if pageTab === "exercises"}
         <ExercisesTab programs={active} assigned={rows.filter((r) => r.recipientUserId !== null && !r.program.archived).map((r) => r.program)} />
       {:else}
@@ -353,3 +367,5 @@
                     <span class="text-[13px] text-muted-foreground">{P.programSummary(p)}</span>
   </button>
 {/snippet}
+
+<NewProgramDialog bind:open={newOpen} {busy} oncreate={(n, w, s) => void create(n, w, s)} />

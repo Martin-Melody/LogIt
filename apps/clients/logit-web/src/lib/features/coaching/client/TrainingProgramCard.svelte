@@ -38,6 +38,37 @@
 
   const DAY = 86_400_000;
   const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  // Canvas EQ1: when their plan outgrows their gym, told ahead with what should happen.
+  let places = $state<Place[]>([]);
+  let bringsPin = $state(false);
+  $effect(() => {
+    if (!shared) return;
+    void syncApi.pullPlaces(0, clientId).then((r) => (places = r.places.flatMap((x) => (x.dataJson && !x.deletedAtMs ? [JSON.parse(x.dataJson) as Place] : []))), () => (places = []));
+    void syncApi.pullProfile(clientId).then((r) => (bringsPin = parseKit(r.profile?.kitJson).includes("pin")), () => {});
+  });
+  const limits = $derived.by(() => {
+    if (!p || status?.state !== "running") return [];
+    const known = knownLifts(sessions, Date.now(), 180);
+    const e1rm = (n: string) => known.find((k) => k.name.toLowerCase() === n.toLowerCase())?.e1rm ?? relatedEstimate(n, known)?.e1rmKg ?? null;
+    return gymLimits(p, usualGym(places), { e1rm: withHandoffs(p, e1rm) }, status.week ?? 1).filter((l) => !l.decided);
+  });
+  let limitOpen = $state(false);
+  let limit = $state<GymLimit | null>(null);
+  async function pickLimit(choice: { atTop: NonNullable<ProgramStrength["atTop"]> } | { swapFrom: number; exerciseName: string; exerciseId?: string }) {
+    if (!p || !limit) return;
+    const id = limit.blockId;
+    let next: CoachProgram;
+    if ("atTop" in choice) {
+      next = { ...p, weeks: p.weeks.map((w) => ({ ...w, days: w.days.map((d) => ({ ...d, blocks: d.blocks.map((b) => (b.id === id && b.type === "strength" ? { ...b, atTop: choice.atTop } : b)) })) })) };
+    } else {
+      next = p;
+      for (const w of p.weeks) for (const d of w.days) if (d.blocks.some((b) => b.id === id)) next = replaceFromWeek(next, w.id, d.id, id, choice.swapFrom, { exerciseName: choice.exerciseName, exerciseId: choice.exerciseId }, createId("pblock"));
+    }
+    await getWebCoachProgramRepo().saveProgram({ ...next, updatedAtMs: Date.now() }, username);
+    toast.success("Saved in their copy");
+    await onchange();
+  }
   const first = $derived(name.split(" ")[0]);
   let assigning = $state(false);
   let stopping = $state(false);
@@ -125,6 +156,13 @@
       toast.error(e instanceof Error ? e.message : "Couldn't stop it");
     }
   }
+  import GymLimitDialog from "./GymLimitDialog.svelte";
+  import { syncApi } from "@logit/core/api/syncApi";
+  import { parseKit } from "@logit/core/domain/kit";
+  import { gymLimits, usualGym, type GymLimit } from "@logit/core/domain/gymLimits";
+  import { knownLifts, relatedEstimate } from "@logit/core/domain/relatedLifts";
+  import { replaceFromWeek, withHandoffs, type ProgramStrength } from "@logit/core/domain/CoachProgram";
+  import type { Place } from "@logit/core/domain/place";
 </script>
 
 <section class="flex flex-col gap-3 rounded-[12px] border border-border bg-card px-[18px] py-4">
@@ -177,6 +215,13 @@
             <span class="block text-xs text-muted-foreground">{n.kind === "block" ? "Until then the block is a note in their workout." : "Until then those exercises repeat last time's numbers."}{c ? "" : " They're asked when they open the program on their phone."}</span></span>
         </p>
       {/if}
+    {/each}
+    {#each limits as l (l.blockId)}
+      <p class="flex items-start gap-2 rounded-[9px] border border-warning/40 bg-warning/5 px-3 py-2 text-[13px]">
+        <span class="flex-1"><b class="font-medium">{l.exerciseName} outgrows {first}'s gym in week {l.week}</b>
+          <span class="block text-xs text-muted-foreground">{l.what === "dumbbells" ? `Heaviest dumbbells at ${l.placeName}: ${l.topKg} kg` : `${l.what} at ${l.placeName} goes to ${l.topKg} kg`}; the plan reaches {l.plannedKg} kg. If you do nothing, the weight stays there and the reps go up.</span></span>
+        <Button size="sm" onclick={() => { limit = l; limitOpen = true; }}>Decide</Button>
+      </p>
     {/each}
     {#if swaps.length}
       <!-- Canvas Q8: their swaps; a lasting one asks to be kept or put back. -->
@@ -238,3 +283,7 @@
     </AlertDialog.Footer>
   </AlertDialog.Content>
 </AlertDialog.Root>
+
+{#if limit}
+  <GymLimitDialog bind:open={limitOpen} {limit} {first} {bringsPin} onpick={pickLimit} />
+{/if}

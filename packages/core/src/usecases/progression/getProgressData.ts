@@ -1,4 +1,5 @@
-import { getExercises, getSetVolumeKg } from "../../domain/workout";
+import { loggedExercises } from "../../domain/loggedSets";
+import { getSetVolumeKg } from "../../domain/workout";
 import type { ExerciseProgressionState } from "../../domain/progression";
 import type { ProgressionDeps } from "./deps";
 
@@ -40,7 +41,7 @@ export async function getProgressData(
   const byKey = new Map<string, Accumulator>();
 
   for (const session of sessions) {
-    for (const ex of getExercises(session)) {
+    for (const ex of loggedExercises(session)) {
       const key = ex.exerciseId ?? ex.exerciseName.toLowerCase().trim();
 
       if (!byKey.has(key)) {

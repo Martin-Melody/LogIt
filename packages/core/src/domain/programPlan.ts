@@ -18,7 +18,8 @@
 import { loadFromPercent } from "./oneRepMax";
 import { getExercises, type WorkoutSession } from "./workout";
 import type { ProgressionOutput } from "./progression";
-import { ruleFor, type CoachProgram, type ProgramRule, type ProgramSet, type ProgramStrength, type ProgramWeek } from "./CoachProgram";
+import { inWeek, phaseAt, ruleFor, type CoachProgram, type ProgramRule, type ProgramSet, type ProgramStrength, type ProgramWeek, phaseBlock, numbersAt } from "./CoachProgram";
+import { weekTypeOf, weekTypeLabel, weekSets, weekWeight, weekReps } from "./weekTypes";
 
 export type PlanCell = {
   /** done: what they did; pinned: typed by the coach; rule: planned by the rule; words: no numbers yet. */
@@ -67,10 +68,18 @@ export function planExercise(program: CoachProgram, blockId: string, ctx: PlanCo
   const out: (PlanCell | null)[] = [];
   let k = -1; // index among the normal (not lighter) weeks
   let lastWeight: number | undefined;
+  let phaseId: string | null | undefined;
   for (const w of weeks) {
+    // A new phase starts its own progression from the estimate (canvas SP5).
+    const ph = phaseAt(program, w.weekNumber)?.id ?? null;
+    if (phaseId !== undefined && ph !== phaseId) { k = -1; lastWeight = undefined; }
+    phaseId = ph;
     const block = findBlock(w, blockId);
-    if (!block) { out.push(null); continue; }
-    const cell = planWeek(program, w, block, ctx, w.lighter ? k : ++k, lastWeight);
+    // Not in this week (6.7): "—", and its progression counts only the weeks it runs.
+    if (!block || !inWeek(block, w.weekNumber)) { out.push(null); continue; }
+    // A week whose type pauses the progression (a deload) plans from where it was; the next carries on.
+    const wt = weekTypeOf(w);
+    const cell = planWeek(program, w, block, ctx, wt?.progression === "pauses" ? k : ++k, lastWeight);
     if (cell.weight != null) lastWeight = cell.weight;
     out.push(cell);
   }
@@ -78,7 +87,8 @@ export function planExercise(program: CoachProgram, blockId: string, ctx: PlanCo
 }
 
 function findBlock(w: ProgramWeek, id: string): ProgramStrength | null {
-  for (const d of w.days) for (const b of d.blocks) if (b.id === id && b.type === "strength") return b;
+  // As it is that week (canvas PX3): a stretch's own sets, reps and progression.
+  for (const d of w.days) for (const b of d.blocks) if (b.id === id && b.type === "strength") return numbersAt(b, w.weekNumber);
   return null;
 }
 
@@ -92,16 +102,23 @@ function planWeek(program: CoachProgram, week: ProgramWeek, block: ProgramStreng
   if (pinned) return { source: "pinned", weight: pinned.weight, reps: repsText(pinned), sets: count };
   if (!first) return { source: "words", sets: 0, words: "No working sets" };
 
-  const rule = ruleFor(program, block);
+  // A circuit that moves by its own setting (same every week, or a round every two weeks) keeps
+  // its members' numbers as typed; "each exercise's own progression" lets theirs run (6.6 r2).
+  const group = block.supersetGroup ? week.days.flatMap((d) => d.groups ?? []).find((g) => g.id === block.supersetGroup) : undefined;
+  const rule = group?.kind === "circuit" && group.progression !== "each" ? ({ kind: "fixed" } as ProgramRule) : ruleFor(program, block, week.weekNumber);
   // A rule built from blocks can set its own rep range; it wins over the exercise's.
   const r = (rule.kind === "own" && rule.recipe?.repRange) || range(first);
-  if (week.lighter) {
-    const lighterSets = Math.max(1, Math.round(count / 2));
+  // The week's type changes what the progression planned (canvas PB5): sets, load, reps, a test set.
+  const wt = weekTypeOf(week);
+  if (wt?.progression === "pauses") {
+    const sets = weekSets(wt, count);
     return lastWeight != null
-      ? { source: "rule", weight: lastWeight, reps: String(r?.[0] ?? repsText(first) ?? ""), sets: lighterSets }
-      : { source: "words", sets: lighterSets, words: `${lighterSets} ${lighterSets === 1 ? "set" : "sets"}, lighter week` };
+      ? { source: "rule", weight: weekWeight(wt, lastWeight), reps: weekReps(wt, String(r?.[0] ?? repsText(first) ?? "")), sets }
+      : { source: "words", sets, words: `${sets} ${sets === 1 ? "set" : "sets"}, ${weekTypeLabel(wt).toLowerCase()} week` };
   }
-  return planByRule(rule, block, first, r, k, ctx, count);
+  const cell = planByRule(rule, block, first, r, k, ctx, count);
+  if (!wt) return cell;
+  return { ...cell, sets: weekSets(wt, cell.sets), weight: weekWeight(wt, cell.weight), reps: weekReps(wt, cell.reps), ...(cell.words ? { words: `${cell.words} · ${weekTypeLabel(wt)}` } : {}) };
 }
 
 function planByRule(rule: ProgramRule, block: ProgramStrength, first: ProgramSet, r: [number, number] | null, k: number, ctx: PlanContext, count: number): PlanCell {
@@ -282,6 +299,13 @@ export function pluginsNeeded(program: CoachProgram): NeededPlugin[] {
     out.set(pluginId, n);
   };
   if (program.rule?.kind === "plugin") add(program.rule.pluginId, program.rule.name, "rule", "every exercise");
+  // A phase's block and progression (6.10): "Weight finder" in "Find your weights, week 1".
+  for (const ph of program.phases ?? []) {
+    const where = `${ph.name}, ${ph.weeks.from === ph.weeks.to ? `week ${ph.weeks.from}` : `weeks ${ph.weeks.from}–${ph.weeks.to}`}`;
+    const blk = phaseBlock(ph);
+    if (blk) add(blk, ph.pack?.name ?? ph.name, "block", where);
+    if (ph.rule?.kind === "plugin") add(ph.rule.pluginId, ph.rule.name, "rule", where);
+  }
   const first = [...program.weeks].sort((a, b) => a.weekNumber - b.weekNumber)[0];
   for (const d of first?.days ?? []) {
     for (const b of d.blocks) {

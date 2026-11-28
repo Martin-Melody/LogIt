@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { loggedExercises } from "@logit/core/domain/loggedSets";
   import type { PluginConsent } from "@logit/core/api/coachApi";
   import * as Table from "$lib/components/ui/table/index.js";
   import { onMount } from "svelte";
@@ -13,6 +14,10 @@
   import { sessionVolumeKg } from "$lib/features/sessionVolume";
   import NotShared from "./NotShared.svelte";
   import TrainingProgramCard from "./TrainingProgramCard.svelte";
+  import StartingPoint from "./StartingPoint.svelte";
+  import { page } from "$app/state";
+  import { slide } from "svelte/transition";
+  import { Button } from "$lib/components/ui/button";
   import { currentProgram, type ProgramStatus } from "../coachingData";
   import { getWebCoachProgramRepo } from "$lib/deps";
   import { loadWebLibrary } from "$lib/features/library/libraryData";
@@ -65,11 +70,11 @@
     const by = new Map<string, { t: number; e1rm: number }[]>();
     for (const s of sessions) {
       if (s.startedAtMs < since) continue;
-      for (const b of s.blocks) {
-        if (b.type !== "strength") continue;
-        const best = bestWorkingSet((b.data as StrengthBlockData).sets);
+      // Every block's sets count (Phase 6.1): plugin blocks that log sets too.
+      for (const ex of loggedExercises(s)) {
+        const best = bestWorkingSet(ex.sets);
         if (!best || best.weight <= 0) continue;
-        const key = blockDisplayName(b);
+        const key = ex.exerciseName;
         const list = by.get(key) ?? [];
         list.push({ t: s.startedAtMs, e1rm: estimated1RM(best.weight, best.reps) });
         by.set(key, list);
@@ -94,9 +99,9 @@
     let best: { weight: number; reps: number } | null = null;
     for (const s of sessions) {
       if (s.startedAtMs < since) continue;
-      for (const b of s.blocks) {
-        if (b.type !== "strength" || blockDisplayName(b) !== lift) continue;
-        const set = bestWorkingSet((b.data as StrengthBlockData).sets);
+      for (const ex of loggedExercises(s)) {
+        if (ex.exerciseName !== lift) continue;
+        const set = bestWorkingSet(ex.sets);
         if (set && (!best || estimated1RM(set.weight, set.reps) > estimated1RM(best.weight, best.reps))) best = set;
       }
     }
@@ -134,6 +139,16 @@
     return done.map((s) => (s.weight ? `${s.weight} × ${s.reps}` : `${s.reps}`)).join(", ") || "–";
   }
 
+  // Canvas SP1: the starting point, open while they're new (no program running, or its first two
+  // weeks), or from ⋯ › Starting point (?start=1).
+  let startOpen = $state<boolean | null>(page.url.searchParams.get("start") === "1" ? true : null);
+  const isNew = $derived(!program || program.state !== "running" || (program.week ?? 1) <= 2);
+  const showStart = $derived(startOpen ?? isNew);
+  const programExercises = $derived.by(() => {
+    const w = program?.program.weeks.find((x) => x.weekNumber === 1) ?? program?.program.weeks[0];
+    return [...new Set((w?.days ?? []).flatMap((d) => d.blocks.flatMap((b) => (b.type === "strength" ? [b.exerciseName] : []))))];
+  });
+
   function openIn(path: string) {
     viewingClient.set(clientId);
     void goto(path);
@@ -143,6 +158,16 @@
 <div class="mb-4">
   <TrainingProgramCard status={program} {clientId} {relationshipId} {username} {name} {sessions} {swaps} {pluginConsent} shared={sharing.workouts} onchange={loadProgram} />
 </div>
+{#if sharing.workouts && !loading && !error}
+  {#if showStart}
+    <div class="mb-4" transition:slide={{ duration: 180 }}>
+      <StartingPoint {clientId} {name} {sharing} {sessions} {programExercises} />
+      {#if !isNew || startOpen}<Button variant="ghost" size="sm" class="mt-1" onclick={() => (startOpen = false)}>Hide the starting point</Button>{/if}
+    </div>
+  {:else}
+    <Button variant="outline" size="sm" class="mb-4" onclick={() => (startOpen = true)}>Starting point</Button>
+  {/if}
+{/if}
 {#if !sharing.workouts}
   <NotShared {name} what="their workouts" note="You can still give them programs." />
 {:else if error}

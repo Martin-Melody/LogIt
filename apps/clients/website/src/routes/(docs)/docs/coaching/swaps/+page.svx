@@ -15,4 +15,9 @@ title: Exercise swaps
 In a program, list approved swaps under each exercise; they're shown to the client first and always
 allowed.
 
+When a client swaps, their phone asks why: **It hurts**, **I don't feel safe**, **Not at my gym** or
+**Something else**, with an optional note. You get a message with the exercise filled in ("I swapped
+Back squat for Leg press today. It hurts: left knee when I go deep."), whatever your swap rule
+allows, so you hear about it either way.
+
 <CanCant ids={["coach-swaps"]} />

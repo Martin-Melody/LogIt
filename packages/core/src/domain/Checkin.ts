@@ -438,6 +438,19 @@ export function checkinRows(
   return { current, earlier };
 }
 
+/** Whether Home should ask for this check-in now. A recurring one is asked near the end of its
+ * period (the last 2 days of a week, 3 of a fortnight, 5 of a month), so a new client's first
+ * weekly check-in comes at the end of their first week, not the day they join. A draft, a late
+ * one or a form sent by hand is asked straight away. It can still be filled in early from the
+ * Check-ins page. */
+export function asksNow(row: Pick<CheckinRow, "schedule" | "state" | "dueMs">, atMs: number = nowMs()): boolean {
+  if (row.state === "draft" || row.state === "late") return true;
+  if (row.state !== "due") return false;
+  const lead = { weekly: 2, biweekly: 3, monthly: 5 }[row.schedule.cadence as "weekly"];
+  if (!lead || row.dueMs == null) return true;
+  return atMs >= row.dueMs - lead * 24 * 3600_000;
+}
+
 /** "Week of Nov 2", "Month of Oct 5", or the form's name for a manual one. */
 export function checkinPeriodLabel(row: Pick<CheckinRow, "schedule" | "periodStartMs">, formatDate: (ms: number) => string): string {
   switch (row.schedule.cadence) {

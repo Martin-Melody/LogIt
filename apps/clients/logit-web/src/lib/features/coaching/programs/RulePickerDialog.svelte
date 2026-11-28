@@ -1,12 +1,12 @@
 <!-- One rule picker (canvas PG4): how an exercise's weight moves up, for the whole program or
-     one exercise. Built in, your own rules (Programs › Rules), and ones from your plugins. The
+     one exercise. Built in, your own (Programs › Progressions), and ones from your plugins. The
      same picker will choose meal plans' training-day targets in Nutrition. -->
 <script lang="ts">
   import * as Dialog from "$lib/components/ui/dialog";
   import { Button } from "$lib/components/ui/button";
   import { describeRecipe } from "@logit/core/domain/progressionRecipe";
   import type { ProgramRule } from "@logit/core/domain/CoachProgram";
-  import { plugins } from "$lib/features/plugins/pluginData.svelte";
+  import { fetchSource, pluginMeta, plugins } from "$lib/features/plugins/pluginData.svelte";
   import { ownRule, rules } from "./rules.svelte";
 
   let { open = $bindable(false), current, exercise = null, onpick }: {
@@ -42,7 +42,13 @@
   const label = (r: ProgramRule | null) => !r ? "the program's" : r.kind === "adaptive" ? "LogIt Adaptive" : r.kind === "linear" ? "Linear Progression" : r.kind === "wave" ? "4-week wave" : r.kind === "fixed" ? "Fixed" : r.name;
 
   function choose(r: ProgramRule | null) { picked = r; }
-  function use() {
+  async function use() {
+    // A plugin progression that plans how many sets says so (builder round 2): Sets hides.
+    if (picked?.kind === "plugin") {
+      const p = plugins.installed.find((x) => x.manifest.id === (picked as { pluginId: string }).pluginId);
+      const meta = p ? await fetchSource(p.manifest as never).then((s) => pluginMeta("progression-algorithm", s)).catch(() => null) : null;
+      picked = { ...picked, ...(meta?.decidesSets === true ? { decidesSets: true } : {}) };
+    }
     onpick(picked, exercise ? scope : "program");
     open = false;
   }
@@ -72,24 +78,24 @@
 
 
 
-    <div class="flex flex-col gap-4" role="radiogroup" aria-label="Rule">
+    <div class="flex flex-col gap-4" role="radiogroup" aria-label="Progression">
       {#if exercise && scope === "exercise"}
-        {@render option(null, "The program's rule", "Follow whatever the program uses.")}
+        {@render option(null, "The program's progression", "Follow whatever the program uses.")}
       {/if}
       <section class="flex flex-col gap-1.5">
         <h3 class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Built in</h3>
         {#each BUILT_IN as b (b.title)}{@render option(b.rule, b.title, b.text)}{/each}
       </section>
       <section class="flex flex-col gap-1.5">
-        <h3 class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Your rules</h3>
+        <h3 class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Your progressions</h3>
         {#each rules.list as r (r.id)}{@render option(ownRule(r), r.name, describeRecipe(r), "Yours")}
-        {:else}<p class="text-xs text-muted-foreground">None yet. Make one in Programs › Rules.</p>{/each}
+        {:else}<p class="text-xs text-muted-foreground">None yet. Make one in Programs › Progressions.</p>{/each}
       </section>
       <section class="flex flex-col gap-1.5">
         <h3 class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">From your plugins</h3>
         {#each pluginRules as p (p.manifest.id)}{@render option({ kind: "plugin", pluginId: p.manifest.id, name: p.manifest.name }, p.manifest.name, `${p.manifest.description} Runs on their phone; they're asked to allow it.`, "Community")}
         {:else}<p class="text-xs text-muted-foreground">No progression plugins installed.</p>{/each}
-        <Button variant="outline" size="sm" class="self-start" href="/plugins?family=progression-algorithm">Browse community rules</Button>
+        <Button variant="outline" size="sm" class="self-start" href="/plugins?family=progression-algorithm">Browse community progressions</Button>
       </section>
     </div>
 

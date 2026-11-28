@@ -30,6 +30,8 @@ export function clientActions(c: ClientSummary): RowAction[] {
     { id: "next-block", label: "Plan the next block…", href: `${page}/next-block`, disabled: c.program ? undefined : "Not on a program from you" },
     { id: "meal-plan", label: "Give a meal plan…", href: `${page}?tab=nutrition&give=1` },
     { id: "training", label: "See their training", href: `${page}?tab=training`, disabled: c.sharing.workouts ? undefined : "Not shared" },
+    // Canvas SP1: what their training says about where they start.
+    { id: "starting-point", label: "Starting point", href: `${page}?tab=training&start=1`, disabled: c.sharing.workouts ? undefined : "Not shared" },
     {
       id: "checkin",
       label: "Review their check-in",

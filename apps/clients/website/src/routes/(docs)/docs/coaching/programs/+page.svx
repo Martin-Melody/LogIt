@@ -22,6 +22,46 @@ copy, or your clients'.
 
 <HowTo id="studio.program" />
 
+Each day is a list you can drag (or move with the arrow keys on its grip); a superset or circuit
+moves as one. Click an exercise to open its settings right there. **+ Add to** the day opens one
+search over exercises, cardio and mobility drills: pick one and Add, or pick several and add them
+separately, as a superset or as a circuit. A superset or circuit opens its settings straight away.
+
+Supersets and circuits are one thing with a type. The header says which, its name, its rounds and
+rests and how it moves up; **Edit…** opens its settings: Superset or Circuit, the name, rounds,
+the rest between exercises and between rounds, each exercise's reps or time per round (with
+**+ Exercise** and × to take one out), and how it moves up. Each exercise inside still opens on its
+own for everything else. Drag an exercise by its grip into a group, out of it or within it, or use
+Alt and the arrow keys. ⋯ on the header has Ungroup.
+
+What an exercise's settings show depends on its progression. With a progression (LogIt Adaptive,
+Linear, a wave, yours or a plugin's) you set the sets, rep range, rest and tempo it plans from,
+and whether warm-ups are on, off or the client's choice; it works out the weights each workout. A
+progression that decides the number of sets too says "Decided by …" instead of Sets. With
+**Fixed** you plan every set: its type (warm-up, normal, drop set and so on), reps, load, rest and
+RPE, and **Calculate warm-ups** builds the ramp up to the first working set, the one the phone uses.
+
+Rest and warm-ups you set are what the client's workout starts with; left blank, their own
+settings fill them in, and they can still change either during the workout. Each side appears for
+one-sided lifts like a Bulgarian split squat. Mobility drills have their measure (hold or reps),
+each side and their own progression, or the client's. Cardio can have intervals (work, easy,
+repeat) and an effort, shown on their phone as "Planned".
+
+Different exercises in different weeks don't need six copies of a day. **Editing**, above the
+day, says which weeks you're changing: Every week (the default), a stretch, or one week; clicking
+a stretch in the bar picks it too (its ⋯ opens its settings). The day then shows as it is in those
+weeks, and every change goes to them: **+ Add** puts the exercise in those weeks (or every week, if
+you say so), an exercise's ⋯ has **Swap for weeks 7–9…** and **Take out of weeks 7–9**, and the
+exercises that aren't in those weeks are listed under the day with **Add to weeks 7–9**. In Every
+week each exercise shows its weeks ("Weeks 1–4"). ⋯ also has **Replace from week…** and **Only in
+some weeks…** for the same thing by hand.
+
+An exercise's sets, reps, rest, warm-ups and progression can differ by stretch too: while you're
+editing a stretch, the numbers you change are for those weeks only (4 × 8–12 in Hypertrophy, 3 × 3–5
+in Strength), and the exercise lists every stretch's numbers and progression; click one to edit it.
+In Every week it says "differs by stretch". A kind of week (a deload) still applies on top. Their phone and Every week leave an exercise out of the
+weeks it doesn't run in, and its progression counts only the weeks it runs.
+
 Changes save as you go, so leaving the page loses nothing. If the same program is open on another
 device, changes to different things come across by themselves with a note; only when both changed
 the same exercise does LogIt ask which to keep. Programs made before the builder whose weeks have
@@ -29,12 +69,11 @@ different exercises are still edited week by week.
 
 ## Circuits and blocks from plugins
 
-**+ Circuit** adds exercises done one after another, round after round: how many rounds, the
-rest between exercises and between rounds, and reps or a time for each exercise. It moves up the
-same every week, by a round every two weeks, or by each exercise's own rule. Clients run it
-with the circuit timer on their phone.
+A circuit runs with the circuit timer on the client's phone: each exercise, then the next, round
+after round. It moves up the same every week, by a round every two weeks, or by each exercise's own
+progression. Circuits made before were one block; Edit… turns one into a circuit of its exercises.
 
-**+ From a plugin** adds a block from a workout-block plugin you've added, like timed rounds of
+**Plugin blocks** (in + Add) adds a block from a workout-block plugin you've added, like timed rounds of
 rolling or hangboard hangs. Each plugin asks for its own settings, plus how many rounds (or
 hangs) it starts with. Find more in Plugins › Workout blocks.
 
@@ -51,53 +90,144 @@ a note in their workout and the rule's exercises repeating last time's numbers; 
 program works. Their Training tab tells you which: not asked yet, not allowed, or removed from
 their phone.
 
-## Rules
+## Progressions
 
-A rule decides how the numbers move from week to week. Pick one for the whole program at the
-top of the builder, and a different one for any exercise from its settings. LogIt Adaptive,
-Linear, the 4-week wave and Fixed are built in. Programs › Rules is where you make your own,
+A progression decides how the numbers move from week to week. Pick one for the whole program at
+the top of the builder, and a different one for any exercise from its settings. LogIt Adaptive,
+Linear, the 4-week wave and Fixed are built in. Programs › Progressions lists them all with what
+each does in a deload week, and is where you make your own,
 with the same builder lifters have on the phone: where the weight comes from (strength estimate,
 last session or a wave), the rep range, reps left, the set layout, the step, what happens on a
 stall, the number of sets and whether to hold in a calorie deficit. "What it would do" shows the
 numbers on a client's lift, and "In words" is what clients see under "Why this weight?". Your
-programs follow changes to a rule; clients' copies follow when you update them.
+programs follow changes to a progression; clients' copies follow when you update them.
 
-A client's copy can follow its own rule: ⋯ › Change their rule… on their Training tab. Clients'
-phones work out each week's numbers from their own lifts when they start the day. Programs ›
-Rules also has what clients can swap to.
+A client's copy can follow its own progression: ⋯ on their Training tab. Clients' phones work out
+each week's numbers from their own lifts when they start the day.
 
 ## Swaps
 
-What clients can swap to is in Programs › Rules: any exercise, the same main muscles, or only the
-swaps you list on each exercise. On the phone, after a swap they choose just today or for the rest
+What clients can swap to is in Programs › Swaps: any exercise, the same main muscles, or only the
+swaps you list for each exercise. The builder follows that rule: the swap list under an exercise
+shows only when it's lists only, and your first list asks once whether to switch to it. The same page has every exercise's swap list: adding a swap
+there adds it to that exercise in every program it's in (the builder shows the same list under the
+exercise). On the phone, after a swap they choose just today or for the rest
 of the program, with a reason if they like; the rest of the program tells you, and later days start
 with the swap. On their Training tab, Keep it changes their copy to match, and Put it back… puts the
 original back and tells them. A message asking about a swap has "Swap an exercise in their
 program…" on its menu, to change it in their copy straight from the conversation. Whatever your
 rule, "Do something else today" is always there for them; it logs as a swap you can see.
 
-## Every week
-
-See every week shows what the rule plans for each exercise, week by week. On a client's copy the
-numbers come from their own strength estimates, and weeks they've done show what they did; on your
-own program the rule is said in words ("6–8 reps, from their estimate") until you pick a client
-under Showing to preview it with their lifts.
+## What the built-in progressions do
 
 - **LogIt Adaptive** picks the weight from their estimate for the reps, leaving two in the tank.
 - **Linear** adds a rep a week through the range, then the step (+2.5 kg) and back to the bottom.
 - **4-week wave** runs 5s, 3s and 5/3/1 off a training max, then a light week.
 - **Fixed** keeps the numbers as you typed them.
-- **Lighter weeks** have about half the sets, at the bottom of the range and the same weight.
+
+## The weeks: stretches
+
+A program's weeks are set up as **stretches**: a range of weeks, an optional name, and what they
+do. **New program** starts with them: a name, how many weeks, then **Weeks 1 to 3** and what they
+do, in one go; **+ Next stretch** starts where the last one ended. Skip it and every week runs the
+program's progression.
+
+In the builder the weeks are one bar of stretches, each as wide as its weeks. Click one to change
+it, or drag the edge between two (or focus it and use the arrow keys) to move where one ends and
+the next starts. **Edit weeks** lists them, with **+ Stretch**. A stretch does one of these:
+
+- **Find your weights** runs LogIt's Weight finder on each lift: a jump at a time, asking "how many
+  more could you have done?", until they could only do 1 or 2 more. The next stretch plans from
+  what they found.
+- **Find your max** works up in heavy singles on the lifts you tick (the barbell ones to start
+  with), asking "how much more was there?" after each, until there's nothing left; the rest of
+  the day runs as normal. When it's done, Today shows "found their maxes": each lift's start (its
+  best estimate in the first weeks) against the heaviest single, with **Send** to put it in your
+  conversation.
+- **A progression** gives those weeks their own, like hypertrophy in weeks 1–4 and strength in 5–8,
+  or the program's own when you don't pick one.
+- **A starting phase from a plugin** you've installed (Coaching › Plugins › Starting phases), with
+  the block and progression it comes with.
+- **A kind of week**, on top of the progression it's in:
+  - **Intro**: an easier start, load −10%.
+  - **Deload**: half the sets, same weights. The progression pauses, and the week after carries on
+    from the week before.
+  - **Heavy**: load +5%, two fewer reps.
+  - **Test**: the last set is as many as they can; it sets the next estimate.
+  - **Your own**: a name, and ± sets, ± load %, ± reps, a last set as many as they can, and whether
+    the progression pauses. Once made, it's offered again.
+
+A deload in the middle of a progression is a one-week stretch of its own; the progression carries
+on after it. Making a stretch cover weeks another one has asks first. Remove gives its weeks back
+to the program's progression. Adding weeks to the program makes a stretch that ran to the end
+longer.
+
+The client's Home shows the stretch's name ("Week 5 of 8 · Hypertrophy"), and for a kind of week
+one line on what it means. A progression from a plugin is told the week's kind; if it doesn't
+handle it, LogIt applies the change to its numbers.
+
+When a Find your weights stretch is done, Today shows "found their weights" under Decide. **Check
+them** lists each lift's top set, its estimated max and how sure that is; change any that look
+wrong and press **Looks right**. If you don't get to it, the next stretch plans from what they found
+anyway.
+
+## Every week
+
+**See every week** shows what each week asks for, with the week types in the headings and a
+deload tinted. On a client's copy the numbers come from their own strength estimates, and weeks
+they've done show what they did. On one of your programs there's no lifter yet, so **Numbers for** shows an example
+lifter (bench 80 kg; **Change their lifts** to change them) or any client with a copy; other
+exercises are worked out from those lifts the way their phone would. Blue numbers come from the
+progression and move as they train; black ones with ✎ are typed by you and stay. "+" on the reps
+means the last set is as many as they can.
 
 Double-click a cell, or press Enter, to type over it, like `62.5 × 7`; it stays put whatever the
-rule does, with a blue edge. Clear gives it back to the rule. Copy, paste and Fill to the end of
-the block (up to the next lighter week) are on the cell's menu.
+rule does. Clear gives it back to the rule. Copy, paste and Fill to the end of
+the block (up to the next week with a type) are on the cell's menu.
+
+## How-tos for your clients
+
+New lifters get how-tos with your program. While it's new, their Home shows **Before your first
+session**: the working-weight explainer ("about 2 more left in you", the same question the app asks
+everywhere) and a card for each exercise in their first week, in the order they'll meet them: a
+video (YouTube or Vimeo, played in the app only when tapped), three cues, the most common mistake
+and your note if you wrote one. It goes once they've read them all, or after the first week. In
+the workout, **How to** sits beside an exercise's name for its first three sessions, and a first
+set says "Find your working weight" with a **How** that opens the explainer.
+
+LogIt writes the cues and the common mistake for every built-in exercise. **Programs › Exercises ›
+How-tos** lists every exercise in your programs with whose how-to clients see (Yours, LogIt, None
+yet); **Write yours** adds pictures, a YouTube or Vimeo link (with its start time), three cues, the
+mistake and your note. Saving updates the programs your clients have. How-to packs from Coaching ›
+Plugins fill in the ones you haven't written. Each program's **How-tos** setting in the builder
+says who gets them: new lifters (from their LogIt setup; the default), always or never.
+
+## When a plan outgrows their gym
+
+A client's Training tab tells you ahead when their copy is planned past what their gym has, once
+LogIt knows the gym: "Leg extension at Flyefit goes to 100 kg; the plan reaches 105 kg in week 6"
+(or the heaviest dumbbells there). **Decide** picks what happens: more reps, then a harder version
+you choose (or slower reps, or "ask me then"); load past the stack with their pin, if they bring
+one; or swap it from that week in their copy. If you do nothing, the weight stays at the top and
+the reps go up, and you're messaged when they get there.
+
+On their phone, a machine LogIt doesn't know yet asks "Is 90 kg the most this machine goes?" and
+opens the machine's settings, where **Past the top** says whether they can add plates with their
+stack pin. **Settings › Workout › What you bring** lists the kit they carry (stack pin, dip belt,
+straps and the rest); you see it, with their experience from setup, on their Starting point. If
+they forget the pin, **Not today** plans that session at the stack's top with more reps, without
+counting it as a step back.
 
 ## Give it to a client
 
 <HowTo id="studio.assign" />
 
-From a program, or from a client's page, Assign gives one or several clients their own copy. It
+From a program, or from a client's page, Assign gives one or several clients their own copy.
+For one client, **Next: check it fits** shows each exercise's starting weight and where it came
+from (their logged sets, a related lift in blue, or "first set finds it"), lets you swap an
+exercise in their copy only, shows what they said hurts in their start-up form word for word, and
+asks whether to start straight away or with a Find your weights week first (picked for you when
+there's nothing to go on). It
 starts when they tap Start on their phone, or on a date you choose. Someone already on a program
 can switch now at week 1, or start the new one the day theirs ends. Gave someone the wrong program
 a few weeks ago? **Replace, at week N** starts the right one on the date the wrong one did, as if
@@ -107,7 +237,7 @@ says so: without the plugin on their phone, that block shows as a note and the r
 works.
 
 On a client's Training tab, their program is at the top: which week they're in, its rule, the
-next lighter week, this week's days and what they've done, and any swaps. Their main lifts show
+next week with a type, this week's days and what they've done, and any swaps. Their main lifts show
 their best set this week, their strength estimate then and four weeks ago, and what the program
 plans next time. ⋯ on the program has Change program…, Plan the next block… and Stop the
 program.

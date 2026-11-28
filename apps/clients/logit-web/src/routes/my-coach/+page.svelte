@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { offerStateNow } from "@logit/core/domain/coachRequest";
   import { onMount } from "svelte";
   import * as Alert from "$lib/components/ui/alert";
   import * as AlertDialog from "$lib/components/ui/alert-dialog";
@@ -19,7 +20,6 @@
   import type { WorkoutSession } from "@logit/core/domain/workout";
   import { getWebDeps } from "$lib/deps";
   import Avatar from "$lib/features/coaching/Avatar.svelte";
-  import MessageThread from "$lib/features/coaching/MessageThread.svelte";
   import SharingSwitches from "$lib/features/coaching/SharingSwitches.svelte";
   import { coachBadges } from "$lib/features/coaching/badges.svelte";
   import { programStatus } from "$lib/features/coaching/coachingData";
@@ -29,7 +29,6 @@
   import { page } from "$app/state";
   import { tick } from "svelte";
   import MyRequest from "$lib/features/coaching/requests/MyRequest.svelte";
-  import RequestEventCard from "$lib/features/coaching/requests/RequestEventCard.svelte";
   import AgreementDialog from "$lib/features/coaching/requests/AgreementDialog.svelte";
   import { Button } from "$lib/components/ui/button";
   import { awayExcuse, type ManageCoaching } from "@logit/core/api/coachApi";
@@ -113,6 +112,21 @@
     }
   });
   const openRequests = $derived(requests.filter((r) => !r.closed));
+
+  // Canvas MS4: with more than one coach, invite or request, a list on the left and one at a time
+  // on the right; chats are in Me › Messages.
+  type Pick = { rel: string; name: string; status: string; tone: "b" | "a" | "o"; line: string };
+  const picks = $derived.by((): Pick[] => [
+    ...coaches.map((c) => ({ rel: c.relationshipId, name: coachName(c), status: c.status === "paused" ? "Paused" : "Coaching you", tone: "b" as const, line: `@${c.coach.username}` })),
+    ...invites.map((i) => ({ rel: i.relationshipId, name: coachName(i), status: "Invited you", tone: "a" as const, line: i.offer?.card.packageName ?? "Wants to coach you" })),
+    ...requests.filter((r) => !coaches.some((c) => c.relationshipId === r.relationshipId)).map((r) => {
+      const offer = r.stage === "offered" && r.offer && offerStateNow(r.offer, Date.now()) === "open";
+      return { rel: r.relationshipId, name: coachName(r), status: r.closed ? "Closed" : offer ? "Offer to look at" : r.stage === "waiting" ? "Waiting list" : "Asked", tone: (offer ? "b" : r.stage === "waiting" ? "a" : "o") as "b" | "a" | "o", line: offer && r.offer ? r.offer.card.packageName : `Asked ${shortDate(Date.parse(r.requestedAt))}` };
+    }),
+  ].sort((a, b) => (a.status === "Closed" ? 1 : 0) - (b.status === "Closed" ? 1 : 0)));
+  const chosen = $derived(page.url.searchParams.get("c") ?? page.url.searchParams.get("request") ?? picks[0]?.rel ?? null);
+  const split = $derived(picks.length > 1);
+  const show = (rel: string) => !split || chosen === rel;
 
   // Which week of which program you're on, and which of its days you've done.
   const running = $derived(programs.map((p) => ({ p, s: programStatus(p) })).filter((x) => x.s.state !== "finished"));
@@ -263,7 +277,20 @@
   {:else if loading}
     <Skeleton class="h-14 w-80" /><Skeleton class="h-72" />
   {:else}
-    {#each invites as inv (inv.relationshipId)}
+    {#if split}<h1 class="text-[26px] font-bold tracking-tight">My coach</h1>{/if}
+    <div class={split ? "grid items-start gap-4 lg:grid-cols-[280px_minmax(0,1fr)]" : "contents"}>
+    {#if split}
+      <nav aria-label="Your coaches and requests" class="flex flex-col gap-0.5 rounded-[10px] border border-border bg-card p-2">
+        {#each picks as p (p.rel)}
+          <a href="/my-coach?c={p.rel}" data-sveltekit-noscroll data-sveltekit-replacestate class="flex flex-col gap-0.5 rounded-lg px-3 py-2.5 {chosen === p.rel ? 'bg-muted' : 'hover:bg-muted/50'}">
+            <span class="flex items-center gap-2"><span class="flex-1 truncate text-[13px] {chosen === p.rel ? 'font-semibold' : 'font-medium'}">{p.name}</span><span class="shrink-0 rounded-md px-1.5 py-0.5 text-[10.5px] font-semibold {p.tone === 'b' ? 'bg-info/15 text-info' : p.tone === 'a' ? 'bg-warning/15 text-warning' : 'border border-border text-muted-foreground'}">{p.status}</span></span>
+            <span class="truncate text-xs text-muted-foreground">{p.line}</span>
+          </a>
+        {/each}
+      </nav>
+    {/if}
+    <div class={split ? "flex min-w-0 flex-col gap-4" : "contents"}>
+    {#each invites.filter((x) => show(x.relationshipId)) as inv (inv.relationshipId)}
       <section class="flex flex-col gap-3 rounded-[10px] border border-warning/30 bg-card px-[18px] py-4">
         <div class="flex items-center gap-3">
           <Avatar name={coachName(inv)} url={inv.coach.avatarUrl} size={40} />
@@ -298,7 +325,7 @@
           <p class="text-xs text-muted-foreground">{openRequests.length} coach {openRequests.length === 1 ? "request" : "requests"} open{#if openRequests.length} · {openRequests.map((r) => `${coachName(r)}${r.stage === "waiting" ? ", waiting list" : ""}`).join(" · ")}{/if}. {coachName(coaches[0]!)} can't see your requests.</p>
         {/if}
         {#each requests as r (r.relationshipId)}
-          <MyRequest request={r} open={!r.closed || r.relationshipId === focusRequest} onchange={load} />
+          {#if show(r.relationshipId)}<MyRequest request={r} open={!r.closed || r.relationshipId === focusRequest} onchange={load} chat={false} />{/if}
         {/each}
       </div>
     {/if}
@@ -314,7 +341,7 @@
       </section>
     {/if}
 
-    {#each coaches as c (c.relationshipId)}
+    {#each coaches.filter((x) => show(x.relationshipId)) as c (c.relationshipId)}
       {@const name = coachName(c)}
       {@const sharing = c.sharing ?? SHARE_ALL}
       {@const paused = c.status === "paused"}
@@ -327,6 +354,7 @@
             <p class="mt-0.5 text-[13px] text-muted-foreground">@{c.coach.username}{sinceLabel(c.since) ? ` · coaching you since ${sinceLabel(c.since)}` : ""}</p>
           </div>
         </div>
+        <Button variant="outline" href="/social/messages?c={c.relationshipId}">Message {name.split(" ")[0]}</Button>
         {#if due[0] && coaches.length === 1 && !paused}
           <a href="/my-coach/checkin/{due[0].form.id}" class="h-[34px] rounded-[9px] bg-primary px-3 text-[13px] font-semibold leading-[34px] text-primary-foreground">{due[0].draft ? "Finish" : "Fill in"} {due[0].form.name.toLowerCase()}</a>
         {/if}
@@ -438,23 +466,6 @@
             {/each}
           {/if}
 
-          {#if !paused}
-            <section id="messages-{c.relationshipId}" class="flex scroll-mt-4 flex-col rounded-[10px] border border-border bg-card px-[18px] pb-4 pt-3">
-              <h2 class="pb-1 text-sm font-semibold">Messages</h2>
-              {#if c.away?.now}
-                <!-- Canvas Z7: pinned while the coach is away. -->
-                <div role="status" class="mb-2 rounded-[10px] border border-border bg-muted/60 px-3.5 py-2.5">
-                  <p class="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{name} is away until {shortDate(Date.parse(c.away.until))}</p>
-                  {#if c.away.note}<p class="mt-1 text-[13px] leading-relaxed">{c.away.note}</p>{/if}
-                </div>
-              {/if}
-              <MessageThread relationshipId={c.relationshipId} otherName={name} onRead={() => void coachBadges.refresh(undefined, true)}>
-                {#snippet card(m)}
-                  <RequestEventCard message={m} reader="client" coach={name} client={apiClient.getUser()?.displayName ?? "You"} stateOf={() => "taken"} />
-                {/snippet}
-              </MessageThread>
-            </section>
-          {/if}
         </div>
 
         <div class="flex min-w-0 flex-[1_1_300px] flex-col gap-4">
@@ -514,6 +525,8 @@
         </div>
       </div>
     {/each}
+    </div>
+    </div>
   {/if}
 </div>
 

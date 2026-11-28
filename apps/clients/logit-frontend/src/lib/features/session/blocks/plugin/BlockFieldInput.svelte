@@ -7,6 +7,8 @@
   import { fromDisplayWeight, toDisplayWeight, type WeightUnit } from "@logit/core/domain/units";
   import type { BlockField, BlockValue } from "@logit/core/domain/blockPlugin";
   import { mmss, parseMmss } from "./format";
+  import { getExerciseRepo } from "$lib/data/repoProvider";
+
 
   let { field, value, options = [], suggestions = [], unit, disabled = false, onchange }: {
     field: BlockField;
@@ -19,6 +21,13 @@
     disabled?: boolean;
     onchange: (v: BlockValue) => void;
   } = $props();
+
+  // An "exercise" field (Phase 6.1): the lift these entries count as. Suggests your library's names.
+  let exerciseNames = $state<string[]>([]);
+  $effect(() => {
+    if (field.type !== "exercise" || exerciseNames.length) return;
+    void getExerciseRepo().list({ limit: 10_000 }).then((xs) => (exerciseNames = xs.map((x) => x.name).sort())).catch(() => {});
+  });
 
   const id = $derived(`bf-${field.key}-${Math.random().toString(36).slice(2, 7)}`);
   const num = (v: BlockValue | undefined) => (typeof v === "number" ? v : null);
@@ -84,6 +93,10 @@
         onchange={(e) => setNumber((e.currentTarget as HTMLInputElement).value)} />
       {#if field.unit}<span class="text-xs text-muted-foreground">{field.unit}</span>{/if}
     </div>
+  {:else if field.type === "exercise"}
+    <input {id} type="text" list="{id}-ex" autocomplete="off" class="{inputClass} font-medium" {disabled} placeholder="Exercise"
+      value={typeof value === "string" ? value : ""} onchange={(e) => onchange((e.currentTarget as HTMLInputElement).value.trim() || null)} />
+    {#if exerciseNames.length}<datalist id="{id}-ex">{#each exerciseNames as s (s)}<option value={s}></option>{/each}</datalist>{/if}
   {:else if field.multiline}
     <textarea {id} rows="2" class="min-h-11 w-full rounded-lg border border-input bg-background px-3 py-2 text-[15px]" {disabled}
       value={typeof value === "string" ? value : ""} onchange={(e) => onchange((e.currentTarget as HTMLTextAreaElement).value.trim() || null)}></textarea>

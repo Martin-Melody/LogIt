@@ -109,3 +109,16 @@ describe("the client's check-ins list", () => {
     expect(checkinPeriodLabel({ schedule: { ...s, cadence: "manual" }, periodStartMs: ANCHOR }, () => "x")).toBe(s.name);
   });
 });
+
+describe("asksNow", () => {
+  it("asks for a weekly check-in in its last two days, not the day they join", async () => {
+    const { asksNow, checkinRows, createCheckinSchedule } = await import("./Checkin");
+    const day = 24 * 3600_000;
+    const joined = Date.UTC(2026, 10, 2);
+    const s = { ...createCheckinSchedule(), cadence: "weekly" as const, anchorMs: joined };
+    const row = (at: number) => checkinRows([s], [], new Map(), at).current.find((r) => r.state === "due")!;
+    expect(asksNow(row(joined + 1 * day), joined + 1 * day)).toBe(false);
+    expect(asksNow(row(joined + 5.5 * day), joined + 5.5 * day)).toBe(true);
+    expect(asksNow({ ...row(joined), state: "late" }, joined)).toBe(true);
+  });
+});

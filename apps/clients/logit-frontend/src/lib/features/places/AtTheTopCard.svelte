@@ -10,6 +10,7 @@
     kind,
     answer,
     onAnswer,
+    onSwap,
   }: {
     /** "24 kg is the heaviest dumbbell at Home" */
     heaviestLabel: string;
@@ -17,6 +18,8 @@
     /** Saved answer: undefined = not asked yet. */
     answer: ExtraLoad[] | undefined;
     onAnswer: (extra: ExtraLoad[]) => void;
+    /** Canvas EQ3 (3): without a coach, the last resort is theirs: swap for a harder version. */
+    onSwap?: () => void;
   } = $props();
 
   let picked = $state<ExtraLoad[]>([]);
@@ -46,5 +49,6 @@
 {:else if answer.length === 0}
   <p transition:reveal class="mx-3 my-1.5 rounded-lg bg-muted/40 px-3 py-2 text-xs leading-relaxed">
     {heaviestLabel}. To keep it getting harder: lower for 3 seconds, pause at the bottom, or switch to a single-arm or single-leg version.
+    {#if onSwap}<button type="button" class="ml-1 min-h-10 rounded-lg border border-border bg-background px-3 text-xs font-medium" onclick={onSwap}>Swap for a harder version</button>{/if}
   </p>
 {/if}

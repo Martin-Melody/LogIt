@@ -14,7 +14,7 @@ export const PLUGIN_BLOCK_PREFIX = "plugin:";
 export const isPluginBlockType = (type: string) => type.startsWith(PLUGIN_BLOCK_PREFIX);
 export const pluginBlockType = (pluginId: string) => `${PLUGIN_BLOCK_PREFIX}${pluginId}`;
 
-export const BLOCK_FIELD_TYPES = ["number", "weight", "distance", "duration", "counter", "scale", "choice", "tags", "toggle", "text"] as const;
+export const BLOCK_FIELD_TYPES = ["number", "weight", "distance", "duration", "counter", "scale", "choice", "tags", "toggle", "text", "exercise"] as const;
 export type BlockFieldType = (typeof BLOCK_FIELD_TYPES)[number];
 
 export type BlockField = {
@@ -56,13 +56,29 @@ export type BlockDeclaration = {
   fields: BlockField[];
   timer?: { pattern: "none" | "rounds"; work?: string; rest?: { default: number; label?: string } };
   summary?: string;
-  countsAs?: { activeMinutes?: string; distance?: string };
+  countsAs?: { activeMinutes?: string; distance?: string; sets?: SetsMapping };
   lists?: Record<string, BlockList>;
   /** Declaration version; old blocks keep the version they were written with. */
   version?: number;
 };
 
 export type BlockValue = number | string | boolean | string[] | null;
+
+/**
+ * How a block's entries are also sets of an exercise (canvas SP6/SP9, Phase 6.1): a bench press
+ * is a bench press whichever screen logged it. Each value is a field key (in the entry's fields,
+ * or the block's own fields). `rpe`/`rir` may read a choice through a map ("Grind" → 9);
+ * otherwise the field's number (or a choice's leading number: "4+" → 4) is used.
+ */
+export type SetsMapping = {
+  exercise: string;
+  weight?: string;
+  reps?: string;
+  rpe?: string;
+  rpeMap?: Record<string, number>;
+  rir?: string;
+  rirMap?: Record<string, number>;
+};
 export type PluginBlockEntry = { id: string; done?: boolean; values: Record<string, BlockValue> };
 /** [key, type, label, column?] of every field, kept with the data. */
 export type BlockShape = [string, BlockFieldType, string, boolean?][];
@@ -81,6 +97,8 @@ export type PluginBlockData = {
   tpl?: string;
   /** The plugin's rounds timer: which field is the work time. */
   timer?: { work: string };
+  /** How entries count as sets (countsAs.sets), kept with the data so history reads without the plugin. */
+  sets?: SetsMapping;
 };
 
 const KEY_RE = /^[a-z][a-zA-Z0-9_]{0,31}$/;
@@ -115,6 +133,34 @@ function parseField(raw: unknown, where: string, lists: Record<string, BlockList
   if (str(f.was)) out.was = f.was;
   if (f.default !== undefined) out.default = f.default as BlockValue;
   return out;
+}
+
+function parseSetsMapping(raw: unknown, all: BlockField[]): SetsMapping {
+  if (!raw || typeof raw !== "object") throw new Error("countsAs.sets must be an object.");
+  const m = raw as Record<string, unknown>;
+  const field = (k: unknown, types: BlockFieldType[], what: string): string => {
+    const f = all.find((x) => x.key === k);
+    if (!f || !types.includes(f.type)) throw new Error(`countsAs.sets.${what} must name a ${types.join(" or ")} field.`);
+    return f.key;
+  };
+  const map = (v: unknown, what: string): Record<string, number> | undefined => {
+    if (v === undefined) return undefined;
+    if (!v || typeof v !== "object" || !Object.values(v).every((n) => typeof n === "number" && isFinite(n))) throw new Error(`countsAs.sets.${what} map must give a number for each choice.`);
+    return v as Record<string, number>;
+  };
+  const effort = (v: unknown, what: "rpe" | "rir") => {
+    if (v === undefined) return {};
+    if (typeof v === "string") return { [what]: field(v, ["number", "scale", "choice", "counter"], what) };
+    const o = v as Record<string, unknown>;
+    return { [what]: field(o?.from, ["number", "scale", "choice", "counter"], what), [`${what}Map`]: map(o?.map, what) };
+  };
+  return {
+    exercise: field(m.exercise, ["exercise"], "exercise"),
+    ...(m.weight !== undefined ? { weight: field(m.weight, ["weight", "number"], "weight") } : {}),
+    ...(m.reps !== undefined ? { reps: field(m.reps, ["number", "counter"], "reps") } : {}),
+    ...effort(m.rpe, "rpe"),
+    ...effort(m.rir, "rir"),
+  };
 }
 
 /** Reads a plugin's declaration; throws a readable error for anything the app can't draw. */
@@ -165,6 +211,7 @@ export function parseBlockDeclaration(raw: unknown, expectedId?: string): BlockD
     ...(countsAs ? { countsAs: {
       ...(str(countsAs.activeMinutes) && fields.some((f) => f.key === countsAs.activeMinutes && f.type === "duration") ? { activeMinutes: countsAs.activeMinutes } : {}),
       ...(str(countsAs.distance) && fields.some((f) => f.key === countsAs.distance && f.type === "distance") ? { distance: countsAs.distance } : {}),
+      ...(countsAs.sets !== undefined ? { sets: parseSetsMapping(countsAs.sets, [...fields, ...blockFields]) } : {}),
     } } : {}),
     ...(Object.keys(lists).length ? { lists } : {}),
     ...(typeof d.version === "number" ? { version: d.version } : {}),
@@ -241,6 +288,7 @@ export function newPluginBlockData(decl: BlockDeclaration, previous?: PluginBloc
     summary: "",
     ...(decl.summary ? { tpl: decl.summary } : {}),
     ...(decl.timer?.work ? { timer: { work: decl.timer.work } } : {}),
+    ...(decl.countsAs?.sets ? { sets: decl.countsAs.sets } : {}),
   });
 }
 

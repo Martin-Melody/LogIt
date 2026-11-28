@@ -100,6 +100,9 @@ public class CoachPaymentService(
             rel.InviteLinkId = meta.LinkId ?? rel.InviteLinkId;
             rel.ApplySharing(meta.Sharing);
             rel.UpdatedAt = now;
+            // Canvas MS3: started straight away from a pay-and-start link, so the coach's welcome.
+            if (meta.LinkId is not null && await db.Users.FindAsync([meta.CoachId], ct) is { } coachUser && await db.Users.FindAsync([meta.ClientId], ct) is { } clientUser)
+                CoachAutoMessages.Queue(db, rel, coachUser, clientUser, CoachAutoMessages.When.Start, now);
         }
 
         var package = meta.PackageId is { } pid

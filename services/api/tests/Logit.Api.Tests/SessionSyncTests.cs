@@ -20,6 +20,16 @@ public class SessionSyncTests
             .GetProperty("sessions").EnumerateArray().Single();
 
     [Fact]
+    public async Task A_malformed_query_is_a_400_not_a_server_error()
+    {
+        using var api = new ApiFactory();
+        var (http, _, _) = await api.SignUpAsync("kai", Logit.Api.Data.Entities.UserTier.Pro);
+
+        var res = await http.GetAsync("/sync/sessions?since=0&clientId=example");
+        Assert.Equal(System.Net.HttpStatusCode.BadRequest, res.StatusCode);
+    }
+
+    [Fact]
     public async Task An_older_copy_does_not_overwrite_a_newer_edit()
     {
         using var api = new ApiFactory();

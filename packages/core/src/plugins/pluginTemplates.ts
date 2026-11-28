@@ -265,6 +265,29 @@ export const cards = {
         null,
         2,
       ) + "\n";
+    case "howto-pack":
+      return JSON.stringify(
+        {
+          formatVersion: 1,
+          pluginId,
+          howtos: [
+            { exercise: "Kettlebell Swing", video: "https://youtu.be/YSxHifyI6s8?t=12", cues: ["Hips back, not down", "Snap the hips", "Arms are ropes"], mistake: "Squatting the swing: keep shins nearly vertical" },
+          ],
+        },
+        null,
+        2,
+      ) + "\n";
+    case "phase-pack":
+      return JSON.stringify(
+        {
+          formatVersion: 1,
+          pluginId,
+          phase: { name: "Technique first", weeks: 2, findsWeights: false },
+          includes: [],
+        },
+        null,
+        2,
+      ) + "\n";
     case "meal-plan-pack":
       return JSON.stringify(
         {
@@ -333,7 +356,7 @@ export const cards = {
 
 /** File name the builder shows for the source. */
 export function sourceFileName(family: string): string {
-  return isCodeFamily(family) ? "bundle.js" : family === "mobility-pack" ? "drills.json" : family === "program-pack" ? "programs.json" : family === "meal-plan-pack" ? "meal-plans.json" : family === "question-pack" ? "questions.json" : family === "recipe-pack" ? "recipes.json" : family === "workout-block" ? "block.json" : "exercises.json";
+  return isCodeFamily(family) ? "bundle.js" : family === "mobility-pack" ? "drills.json" : family === "program-pack" ? "programs.json" : family === "meal-plan-pack" ? "meal-plans.json" : family === "question-pack" ? "questions.json" : family === "phase-pack" ? "phase.json" : family === "howto-pack" ? "howtos.json" : family === "recipe-pack" ? "recipes.json" : family === "workout-block" ? "block.json" : "exercises.json";
 }
 
 /** Turn a name into the last part of an id: "Weekly swings" -> "weekly-swings". */

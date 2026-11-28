@@ -176,8 +176,10 @@ public static class SyncEndpoints
         // StartedAtMs-based cursor on an already-synced second device. SyncedAt advances
         // on every insert/edit/delete, so it's the correct incremental-sync cursor.
         var sinceUtc = DateTimeOffset.FromUnixTimeMilliseconds(since).UtcDateTime;
+        // A coach sees workouts from before coaching only if the client shares them (canvas SP3).
+        var floor = clientId is { } cid ? await CoachAccess.WorkoutsSince(db, caller.GetUserId(), cid) ?? 0 : 0;
         var sessions = await db.SyncedWorkoutSessions
-            .Where(s => s.UserId == userId && s.SyncedAt > sinceUtc)
+            .Where(s => s.UserId == userId && s.SyncedAt > sinceUtc && s.StartedAtMs >= floor)
             .OrderBy(s => s.SyncedAt)
             .Select(s => new SessionDto(s.ClientId, s.StartedAtMs, s.DeletedAtMs == null ? s.DataJson : null, s.DeletedAtMs, s.UpdatedAtMs))
             .ToListAsync();
@@ -391,6 +393,8 @@ public static class SyncEndpoints
             {
                 SplitRotationJson = rotations, GoalsJson = goals, PluginSettingsJson = pluginSettings,
                 TrainingGoal = dto.TrainingGoal ?? stored?.TrainingGoal,
+                KitJson = dto.KitJson ?? stored?.KitJson,
+                Experience = dto.Experience ?? stored?.Experience,
             });
             user.ProfileUpdatedAtMs = dto.UpdatedAtMs;
             await db.SaveChangesAsync();
@@ -756,8 +760,13 @@ public static class SyncEndpoints
         => PushSyncRows(caller.GetUserId(), req.Places, db.SyncedPlaces, db);
 
     private static async Task<IResult> PullPlaces(
-        [FromQuery] long since, ClaimsPrincipal caller, AppDbContext db)
-        => Results.Ok(new { places = await PullSyncRows(caller.GetUserId(), since, db.SyncedPlaces) });
+        [FromQuery] long since, [FromQuery] Guid? clientId, ClaimsPrincipal caller, AppDbContext db)
+    {
+        // A coach reads a client's gyms with their workouts (canvas EQ1: what their gym has).
+        var (userId, forbidden) = await ResolveTargetUserId(caller.GetUserId(), clientId, db, ShareArea.Workouts);
+        if (forbidden is not null) return forbidden;
+        return Results.Ok(new { places = await PullSyncRows(userId!.Value, since, db.SyncedPlaces) });
+    }
 
     // ── Installed plugins ────────────────────────────────────────────────────
     // One row per installed plugin (keyed by manifest id), so installing, switching off or
@@ -869,7 +878,11 @@ public record ProfileDto(
     // The goal picked in the app's onboarding: strength, muscle, both, fit, leaner. The
     // dashboard arranges Overview by it until the layout is changed by hand. Kept when a
     // push leaves it out (an app from before this field).
-    string? TrainingGoal = null
+    string? TrainingGoal = null,
+    // What they bring to the gym (canvas EQ4) and their experience from setup (HT3), both shown
+    // to a coach. Kept when a push leaves them out.
+    string? KitJson = null,
+    string? Experience = null
 );
 
 /// One client-owned sync row — nutrition row, habit or habit entry (see ISyncedClientRow).

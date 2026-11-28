@@ -27,7 +27,7 @@
   onMount(async () => {
     await rules.load();
     if (id === "new") {
-      const fresh = createProgressionRecipe("New rule");
+      const fresh = createProgressionRecipe("New progression");
       r = fresh;
       await save(fresh);
       await goto(`/coaching/programs/rules/${fresh.id}`, { replaceState: true });
@@ -124,12 +124,12 @@
 </script>
 
 <div class="flex flex-col gap-4">
-  <PageCrumbs crumbs={[{ label: "Programs", href: "/coaching/programs" }, { label: "Rules", href: "/coaching/programs?tab=rules" }, { label: r?.name ?? "Rule" }]} />
+  <PageCrumbs crumbs={[{ label: "Programs", href: "/coaching/programs" }, { label: "Progressions", href: "/coaching/programs?tab=progressions" }, { label: r?.name ?? "Progression" }]} />
   {#if !r}
-    <p class="text-[13px] text-muted-foreground">{rules.loaded ? "This rule doesn't exist any more." : "Loading…"}</p>
+    <p class="text-[13px] text-muted-foreground">{rules.loaded ? "This progression doesn't exist any more." : "Loading…"}</p>
   {:else}
     <header class="flex flex-wrap items-end justify-between gap-3">
-      <label class="flex flex-[1_1_320px] flex-col gap-1.5 text-xs font-medium text-muted-foreground">Rule name
+      <label class="flex flex-[1_1_320px] flex-col gap-1.5 text-xs font-medium text-muted-foreground">Name
         <Input value={r.name} class="h-10 text-[17px] font-semibold text-foreground" onchange={(e) => set("name", e.currentTarget.value.trim() || r!.name)} />
       </label>
       <span class="flex items-center gap-2">
@@ -222,7 +222,7 @@
           <p class="text-[13px] text-muted-foreground">{clients.length ? "Pick a client who logs this lift to see the numbers." : "With a client, this shows the numbers it would give them."}</p>
         {/if}
         <div class="rounded-[10px] bg-muted px-3.5 py-3 text-[13px]"><b class="font-semibold">In words</b><br />{words}</div>
-        <p class="text-xs text-muted-foreground">The sentence is what clients see under "Why this weight?" in the app. Programs of yours that use this rule follow your changes; clients' copies follow when you update them.</p>
+        <p class="text-xs text-muted-foreground">The sentence is what clients see under "Why this weight?" in the app. Programs of yours that use this progression follow your changes; clients' copies follow when you update them.</p>
       </aside>
     </div>
   {/if}

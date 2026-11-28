@@ -1,4 +1,4 @@
-import { getExercises } from "../../domain/workout";
+import { loggedExercises } from "../../domain/loggedSets";
 import type { WorkoutSession, ExerciseEntry } from "../../domain/workout";
 import type { MuscleGroup } from "../../domain/exercise";
 import { classifyTrend, PROGRESS_STATUS_ATTENTION_ORDER, type ProgressStatus } from "../../domain/progression";
@@ -111,7 +111,7 @@ export async function getMuscleGroupInsights(
     const performedAtMs = session.endedAtMs ?? session.startedAtMs;
     const week = weekBucket(performedAtMs);
 
-    for (const ex of getExercises(session)) {
+    for (const ex of loggedExercises(session)) {
       const workingSets = ex.sets.filter(
         (s) => (s.setType === "normal" || !s.setType) && s.completed !== false,
       );

@@ -5,6 +5,12 @@
 </script>
 
 <script lang="ts">
+  import WorkingWeight from "$lib/features/howto/WorkingWeight.svelte";
+  import { showsHowTos } from "$lib/features/howto/howtos";
+  import * as Dialog from "$lib/components/ui/dialog/index.js";
+  import { getCoachProgramRepo } from "$lib/data/repoProvider";
+  import type { CoachProgram } from "@logit/core/domain/CoachProgram";
+  import { kit, setKit } from "$lib/features/kit/kit";
   import { sendMessage } from "$lib/usecases/messages/sendMessage";
   import { carriedWeight } from "./carryWeight";
   import { openAllSignal } from "$lib/features/session/openAll";
@@ -183,6 +189,16 @@
   const machineKinds = ["machine", "cable", "smith"];
   // Last time this exercise was performed — shown as a "prev" hint per set row.
   let prevSets = $state<SetEntry[] | null>(null);
+  // Canvas HT2: how many times they've done it, and the coach's program with its how-tos.
+  let timesDone = $state(99);
+  let coachProgram = $state<CoachProgram | null>(null);
+  $effect(() => {
+    const src = $currentSession?.source;
+    if (src?.kind !== "program") { coachProgram = null; return; }
+    void getCoachProgramRepo().getAssignedProgram(src.parentId).then((p) => (coachProgram = p), () => (coachProgram = null));
+  });
+  const coachHowTo = $derived(coachProgram?.howtos?.find((h) => h.exerciseName.trim().toLowerCase() === data.exerciseName.trim().toLowerCase()) ?? null);
+  let weightHelpOpen = $state(false);
   // An exercise never done before (design canvas O4): its first set is the starting point
   // the plan works from, so it says how heavy to go instead of asking for a max.
   let prevLoaded = $state(false);
@@ -194,7 +210,10 @@
     const ex = { id: data.exerciseId, name: data.exerciseName };
     void hasStartingLift(ex).then((has) => (fromBestLift = has)).catch(() => (fromBestLift = false));
   });
-  const firstEver = $derived(prevLoaded && prevSets === null && !fromBestLift);
+  // Planned from another lift (Phase 6.2: "From your deadlift 200 × 5"): not a blank first time;
+  // the plan and its reason show, and the first set checks it.
+  const fromEstimate = $derived(suggestion?.change?.kind === "first" && /^From your /.test(suggestion.change.text ?? ""));
+  const firstEver = $derived(prevLoaded && prevSets === null && !fromBestLift && !fromEstimate);
   const showFirstSetHint = $derived(firstEver && !data.sets.some((s) => s.completed));
   // A beginner's first barbell lift is planned on the empty bar (decision D3): say so plainly
   // instead of "pick a weight you could lift 8 times", which means nothing on day one.
@@ -472,6 +491,7 @@
         }
       }
       lastOnMachine = onMachine;
+      timesDone = history.length;
       prevSets = last
         ? [...last.sets].sort((a, b) => a.orderIndex - b.orderIndex)
         : null;
@@ -960,6 +980,45 @@
       `${formatLoad(topRung, $profile.weightUnit, false)} is the heaviest ${weightSource.kind === "machine" ? `on ${weightSource.machine.name}` : "dumbbell"}${place ? ` at ${place.name}` : ""}`,
   );
 
+  // ── Canvas EQ2/EQ3: a machine LogIt doesn't know yet, and who decides at the top ──
+  // The plan asks for more than they've ever set on a machine with no numbers: ask, once a workout.
+  let unknownDismissed = $state(false);
+  const bestOnMachine = $derived(Math.max(0, ...(prevSets ?? []).filter((x) => x.setType !== "warmup").map((x) => x.weight)));
+  const unknownTop = $derived(
+    onMachine && !unknownDismissed && !weightSource && plannedTop > 0 && bestOnMachine > 0 && plannedTop > bestOnMachine,
+  );
+  // Canvas EQ3 (1): what the coach picked for the top of the stack, from their program.
+  const coachAtTop = $derived.by(() => {
+    for (const w of coachProgram?.weeks ?? []) for (const d of w.days) for (const b of d.blocks) {
+      if (b.type === "strength" && b.atTop && b.exerciseName.trim().toLowerCase() === data.exerciseName.trim().toLowerCase()) return b.atTop;
+    }
+    return null;
+  });
+  const sessionCoach = $derived($currentSession?.source?.kind === "program" && $currentSession.source.coachId ? coachFor($currentSession.source.coachId) : undefined);
+  // Coached and at the top with no way past it: weight held, reps up, and the coach told once.
+  $effect(() => {
+    if (!atTheTop || !sessionCoach || coachAtTop || extraLoadAnswer === undefined || extraLoadAnswer.length || !topLabel) return;
+    const key = `logit:at-top-told:${sessionCoach.relationshipId}:${data.exerciseName.toLowerCase()}:${topRung}`;
+    if (getAccountItem(key)) return;
+    setAccountItem(key, "1");
+    void sendMessage(sessionCoach.relationshipId, `${data.exerciseName}: ${topLabel}, so I'm doing more reps there for now. What should come next?`).catch(() => {});
+  });
+  // Forgot the pin today (canvas, plan 6.15): this session only, at the stack's top with more reps.
+  const pinPlanned = $derived(atTheTop && (extraLoadAnswer ?? []).includes("pin") && $kit.includes("pin"));
+  async function notToday() {
+    if (topRung === null) return;
+    for (const x of data.sets.filter((s) => !s.completed && s.setType !== "warmup")) {
+      const reps = (x.target?.reps ?? x.reps) + 2;
+      await onMutate((s: WorkoutSession) => updateSet(s, blockId, x.id, { weight: topRung!, ...(x.target ? { target: { ...x.target, weight: topRung!, reps } } : {}), withoutKit: ["pin"] }));
+    }
+    // Three sessions in a row without it: ask once whether they still bring one.
+    const k = "logit:pin-forgotten";
+    const n = Number(getAccountItem(k) ?? "0") + 1;
+    setAccountItem(k, String(n));
+    if (n >= 3) stillBringPin = true;
+  }
+  let stillBringPin = $state(false);
+
   function answerExtraLoad(extra: ExtraLoad[]) {
     const p = place ? placesStore.byId(place.id) : null;
     if (!p || !weightSource) return;
@@ -1168,6 +1227,7 @@
   onAddWarmup={handleAddWarmup}
   onMenu={() => (menuOpen = true)}
   onSettings={openSettings}
+  onHowTo={timesDone < 3 && showsHowTos(coachProgram) && !(showFirstSetHint && emptyBarStart) ? openHowTo : undefined}
   onToggleCollapse={() => (collapsed = !collapsed)}
   onAddSet={handleAddSet}
   onOpenDetail={openDetail}
@@ -1212,8 +1272,43 @@
     {/if}
   {/snippet}
   {#snippet notice()}
-    {#if atTheTop && topLabel}
-      <AtTheTopCard heaviestLabel={topLabel} kind={weightSource?.kind === "machine" ? "machine" : "dumbbells"} answer={extraLoadAnswer} onAnswer={answerExtraLoad} />
+    {#if unknownTop}
+      <!-- Canvas EQ2: a prompt, not a new screen; the machine editor they already have. -->
+      <div transition:reveal class="mx-3 my-2 flex flex-col gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2.5">
+        <p class="text-sm font-semibold">Is {formatLoad(bestOnMachine, $profile.weightUnit, false)} the most this machine goes?</p>
+        <p class="text-xs text-muted-foreground">Your plan wants {formatLoad(plannedTop, $profile.weightUnit, false)}. Tell LogIt about this machine and your plan will fit it, here and next time.</p>
+        <span class="flex gap-2">
+          <button type="button" class="min-h-10 rounded-lg bg-primary px-3 text-sm font-semibold text-primary-foreground" onclick={() => { editorFrom = "card"; machineEditor = { open: true, machineId: chosen?.id ?? null }; }}>Set up this machine</button>
+          <button type="button" class="min-h-10 rounded-lg px-3 text-sm" onclick={() => (unknownDismissed = true)}>Not now</button>
+        </span>
+      </div>
+    {:else if atTheTop && topLabel && weightSource?.kind === "machine" && extraLoadAnswer === undefined}
+      <div transition:reveal class="mx-3 my-2 flex flex-col gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2.5">
+        <p class="text-sm font-semibold">{topLabel}. Can you go past it?</p>
+        <button type="button" class="min-h-10 self-start rounded-lg border border-border bg-background px-3 text-sm font-medium" onclick={() => { editorFrom = "card"; machineEditor = { open: true, machineId: chosen?.id ?? null }; }}>Set up this machine</button>
+      </div>
+    {:else if pinPlanned}
+      <div transition:reveal class="mx-3 my-1.5 flex items-center justify-between gap-2 rounded-lg bg-muted/40 px-3 py-2 text-xs">
+        <span>Past the stack with your pin.</span>
+        <button type="button" class="min-h-10 rounded-lg border border-border bg-background px-3 text-xs font-medium" onclick={() => void notToday()}>Not today</button>
+      </div>
+    {:else if atTheTop && topLabel && sessionCoach && coachAtTop && coachAtTop.then !== "pin"}
+      <!-- Canvas EQ3 (1): the coach planned for it. -->
+      <p transition:reveal class="mx-3 my-1.5 rounded-lg bg-muted/40 px-3 py-2 text-xs leading-relaxed"><b class="font-semibold">{sessionCoach.name}'s plan.</b> {topLabel}: more reps up to 15, then {coachAtTop.then === "harder" ? coachAtTop.exercise : coachAtTop.then === "slower" ? "slower reps (3 seconds down, a pause)" : `${sessionCoach.name} picks what's next`}.</p>
+    {:else if atTheTop && topLabel && sessionCoach && extraLoadAnswer !== undefined && !extraLoadAnswer.length}
+      <!-- Canvas EQ3 (2): coached, the coach hasn't decided: weight held, reps up, coach told. -->
+      <p transition:reveal class="mx-3 my-1.5 rounded-lg bg-muted/40 px-3 py-2 text-xs leading-relaxed"><b class="font-semibold">At the top.</b> {topLabel}. More reps for now; {sessionCoach.name} has been told and picks what's next.</p>
+    {:else if atTheTop && topLabel}
+      <AtTheTopCard heaviestLabel={topLabel} kind={weightSource?.kind === "machine" ? "machine" : "dumbbells"} answer={extraLoadAnswer} onAnswer={answerExtraLoad} onSwap={openSwap} />
+    {/if}
+    {#if stillBringPin}
+      <div transition:reveal class="mx-3 my-2 flex flex-col gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2.5">
+        <p class="text-sm font-semibold">Still bring a stack pin?</p>
+        <span class="flex gap-2">
+          <button type="button" class="min-h-10 rounded-lg border border-border bg-background px-3 text-sm" onclick={() => { stillBringPin = false; setAccountItem("logit:pin-forgotten", "0"); }}>Yes</button>
+          <button type="button" class="min-h-10 rounded-lg border border-border bg-background px-3 text-sm" onclick={() => { stillBringPin = false; setAccountItem("logit:pin-forgotten", "0"); setKit($kit.filter((x) => x !== "pin")); }}>No, plan without it</button>
+        </span>
+      </div>
     {/if}
   {/snippet}
   {#if round !== undefined}
@@ -1270,8 +1365,10 @@
           <p class="text-xs text-muted-foreground">Do {firstTimeMin > 1 && firstTimeMin < firstTimeReps ? `${firstTimeMin}–${firstTimeReps}` : firstTimeReps} slow reps. If they felt easy, put {$profile.weightUnit === "lbs" ? "5 lb" : "2.5 kg"} on each side for the next set. LogIt plans next time from what you do today.</p>
           <button type="button" class="mt-1 h-11 w-fit rounded-[10px] border border-border px-3.5 text-sm font-medium" onclick={openHowTo}>How to</button>
         {:else}
-          <p class="text-sm font-semibold">First time? Pick a weight you could lift about {firstTimeReps} times.</p>
-          <p class="text-xs text-muted-foreground">LogIt plans every set after this one from it. No need to know your max.</p>
+          <!-- Canvas HT2: worded like "how many more could you have done?" everywhere else. -->
+          <p class="text-sm font-semibold">First time? Find your working weight.</p>
+          <p class="text-xs text-muted-foreground">Start light; stop going up when you'd have 2 more left at {firstTimeReps} reps. LogIt plans every set after it.</p>
+          <button type="button" class="mt-1 h-11 w-fit rounded-[10px] border border-border px-3.5 text-sm font-medium" onclick={() => (weightHelpOpen = true)}>How</button>
         {/if}
       </div>
     {/if}
@@ -1447,7 +1544,15 @@
   {/if}
 {/snippet}
 
+<Dialog.Root open={weightHelpOpen} onOpenChange={(v) => (weightHelpOpen = v)}>
+  <Dialog.Content class="max-h-[88svh] overflow-y-auto sm:max-w-[420px]">
+    <Dialog.Header><Dialog.Title>Finding your working weight</Dialog.Title><Dialog.Description class="sr-only">How to find the weight to use</Dialog.Description></Dialog.Header>
+    <WorkingWeight coachName={coachProgram ? (coachFor(coachProgram.coachId)?.name ?? null) : null} />
+  </Dialog.Content>
+</Dialog.Root>
+
 <ExerciseDetailSheet
+  coach={coachProgram ? { name: coachFor(coachProgram.coachId)?.name ?? "Your coach", howTo: coachHowTo } : null}
   exerciseId={detailExerciseId}
   excludeSessionId={$currentSession?.id}
   onClose={() => {

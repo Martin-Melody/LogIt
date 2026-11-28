@@ -17,6 +17,8 @@ export const algorithm = {
   name: "AMRAP training max",
   description: "A four-week wave on a training max; the last set of each session is as many reps as you can, and the next cycle's max comes from it.",
   defaultState: {},
+  // It plans its own light week, so a coach's week types don't change its numbers.
+  readsWeekTypes: true,
   defaultPreferences: { increment: 2.5 },
   preferencesSchema: [
     { key: "increment", label: "Round weights to", type: "number", default: 2.5, min: 0.5, max: 5, step: 0.5, unit: "kg" },

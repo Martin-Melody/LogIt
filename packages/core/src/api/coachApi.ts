@@ -1,3 +1,4 @@
+import type { CoachHowTo } from "../domain/howTo";
 import { ApiError, apiClient, type ApiFetcher } from "./client";
 import type { SwapRule } from "../domain/swaps";
 import type { ClientPayment, LinkPackage } from "../domain/coachPayments";
@@ -17,6 +18,10 @@ export interface CoachClientUser {
  * phone never lists them (it has no Practice view). */
 export const isRealClient = (x: { client: { isSample?: boolean } }): boolean => !x.client.isSample;
 
+/** Messages sent for the coach, each on or off with its text ({first name}, {coach name}). */
+export type AutoMessage = { on: boolean; text: string };
+export type AutoMessages = { onStart: AutoMessage; onAsk: AutoMessage; onWaitingList: AutoMessage };
+
 /** What a client lets one coach read. The server enforces it on every coach read; a
  * switched-off area answers 403 with `code: "not_shared"`. */
 export interface Sharing {
@@ -25,11 +30,20 @@ export interface Sharing {
   bodyweight: boolean;
   habits: boolean;
   checkins: boolean;
+  /** Canvas SP3: workouts from before coaching. Absent or true = shared (the default); false =
+   * only workouts from when it was turned off. Only means anything while workouts are shared. */
+  pastTraining?: boolean;
 }
 
-export type ShareArea = keyof Sharing;
+export type ShareArea = Exclude<keyof Sharing, "pastTraining">;
 
-export const SHARE_ALL: Sharing = { workouts: true, nutrition: true, bodyweight: true, habits: true, checkins: true };
+export const SHARE_ALL: Sharing = { workouts: true, nutrition: true, bodyweight: true, habits: true, checkins: true, pastTraining: true };
+
+/** "214 workouts since Jan 2025": what "Your training from before" would share. */
+export function pastTrainingText(count: number, sinceMs: number | null): string {
+  const since = sinceMs ? ` since ${new Date(sinceMs).toLocaleDateString(undefined, { month: "short", year: "numeric" })}` : "";
+  return `${count} ${count === 1 ? "workout" : "workouts"}${since}, so your coach can start from your real numbers.`;
+}
 
 /** The switches in the order and words the UI shows them. */
 export const SHARE_AREAS: { key: ShareArea; label: string }[] = [
@@ -640,6 +654,23 @@ export function coachApiFor(api: ApiFetcher) {
       return api.fetch("/coach/cards", { method: "PUT", body: JSON.stringify(layout) });
     },
     /** Canvas W10: my saved replies. */
+    /** Messages sent for you (canvas MS3). */
+    /** The coach's own how-tos (canvas HT4), shown to their clients instead of LogIt's. */
+    async getHowTos(): Promise<CoachHowTo[]> {
+      return (await api.fetch<{ howTos: CoachHowTo[] }>("/coach/howtos")).howTos;
+    },
+
+    async saveHowTos(howTos: CoachHowTo[]): Promise<CoachHowTo[]> {
+      return (await api.fetch<{ howTos: CoachHowTo[] }>("/coach/howtos", { method: "PUT", body: JSON.stringify({ howTos }) })).howTos;
+    },
+
+    async getAutoMessages(): Promise<AutoMessages> {
+      return api.fetch("/coach/auto-messages");
+    },
+    async saveAutoMessages(s: AutoMessages): Promise<AutoMessages> {
+      return api.fetch("/coach/auto-messages", { method: "PUT", body: JSON.stringify(s) });
+    },
+
     async getSavedReplies(): Promise<import("../domain/savedReplies").SavedReply[]> {
       return (await api.fetch<{ replies: import("../domain/savedReplies").SavedReply[] }>("/coach/saved-replies")).replies;
     },

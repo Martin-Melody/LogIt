@@ -1,3 +1,5 @@
+import { stretchesOf, stretchTitle } from "./stretches";
+import { weekTypeOf, weekTypeLabel } from "./weekTypes";
 import { copyData } from "./copyData";
 import type { MobilityMetric, SetType } from "./workout";
 import type { BlockValue } from "./blockPlugin";
@@ -23,6 +25,15 @@ export type CoachProgram = {
   /** v2: how the numbers move week to week, for every exercise without its own rule.
    * Missing (v1) = fixed: the numbers are as the coach typed them. */
   rule?: ProgramRule;
+  /** Phase 6.9: week ranges with their own progression ("find your weights, then Adaptive").
+   * Weeks no phase covers use the program's rule. */
+  phases?: ProgramPhase[];
+  /** On a client's copy: the weights a phase found, as the coach checked them (canvas SP4). */
+  handoffs?: PhaseHandoff[];
+  /** Phase 6.12/6.13: the coach's own how-tos for exercises in it (theirs win over LogIt's), and
+   * who sees how-tos: new lifters (the default), always or never (canvas HT3). */
+  howtos?: import("./howTo").CoachHowTo[];
+  howtoShow?: "new" | "always" | "never";
   id: string;
   name: string;
   description?: string;
@@ -62,8 +73,10 @@ export type ProgramWeek = {
   id: string;
   weekNumber: number;
   name?: string;
-  /** v2: a lighter (deload) week: fewer sets, same weight (canvas PG2). */
+  /** v2: a lighter (deload) week: fewer sets, same weight (canvas PG2). Read as a Deload week type. */
   lighter?: boolean;
+  /** Its type (Phase 6.4): Deload, Test, the coach's own… Absent = normal. */
+  type?: import("./weekTypes").WeekType;
   days: ProgramDay[];
 };
 
@@ -77,7 +90,82 @@ export type ProgramDay = {
    * follow it). The client can set their own on the phone. */
   sessionTime?: string;
   blocks: ProgramBlock[];
+  /** Phase 6.6: settings of the day's supersets, by supersetGroup id. Without one, a group is
+   * a superset (any size: a tri-set stays a superset) with no timer between exercises. */
+  groups?: ProgramGroup[];
 };
+
+/** A superset, tri-set, giant set or circuit made of the blocks sharing its id (canvas PB2). */
+export type ProgramGroup = {
+  id: string;
+  /** The coach's name; else "Superset" / "Tri-set" / "Giant set" / "Circuit". */
+  name?: string;
+  kind?: "superset" | "circuit";
+  /** Rest between one exercise and the next, and after each round. */
+  memberRestSec?: number;
+  roundRestSec?: number;
+  /** Builder round 2: how it moves up, like the old circuit blocks. Rounds are each member's
+   * number of sets (canvas PB15/PB16). */
+  progression?: "same" | "add-round" | "each";
+};
+
+/** What the group dialog edits (the old circuit dialog, for supersets too). */
+export type GroupDraft = {
+  kind: "superset" | "circuit";
+  name?: string;
+  rounds: number;
+  memberRestSec?: number;
+  roundRestSec?: number;
+  progression: "same" | "add-round" | "each";
+  /** In order. A member with a block id is changed; one without is added; members missing from
+   * the list leave the group and stand alone. */
+  members: { blockId?: string; exerciseName: string; exerciseId?: string; reps?: number; durationSec?: number }[];
+};
+
+/** The block a phase runs each lift with. Find your weights made before 6.10 named none: it
+ * means LogIt's Weight finder, so it gets that rather than the plain lifts. */
+export function phaseBlock(phase: Pick<ProgramPhase, "blockPluginId" | "findsWeights" | "pack" | "findsMax">): string | undefined {
+  if (phase.blockPluginId) return phase.blockPluginId;
+  if (phase.findsMax) return MAX_FINDER_ID;
+  return phase.findsWeights && (!phase.pack || phase.pack.id === FIND_YOUR_WEIGHTS_PACK.id) ? WEIGHT_FINDER_ID : undefined;
+}
+
+/** A phase (canvas SP5): weeks with their own progression. One that finds weights hands its
+ * numbers to the next; the coach checks them on Today (SP4). */
+export type ProgramPhase = {
+  id: string;
+  name: string;
+  weeks: WeekRange;
+  rule?: ProgramRule;
+  /** It works up to the weights that fit; the next phase plans from what it found. */
+  findsWeights?: boolean;
+  /** Phase 6.10: a block plugin that runs each lift in these weeks (its exercise field set to
+   * the lift), like LogIt's Weight finder. Without it on the phone, the lift runs as usual. */
+  blockPluginId?: string;
+  /** The pack it came from (canvas SP8), for "From the Find your weights pack". */
+  pack?: { id: string; name: string };
+  /** Canvas PX4: a max test: heavy singles on `lifts`; the coach sees start against new max. */
+  findsMax?: boolean;
+  /** The exercises its block runs on (absent = every weighted lift); the rest run as usual. */
+  lifts?: string[];
+};
+
+/** LogIt's own Find your weights: the Weight finder block, one week (canvas SP6). */
+export const WEIGHT_FINDER_ID = "app.getlogit.weight-finder";
+export const FIND_YOUR_WEIGHTS_PACK = { id: "app.getlogit.find-your-weights", name: "Find your weights" };
+/** LogIt's own max test (canvas PX4): heavy singles until there's nothing left. */
+export const MAX_FINDER_ID = "app.getlogit.max-finder";
+export const FIND_YOUR_MAX_PACK = { id: "app.getlogit.find-your-max", name: "Find your max" };
+
+/** What a weight-finding phase found, as the coach checked it. `e1rm` holds only the lifts the
+ * coach changed; the rest come from the client's own sets as usual. */
+export type PhaseHandoff = { phaseId: string; checkedAtMs: number; e1rm?: Record<string, number> };
+
+/** Weeks from..to, both included (canvas PB7). */
+export type WeekRange = { from: number; to: number };
+
+/** What an exercise measures (canvas PB3), the kinds the workout logs. Absent = weight × reps. */
+export type ExerciseMeasure = "weight" | "reps" | "added" | "time" | "distance";
 
 /**
  * v2: a progression rule (canvas PG4). Built in: LogIt Adaptive (weight from the client's
@@ -93,7 +181,8 @@ export type ProgramRule =
   /** The coach's own rule (built in Programs › Rules): its blocks travel with the program so
    * the client's phone can run it. */
   | { kind: "own"; ruleId: string; name: string; recipe?: SharedRecipe }
-  | { kind: "plugin"; pluginId: string; name: string };
+  /** decidesSets: the plugin plans how many sets too (builder round 2): the builder hides Sets. */
+  | { kind: "plugin"; pluginId: string; name: string; decidesSets?: boolean };
 
 export type ProgramBlock = ProgramStrength | ProgramCardio | ProgramCircuit | ProgramMobility | ProgramPluginBlock;
 
@@ -101,6 +190,8 @@ export type ProgramBlock = ProgramStrength | ProgramCardio | ProgramCircuit | Pr
 type V2Block = {
   id: string;
   orderIndex: number;
+  /** Phase 6.7: the weeks it runs in (absent = every week). */
+  weeks?: WeekRange;
   /** As on strength blocks; a circuit is a group of its own and leaves it unset. */
   supersetGroup?: string;
   /** The lowest app version that can run this block ("1.1.0"). Older apps show "Update
@@ -131,6 +222,9 @@ export type ProgramMobility = V2Block & {
   sets?: number;
   /** Hold goal per set, seconds. */
   targetSec?: number;
+  /** Builder round 2 (canvas PB13): its progression (a mobility progression id); absent = the
+   * client's own for that drill. */
+  progressionId?: string;
   /** Or a time for the whole drill, minutes ("Shoulder CARs · 5 min"). */
   minutes?: number;
 };
@@ -149,10 +243,15 @@ export type ProgramPluginBlock = V2Block & {
   settingsText?: string;
 };
 
+/** Canvas PX3: an exercise's numbers for some weeks (a stretch), over its every-week ones. */
+export type WeekNumbers = { weeks: WeekRange; sets: ProgramSet[]; rule?: ProgramRule; warmups?: "on" | "off" };
+
 export type ProgramStrength = {
   type: "strength";
   id: string;
   orderIndex: number;
+  /** Canvas PX3: its sets, reps, rest and progression in some weeks, when they differ. */
+  byWeeks?: WeekNumbers[];
   /** Blocks sharing a supersetGroup are performed as a superset. */
   supersetGroup?: string;
   exerciseName: string;
@@ -164,6 +263,18 @@ export type ProgramStrength = {
   alternatives?: SwapAlternative[];
   /** v2: this exercise's own rule, over the program's. */
   rule?: ProgramRule;
+  /** Phase 6.7: the weeks it runs in (absent = every week). */
+  weeks?: WeekRange;
+  /** Phase 6.15 (canvas EQ1): what happens when the client's gym runs out (a stack's top): more
+   * reps then a harder version (or slower reps, or ask the coach then), or load past it with their
+   * stack pin. Absent: weight held and reps up while the coach is asked. */
+  atTop?: { then: "harder"; exercise: string } | { then: "slower" } | { then: "ask" } | { then: "pin" };
+  /** Builder round 2 (canvas PB12): warm-ups planned in ("on"), left out ("off"), or absent =
+   * the client's own choice. */
+  warmups?: "on" | "off";
+  /** Phase 6.6: what it measures (absent = weight × reps), and left and right logged apart. */
+  measure?: ExerciseMeasure;
+  perSide?: boolean;
 };
 
 export type SwapAlternative = { exerciseName: string; exerciseId?: string };
@@ -176,8 +287,14 @@ export type ProgramCardio = {
   orderIndex: number;
   supersetGroup?: string;
   activityName: string;
+  /** Phase 6.7: the weeks it runs in (absent = every week). */
+  weeks?: WeekRange;
   targetDurationSec?: number;
   targetDistanceM?: number;
+  /** Phase 6.6: intervals, e.g. 1:00 hard, 2:00 easy, × 6. */
+  intervals?: { workSec: number; easySec?: number; repeat: number };
+  /** "Zone 2", "about 8/10". */
+  effort?: string;
   note?: string;
 };
 
@@ -196,6 +313,9 @@ export type ProgramSet = {
   restSec?: number;
   /** Tempo notation, e.g. "3-1-1-0" (eccentric-pause-concentric-pause). */
   tempo?: string;
+  /** Phase 6.6: a hold's time, or a carry's distance, when the exercise measures those. */
+  durationSec?: number;
+  distanceM?: number;
   /** v2: the coach typed this week's numbers over the rule's (canvas PG3); they stay put. */
   pinned?: boolean;
 };
@@ -749,6 +869,313 @@ export function supersetLabels(day: ProgramDay): Map<string, string> {
   return out;
 }
 
+// ── Exercises in some weeks (Phase 6.7, canvas PB7) ───────────────────────────
+
+/** Whether a block runs in week n. */
+export function inWeek(b: { weeks?: WeekRange }, n: number): boolean {
+  return !b.weeks || (n >= b.weeks.from && n <= b.weeks.to);
+}
+
+/** The day as it is in week n: only the blocks that run that week, each with that week's numbers. */
+export function dayForWeek<D extends ProgramDay>(day: D, n: number): D {
+  if (day.blocks.every((b) => inWeek(b, n) && !(b.type === "strength" && b.byWeeks?.length))) return day;
+  return { ...day, blocks: day.blocks.filter((b) => inWeek(b, n)).map((b) => (b.type === "strength" ? numbersAt(b, n) : b)) };
+}
+
+const NUMBER_KEYS = ["sets", "rule", "warmups"] as const;
+/** An exercise as it is in week n: the numbers of the stretch it's in, else its every-week ones. */
+export function numbersAt(b: ProgramStrength, n: number): ProgramStrength {
+  const e = b.byWeeks?.find((x) => n >= x.weeks.from && n <= x.weeks.to);
+  return e ? withNumbers(b, e) : b;
+}
+/** An exercise as it is in weeks r (the builder's Editing): numbers set for all of r, else every week's. */
+export function numbersFor(b: ProgramStrength, r: WeekRange): ProgramStrength {
+  const e = b.byWeeks?.find((x) => x.weeks.from <= r.from && x.weeks.to >= r.to);
+  return e ? withNumbers(b, e) : b;
+}
+function withNumbers(b: ProgramStrength, e: WeekNumbers): ProgramStrength {
+  const { rule: _r, warmups: _w, ...rest } = b;
+  return { ...rest, sets: e.sets, ...(e.rule ? { rule: e.rule } : b.rule ? { rule: b.rule } : {}), ...(e.warmups ? { warmups: e.warmups } : b.warmups ? { warmups: b.warmups } : {}) };
+}
+
+/** Changes an exercise's numbers in weeks r only (canvas PX3): `fn` gets it as it is there and
+ * returns it changed; the change is kept for r, trimming what other weeks had for r. Numbers the
+ * same as every week's aren't kept. */
+export function setNumbersInWeeks(b: ProgramStrength, r: WeekRange, fn: (x: ProgramStrength) => ProgramStrength): ProgramStrength {
+  const next = fn(numbersFor(b, r));
+  const pick = (x: ProgramStrength) => JSON.stringify([x.sets.map(({ id: _i, ...s }) => s), x.rule ?? null, x.warmups ?? null]);
+  const others: WeekNumbers[] = [];
+  for (const e of b.byWeeks ?? []) {
+    if (e.weeks.to < r.from || e.weeks.from > r.to) { others.push(e); continue; }
+    if (e.weeks.from < r.from) others.push({ ...e, weeks: { from: e.weeks.from, to: r.from - 1 } });
+    if (e.weeks.to > r.to) others.push({ ...e, weeks: { from: r.to + 1, to: e.weeks.to } });
+  }
+  const entry: WeekNumbers = { weeks: r, sets: next.sets, ...(next.rule ? { rule: next.rule } : {}), ...(next.warmups ? { warmups: next.warmups } : {}) };
+  const keep = pick(next) !== pick(b) ? [...others, entry] : others;
+  const { byWeeks: _b, ...rest } = b;
+  return keep.length ? { ...rest, byWeeks: keep.sort((x, y) => x.weeks.from - y.weeks.from) } : rest;
+}
+
+/** "Weeks 1–4", "Week 5". */
+export function weekRangeText(r: WeekRange): string {
+  return r.from === r.to ? `Week ${r.from}` : `Weeks ${r.from}–${r.to}`;
+}
+
+/** Sets the weeks a block runs in; null = every week. */
+export function setBlockWeeks(program: CoachProgram, weekId: string, dayId: string, blockId: string, weeks: WeekRange | null): CoachProgram {
+  return mapDay(program, weekId, dayId, (day) => ({
+    ...day,
+    blocks: day.blocks.map((b) => {
+      if (b.id !== blockId) return b;
+      const { weeks: _w, ...rest } = b;
+      return (weeks ? { ...rest, weeks } : rest) as ProgramBlock;
+    }),
+  }));
+}
+
+/** The weeks a block runs in, as a range (every week = 1 to the last). */
+const spanOf = (b: { weeks?: WeekRange }, total: number): WeekRange => b.weeks ?? { from: 1, to: total };
+const copyBlock = (b: ProgramBlock, id: string): ProgramBlock =>
+  (b.type === "strength" ? { ...b, id, sets: b.sets.map((s) => ({ ...s, id: `${s.id}_${id.slice(-4)}` })) } : { ...b, id }) as ProgramBlock;
+
+/** Takes an exercise out of weeks r (canvas PX2). Out of the middle of its weeks it becomes two:
+ * before r, and a copy after r. Out of all of them, it goes. */
+export function takeOutOfWeeks(program: CoachProgram, weekId: string, dayId: string, blockId: string, r: WeekRange, newId: string): CoachProgram {
+  const total = program.weeks.length;
+  return mapDay(program, weekId, dayId, (day) => {
+    const ordered = [...day.blocks].sort((a, b) => a.orderIndex - b.orderIndex);
+    const at = ordered.findIndex((b) => b.id === blockId);
+    const old = ordered[at];
+    if (!old) return day;
+    const s = spanOf(old, total);
+    if (r.to < s.from || r.from > s.to) return day;
+    const parts: ProgramBlock[] = [];
+    if (s.from < r.from) parts.push({ ...old, weeks: { from: s.from, to: r.from - 1 } } as ProgramBlock);
+    if (s.to > r.to) parts.push({ ...(parts.length ? copyBlock(old, newId) : old), weeks: { from: r.to + 1, to: s.to } } as ProgramBlock);
+    ordered.splice(at, 1, ...parts);
+    return { ...day, blocks: ordered.map((b, i) => ({ ...b, orderIndex: i }) as ProgramBlock) };
+  });
+}
+
+/** Swaps an exercise for another in weeks r only (canvas PX2): the new one takes its place in
+ * those weeks with the same sets, rest and progression; the old one keeps the others. */
+export function swapInWeeks(program: CoachProgram, weekId: string, dayId: string, blockId: string, r: WeekRange, next: { exerciseName: string; exerciseId?: string }, newId: () => string): CoachProgram {
+  const total = program.weeks.length;
+  const day = program.weeks.find((w) => w.id === weekId)?.days.find((d) => d.id === dayId);
+  const old = day?.blocks.find((b) => b.id === blockId);
+  if (!old || old.type !== "strength") return program;
+  const s = spanOf(old, total);
+  const inside = { from: Math.max(s.from, r.from), to: Math.min(s.to, r.to) };
+  if (inside.from > inside.to) return program;
+  const { alternatives: _a, ...base } = old;
+  const fresh = { ...copyBlock(base as ProgramBlock, newId()), ...next, weeks: inside } as ProgramBlock;
+  if (!next.exerciseId) delete (fresh as { exerciseId?: string }).exerciseId;
+  const out = takeOutOfWeeks(program, weekId, dayId, blockId, inside, newId());
+  // The new one goes where the old one was in those weeks: right after its earlier part.
+  return mapDay(out, weekId, dayId, (d) => {
+    const ordered = [...d.blocks].sort((a, b) => a.orderIndex - b.orderIndex);
+    const before = ordered.findIndex((b) => b.id === blockId && spanOf(b, total).to < inside.from);
+    const at = before >= 0 ? before + 1 : Math.max(0, ordered.findIndex((b) => b.id === blockId));
+    ordered.splice(at === -1 ? ordered.length : at, 0, fresh);
+    return { ...d, blocks: ordered.map((b, i) => ({ ...b, orderIndex: i }) as ProgramBlock) };
+  });
+}
+
+/** Puts an exercise into weeks r too (canvas PX1, "bring it back"): next to its weeks it grows
+ * to cover them; apart from them, a copy runs in r. */
+export function addToWeeks(program: CoachProgram, weekId: string, dayId: string, blockId: string, r: WeekRange, newId: string): CoachProgram {
+  const total = program.weeks.length;
+  return mapDay(program, weekId, dayId, (day) => {
+    const ordered = [...day.blocks].sort((a, b) => a.orderIndex - b.orderIndex);
+    const at = ordered.findIndex((b) => b.id === blockId);
+    const old = ordered[at];
+    if (!old) return day;
+    const s = spanOf(old, total);
+    const touches = r.from <= s.to + 1 && s.from <= r.to + 1;
+    const span = { from: Math.min(s.from, r.from), to: Math.max(s.to, r.to) };
+    if (touches) ordered[at] = { ...old, weeks: span } as ProgramBlock;
+    else ordered.splice(at + 1, 0, { ...copyBlock(old, newId), weeks: r } as ProgramBlock);
+    // Parts of the same exercise that now meet (Squat 1–4 and 5–6) join into one.
+    const same = (x: ProgramBlock) => JSON.stringify({ ...x, id: 0, orderIndex: 0, weeks: 0, sets: x.type === "strength" ? x.sets.map(({ id: _i, ...s }) => s) : 0 });
+    const kept: ProgramBlock[] = [];
+    for (const blk of ordered) {
+      const s = spanOf(blk, total);
+      const mate = kept.findIndex((k) => same(k) === same(blk) && spanOf(k, total).to + 1 >= s.from && s.to + 1 >= spanOf(k, total).from);
+      if (mate < 0) { kept.push(blk); continue; }
+      const m = spanOf(kept[mate]!, total);
+      kept[mate] = { ...kept[mate]!, weeks: { from: Math.min(m.from, s.from), to: Math.max(m.to, s.to) } } as ProgramBlock;
+    }
+    const all = kept.map((x) => { const s = x.weeks; if (s && s.from <= 1 && s.to >= total) { const { weeks: _w, ...rest } = x; return rest as ProgramBlock; } return x; });
+    return { ...day, blocks: all.map((x, i) => ({ ...x, orderIndex: i }) as ProgramBlock) };
+  });
+}
+
+/** Ends an exercise before week `from` and starts another in its place, with the same sets,
+ * rest and progression (canvas PB7). Returns the program and the new block's id. */
+export function replaceFromWeek(program: CoachProgram, weekId: string, dayId: string, blockId: string, from: number, next: { exerciseName: string; exerciseId?: string }, newId: string): CoachProgram {
+  const total = program.weeks.length;
+  return mapDay(program, weekId, dayId, (day) => {
+    const ordered = [...day.blocks].sort((a, b) => a.orderIndex - b.orderIndex);
+    const at = ordered.findIndex((b) => b.id === blockId);
+    const old = ordered[at];
+    if (!old || old.type !== "strength") return day;
+    const start = old.weeks?.from ?? 1, end = old.weeks?.to ?? total;
+    if (from <= start || from > end) return day;
+    const { alternatives: _a, ...base } = old;
+    const fresh: ProgramStrength = { ...base, id: newId, ...next, weeks: { from, to: end }, sets: old.sets.map((s) => ({ ...s, id: `${s.id}_${newId.slice(-4)}` })) };
+    ordered.splice(at, 1, { ...old, weeks: { from: start, to: from - 1 } }, fresh);
+    return { ...day, blocks: ordered.map((b, i) => ({ ...b, orderIndex: i })) };
+  });
+}
+
+// ── Groups (Phase 6.6, canvas PB2) ────────────────────────────────────────────
+
+/** "Superset" (2), "Tri-set" (3), "Giant set" (4+), "Circuit", or the coach's name. */
+export function groupLabel(day: Pick<ProgramDay, "blocks" | "groups">, groupId: string): string {
+  const g = day.groups?.find((x) => x.id === groupId);
+  if (g?.name?.trim()) return g.name.trim();
+  if (g?.kind === "circuit") return "Circuit";
+  const n = day.blocks.filter((b) => b.supersetGroup === groupId).length;
+  return n >= 4 ? "Giant set" : n === 3 ? "Tri-set" : "Superset";
+}
+
+/** Changes a group's settings; null fields go back to the default. */
+export function setGroup(program: CoachProgram, weekId: string, dayId: string, groupId: string, patch: Partial<Omit<ProgramGroup, "id">>): CoachProgram {
+  return mapDay(program, weekId, dayId, (day) => {
+    const cur = day.groups?.find((g) => g.id === groupId) ?? { id: groupId };
+    const next = Object.fromEntries(Object.entries({ ...cur, ...patch }).filter(([, v]) => v != null && v !== "")) as ProgramGroup;
+    return { ...day, groups: [...(day.groups ?? []).filter((g) => g.id !== groupId), next] };
+  });
+}
+
+/** Puts a block into a group, right after its last member. */
+export function addToGroup(program: CoachProgram, weekId: string, dayId: string, blockId: string, groupId: string): CoachProgram {
+  return mapDay(program, weekId, dayId, (day) => {
+    const ordered = [...day.blocks].sort((a, b) => a.orderIndex - b.orderIndex);
+    const moving = ordered.find((b) => b.id === blockId);
+    if (!moving) return day;
+    const rest = ordered.filter((b) => b.id !== blockId);
+    const at = rest.map((b) => b.supersetGroup).lastIndexOf(groupId) + 1;
+    rest.splice(at > 0 ? at : rest.length, 0, { ...moving, supersetGroup: groupId });
+    return { ...day, blocks: rest.map((b, i) => ({ ...b, orderIndex: i })) };
+  });
+}
+
+/** Every block of the group stands alone again, and its settings go. */
+export function ungroup(program: CoachProgram, weekId: string, dayId: string, groupId: string): CoachProgram {
+  return mapDay(program, weekId, dayId, (day) => ({
+    ...day,
+    blocks: day.blocks.map((b) => (b.supersetGroup === groupId ? ({ ...b, supersetGroup: undefined } as ProgramBlock) : b)),
+    groups: day.groups?.filter((g) => g.id !== groupId),
+  }));
+}
+
+/** A group's rounds: the most sets any member has. */
+export function groupRounds(day: Pick<ProgramDay, "blocks">, groupId: string): number {
+  return Math.max(0, ...day.blocks.filter((b) => b.supersetGroup === groupId).map((b) => (b.type === "strength" ? b.sets.filter((s) => s.setType !== "warmup").length : b.type === "mobility" ? (b.sets ?? 1) : 1)));
+}
+
+/** What a member does each round: "15 reps", "0:40", "8–12". */
+export function memberAmount(b: ProgramBlock): string {
+  if (b.type === "strength") {
+    const s = b.sets.find((x) => x.setType !== "warmup") ?? b.sets[0];
+    if (b.measure === "time" && s?.durationSec) return restText(s.durationSec);
+    return s ? `${repsText(s) || "?"} reps` : "";
+  }
+  if (b.type === "mobility") return b.metric === "reps" ? `${b.targetSec ?? "?"} reps` : restText(b.targetSec ?? 30);
+  if (b.type === "cardio") return b.targetDurationSec ? restText(b.targetDurationSec) : b.targetDistanceM ? `${b.targetDistanceM} m` : "";
+  return "";
+}
+
+/** Applies the group dialog (canvas PB15): its settings, each member's amount and sets (one a
+ * round), members added and taken out, in the dialog's order. Returns the program. */
+export function applyGroupDraft(program: CoachProgram, weekId: string, dayId: string, groupId: string, draft: GroupDraft, newId: () => string): CoachProgram {
+  const rounds = Math.max(1, Math.min(20, Math.round(draft.rounds)));
+  let out = mapDay(program, weekId, dayId, (day) => {
+    const ordered = [...day.blocks].sort((a, b) => a.orderIndex - b.orderIndex);
+    const keep = new Set(draft.members.map((m) => m.blockId).filter(Boolean) as string[]);
+    const members: ProgramBlock[] = draft.members.map((m) => {
+      const cur = m.blockId ? ordered.find((b) => b.id === m.blockId) : undefined;
+      if (cur?.type === "strength") {
+        const like = cur.sets.find((s) => s.setType !== "warmup") ?? cur.sets[0];
+        const warm = cur.sets.filter((s) => s.setType === "warmup");
+        const sets = Array.from({ length: rounds }, (_, i): ProgramSet => {
+          const prev = cur.sets.filter((s) => s.setType !== "warmup")[i] ?? like;
+          const base: ProgramSet = { ...(prev ?? { setType: "normal" }), id: prev && cur.sets.filter((s) => s.setType !== "warmup")[i] ? prev.id : newId(), orderIndex: warm.length + i, setType: prev?.setType === "warmup" ? "normal" : (prev?.setType ?? "normal") } as ProgramSet;
+          if (m.durationSec != null) return { ...base, durationSec: m.durationSec, reps: undefined, repsMin: undefined, repsMax: undefined };
+          if (m.reps != null) return { ...base, reps: m.reps, repsMin: undefined, repsMax: undefined };
+          return base;
+        });
+        return { ...cur, supersetGroup: groupId, ...(m.durationSec != null ? { measure: "time" as const } : {}), sets: [...warm, ...sets] };
+      }
+      if (cur?.type === "mobility") return { ...cur, supersetGroup: groupId, sets: rounds, ...(m.durationSec != null ? { targetSec: m.durationSec, metric: "hold" as const } : m.reps != null ? { targetSec: m.reps, metric: "reps" as const } : {}) };
+      if (cur) return { ...cur, supersetGroup: groupId } as ProgramBlock;
+      // A new member: a timed one is a hold, else sets of reps.
+      const id = newId();
+      if (m.durationSec != null) return { type: "mobility", id, orderIndex: 0, supersetGroup: groupId, drillName: m.exerciseName, sets: rounds, targetSec: m.durationSec, metric: "hold", minAppVersion: V2_BLOCKS_APP_VERSION } as ProgramBlock;
+      return { type: "strength", id, orderIndex: 0, supersetGroup: groupId, exerciseName: m.exerciseName, ...(m.exerciseId ? { exerciseId: m.exerciseId } : {}),
+        sets: Array.from({ length: rounds }, (_, i) => ({ id: newId(), orderIndex: i, setType: "normal" as const, reps: m.reps ?? 10 })) } as ProgramBlock;
+    });
+    // The group sits where its first member was (or at the end, for a new one).
+    const firstAt = ordered.findIndex((b) => b.supersetGroup === groupId || keep.has(b.id));
+    const rest = ordered.filter((b) => !keep.has(b.id)).map((b) => (b.supersetGroup === groupId ? ({ ...b, supersetGroup: undefined } as ProgramBlock) : b));
+    const at = firstAt < 0 ? rest.length : Math.min(firstAt, rest.length);
+    rest.splice(at, 0, ...members);
+    return { ...day, blocks: rest.map((b, i) => ({ ...b, orderIndex: i }) as ProgramBlock) };
+  });
+  out = setGroup(out, weekId, dayId, groupId, { kind: draft.kind, name: draft.name?.trim() || undefined, memberRestSec: draft.memberRestSec, roundRestSec: draft.roundRestSec, progression: draft.progression === "same" ? undefined : draft.progression });
+  return out;
+}
+
+/** Puts a block before another (null = the end) and in a group or none (builder round 2: drag
+ * in, out of and within groups). A group left with one exercise stops being a group. */
+export function placeBlock(program: CoachProgram, weekId: string, dayId: string, blockId: string, beforeId: string | null, group: string | undefined): CoachProgram {
+  return mapDay(program, weekId, dayId, (day) => {
+    const ordered = [...day.blocks].sort((a, b) => a.orderIndex - b.orderIndex);
+    const moving = ordered.find((b) => b.id === blockId);
+    if (!moving || beforeId === blockId) return day;
+    const rest = ordered.filter((b) => b.id !== blockId);
+    const at = beforeId ? rest.findIndex((b) => b.id === beforeId) : -1;
+    rest.splice(at < 0 ? rest.length : at, 0, { ...moving, supersetGroup: group } as ProgramBlock);
+    const count = new Map<string, number>();
+    for (const b of rest) if (b.supersetGroup) count.set(b.supersetGroup, (count.get(b.supersetGroup) ?? 0) + 1);
+    const blocks = rest.map((b, i) => ({ ...b, orderIndex: i, ...(b.supersetGroup && (count.get(b.supersetGroup) ?? 0) < 2 ? { supersetGroup: undefined } : {}) }) as ProgramBlock);
+    const live = new Set(blocks.map((b) => b.supersetGroup).filter(Boolean));
+    return { ...day, blocks, ...(day.groups ? { groups: day.groups.filter((g) => live.has(g.id)) } : {}) };
+  });
+}
+
+/** One-sided lifts, where Each side makes sense for strength (canvas PB11). By name: the library
+ * has no flag. shortcut: a name list, add a library field if coaches hit misses. */
+export function isOneSided(name: string): boolean {
+  return /single[- ]?(arm|leg)|one[- ](arm|leg)|unilateral|split squat|bulgarian|lunge|step[- ]?up|pistol|suitcase|kickstand|\bb-stance\b|concentration curl|kickback/i.test(name);
+}
+
+/** An old circuit block becomes a group of its members (one kind of group, canvas PB16). */
+export function circuitToGroup(program: CoachProgram, weekId: string, dayId: string, blockId: string, newId: () => string): { program: CoachProgram; groupId: string } {
+  const day = program.weeks.find((w) => w.id === weekId)?.days.find((d) => d.id === dayId);
+  const c = day?.blocks.find((b) => b.id === blockId);
+  if (!c || c.type !== "circuit") return { program, groupId: "" };
+  const groupId = newId();
+  // The circuit block steps aside; its members take its place.
+  let p = mapDay(program, weekId, dayId, (d) => ({ ...d, blocks: d.blocks.map((b) => (b.id === blockId ? ({ ...b, supersetGroup: groupId } as ProgramBlock) : b)) }));
+  p = applyGroupDraft(p, weekId, dayId, groupId, {
+    kind: "circuit", rounds: c.rounds, memberRestSec: c.memberRestSec, roundRestSec: c.roundRestSec, progression: c.progression ?? "same",
+    members: c.members.map((m) => ({ exerciseName: m.exerciseName, exerciseId: m.exerciseId, ...(m.durationSec ? { durationSec: m.durationSec } : { reps: m.reps ?? 10 }) })),
+  }, newId);
+  p = mapDay(p, weekId, dayId, (d) => ({ ...d, blocks: d.blocks.filter((b) => b.id !== blockId).map((b, i) => ({ ...b, orderIndex: i }) as ProgramBlock) }));
+  return { program: p, groupId };
+}
+
+/** "Weight × reps", "Reps", "Reps + added weight", "Time", "Distance". */
+export const MEASURES: { value: ExerciseMeasure; label: string; detail: string }[] = [
+  { value: "weight", label: "Weight × reps", detail: "Barbell, dumbbell, machine" },
+  { value: "reps", label: "Reps", detail: "Bodyweight: push-ups, pull-ups" },
+  { value: "added", label: "Reps + added weight", detail: "Weighted pull-ups, dips (belt)" },
+  { value: "time", label: "Time", detail: "Holds: plank, dead hang, wall sit" },
+  { value: "distance", label: "Distance", detail: "Carries, sled" },
+];
+
 // ── Set targets as text (the web editor's fields) ─────────────────────────────
 
 type RepsFields = Pick<ProgramSet, "reps" | "repsMin" | "repsMax" | "setType">;
@@ -861,8 +1288,91 @@ function withMinVersion(b: ProgramBlock): ProgramBlock {
 }
 
 /** The rule an exercise follows: its own, else the program's, else fixed. */
-export function ruleFor(program: Pick<CoachProgram, "rule">, block: ProgramBlock): ProgramRule {
-  return (block.type === "strength" ? block.rule : undefined) ?? program.rule ?? { kind: "fixed" };
+export function ruleFor(program: Pick<CoachProgram, "rule" | "phases">, block0: ProgramBlock, weekNumber?: number): ProgramRule {
+  const phase = weekNumber != null ? phaseAt(program, weekNumber) : null;
+  // A stretch's own progression for this exercise wins (canvas PX3).
+  const block = block0.type === "strength" && weekNumber != null ? numbersAt(block0, weekNumber) : block0;
+  return (block.type === "strength" ? block.rule : undefined) ?? phase?.rule ?? program.rule ?? { kind: "fixed" };
+}
+
+/** The phase week n is in, if any. */
+export function phaseAt(program: Pick<CoachProgram, "phases">, n: number): ProgramPhase | null {
+  return program.phases?.find((p) => n >= p.weeks.from && n <= p.weeks.to) ?? null;
+}
+
+/** Adds or changes a phase. A phase that finds weights makes its weeks "Find your weights". */
+export function putPhase(program: CoachProgram, phase: ProgramPhase): CoachProgram {
+  const others = (program.phases ?? []).filter((p) => p.id !== phase.id);
+  if (others.some((p) => p.weeks.from <= phase.weeks.to && phase.weeks.from <= p.weeks.to)) return program;
+  const old = program.phases?.find((p) => p.id === phase.id);
+  const inRange = (n: number, r?: WeekRange) => !!r && n >= r.from && n <= r.to;
+  return {
+    ...program,
+    phases: [...others, phase].sort((a, b) => a.weeks.from - b.weeks.from),
+    weeks: program.weeks.map((w) => {
+      if (phase.findsWeights && inRange(w.weekNumber, phase.weeks)) return { ...w, type: { kind: "find", progression: "pauses" } };
+      // Weeks that stopped being found by this phase go back to normal.
+      if (old?.findsWeights && inRange(w.weekNumber, old.weeks) && w.type?.kind === "find") { const { type: _t, ...rest } = w; return rest; }
+      return w;
+    }),
+  };
+}
+
+export function removePhase(program: CoachProgram, phaseId: string): CoachProgram {
+  const old = program.phases?.find((p) => p.id === phaseId);
+  if (!old) return program;
+  return {
+    ...program,
+    phases: program.phases!.filter((p) => p.id !== phaseId),
+    weeks: program.weeks.map((w) => {
+      if (!old.findsWeights || w.weekNumber < old.weeks.from || w.weekNumber > old.weeks.to || w.type?.kind !== "find") return w;
+      const { type: _t, ...rest } = w;
+      return rest;
+    }),
+  };
+}
+
+/** "Find your weights first" when assigning (canvas SP2): a week of LogIt's Weight finder before
+ * week 1, the same days, everything after moving on a week. */
+export function addFindWeekFirst(program: CoachProgram): CoachProgram {
+  const weeks = [...program.weeks].sort((a, b) => a.weekNumber - b.weekNumber);
+  const first = weeks[0];
+  if (!first || program.phases?.some((p) => p.findsWeights && p.weeks.from === 1)) return program;
+  // Everything moves on a week; what started in week 1 starts in the find week instead.
+  const shiftBlock = (r: WeekRange): WeekRange => ({ from: r.from === 1 ? 1 : r.from + 1, to: r.to + 1 });
+  const shift = (r: WeekRange): WeekRange => ({ from: r.from + 1, to: r.to + 1 });
+  const moveDays = (days: ProgramDay[]) => days.map((d) => ({ ...d, blocks: d.blocks.map((b) => (b.weeks ? ({ ...b, weeks: shiftBlock(b.weeks) } as ProgramBlock) : b)) }));
+  const { type: _t, lighter: _l, ...plain } = first;
+  const moved: CoachProgram = {
+    ...program,
+    weeks: [
+      // Week 1's days with the same block ids, so each exercise is the same one in every week.
+      { ...plain, id: createId("pweek"), weekNumber: 1, days: moveDays(first.days) },
+      ...weeks.map((w) => ({ ...w, weekNumber: w.weekNumber + 1, days: moveDays(w.days) })),
+    ],
+    ...(program.phases ? { phases: program.phases.map((p) => ({ ...p, weeks: shift(p.weeks) })) } : {}),
+  };
+  return putPhase(moved, { id: createId("phase"), name: "Find your weights", weeks: { from: 1, to: 1 }, findsWeights: true, blockPluginId: WEIGHT_FINDER_ID, pack: FIND_YOUR_WEIGHTS_PACK });
+}
+
+/** A weight-finding phase in its last week, or the week after, that the coach hasn't checked:
+ * "Niamh found her weights · Check them" (canvas SP4). Unchecked, its numbers apply anyway. */
+/** A max test that's just finished (canvas PX4): the coach sees how far they've come. */
+export function maxTestDue(program: Pick<CoachProgram, "phases" | "handoffs">, n: number): ProgramPhase | null {
+  const p = (program.phases ?? []).find((x) => x.findsMax && (n === x.weeks.to || n === x.weeks.to + 1));
+  return p && !program.handoffs?.some((h) => h.phaseId === p.id) ? p : null;
+}
+
+export function handoffDue(program: Pick<CoachProgram, "phases" | "handoffs">, n: number): ProgramPhase | null {
+  const p = (program.phases ?? []).find((x) => x.findsWeights && (n === x.weeks.to || n === x.weeks.to + 1));
+  return p && !program.handoffs?.some((h) => h.phaseId === p.id) ? p : null;
+}
+
+/** The client's estimates with the coach's checked numbers on top. */
+export function withHandoffs(program: Pick<CoachProgram, "handoffs">, e1rm: (name: string) => number | null): (name: string) => number | null {
+  const over = new Map<string, number>();
+  for (const h of program.handoffs ?? []) for (const [k, v] of Object.entries(h.e1rm ?? {})) over.set(k.trim().toLowerCase(), v);
+  return over.size ? (name) => over.get(name.trim().toLowerCase()) ?? e1rm(name) : e1rm;
 }
 
 /** "1.0.3" < "1.1.0". Anything that isn't a version ("web", "dev") counts as new enough. */
@@ -931,9 +1441,20 @@ export function daysPerWeek(program: Pick<CoachProgram, "weeks">): number {
 export function programSummary(program: CoachProgram): string {
   const weeks = program.weeks.length;
   const days = daysPerWeek(program);
-  const lighter = program.weeks.filter((w) => w.lighter).map((w) => w.weekNumber);
   const bits = [`${weeks} ${weeks === 1 ? "week" : "weeks"}`, `${days} ${days === 1 ? "day" : "days"} a week`, ruleLabel(program.rule)];
-  if (lighter.length) bits.push(`lighter ${lighter.length === 1 ? "week" : "weeks"} ${lighter.length === 1 ? lighter[0] : `${lighter.slice(0, -1).join(", ")} and ${lighter.at(-1)}`}`);
+  // Its stretches (canvas PW2): "find your weights weeks 1–2 · hypertrophy weeks 3–7 · deload weeks 4 and 8".
+  const by = new Map<string, WeekRange[]>();
+  for (const s of stretchesOf(program)) {
+    if (s.plain) continue;
+    // An unnamed progression stretch goes by its progression: "LogIt Adaptive weeks 2–3 and 5".
+    const label = s.what.kind === "progression" ? (s.name ?? ruleLabel(s.what.rule ?? program.rule)) : s.name ?? stretchTitle(s).toLowerCase();
+    by.set(label, [...(by.get(label) ?? []), s]);
+  }
+  for (const [label, rs] of by) {
+    const parts = rs.map((r) => (r.from === r.to ? `${r.from}` : `${r.from}–${r.to}`));
+    const many = rs.length > 1 || rs[0]!.from !== rs[0]!.to;
+    bits.push(`${label} ${many ? "weeks" : "week"} ${parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}`}`);
+  }
   return bits.join(" · ");
 }
 
@@ -942,11 +1463,15 @@ export function strengthSummary(block: ProgramStrength): string {
   const work = [...block.sets].filter((s) => s.setType !== "warmup").sort((a, b) => a.orderIndex - b.orderIndex);
   if (!work.length) return "";
   const first = work[0]!;
+  // A hold or a carry says its time or distance: "3 × 0:45", "3 × 40 m" (Phase 6.6).
+  const side = block.perSide ? " each side" : "";
+  if (block.measure === "time" && first.durationSec) return `${work.length} × ${restText(first.durationSec)}${side}`;
+  if (block.measure === "distance" && first.distanceM) return `${work.length} × ${first.distanceM} m${side}`;
   const reps = first.setType === "amrap" ? "AMRAP"
     : first.reps != null ? String(first.reps)
     : first.repsMin != null ? (first.repsMax != null && first.repsMax !== first.repsMin ? `${first.repsMin}–${first.repsMax}` : String(first.repsMin))
     : "";
-  return reps ? `${work.length} × ${reps}` : `${work.length} ${work.length === 1 ? "set" : "sets"}`;
+  return reps ? `${work.length} × ${reps}${side}` : `${work.length} ${work.length === 1 ? "set" : "sets"}`;
 }
 
 /** A day in one line: "Bench Press 3 × 6–8 · Barbell Row 3 × 8–10 · …". */

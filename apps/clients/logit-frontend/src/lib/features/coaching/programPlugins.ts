@@ -9,6 +9,18 @@ import { resolvePluginManifest } from "$lib/plugins/discovery";
 import { fetchRegistry, type RegistryEntry } from "$lib/plugins/registry";
 import { mayRunPlugin } from "$lib/plugins/sandboxedPlugin";
 import { setCoachAllowed } from "$lib/plugins/coachAllowed";
+import type { PluginManifest } from "$lib/plugins/types";
+import weightFinder from "../../../../../../../plugins/first-party/app.getlogit.weight-finder/block.json";
+import maxFinder from "../../../../../../../plugins/first-party/app.getlogit.max-finder/block.json";
+
+/** LogIt's own data-only blocks, shipped with the app so a Find your weights (or max) week works
+ * even when the registry doesn't have them (or the phone is offline). */
+const bundled = (b: { id: string; name: string; description: string }): PluginManifest => ({
+  id: b.id, family: "workout-block", name: b.name, description: b.description,
+  version: "1.0.0", author: "LogIt", distribution: { origin: "inline", data: b },
+  capabilities: [{ family: "workout-block", blockId: b.id }],
+}) as PluginManifest;
+const BUNDLED_BLOCKS: Record<string, PluginManifest> = { [weightFinder.id]: bundled(weightFinder), [maxFinder.id]: bundled(maxFinder) };
 
 /**
  * The plugins a coach's program uses and whether they run on this phone (canvas PG8). One
@@ -17,7 +29,27 @@ import { setCoachAllowed } from "$lib/plugins/coachAllowed";
  */
 export type ProgramPlugin = NeededPlugin & { ready: boolean; entry: RegistryEntry | null };
 
+/** LogIt's own blocks (app.getlogit.*, data only, no code) come with the program, like the
+ * Weight finder in a Find your weights week: a coach using one means the client gets it too. */
+export async function ensureOwnBlocks(program: CoachProgram): Promise<void> {
+  const own = pluginsNeeded(program).filter((n) => n.kind === "block" && n.pluginId.startsWith("app.getlogit.") && !getBlockDeclaration(n.pluginId));
+  if (!own.length) return;
+  const entries = (await fetchRegistry().catch(() => ({ entries: [] as RegistryEntry[] }))).entries;
+  for (const n of own) {
+    const entry = entries.find((e) => e.id === n.pluginId);
+    const manifest = entry ? await resolvePluginManifest({ kind: "url", url: entry.manifestUrl }).catch(() => null) : null;
+    if (manifest?.id === n.pluginId && manifest.family === "workout-block") {
+      await installPluginFromManifest(manifest, true, { source: "registry" }).catch(() => {});
+      continue;
+    }
+    // Not in any registry (offline, or not published there): the copy that ships with the app.
+    const bundled = BUNDLED_BLOCKS[n.pluginId];
+    if (bundled) await installPluginFromManifest(bundled, true, { source: "registry" }).catch(() => {});
+  }
+}
+
 export async function programPlugins(program: CoachProgram): Promise<ProgramPlugin[]> {
+  await ensureOwnBlocks(program).catch(() => {});
   const needed = pluginsNeeded(program);
   if (!needed.length) return [];
   const installed = await listInstalledPluginManifests();

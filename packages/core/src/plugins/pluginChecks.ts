@@ -1,6 +1,8 @@
 import { parseMealPlanPack, parseRecipePack } from "./nutritionPacks";
 import { cardPackCards } from "./cardPack";
 import { parseQuestionPack } from "./questionPack";
+import { parsePhasePack } from "./phasePack";
+import { parseHowToPack } from "./howtoPack";
 import { parseProgramPack } from "./programPack";
 import { parseBlockDeclaration } from "../domain/blockPlugin";
 import { parseExercisePack } from "./exercisePack";
@@ -177,6 +179,15 @@ function checkPack(family: string, pluginId: string, source: string): CheckResul
     checks.push({ id: "json", label: "Valid JSON", ok: false, detail: message(e) });
     return done(checks);
   }
+  if (family === "phase-pack") {
+    try {
+      const p = parsePhasePack(raw, pluginId);
+      checks.push({ id: "pack", label: `"${p.phase.name}", ${p.phase.weeks} ${p.phase.weeks === 1 ? "week" : "weeks"}, with ${p.includes.length} ${p.includes.length === 1 ? "part" : "parts"}, readable`, ok: true });
+    } catch (e) {
+      checks.push({ id: "pack", label: "The phase is readable", ok: false, detail: message(e) });
+    }
+    return done(checks);
+  }
   if (family === "workout-block") {
     try {
       const d = parseBlockDeclaration(raw, pluginId);
@@ -196,10 +207,12 @@ function checkPack(family: string, pluginId: string, source: string): CheckResul
             ? parseMealPlanPack(raw, pluginId).plans.length
             : family === "question-pack"
               ? parseQuestionPack(raw, pluginId).questions.length
+            : family === "howto-pack"
+              ? parseHowToPack(raw, pluginId).howtos.length
             : family === "recipe-pack"
               ? parseRecipePack(raw, pluginId).recipes.length
               : parseExercisePack(raw, pluginId).exercises.length;
-    const what = family === "mobility-pack" ? "drills" : family === "program-pack" ? "programs" : family === "meal-plan-pack" ? "meal plans" : family === "recipe-pack" ? "recipes" : family === "question-pack" ? "questions" : "exercises";
+    const what = family === "mobility-pack" ? "drills" : family === "program-pack" ? "programs" : family === "meal-plan-pack" ? "meal plans" : family === "recipe-pack" ? "recipes" : family === "question-pack" ? "questions" : family === "howto-pack" ? "how-tos" : "exercises";
     checks.push({ id: "pack", label: `${count} ${what}, all readable`, ok: true });
   } catch (e) {
     checks.push({ id: "pack", label: "Every entry is readable", ok: false, detail: message(e) });

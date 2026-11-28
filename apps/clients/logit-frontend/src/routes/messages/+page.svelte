@@ -29,6 +29,7 @@
   import { shortAgo } from "$lib/features/friends/dmTime";
   import { outbox } from "$lib/features/friends/dmOutbox.svelte";
 
+  type Chip = "friends" | "coaches" | "clients" | "requests";
   type Row = {
     key: string;
     href: string;
@@ -39,6 +40,8 @@
     atMs: number;
     unread: boolean;
     coach: boolean;
+    /** Which chip it's under (canvas MS2): your role in the conversation. */
+    group: Chip;
     /** A chat with a person: its thread and their account id (report). */
     threadId?: string;
     userId?: string;
@@ -80,6 +83,24 @@
   }
 
   let rows = $state<Row[] | null>(null);
+  // Chips by role (canvas MS2): Clients and Requests only for coaches, Coaches only when coached
+  // or asking; no coaching at all, no chips. The last one picked is remembered.
+  const CHIP_KEY = "logit:messages-chip";
+  let chip = $state<"all" | Chip>((typeof localStorage !== "undefined" ? (localStorage.getItem(CHIP_KEY) as "all" | Chip | null) : null) ?? "all");
+  const chips = $derived.by(() => {
+    const has = (g: Chip) => (rows ?? []).some((x) => x.group === g);
+    const list: { id: "all" | Chip; label: string }[] = [{ id: "all", label: "All" }, { id: "friends", label: "Friends" }];
+    if (has("coaches")) list.push({ id: "coaches", label: "Coaches" });
+    if (has("clients")) list.push({ id: "clients", label: "Clients" });
+    if (has("requests")) list.push({ id: "requests", label: "Requests" });
+    return list.length > 2 ? list : [];
+  });
+  const unreadIn = (g: Chip) => (rows ?? []).filter((x) => x.group === g && x.unread).length;
+  const shownRows = $derived(chips.some((c) => c.id === chip) ? (rows ?? []).filter((x) => chip === "all" || x.group === chip) : (rows ?? []));
+  function pick(c: "all" | Chip) {
+    chip = c;
+    try { localStorage.setItem(CHIP_KEY, c); } catch { /* fine */ }
+  }
   let creating = $state(false);
   let requests = $state(0);
   let sent = $state(0);
@@ -107,16 +128,17 @@
         atMs: Date.parse(q.requestedAt),
         unread: (q.stage ?? "asked") === "asked",
         coach: true,
+        group: "requests" as Chip,
         label: q.stage === "waiting" ? "Waiting list" : "Request",
       };
     });
     const repo = getMessagesRepo();
     const threads = [
-      ...coaches.filter((c) => c.status !== "paused").map((c) => ({ id: c.relationshipId, person: c.coach })),
-      ...clients.map((c) => ({ id: c.relationshipId, person: c.client })),
+      ...coaches.filter((c) => c.status !== "paused").map((c) => ({ id: c.relationshipId, person: c.coach, group: "coaches" as Chip })),
+      ...clients.map((c) => ({ id: c.relationshipId, person: c.client, group: "clients" as Chip })),
     ];
     return [...requestRows, ...(await Promise.all(
-      threads.map(async ({ id, person }) => {
+      threads.map(async ({ id, person, group }) => {
         const last = (await repo.listThread(id)).at(-1);
         const name = person.displayName || person.username;
         return {
@@ -129,6 +151,8 @@
           atMs: last?.createdAtMs ?? 0,
           unread: (await repo.unreadCount(id)) > 0,
           coach: true,
+          group,
+          label: group === "coaches" ? "Your coach" : "Client",
         };
       }),
     ))];
@@ -157,6 +181,7 @@
           atMs: t.lastAtMs,
           unread: t.unread,
           coach: false,
+          group: "friends" as Chip,
           threadId: t.id,
           userId: t.group ? undefined : t.other?.id,
           groupId: t.group?.id,
@@ -195,6 +220,15 @@
       <span class="flex items-center gap-1.5 text-sm text-muted-foreground tabular-nums">{requests > 0 ? requests : `${sent} sent`}<ChevronRight class="size-4" /></span>
     </a>
   {/if}
+  {#if chips.length}
+    <div role="tablist" aria-label="Which conversations" class="flex gap-1.5 overflow-x-auto px-4 py-2">
+      {#each chips as c (c.id)}
+        {@const n = c.id === "all" ? 0 : unreadIn(c.id)}
+        <button type="button" role="tab" aria-selected={chip === c.id} onclick={() => pick(c.id)}
+          class="h-9 shrink-0 rounded-full border px-3.5 text-[13px] transition-colors {chip === c.id ? 'border-primary bg-primary font-semibold text-primary-foreground' : 'border-border text-muted-foreground'}">{c.label}{#if n}<span class="ml-1 tabular-nums">{n}</span>{/if}</button>
+      {/each}
+    </div>
+  {/if}
   {#if waiting > 0}
     <p class="px-4 py-2 text-[13px] text-muted-foreground">{waiting === 1 ? "1 message is" : `${waiting} messages are`} waiting to send. They go when you're back online.</p>
   {/if}
@@ -212,7 +246,7 @@
     </div>
   {:else}
     <ul data-guide="phone-messages-list">
-      {#each rows as r (r.key)}
+      {#each shownRows as r (r.key)}
         <li>
           <button type="button" class="flex w-full select-none items-center gap-3 px-4 py-2.5 text-left hover:bg-muted/40" onclick={() => { if (!picked) void goto(r.href); }}
             use:longpress={() => { if (!r.coach) picked = r; }}>

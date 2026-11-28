@@ -1,3 +1,4 @@
+import { parsePhasePack } from "@logit/core/plugins/phasePack";
 import { pluginsApi, type HostedRegistryEntry, type ServedManifest } from "@logit/core/api/pluginsApi";
 import { syncApi } from "@logit/core/api/syncApi";
 import { apiClient } from "@logit/core/api/client";
@@ -91,6 +92,16 @@ class PluginState {
         Math.max(now, (existing?.row.updatedAtMs ?? 0) + 1),
       ),
     );
+    // A starting phase brings its parts (canvas SP8): one install for the block, progression and
+    // questions it lists. A part that's gone from the directory is skipped; the phase says so.
+    if (manifest.family === "phase-pack") {
+      const pack = parsePhasePack(JSON.parse(await fetchSource(manifest)), manifest.id);
+      for (const id of pack.includes) {
+        if (this.get(id)) continue;
+        const part = await pluginsApi.listed(id).catch(() => null);
+        if (part) await this.install(part.manifest, source);
+      }
+    }
   }
 
   async setEnabled(id: string, enabled: boolean): Promise<void> {

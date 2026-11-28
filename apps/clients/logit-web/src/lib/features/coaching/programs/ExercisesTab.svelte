@@ -32,7 +32,23 @@
   /** Each pack's exercise/drill names, once fetched. */
   let packNames = $state<Record<string, string[] | null>>({});
 
+  // Canvas HT4: your own how-tos, for every exercise in your programs (LogIt's included).
+  let howtos = $state<CoachHowTo[]>([]);
+  let editing = $state<string | null>(null);
+  let editOpen = $state(false);
+  const programExercises = $derived([...new Set(programs.flatMap((p) => p.weeks.flatMap((w) => w.days.flatMap((d) => d.blocks.flatMap((b) => (b.type === "strength" ? [b.exerciseName] : [])))))).values()]
+    .sort((a, b) => a.localeCompare(b)));
+  const howtoRows = $derived(programExercises.filter((n) => !query.trim() || n.toLowerCase().includes(query.trim().toLowerCase())));
+  const mineFor = (n: string) => howtos.find((h) => h.exerciseName.toLowerCase() === n.toLowerCase()) ?? null;
+  const coreFor = (n: string) => CORE_EXERCISES.find((e) => e.name.toLowerCase() === n.toLowerCase()) ?? null;
+  async function saveHowTos(next: CoachHowTo[]) {
+    howtos = await coachApi.saveHowTos(next);
+    const n = await pushHowTosToCopies(await allHowTos()).catch(() => 0);
+    toast.success(n ? `Saved. ${n} ${n === 1 ? "client's program has" : "clients' programs have"} it now.` : "Saved. Clients get it with the programs that use it.");
+  }
+
   onMount(async () => {
+    void coachApi.getHowTos().then((h) => (howtos = h), () => {});
     lib = await loadWebLibrary().catch(() => null);
     await plugins.loadInstalls().catch(() => {});
     for (const p of packs) void loadPack(p.manifest as unknown as ServedManifest);
@@ -79,6 +95,12 @@
     { id: "open", label: `Open ${e.item.name}`, href: href(e) },
     { id: "share", label: shared(e) ? "Stop sharing with all clients" : "Share with all clients", run: () => void setShared(e, !shared(e)), disabled: viaProgram(e) ? "In an assigned program" : undefined, separatorBefore: true },
   ];
+  import HowToEditorDialog from "./HowToEditorDialog.svelte";
+  import { allHowTos, pushHowTosToCopies } from "./howtoData";
+  import { coachApi } from "@logit/core/api/coachApi";
+  import type { CoachHowTo } from "@logit/core/domain/howTo";
+  import { CORE_EXERCISES } from "@logit/core/domain/coreExercises";
+  import { CORE_MISTAKES } from "@logit/core/domain/coreMistakes";
 </script>
 
 <div class="flex flex-col gap-4">
@@ -116,6 +138,23 @@
       {/each}
     </section>
 
+    <section class="flex flex-col rounded-[12px] border border-border bg-card" aria-label="How-tos">
+      <h2 class="px-5 pb-0.5 pt-4 text-sm font-semibold">How-tos</h2>
+      <p class="px-5 pb-2 text-xs text-muted-foreground">What new lifters see for each exercise in your programs: yours where you wrote one, LogIt's for the rest.</p>
+      {#each howtoRows as n (n)}
+        {@const mine = mineFor(n)}
+        {@const core = coreFor(n)}
+        <article class="flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-border px-5 py-2.5">
+          <span class="min-w-0 flex-[1_1_260px] text-[14px] font-medium">{n}</span>
+          <span class="rounded-md px-1.5 py-0.5 text-[11px] font-semibold {mine ? 'bg-foreground text-background' : core ? 'bg-muted' : 'bg-warning/15 text-warning'}">{mine ? "Yours" : core ? "LogIt" : "None yet"}</span>
+          <span class="w-56 truncate text-xs text-muted-foreground">{mine ? [mine.video ? "video" : "", mine.pictures?.length ? `${mine.pictures.length} pictures` : "", mine.note ? "your note" : ""].filter(Boolean).join(" · ") || "cues" : core ? "cues and the common mistake" : "Clients see no steps"}</span>
+          <Button variant="outline" size="sm" onclick={() => { editing = n; editOpen = true; }}>{mine ? "Edit" : "Write yours"}</Button>
+        </article>
+      {:else}
+        <p class="border-t border-border px-5 py-6 text-center text-[13px] text-muted-foreground">{programExercises.length ? "Nothing matches that." : "Exercises in your programs show here."}</p>
+      {/each}
+    </section>
+
     <section class="flex flex-col rounded-[12px] border border-border bg-card" aria-label="From your packs">
       <h2 class="px-5 pb-2 pt-4 text-sm font-semibold">From your packs</h2>
       {#each packs as p (p.manifest.id)}
@@ -137,3 +176,11 @@
     <p class="text-xs text-muted-foreground">Anything here used in a program you've assigned goes to that client with it, read-only, so they can do it and swap by muscle. Packs are data, so clients don't have to allow anything.</p>
   {/if}
 </div>
+
+{#if editing}
+  {@const core = coreFor(editing)}
+  <HowToEditorDialog bind:open={editOpen} exerciseName={editing} current={mineFor(editing)}
+    logit={{ cues: core?.cues ?? [], mistake: core ? (CORE_MISTAKES[core.id] ?? null) : null }}
+    onsave={(h) => saveHowTos([...howtos.filter((x) => x.exerciseName.toLowerCase() !== h.exerciseName.toLowerCase()), h])}
+    onremove={() => saveHowTos(howtos.filter((x) => x.exerciseName.toLowerCase() !== editing!.toLowerCase()))} />
+{/if}

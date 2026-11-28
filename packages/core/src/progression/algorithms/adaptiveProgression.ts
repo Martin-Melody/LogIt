@@ -290,7 +290,8 @@ function suggest(input: ProgressionInput): ProgressionOutput | Promise<Progressi
     };
   }
 
-  const rir = prefs.repsInReserve;
+  // While the numbers are a guess (typed in, or from another lift), aim further from failure (Phase 6.2).
+  const rir = input.estimate && input.estimate.confidence !== "sure" ? Math.max(prefs.repsInReserve, 3) : prefs.repsInReserve;
   const drop = setToSetDrop(input.history);
   // The first set aims high enough that, losing `drop` reps a set, the last set still
   // lands in the range.

@@ -305,19 +305,19 @@ export const STUDIO_CHAPTERS: Chapter[] = [
     id: "studio.program",
     walkthrough: "studio",
     title: "Build a program",
-    blurb: "One week of days, a rule, sets and loads",
+    blurb: "One week of days, a progression, and the weeks as stretches",
     minutes: 4,
     feature: "coach-programs",
     steps: [
       {
         id: "new", on: "web", route: "/coaching/programs", target: "programs-new", kind: "do", signal: "program.created",
         title: "Start a program",
-        body: "Open Coaching › Programs and choose New program, or Start from a program to copy one of LogIt's (or a community pack's) and change it. A new one starts with one week and one day.",
+        body: "Open Coaching › Programs and choose New program, or Start from a program to copy one of LogIt's (or a community pack's) and change it. A new one asks how many weeks and what they do first (weeks 1 to 3 finding their weights, then a progression, a deload), or Skip for every week the same.",
       },
       {
         id: "editor", on: "web", route: "/coaching/programs", target: "program-editor", kind: "look",
         title: "One week of days",
-        body: "You build one week and it applies to every week. Pick a day, add exercises, supersets, cardio or mobility, and click one to set its sets, reps (8 or 8-10), load (kg, or 75% of their best), rest and tempo, its swaps and a note. Choose the rule that moves the numbers each week, the length, and any lighter weeks.",
+        body: "You build one week and it applies to every week. Pick a day and use + Add to search exercises, cardio and drills; pick several to add them as a superset or circuit. Click an exercise to open it in place: what it measures, sets, reps (8 or 8-10), load (kg, or 75% of their best), rest, tempo, swaps and a note. Drag the grip to reorder. Above the days: the progression that moves the numbers, the length, and the weeks as stretches (Find your weights in weeks 1–3, Hypertrophy in 4–7, a Deload); click one to change it or drag its edge. See every week shows it with an example lifter's numbers.",
       },
       {
         id: "save", on: "web", route: "/coaching/programs", target: "program-save", kind: "do", signal: "program.saved",
@@ -339,7 +339,7 @@ export const STUDIO_CHAPTERS: Chapter[] = [
       {
         id: "assign", on: "web", route: "/coaching/programs", target: "programs-assign", kind: "do", signal: "program.assigned",
         title: "Assign to a client",
-        body: "Open the program and choose Assign…. Pick who gets it (Niamh, if you're using the sample clients; you can pick several) and when it starts: when they tap Start, or a date you choose. Someone already on a program can switch now or start this one when theirs ends. Each gets their own copy.",
+        body: "Open the program and choose Assign…. Pick who gets it (Niamh, if you're using the sample clients; you can pick several) and when it starts: when they tap Start, or a date you choose. Someone already on a program can switch now or start this one when theirs ends. For one client, Next: check it fits shows where each weight starts from, lets you swap in their copy, and offers a Find your weights week first. Each gets their own copy.",
       },
       {
         // The tab in the route takes them back to the list from the program they just assigned.
@@ -453,15 +453,14 @@ export const STUDIO_CHAPTERS: Chapter[] = [
     feature: "coach-swaps",
     steps: [
       {
-        id: "default", on: "web", route: "/coaching/programs?tab=rules", target: "swap-default", kind: "look",
+        id: "default", on: "web", route: "/coaching/programs?tab=swaps", target: "swap-default", kind: "look",
         title: "Your swap rule",
-        body: "Programs › Rules: choose what clients may swap in your programs: any exercise, the same muscles only, or only the swaps you list under each exercise. Set it for everyone here and change it for one client on their page. A swap that isn't allowed becomes a message asking you.",
+        body: "Programs › Swaps: choose what clients may swap in your programs: any exercise, the same muscles only, or only the swaps you list for each exercise. Set it for everyone here and change it for one client on their page. A swap that isn't allowed becomes a message asking you.",
       },
       {
-        id: "list", on: "web", route: "/coaching/programs", target: "program-swaps", kind: "do", signal: "swap.added",
-        title: "An exercise's swap list",
-        body: "Each exercise in a program has its own list, under Swaps they can use. Add one with + Swap or tap a suggestion. With \"Only my list\" these are the only swaps a client sees; with \"Same muscles only\" they come first.",
-        arrives: "Open one of your programs and click an exercise to see its swaps.",
+        id: "list", on: "web", route: "/coaching/programs?tab=swaps", target: "swap-lists", kind: "do", signal: "swap.added",
+        title: "Each exercise's swap list",
+        body: "Every exercise in your programs, with its swaps. + Swap adds one to that exercise in every program it's in (the builder shows the same list under the exercise). With \"Only my list\" these are the only swaps a client sees; with \"Same muscles only\" they come first.",
       },
     ],
   },

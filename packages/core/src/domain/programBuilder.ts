@@ -4,6 +4,7 @@
 // built week. Saved as you go, with undo, and changes from another device merged in.
 
 import { createId } from "./ids";
+import type { WeekType } from "./weekTypes";
 import { libraryBaseOf, touchCoachProgram, updateCopyFromTemplate, type CoachProgram, type ProgramBlock, type ProgramDay, type ProgramSet, type ProgramWeek } from "./CoachProgram";
 
 const byOrder = <T extends { orderIndex: number }>(xs: T[]) => [...xs].sort((a, b) => a.orderIndex - b.orderIndex);
@@ -25,6 +26,72 @@ const sameNumbers = (a: ProgramSet, b: ProgramSet) => NUMBERS.every((k) => a[k] 
  * programs stay in the week-by-week editor, so nothing is lost.
  */
 export function forBuilder(program: CoachProgram): CoachProgram | null {
+  return sameShape(program) ?? mergeWeeks(program);
+}
+
+/** Weeks with different exercises (canvas PB7): one day of all of them, each with the weeks it
+ * runs in, so the program opens in the builder instead of week by week. Null when the weeks
+ * can't be one (a different number of days, sets or an exercise that comes and goes). */
+function mergeWeeks(program: CoachProgram): CoachProgram | null {
+  const weeks = byWeek(program.weeks);
+  const t = weeks[0];
+  if (!t) return null;
+  const tDays = byOrder(t.days);
+  if (weeks.some((w) => w.days.length !== tDays.length)) return null;
+  const key = (b: ProgramBlock) => (b.type === "strength" ? `s:${b.exerciseName.trim().toLowerCase()}` : shape(b));
+  const out: ProgramDay[][] = weeks.map(() => []);
+  for (let i = 0; i < tDays.length; i++) {
+    const order: string[] = [];
+    const first = new Map<string, ProgramBlock>();
+    const present = new Map<string, number[]>();
+    const perWeek: Map<string, ProgramBlock>[] = [];
+    for (const w of weeks) {
+      const list = byOrder(byOrder(w.days)[i]!.blocks);
+      const counts = new Map<string, number>();
+      const keys = list.map((b) => { const k0 = key(b); const n = (counts.get(k0) ?? 0) + 1; counts.set(k0, n); return `${k0}#${n}`; });
+      const m = new Map<string, ProgramBlock>();
+      keys.forEach((k, j) => {
+        m.set(k, list[j]!);
+        present.set(k, [...(present.get(k) ?? []), w.weekNumber]);
+        if (first.has(k)) return;
+        first.set(k, list[j]!);
+        // In the same place: after the one before it this week, else before the next known one.
+        const prev = j > 0 ? keys[j - 1]! : null;
+        const next = keys.slice(j + 1).find((x) => order.includes(x));
+        const at = prev && order.includes(prev) ? order.indexOf(prev) + 1 : next ? order.indexOf(next) : order.length;
+        order.splice(at, 0, k);
+      });
+      perWeek.push(m);
+    }
+    for (const k of order) {
+      const ns = present.get(k)!;
+      if (ns.some((n, j) => j > 0 && n !== ns[j - 1]! + 1)) return null;
+      const f = first.get(k)!;
+      for (const m of perWeek) {
+        const b = m.get(k);
+        if (b && f.type === "strength" && b.type === "strength" && b.sets.length !== f.sets.length) return null;
+      }
+    }
+    weeks.forEach((_w, wi) => {
+      const blocks = order.map((k, idx) => {
+        const f = first.get(k)!;
+        const ns = present.get(k)!;
+        const y = perWeek[wi]!.get(k);
+        let b: ProgramBlock = { ...f, orderIndex: idx };
+        if (y && f.type === "strength" && y.type === "strength") {
+          const fs = byOrder(f.sets), ys = byOrder(y.sets);
+          b = { ...b, sets: fs.map((s, j) => (sameNumbers(s, ys[j]!) && !ys[j]!.pinned ? s : { ...pick(ys[j]!), id: s.id, orderIndex: s.orderIndex, pinned: true })) } as ProgramBlock;
+        }
+        const { weeks: _r, ...rest } = b;
+        return (ns.length === weeks.length ? rest : { ...rest, weeks: { from: ns[0]!, to: ns.at(-1)! } }) as ProgramBlock;
+      });
+      out[wi]!.push({ ...tDays[i]!, blocks });
+    });
+  }
+  return { ...program, weeks: weeks.map((w, wi) => ({ ...w, days: out[wi]! })) };
+}
+
+function sameShape(program: CoachProgram): CoachProgram | null {
   const weeks = byWeek(program.weeks);
   const t = weeks[0];
   if (!t) return null;
@@ -64,7 +131,10 @@ export function applyTemplate(program: CoachProgram, template: ProgramWeek): Coa
   return touchCoachProgram({
     ...program,
     weeks: weeks.map((w, i) => {
-      if (i === 0) return { ...template, weekNumber: w.weekNumber, id: w.id, ...(w.lighter ? { lighter: true } : {}) };
+      if (i === 0) {
+        const { lighter: _l, type: _t, ...rest } = template;
+        return { ...rest, weekNumber: w.weekNumber, id: w.id, ...(w.lighter ? { lighter: true } : {}), ...(w.type ? { type: w.type } : {}) };
+      }
       return { ...w, days: template.days.map((td) => mergeDay(td, w.days.find((d) => d.id === td.id))) };
     }),
   });
@@ -101,6 +171,19 @@ export function setLength(program: CoachProgram, weeks: number): CoachProgram {
 
 function unpin(b: ProgramBlock): ProgramBlock {
   return b.type === "strength" ? { ...b, sets: b.sets.map(({ pinned: _p, ...s }) => s) } : b;
+}
+
+/** A week's type (Phase 6.4): Deload, Test, the coach's own; null or normal = a normal week.
+ * Replaces the old lighter flag on that week. */
+export function setWeekType(program: CoachProgram, weekNumber: number, type: WeekType | null): CoachProgram {
+  return touchCoachProgram({
+    ...program,
+    weeks: program.weeks.map((w) => {
+      if (w.weekNumber !== weekNumber) return w;
+      const { lighter: _l, type: _t, ...rest } = w;
+      return type && type.kind !== "normal" ? { ...rest, type } : rest;
+    }),
+  });
 }
 
 /** Lighter weeks: fewer sets, same weight (canvas PG2). */
@@ -182,6 +265,11 @@ export function mergePrograms(base: CoachProgram, mine: CoachProgram, theirs: Co
   }
   const lighter = (p: CoachProgram) => p.weeks.filter((w) => w.lighter).map((w) => w.weekNumber).sort();
   if (j(lighter(theirs)) !== j(lighter(base)) && j(lighter(mine)) === j(lighter(base))) out = setLighterWeeks(out, lighter(theirs));
+  // Week types the same way: theirs when only they changed them.
+  const types = (p: CoachProgram) => byWeek(p.weeks).map((w) => w.type ?? null);
+  if (j(types(theirs)) !== j(types(base)) && j(types(out)) === j(types(base))) {
+    for (const w of theirs.weeks) out = setWeekType(out, w.weekNumber, w.type ?? null);
+  }
 
   const tB = templateOf(base), tM = templateOf(out), tT = templateOf(theirs);
   const dayIn = (w: ProgramWeek, id: string) => w.days.find((d) => d.id === id);

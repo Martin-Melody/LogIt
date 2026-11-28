@@ -73,10 +73,21 @@ If a client answers Yes to a health question (a heart condition, chest pain or d
 page says so in amber until you mark that form read. ⋯ has Message, Change package, Send a form,
 their answers from when they asked to be coached, and Pause or End coaching.
 
+## Starting point
+
+At the top of a new client's **Training** (and from ⋯ › Starting point later): what their training
+says about where they start. Their lifts with the best recent set, estimated max, where it's from
+(logged, or worked out from another lift, in blue) and how sure it is; how they train (days a
+week, usual start, session length); weekly sets per muscle over the last 8 weeks; what they keep
+coming back to, swap away from and skip; and their start-up form's answers in their own words.
+Nothing in it was typed in.
+
 ## Sharing
 
 Each client chooses what you see: workouts, nutrition diary, bodyweight, habits and check-ins. They can
-change it any time; if they turn something off, that tab shows Not shared. Charts a client chooses to
+change it any time; if they turn something off, that tab shows Not shared. Under Workouts, **Your
+training from before** (on by default, with the real count) lets you see what they logged before
+coaching; off, you see only workouts from then on, and the Starting point says so. Charts a client chooses to
 show you appear under Insights on their Training tab, and you can build charts for them too.
 
 ## On the phone

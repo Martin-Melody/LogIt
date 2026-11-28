@@ -26,6 +26,10 @@ public static partial class PluginRules
         "meal-plan-pack", "recipe-pack", "card-pack",
         // Canvas W8/W9: check-in questions a sport plugin brings.
         "question-pack",
+        // Canvas SP8: a starting phase with the block, progression and questions it comes with.
+        "phase-pack",
+        // Canvas HT5: how-tos coaches show their clients (data only).
+        "howto-pack",
     ];
 
     public static readonly HashSet<string> CodeFamilies =
@@ -128,6 +132,8 @@ public static partial class PluginRules
         "recipe-pack" => new JsonObject { ["family"] = family, ["recipePackId"] = pluginId },
         "card-pack" => new JsonObject { ["family"] = family, ["cardPackId"] = pluginId, ["slot"] = "coaching" },
         "question-pack" => new JsonObject { ["family"] = family, ["questionPackId"] = pluginId },
+        "phase-pack" => new JsonObject { ["family"] = family, ["phasePackId"] = pluginId },
+        "howto-pack" => new JsonObject { ["family"] = family, ["howtoPackId"] = pluginId },
         _ => new JsonObject { ["family"] = family, ["algorithmId"] = pluginId },
     };
 

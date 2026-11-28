@@ -7,6 +7,9 @@ accounts can publish under, so apps can show them as LogIt's.
 | Plugin | Family | What it does |
 | --- | --- | --- |
 | `app.getlogit.rounds` | workout-block | Timed rounds with rest and notes, for BJJ, wrestling, boxing and bag work |
+| `app.getlogit.weight-finder` | workout-block | Work up to the weight that fits, a jump at a time, with "how many more could you have done?"; each jump counts as a set of the lift |
+| `app.getlogit.max-finder` | workout-block | Work up to a heavy single, "how much more was there?" after each; the heaviest is the new max (Find your max) |
+| `app.getlogit.find-your-weights` | phase-pack | A first week of Weight finder on each lift; the program after it plans from what it found, once the coach checks it |
 | `app.getlogit.hangboard` | workout-block | Hangs with edge size, grip, added weight and time |
 | `app.getlogit.boulder` | workout-block | Bouldering problems by grade: flashed, sent or a project, and tries |
 | `app.getlogit.climbing-week` | widget | "Climbing this week": sessions, hardest send and flash, tries on projects (reads Bouldering blocks) |

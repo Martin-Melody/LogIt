@@ -1,3 +1,4 @@
+import { loggedExercises } from "../domain/loggedSets";
 import type { WidgetDataNeed, WidgetInput, WidgetWorkout, WidgetWorkoutBlock } from "./widgetView";
 import { isPluginBlockType, PLUGIN_BLOCK_PREFIX, type PluginBlockData } from "../domain/blockPlugin";
 import type { WorkoutSession } from "../domain/workout";
@@ -7,7 +8,7 @@ import type { HabitRepo } from "../data/habitRepo";
 import type { NutritionDeps } from "../usecases/nutrition/deps";
 import type { ProgressionDeps } from "../usecases/progression/deps";
 import type { ProgressionOutput } from "../domain/progression";
-import { getExercises, type MobilityBlockData } from "../domain/workout";
+import { type MobilityBlockData } from "../domain/workout";
 import { dayTotals, localDateIso } from "../domain/nutrition";
 import { getSuggestion } from "../usecases/progression/getSuggestion";
 import { getNutritionTargets } from "../usecases/nutrition/getNutritionTargets";
@@ -93,7 +94,7 @@ export async function gatherWidgetInputFrom(
             id: s.id,
             startedAtMs: s.startedAtMs,
             endedAtMs: s.endedAtMs ?? undefined,
-            exercises: getExercises(s).map((ex) => ({
+            exercises: loggedExercises(s).map((ex) => ({
               exerciseId: ex.exerciseId ?? undefined,
               name: ex.exerciseName,
               sets: ex.sets.map((set) => ({
@@ -213,7 +214,7 @@ export async function gatherWidgetInputFrom(
         const seen = new Set<string>();
         const candidates: { id?: string; name: string }[] = [];
         outer: for (const session of recentSessions) {
-          for (const ex of getExercises(session)) {
+          for (const ex of loggedExercises(session)) {
             const key = ex.exerciseId ?? ex.exerciseName.toLowerCase();
             if (seen.has(key)) continue;
             seen.add(key);

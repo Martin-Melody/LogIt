@@ -1,0 +1,8 @@
+{
+  "formatVersion": 1,
+  "id": "app.getlogit.find-your-weights",
+  "name": "Find your weights",
+  "description": "A first week that works up to a hard set on each lift, so the program after it starts from real numbers. The coach checks them before week 2.",
+  "phase": { "name": "Find your weights", "weeks": 1, "findsWeights": true, "block": "app.getlogit.weight-finder" },
+  "includes": ["app.getlogit.weight-finder"]
+}

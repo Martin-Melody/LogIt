@@ -14,6 +14,20 @@
     "orSampleCoach": true
   },
   {
+    "method": "GET",
+    "route": "/coach/auto-messages/",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": true
+  },
+  {
+    "method": "PUT",
+    "route": "/coach/auto-messages/",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": true
+  },
+  {
     "method": "DELETE",
     "route": "/coach/away/",
     "plan": "Studio",
@@ -142,6 +156,20 @@
   {
     "method": "POST",
     "route": "/coach/habits",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": true
+  },
+  {
+    "method": "GET",
+    "route": "/coach/howtos/",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": true
+  },
+  {
+    "method": "PUT",
+    "route": "/coach/howtos/",
     "plan": "Studio",
     "orActivelyCoached": false,
     "orSampleCoach": true
