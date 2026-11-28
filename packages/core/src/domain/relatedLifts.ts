@@ -72,15 +72,19 @@ const LEVEL: Record<Movement, number> = {
   "elbow-extension": 0.26, "lateral-raise": 0.07, "rear-delt": 0.15, fly: 0.2, calf: 0.8, shrug: 0.9,
 };
 
-const MACHINE = /machine|leg press|hack|extension|leg curl|pulldown|pec deck|cable|smith|selectorized|lever/;
+const MACHINE = /machine|leg press|hack|extension|leg curl|pull.?down|pec deck|cable|smith|selectorized|lever/;
 
 export type LiftKind = { movement: Movement; factor: number; machine: boolean };
 
 /** The movement and factor for an exercise name, or null for ones it can't place (and bodyweight ones). */
+/** Bodyweight lifts log added weight (a dip with 5 kg), so they don't compare with others. */
+export function isBodyweightLift(name: string): boolean {
+  return /pull.?up|chin.?up|push.?up|bodyweight|assisted|^dips?$|weighted dip|ring dip/.test(name.toLowerCase());
+}
+
 export function liftKind(name: string): LiftKind | null {
   const n = name.toLowerCase();
-  // Bodyweight lifts log added weight (a dip with 5 kg), so they don't compare.
-  if (/pull.?up|chin.?up|push.?up|bodyweight|assisted|^dips?$|weighted dip|ring dip/.test(n)) return null;
+  if (isBodyweightLift(n)) return null;
   for (const [re, movement, factor] of RULES) if (re.test(n)) return { movement, factor, machine: MACHINE.test(n) };
   return null;
 }
