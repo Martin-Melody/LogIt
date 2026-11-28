@@ -1,4 +1,3 @@
-import { weekTypeOf, weekTypeLabel, weekSets, weekWeight, weekReps } from "./weekTypes";
 // What a program's rule plans for each exercise, week by week (canvas PG3 "Every week").
 // On a client's copy the numbers come from their own strength estimates and what they've done;
 // on one of your programs there are no numbers until it's someone's, so the rule is said in
@@ -19,7 +18,8 @@ import { weekTypeOf, weekTypeLabel, weekSets, weekWeight, weekReps } from "./wee
 import { loadFromPercent } from "./oneRepMax";
 import { getExercises, type WorkoutSession } from "./workout";
 import type { ProgressionOutput } from "./progression";
-import { ruleFor, type CoachProgram, type ProgramRule, type ProgramSet, type ProgramStrength, type ProgramWeek } from "./CoachProgram";
+import { inWeek, ruleFor, type CoachProgram, type ProgramRule, type ProgramSet, type ProgramStrength, type ProgramWeek } from "./CoachProgram";
+import { weekTypeOf, weekTypeLabel, weekSets, weekWeight, weekReps } from "./weekTypes";
 
 export type PlanCell = {
   /** done: what they did; pinned: typed by the coach; rule: planned by the rule; words: no numbers yet. */
@@ -70,7 +70,8 @@ export function planExercise(program: CoachProgram, blockId: string, ctx: PlanCo
   let lastWeight: number | undefined;
   for (const w of weeks) {
     const block = findBlock(w, blockId);
-    if (!block) { out.push(null); continue; }
+    // Not in this week (6.7): "—", and its progression counts only the weeks it runs.
+    if (!block || !inWeek(block, w.weekNumber)) { out.push(null); continue; }
     // A week whose type pauses the progression (a deload) plans from where it was; the next carries on.
     const wt = weekTypeOf(w);
     const cell = planWeek(program, w, block, ctx, wt?.progression === "pauses" ? k : ++k, lastWeight);

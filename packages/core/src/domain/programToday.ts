@@ -1,7 +1,7 @@
 // A coach's program on the client's Home (decision D2): which of its days is next. The week the
 // client is in comes from when they started; inside it, the first day not yet done (a workout
 // started from that day, this program week). All done: the next week's first day, on its date.
-import { getProgramProgress, getProgramStartMs, type CoachProgram, type ProgramDay } from "./CoachProgram";
+import { dayForWeek, getProgramProgress, getProgramStartMs, type CoachProgram, type ProgramDay } from "./CoachProgram";
 import { weekTypeOf, weekTypeLabel, weekTypeText, type WeekType } from "./weekTypes";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -38,12 +38,13 @@ export function programToday(program: CoachProgram, sessions: DoneSession[], now
   const weekStart = start + (progress.weekNumber - 1) * WEEK_MS;
   const mine = sessions.filter((s) => s.source?.kind === "program" && s.source.parentId === program.id);
   const doneIds = new Set(mine.filter((s) => s.startedAtMs >= weekStart).map((s) => s.source!.dayId));
-  const days = byOrder(week.days).filter((d) => d.blocks.length > 0);
+  // Each day as it is that week: an exercise for part of the program shows only in its weeks (6.7).
+  const days = byOrder(week.days).map((d) => dayForWeek(d, week.weekNumber)).filter((d) => d.blocks.length > 0);
   const todayStart = new Date(nowMs).setHours(0, 0, 0, 0);
   const doneToday = days.filter((d) => mine.some((s) => s.source!.dayId === d.id && s.startedAtMs >= todayStart));
   const open = days.find((d) => !doneIds.has(d.id));
   const following = weeks.find((w) => w.weekNumber === progress.weekNumber + 1);
-  const nextWeekFirst = following ? byOrder(following.days).find((d) => d.blocks.length > 0) : undefined;
+  const nextWeekFirst = following ? byOrder(following.days).map((d) => dayForWeek(d, following.weekNumber)).find((d) => d.blocks.length > 0) : undefined;
   return {
     program,
     weekNumber: progress.weekNumber,

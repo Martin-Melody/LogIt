@@ -8,7 +8,7 @@
 // plugin that isn't there) is left out, and the day's list says "Update LogIt to see this
 // part" (unrunnableBlocks); the rest of the day works.
 
-import { canRunBlock, restText, type ProgramBlock, type ProgramDay } from "./CoachProgram";
+import { canRunBlock, inWeek, restText, type ProgramBlock, type ProgramDay } from "./CoachProgram";
 import { circuitRounds, type PlanCell } from "./programPlan";
 import { addPluginBlock, repeatLastEntry, setBlockFieldValue, updatePluginBlock, type BlockDeclaration } from "./blockPlugin";
 import {
@@ -79,6 +79,8 @@ export function programDaySession(day: ProgramDay, opts: ProgramDayOptions = {})
   // done, just logged by hand (canvas Q4/PG8). Newer block types say "Update LogIt" on the day.
   const notes: string[] = [];
   for (const block of sortByOrderIndex(day.blocks)) {
+    // An exercise for part of the program only runs in its weeks (6.7).
+    if (opts.weekNumber != null && !inWeek(block, opts.weekNumber)) continue;
     if (skip.has(block.id)) {
       if (block.type === "plugin" && canRunBlock(block, opts.appVersion)) notes.push(pluginNote(block));
       continue;

@@ -37,6 +37,13 @@ time (holds like a plank) or distance (carries), and whether left and right are 
 set fields follow it. Holds run as a timed hold on the client's phone and carries as distance.
 Cardio can have intervals (work, easy, repeat) and an effort, shown on their phone as "Planned".
 
+Different exercises in different weeks don't need six copies of a day. ⋯ on an exercise has
+**Replace from week…**, which ends it the week before and starts another in its place with the same
+sets, rest and progression, and **Only in some weeks…**, which sets the weeks it runs in. The
+exercise shows its weeks ("Weeks 1–4"); **Show: Week 5** reads the day as the client will see it
+that week. Their phone and Every week leave it out of the other weeks, and its progression counts
+only the weeks it runs.
+
 Changes save as you go, so leaving the page loses nothing. If the same program is open on another
 device, changes to different things come across by themselves with a note; only when both changed
 the same exercise does LogIt ask which to keep. Programs made before the builder whose weeks have

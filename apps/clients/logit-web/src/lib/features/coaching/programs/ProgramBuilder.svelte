@@ -26,6 +26,7 @@
   import NamePicker from "$lib/features/plan/NamePicker.svelte";
   import AddToDayDialog, { type AddPick } from "./AddToDayDialog.svelte";
   import GroupDialog from "./GroupDialog.svelte";
+  import WeekRangeDialog from "./WeekRangeDialog.svelte";
   import { cardioPlanned } from "@logit/core/domain/programDaySession";
   import GripVerticalIcon from "@lucide/svelte/icons/grip-vertical";
   import { flip } from "svelte/animate";
@@ -399,6 +400,8 @@
         ? { id: "ungroup", label: "Take out of the superset", run: () => edit((p, w) => P.leaveSuperset(p, w, d, b.id)), separatorBefore: true }
         : { id: "superset", label: "Superset with the one above", run: () => edit((p, w) => P.supersetWithPrevious(p, w, d, b.id)), disabled: !prev || prev.type === "circuit" ? "Nothing above to pair with" : undefined, separatorBefore: true },
       ...(b.type === "circuit" ? [{ id: "edit", label: "Edit circuit…", run: () => openCircuit(b) }] : b.type === "plugin" ? [{ id: "edit", label: `Edit ${b.name}…`, run: () => openPluginBlock(b) }] : []),
+      ...(b.type === "strength" && prog.weeks.length > 1 ? [{ id: "replace-from", label: "Replace from week…", separatorBefore: true, run: () => openRange(b, "replace") }] : []),
+      ...(prog.weeks.length > 1 ? [{ id: "some-weeks", label: "Only in some weeks…", ...(b.type === "strength" ? {} : { separatorBefore: true }), run: () => openRange(b, "some") }] : []),
       { id: "dup", label: "Duplicate", run: () => duplicateBlock(b) },
       { id: "remove", label: "Remove", danger: true, separatorBefore: true, run: () => { edit((p, w) => P.removeBlock(p, w, d, b.id)); if (blockId === b.id) blockId = null; } },
     ];
@@ -557,6 +560,14 @@
     return out;
   });
   const runOrder = createReorder<string>("y");
+  // Exercises in some weeks (canvas PB7).
+  let rangeOpen = $state(false);
+  let rangeMode = $state<"replace" | "some">("some");
+  let rangeBlock = $state<ProgramBlock | null>(null);
+  function openRange(b: ProgramBlock, mode: "replace" | "some") { rangeBlock = b; rangeMode = mode; rangeOpen = true; }
+  /** "Show: Week 5" reads the day as the client sees it that week; dragging is for all weeks. */
+  let showWeek = $state<number | null>(null);
+  const shownRuns = $derived(showWeek == null ? runs : runs.map((x) => ({ ...x, blocks: x.blocks.filter((b) => P.inWeek(b, showWeek!)) })).filter((x) => x.blocks.length));
   let groupOpen = $state(false);
   let groupEditing = $state<string | null>(null);
   const editingGroup = $derived(groupEditing ? (day?.groups?.find((g) => g.id === groupEditing) ?? { id: groupEditing }) : null);
@@ -712,15 +723,22 @@
             class="h-8 rounded-full border px-3 text-xs transition-colors {day.weekday == null ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:text-foreground'}">Any day</button>
         </div>
 
+        {#if prog.weeks.length > 1 && blocks.some((b) => b.weeks)}
+          <span class="flex items-center gap-2 text-[13px]"><span class="text-muted-foreground">Show</span>
+            <OptionSelect size="sm" value={showWeek == null ? "all" : String(showWeek)} aria-label="Show"
+              options={[{ value: "all", label: "All weeks" }, ...[...prog.weeks].sort((a, c) => a.weekNumber - c.weekNumber).map((w) => ({ value: String(w.weekNumber), label: `Week ${w.weekNumber}` }))]}
+              onValueChange={(v) => (showWeek = v === "all" ? null : Number(v))} />
+          </span>
+        {/if}
         <ul class="flex flex-col gap-1.5" aria-label="Blocks" ondragenter={(e) => runOrder.allow(e)} ondragover={(e) => runOrder.allow(e)} ondrop={(e) => { const k = runOrder.drop(e); if (k) orderRuns(k); }}>
-          {#each runOrder.arrange(runs, (x) => x.key) as run, ri (run.key)}
+          {#each showWeek == null ? runOrder.arrange(runs, (x) => x.key) : shownRuns as run, ri (run.key)}
             <li animate:flip={{ duration: SLIDE_MS }} ondragover={(e) => runOrder.over(run.key, e)}
               class="flex items-start gap-1 rounded-[10px] {runOrder.held === run.key ? 'bg-primary/10 outline-dashed outline-[1.5px] -outline-offset-2 outline-primary [&>*]:invisible' : ''}">
-              <button type="button" draggable="true" aria-label="Move {run.blocks.map(blockMain).join(' and ')} (arrow keys)"
+              <button type="button" draggable={showWeek == null} disabled={showWeek != null} aria-label="Move {run.blocks.map(blockMain).join(' and ')} (arrow keys)"
                 ondragstart={(e) => runOrder.start(runs.map((x) => x.key), run.key, e, (e.currentTarget as HTMLElement).closest("li"))}
                 ondragend={() => runOrder.end()}
                 onkeydown={(e) => { if (e.key === "ArrowUp") { e.preventDefault(); moveRun(ri, ri - 1); } else if (e.key === "ArrowDown") { e.preventDefault(); moveRun(ri, ri + 1); } }}
-                class="mt-2 flex h-8 w-6 shrink-0 cursor-grab items-center justify-center rounded text-muted-foreground hover:text-foreground focus:outline-none focus:ring-1 focus:ring-ring">
+                class="mt-2 flex h-8 w-6 shrink-0 cursor-grab items-center justify-center rounded text-muted-foreground hover:text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-default disabled:opacity-30">
                 <GripVerticalIcon class="size-4" />
               </button>
               <div class="flex min-w-0 flex-1 flex-col gap-1.5">
@@ -752,6 +770,7 @@
                             <span class="truncate text-[13px] font-semibold">{#if b.type !== "strength"}<span class="mr-1.5 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{b.type === "cardio" ? "Cardio" : b.type === "mobility" ? "Mobility" : b.type === "plugin" ? "Plugin" : b.type === "circuit" ? "Circuit" : ""}</span>{/if}{blockMain(b)}</span>
                             <span class="truncate text-xs text-muted-foreground">{blockSub(b)}</span>
                           </button>
+                          {#if b.weeks}<button type="button" onclick={() => openRange(b, "some")} class="shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-[11px] font-semibold tabular-nums">{P.weekRangeText(b.weeks)}</button>{/if}
                           {@render more()}
                         </div>
                       {/snippet}
@@ -991,4 +1010,10 @@
 {#if editingGroup && day}
   <GroupDialog bind:open={groupOpen} group={editingGroup} fallback={P.groupLabel({ blocks: day.blocks }, editingGroup.id)}
     onsave={(patch) => { const d = day!.id, gid = editingGroup!.id; edit((p, w) => P.setGroup(p, w, d, gid, patch)); }} />
+{/if}
+
+{#if rangeBlock && day}
+  <WeekRangeDialog bind:open={rangeOpen} mode={rangeMode} name={blockMain(rangeBlock)} weeks={rangeBlock.weeks} total={prog.weeks.length} search={searchExercises}
+    onrange={(range) => { const d = day!.id, id = rangeBlock!.id; edit((p, w) => P.setBlockWeeks(p, w, d, id, range)); }}
+    onreplace={(from, name) => { const d = day!.id, id = rangeBlock!.id, nid = createId("pblock"); edit((p, w) => P.replaceFromWeek(p, w, d, id, from, { exerciseName: name, exerciseId: index?.get(name)?.id }, nid)); blockId = nid; }} />
 {/if}

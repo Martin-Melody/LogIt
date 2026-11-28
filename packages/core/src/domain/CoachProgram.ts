@@ -96,6 +96,9 @@ export type ProgramGroup = {
   roundRestSec?: number;
 };
 
+/** Weeks from..to, both included (canvas PB7). */
+export type WeekRange = { from: number; to: number };
+
 /** What an exercise measures (canvas PB3), the kinds the workout logs. Absent = weight × reps. */
 export type ExerciseMeasure = "weight" | "reps" | "added" | "time" | "distance";
 
@@ -121,6 +124,8 @@ export type ProgramBlock = ProgramStrength | ProgramCardio | ProgramCircuit | Pr
 type V2Block = {
   id: string;
   orderIndex: number;
+  /** Phase 6.7: the weeks it runs in (absent = every week). */
+  weeks?: WeekRange;
   /** As on strength blocks; a circuit is a group of its own and leaves it unset. */
   supersetGroup?: string;
   /** The lowest app version that can run this block ("1.1.0"). Older apps show "Update
@@ -184,6 +189,8 @@ export type ProgramStrength = {
   alternatives?: SwapAlternative[];
   /** v2: this exercise's own rule, over the program's. */
   rule?: ProgramRule;
+  /** Phase 6.7: the weeks it runs in (absent = every week). */
+  weeks?: WeekRange;
   /** Phase 6.6: what it measures (absent = weight × reps), and left and right logged apart. */
   measure?: ExerciseMeasure;
   perSide?: boolean;
@@ -199,6 +206,8 @@ export type ProgramCardio = {
   orderIndex: number;
   supersetGroup?: string;
   activityName: string;
+  /** Phase 6.7: the weeks it runs in (absent = every week). */
+  weeks?: WeekRange;
   targetDurationSec?: number;
   targetDistanceM?: number;
   /** Phase 6.6: intervals, e.g. 1:00 hard, 2:00 easy, × 6. */
@@ -777,6 +786,53 @@ export function supersetLabels(day: ProgramDay): Map<string, string> {
     out.set(b.id, `${letterOf.get(g)}${n}`);
   }
   return out;
+}
+
+// ── Exercises in some weeks (Phase 6.7, canvas PB7) ───────────────────────────
+
+/** Whether a block runs in week n. */
+export function inWeek(b: { weeks?: WeekRange }, n: number): boolean {
+  return !b.weeks || (n >= b.weeks.from && n <= b.weeks.to);
+}
+
+/** The day as it is in week n: only the blocks that run that week. */
+export function dayForWeek<D extends ProgramDay>(day: D, n: number): D {
+  return day.blocks.every((b) => inWeek(b, n)) ? day : { ...day, blocks: day.blocks.filter((b) => inWeek(b, n)) };
+}
+
+/** "Weeks 1–4", "Week 5". */
+export function weekRangeText(r: WeekRange): string {
+  return r.from === r.to ? `Week ${r.from}` : `Weeks ${r.from}–${r.to}`;
+}
+
+/** Sets the weeks a block runs in; null = every week. */
+export function setBlockWeeks(program: CoachProgram, weekId: string, dayId: string, blockId: string, weeks: WeekRange | null): CoachProgram {
+  return mapDay(program, weekId, dayId, (day) => ({
+    ...day,
+    blocks: day.blocks.map((b) => {
+      if (b.id !== blockId) return b;
+      const { weeks: _w, ...rest } = b;
+      return (weeks ? { ...rest, weeks } : rest) as ProgramBlock;
+    }),
+  }));
+}
+
+/** Ends an exercise before week `from` and starts another in its place, with the same sets,
+ * rest and progression (canvas PB7). Returns the program and the new block's id. */
+export function replaceFromWeek(program: CoachProgram, weekId: string, dayId: string, blockId: string, from: number, next: { exerciseName: string; exerciseId?: string }, newId: string): CoachProgram {
+  const total = program.weeks.length;
+  return mapDay(program, weekId, dayId, (day) => {
+    const ordered = [...day.blocks].sort((a, b) => a.orderIndex - b.orderIndex);
+    const at = ordered.findIndex((b) => b.id === blockId);
+    const old = ordered[at];
+    if (!old || old.type !== "strength") return day;
+    const start = old.weeks?.from ?? 1, end = old.weeks?.to ?? total;
+    if (from <= start || from > end) return day;
+    const { alternatives: _a, ...base } = old;
+    const fresh: ProgramStrength = { ...base, id: newId, ...next, weeks: { from, to: end }, sets: old.sets.map((s) => ({ ...s, id: `${s.id}_${newId.slice(-4)}` })) };
+    ordered.splice(at, 1, { ...old, weeks: { from: start, to: from - 1 } }, fresh);
+    return { ...day, blocks: ordered.map((b, i) => ({ ...b, orderIndex: i })) };
+  });
 }
 
 // ── Groups (Phase 6.6, canvas PB2) ────────────────────────────────────────────
