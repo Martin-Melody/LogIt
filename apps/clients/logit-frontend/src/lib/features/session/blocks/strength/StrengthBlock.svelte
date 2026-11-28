@@ -2,14 +2,15 @@
   // Blocks re-planned onto the place's machine this run (see replanForMachine), so going back to
   // the workout screen doesn't re-plan over weights typed since.
   const replanned = new Set<string>();
+</script>
+
+<script lang="ts">
   import WorkingWeight from "$lib/features/howto/WorkingWeight.svelte";
   import { showsHowTos } from "$lib/features/howto/howtos";
   import * as Dialog from "$lib/components/ui/dialog/index.js";
   import { getCoachProgramRepo } from "$lib/data/repoProvider";
   import type { CoachProgram } from "@logit/core/domain/CoachProgram";
-</script>
-
-<script lang="ts">
+  import { kit, setKit } from "$lib/features/kit/kit";
   import { sendMessage } from "$lib/usecases/messages/sendMessage";
   import { carriedWeight } from "./carryWeight";
   import { openAllSignal } from "$lib/features/session/openAll";
@@ -979,6 +980,38 @@
       `${formatLoad(topRung, $profile.weightUnit, false)} is the heaviest ${weightSource.kind === "machine" ? `on ${weightSource.machine.name}` : "dumbbell"}${place ? ` at ${place.name}` : ""}`,
   );
 
+  // ── Canvas EQ2/EQ3: a machine LogIt doesn't know yet, and who decides at the top ──
+  // The plan asks for more than they've ever set on a machine with no numbers: ask, once a workout.
+  let unknownDismissed = $state(false);
+  const bestOnMachine = $derived(Math.max(0, ...(prevSets ?? []).filter((x) => x.setType !== "warmup").map((x) => x.weight)));
+  const unknownTop = $derived(
+    onMachine && !unknownDismissed && !weightSource && plannedTop > 0 && bestOnMachine > 0 && plannedTop > bestOnMachine,
+  );
+  const sessionCoach = $derived($currentSession?.source?.kind === "program" && $currentSession.source.coachId ? coachFor($currentSession.source.coachId) : undefined);
+  // Coached and at the top with no way past it: weight held, reps up, and the coach told once.
+  $effect(() => {
+    if (!atTheTop || !sessionCoach || extraLoadAnswer === undefined || extraLoadAnswer.length || !topLabel) return;
+    const key = `logit:at-top-told:${sessionCoach.relationshipId}:${data.exerciseName.toLowerCase()}:${topRung}`;
+    if (getAccountItem(key)) return;
+    setAccountItem(key, "1");
+    void sendMessage(sessionCoach.relationshipId, `${data.exerciseName}: ${topLabel}, so I'm doing more reps there for now. What should come next?`).catch(() => {});
+  });
+  // Forgot the pin today (canvas, plan 6.15): this session only, at the stack's top with more reps.
+  const pinPlanned = $derived(atTheTop && (extraLoadAnswer ?? []).includes("pin") && $kit.includes("pin"));
+  async function notToday() {
+    if (topRung === null) return;
+    for (const x of data.sets.filter((s) => !s.completed && s.setType !== "warmup")) {
+      const reps = (x.target?.reps ?? x.reps) + 2;
+      await onMutate((s: WorkoutSession) => updateSet(s, blockId, x.id, { weight: topRung!, ...(x.target ? { target: { ...x.target, weight: topRung!, reps } } : {}), withoutKit: ["pin"] }));
+    }
+    // Three sessions in a row without it: ask once whether they still bring one.
+    const k = "logit:pin-forgotten";
+    const n = Number(getAccountItem(k) ?? "0") + 1;
+    setAccountItem(k, String(n));
+    if (n >= 3) stillBringPin = true;
+  }
+  let stillBringPin = $state(false);
+
   function answerExtraLoad(extra: ExtraLoad[]) {
     const p = place ? placesStore.byId(place.id) : null;
     if (!p || !weightSource) return;
@@ -1232,8 +1265,40 @@
     {/if}
   {/snippet}
   {#snippet notice()}
-    {#if atTheTop && topLabel}
-      <AtTheTopCard heaviestLabel={topLabel} kind={weightSource?.kind === "machine" ? "machine" : "dumbbells"} answer={extraLoadAnswer} onAnswer={answerExtraLoad} />
+    {#if unknownTop}
+      <!-- Canvas EQ2: a prompt, not a new screen; the machine editor they already have. -->
+      <div transition:reveal class="mx-3 my-2 flex flex-col gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2.5">
+        <p class="text-sm font-semibold">Is {formatLoad(bestOnMachine, $profile.weightUnit, false)} the most this machine goes?</p>
+        <p class="text-xs text-muted-foreground">Your plan wants {formatLoad(plannedTop, $profile.weightUnit, false)}. Tell LogIt about this machine and your plan will fit it, here and next time.</p>
+        <span class="flex gap-2">
+          <button type="button" class="min-h-10 rounded-lg bg-primary px-3 text-sm font-semibold text-primary-foreground" onclick={() => { editorFrom = "card"; machineEditor = { open: true, machineId: chosen?.id ?? null }; }}>Set up this machine</button>
+          <button type="button" class="min-h-10 rounded-lg px-3 text-sm" onclick={() => (unknownDismissed = true)}>Not now</button>
+        </span>
+      </div>
+    {:else if atTheTop && topLabel && weightSource?.kind === "machine" && extraLoadAnswer === undefined}
+      <div transition:reveal class="mx-3 my-2 flex flex-col gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2.5">
+        <p class="text-sm font-semibold">{topLabel}. Can you go past it?</p>
+        <button type="button" class="min-h-10 self-start rounded-lg border border-border bg-background px-3 text-sm font-medium" onclick={() => { editorFrom = "card"; machineEditor = { open: true, machineId: chosen?.id ?? null }; }}>Set up this machine</button>
+      </div>
+    {:else if pinPlanned}
+      <div transition:reveal class="mx-3 my-1.5 flex items-center justify-between gap-2 rounded-lg bg-muted/40 px-3 py-2 text-xs">
+        <span>Past the stack with your pin.</span>
+        <button type="button" class="min-h-9 rounded-lg border border-border bg-background px-3 text-xs font-medium" onclick={() => void notToday()}>Not today</button>
+      </div>
+    {:else if atTheTop && topLabel && sessionCoach && extraLoadAnswer !== undefined && !extraLoadAnswer.length}
+      <!-- Canvas EQ3 (2): coached, the coach hasn't decided: weight held, reps up, coach told. -->
+      <p transition:reveal class="mx-3 my-1.5 rounded-lg bg-muted/40 px-3 py-2 text-xs leading-relaxed"><b class="font-semibold">At the top.</b> {topLabel}. More reps for now; {sessionCoach.name} has been told and picks what's next.</p>
+    {:else if atTheTop && topLabel}
+      <AtTheTopCard heaviestLabel={topLabel} kind={weightSource?.kind === "machine" ? "machine" : "dumbbells"} answer={extraLoadAnswer} onAnswer={answerExtraLoad} onSwap={openSwap} />
+    {/if}
+    {#if stillBringPin}
+      <div transition:reveal class="mx-3 my-2 flex flex-col gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2.5">
+        <p class="text-sm font-semibold">Still bring a stack pin?</p>
+        <span class="flex gap-2">
+          <button type="button" class="min-h-10 rounded-lg border border-border bg-background px-3 text-sm" onclick={() => { stillBringPin = false; setAccountItem("logit:pin-forgotten", "0"); }}>Yes</button>
+          <button type="button" class="min-h-10 rounded-lg border border-border bg-background px-3 text-sm" onclick={() => { stillBringPin = false; setAccountItem("logit:pin-forgotten", "0"); setKit($kit.filter((x) => x !== "pin")); }}>No, plan without it</button>
+        </span>
+      </div>
     {/if}
   {/snippet}
   {#if round !== undefined}

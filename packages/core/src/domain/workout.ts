@@ -118,6 +118,9 @@ export type SetEntry = {
   machineId?: string | null;
   /** Rate of perceived exertion, 6–10 (RPE) or left unset. */
   rpe?: number | null;
+  /** Phase 6.15: done without kit the plan counted on ("pin"): estimates and progressions don't
+   * read it as a step back. */
+  withoutKit?: string[];
   /**
    * What the progression plan asked for on this set. A planned set starts with
    * reps 0 and is logged by ticking it (reps/weight copied from here) or by
@@ -530,7 +533,7 @@ export function updateSet(
   session: WorkoutSession,
   exerciseEntryId: string,
   setId: string,
-  patch: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "completed" | "restDurationMs" | "restStartedAtMs" | "machineId" | "rpe" | "target">>,
+  patch: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "completed" | "restDurationMs" | "restStartedAtMs" | "machineId" | "rpe" | "target" | "withoutKit">>,
 ): WorkoutSession {
   return updateStrengthBlock(session, exerciseEntryId, (data) => ({
     ...data,

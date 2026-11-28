@@ -37,7 +37,8 @@ export async function getExerciseHistory(
       // A set that was planned but never done (no reps, not ticked) isn't history,
       // and an exercise with nothing done that session (skipped) isn't either —
       // otherwise skipping it once wiped its plan back to 0kg.
-      const done = matches.flatMap(({ e }) => e.sets).filter((s) => s.completed || s.reps > 0);
+      // Sets done without the kit the plan counted on (a forgotten pin, 6.15) aren't a step back.
+      const done = matches.flatMap(({ e }) => e.sets).filter((s) => (s.completed || s.reps > 0) && !s.withoutKit?.length);
       if (done.length === 0) return [];
       return [{
         sessionId: session.id,

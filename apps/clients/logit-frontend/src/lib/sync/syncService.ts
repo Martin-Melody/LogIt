@@ -1,5 +1,6 @@
 import { writable } from "svelte/store";
 import { getTrainingGoal, isTrainingGoal, setTrainingGoal } from "$lib/features/onboarding/trainingGoal";
+import { getExperience, getKitJson, setKitFromJson } from "$lib/features/kit/kit";
 import { apiClient } from "@logit/core/api/client";
 import { refreshCoaches } from "$lib/features/coaching/coachCache";
 import { syncApi, type RemoteProfile } from "@logit/core/api/syncApi";
@@ -1245,6 +1246,8 @@ export async function buildRemoteProfile(): Promise<RemoteProfile> {
     profileConfigJson: getProfileConfigJson(),
     pluginSettingsJson: community ? writeCommunitySetting(community) : null,
     trainingGoal: getTrainingGoal(),
+    kitJson: getKitJson(),
+    experience: getExperience(),
     updatedAtMs: Date.now(),
   };
 }
@@ -1556,6 +1559,7 @@ export async function pullAndApplyProfile(): Promise<boolean> {
     // path at all — every fresh install/re-login lost it even though the split data itself
     // (days/blocks) synced fine, forcing the user to re-pick it by hand every time.
     if (isTrainingGoal(remote.trainingGoal)) setTrainingGoal(remote.trainingGoal);
+    setKitFromJson(remote.kitJson);
 
     if (remote.activeSplitId !== undefined) {
       await getSplitRepo().setActiveSplitId(remote.activeSplitId).catch((e) => syncWarn("pullAndApplyProfile", e));

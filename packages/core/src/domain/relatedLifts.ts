@@ -102,6 +102,7 @@ export function knownLifts(sessions: WorkoutSession[], now: number, days = 180):
       const k = ex.exerciseName.trim().toLowerCase();
       if (ex.sets.some((x) => x.setType !== "warmup" && x.weight > 0 && x.reps > 0)) times.set(k, (times.get(k) ?? new Set()).add(s.id));
       for (const set of ex.sets) {
+        if (set.withoutKit?.length) continue;
         if (set.setType === "warmup" || set.weight <= 0 || set.reps < 1 || set.reps > 12) continue;
         const e1rm = estimated1RM(set.weight, set.reps);
         const key = ex.exerciseName.trim().toLowerCase();

@@ -1,6 +1,8 @@
 <!-- Settings › Workout: how a workout behaves (blocks, effort, rest timers, circuits). -->
 <script lang="ts">
   import { onMount } from "svelte";
+  import { BRING } from "@logit/core/domain/kit";
+  import { kit, setKit } from "$lib/features/kit/kit";
   import SettingsPage from "$lib/features/settings/SettingsPage.svelte";
   import SettingsSection, { settingRow } from "$lib/features/settings/SettingsSection.svelte";
   import Switch from "$lib/components/ui/switch/Switch.svelte";
@@ -69,6 +71,19 @@
       <Switch checked={$profile.askEffortAfterSet} label="Ask how hard each set was"
         onchange={() => profile.save({ askEffortAfterSet: !$profile.askEffortAfterSet })} />
     </label>
+  </SettingsSection>
+
+  <!-- Canvas EQ4: the kit that goes in your bag. -->
+  <SettingsSection id="what-you-bring" title="What you bring" note="Your coach sees this list. The stack pin and dip belt change your plans.">
+    {#each BRING as b (b.id)}
+      <label class="{settingRow} cursor-pointer">
+        <span class="flex flex-1 flex-col gap-0.5">
+          <span class="text-[15px] font-medium">{b.label}</span>
+          <span class="text-[13px] text-muted-foreground">{b.text}</span>
+        </span>
+        <Switch checked={$kit.includes(b.id)} label={b.label} onchange={() => setKit($kit.includes(b.id) ? $kit.filter((x) => x !== b.id) : [...$kit, b.id])} />
+      </label>
+    {/each}
   </SettingsSection>
 
   <SettingsSection id="rest-timer" title="Rest timer" note="Turn the timer on for a kind of set and choose how long it rests.">

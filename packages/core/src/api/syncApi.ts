@@ -78,6 +78,10 @@ export type RemoteProfile = {
   /** The goal picked in onboarding (domain/starterPlan.ts TrainingGoal). The dashboard
    * arranges Overview by it until someone changes the layout. Kept by the server when left out. */
   trainingGoal?: string | null;
+  /** What you bring (domain/kit.ts BringItem[] as JSON). Kept by the server when left out. */
+  kitJson?: string | null;
+  /** Experience from the LogIt setup ("new", "under2", "2plus", "compete"), so a coach sees it. */
+  experience?: string | null;
 };
 
 // ── Nutrition ────────────────────────────────────────────────────────────────
