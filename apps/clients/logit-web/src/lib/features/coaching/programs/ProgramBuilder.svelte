@@ -372,6 +372,13 @@
     edit((p) => mapTemplateDay(p, d, (dd) => ({ ...dd, blocks: dd.blocks.map((b) => (b.id === id ? (typeof patch === "function" ? patch(b) : ({ ...b, ...patch } as ProgramBlock)) : b)) })));
   }
 
+  /** Changes an exercise's sets, reps, rest or progression: in the weeks being edited only
+   * (canvas PX3), or every week. */
+  function patchNumbers(id: string, fn: (x: ProgramStrength) => ProgramStrength) {
+    const r = editing;
+    patchBlock(id, (x) => (x.type !== "strength" ? x : r ? P.setNumbersInWeeks(x, r, fn) : fn(x)));
+  }
+
   /** The same targets on every working set of an exercise. */
   function setAll(b: ProgramStrength, field: "reps" | "load" | "rest" | "tempo" | "hold" | "distance", text: string, el: HTMLInputElement) {
     let patch: Partial<ProgramSet> | null = null;
@@ -389,7 +396,7 @@
     }
     el.setCustomValidity("");
     const p = patch;
-    patchBlock(b.id, (x) => (x.type === "strength" ? { ...x, sets: x.sets.map((s) => (field === "rest" || field === "tempo" || s.setType !== "warmup" ? { ...s, ...p } : s)) } : x));
+    patchNumbers(b.id, (x) => ({ ...x, sets: x.sets.map((s) => (field === "rest" || field === "tempo" || s.setType !== "warmup" ? { ...s, ...p } : s)) }));
   }
 
   function setOne(b: ProgramStrength, s: ProgramSet, field: "reps" | "load" | "rpe" | "type" | "rest", text: string, el?: HTMLInputElement) {
@@ -403,20 +410,16 @@
     if (!patch) { el?.setCustomValidity("Check this number"); el?.reportValidity(); return; }
     el?.setCustomValidity("");
     const p = patch;
-    patchBlock(b.id, (x) => (x.type === "strength" ? { ...x, sets: x.sets.map((y) => (y.id === s.id ? { ...y, ...p } : y)) } : x));
+    patchNumbers(b.id, (x) => ({ ...x, sets: x.sets.map((y) => (y.id === s.id ? { ...y, ...p } : y)) }));
   }
 
   function setCount(b: ProgramStrength, n: number) {
     if (!day || n < 1 || n > 12) return;
-    const d = day.id;
-    edit((p, w) => {
-      let next = p;
-      const cur = [...b.sets].sort((a, c) => a.orderIndex - c.orderIndex);
-      if (n > cur.length) {
-        const { id: _i, orderIndex: _o, pinned: _p, ...like } = (cur.at(-1) ?? { reps: 8 }) as ProgramSet;
-        for (let k = cur.length; k < n; k++) next = P.addSet(next, w, d, b.id, like);
-      } else for (const s of cur.slice(n)) next = P.removeSet(next, w, d, b.id, s.id);
-      return next;
+    patchNumbers(b.id, (x) => {
+      const cur = [...x.sets].sort((a, c) => a.orderIndex - c.orderIndex);
+      if (n <= cur.length) return { ...x, sets: cur.slice(0, n) };
+      const { id: _i, orderIndex: _o, pinned: _p, ...like } = (cur.at(-1) ?? { setType: "normal", reps: 8 }) as ProgramSet;
+      return { ...x, sets: [...cur, ...Array.from({ length: n - cur.length }, (_, k): ProgramSet => ({ ...like, id: createId("pset"), orderIndex: cur.length + k }))] };
     });
   }
 
@@ -511,7 +514,7 @@
         return b ? mapTemplateDay(withRule, day!.id, (d) => ({ ...d, blocks: d.blocks.map((x) => { if (x.id !== b.id || x.type !== "strength") return x; const { rule: _r, ...rest } = x; return rest; }) })) : withRule;
       });
     } else {
-      patchBlock(b.id, (x) => { if (x.type !== "strength") return x; const { rule: _r, ...rest } = x; return rule ? { ...rest, rule } : rest; });
+      patchNumbers(b.id, (x) => { const { rule: _r, ...rest } = x; return rule ? { ...rest, rule } : rest; });
     }
   }
   // The program's weeks as stretches (canvas PW1–PW4): one idea for phases and week types.
@@ -765,10 +768,10 @@
     if (!top) return;
     const ramp = warmupSets(top).filter((w) => w.weight < top);
     const rest = work[0]?.restSec;
-    patchBlock(b.id, (x) => (x.type === "strength" ? { ...x, sets: [
+    patchNumbers(b.id, (x) => ({ ...x, sets: [
       ...ramp.map((w, i): ProgramSet => ({ id: createId("pset"), orderIndex: i, setType: "warmup", reps: w.reps, weight: w.weight, ...(rest ? { restSec: 60 } : {}) })),
       ...work.map((s, i) => ({ ...s, orderIndex: ramp.length + i })),
-    ] } : x));
+    ] }));
   }
   const MOBILITY_RULES = $derived([
     { value: "", label: "Their own mobility progression" },
@@ -981,7 +984,7 @@
                           {/if}
                           <button type="button" aria-expanded={isOpen} onclick={() => (blockId = isOpen ? null : b.id)} class="flex min-w-0 flex-1 flex-col text-left">
                             <span class="truncate text-[13px] font-semibold">{#if b.type !== "strength"}<span class="mr-1.5 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{b.type === "cardio" ? "Cardio" : b.type === "mobility" ? "Mobility" : b.type === "plugin" ? "Plugin" : b.type === "circuit" ? "Circuit" : ""}</span>{/if}{blockMain(b)}</span>
-                            <span class="truncate text-xs text-muted-foreground">{circuit ? `${P.memberAmount(b)} each round` : blockSub(b)}</span>
+                            <span class="truncate text-xs text-muted-foreground">{circuit ? `${P.memberAmount(b)} each round` : blockSub(b.type === "strength" && editing ? P.numbersFor(b, editing) : b)}{#if !editing && b.type === "strength" && b.byWeeks?.length}{" · differs by stretch"}{/if}</span>
                           </button>
                           {#if b.weeks}<button type="button" onclick={() => openRange(b, "some")} class="shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-[11px] font-semibold tabular-nums">{P.weekRangeText(b.weeks)}</button>{/if}
                           {@render more()}
@@ -993,7 +996,7 @@
                       <div transition:slide={{ duration: 180 }} class="flex flex-col gap-3.5 border-t border-border px-3.5 py-3.5" aria-label="{blockMain(block)} settings" role="group">
 
         {#if block.type === "strength"}
-          {@const b = block}
+          {@const b = editing ? P.numbersFor(block, editing) : block}
           {@const first = b.sets.find((s) => s.setType !== "warmup") ?? b.sets[0]}
           <div class="flex items-start justify-between gap-2">
             <span class="text-xs font-medium text-muted-foreground">Exercise</span>
@@ -1005,7 +1008,7 @@
           {/if}
           {#key b.id}
             {@const m = b.measure ?? "weight"}
-            {@const rule = P.ruleFor(prog, b)}
+            {@const rule = P.ruleFor(prog, b, editing?.from)}
             {@const fixed = rule.kind === "fixed"}
             {@const decides = rule.kind === "plugin" && !!rule.decidesSets}
             <!-- Canvas PB11/PB12: the fields that fit. Measures only for ones already set to a
@@ -1056,7 +1059,7 @@
               <div class="flex flex-col gap-1.5">
                 <Label>Warm-ups</Label>
                 <ToggleGroup.Root type="single" variant="outline" spacing={2} class="justify-start" value={b.warmups ?? "theirs"} aria-label="Warm-ups"
-                  onValueChange={(v: string) => { if (v) patchBlock(b.id, { warmups: v === "theirs" ? undefined : v } as Partial<ProgramBlock>); }}>
+                  onValueChange={(v: string) => { if (v) patchNumbers(b.id, (x) => { const { warmups: _w, ...rest } = x; return v === "theirs" ? rest : { ...rest, warmups: v as "on" | "off" }; }); }}>
                   {#each [["on", "On"], ["off", "Off"], ["theirs", "Their choice"]] as [v, l] (v)}
                     <ToggleGroup.Item value={v} class="h-9 rounded-full px-3.5 text-[13px] data-[state=on]:border-primary! data-[state=on]:bg-primary! data-[state=on]:text-primary-foreground!">{l}</ToggleGroup.Item>
                   {/each}
@@ -1090,9 +1093,31 @@
               </div>
             {/if}
             <div class="flex items-center justify-between gap-2">
-              <span class="flex flex-col"><Label>Progression</Label><span class="text-[13px]">{b.rule ? P.ruleLabel(b.rule) : `The program's · ${P.ruleLabel(prog.rule)}`}</span></span>
+              <span class="flex flex-col"><Label>Progression</Label><span class="text-[13px]">{b.rule ? P.ruleLabel(b.rule) : editing && P.phaseAt(prog, editing.from)?.rule ? `The stretch's · ${P.ruleLabel(rule)}` : `The program's · ${P.ruleLabel(prog.rule)}`}</span></span>
               <Button variant="outline" size="sm" onclick={() => { pickingFor = b; picking = true; }}>Change</Button>
             </div>
+            <!-- Canvas PX3: its numbers and progression by stretch; click one to edit it. -->
+            {#if prog.weeks.length > 1 && (editing || block.byWeeks?.length)}
+              <div class="flex flex-col gap-1 text-[13px]">
+                <span class="text-xs text-muted-foreground">{editing ? `These are for ${editingText.toLowerCase()}; other weeks keep theirs.` : "Different in some stretches:"}</span>
+                <table class="w-full text-xs">
+                  <thead><tr class="text-left text-muted-foreground"><th class="py-1 font-medium">Weeks</th><th class="font-medium">Sets × reps</th><th class="font-medium">Rest</th><th class="font-medium">Progression</th></tr></thead>
+                  <tbody>
+                    {#each stretches as s (s.key + s.from)}
+                      {@const x = P.numbersFor(block, s)}
+                      {@const w1 = x.sets.find((y) => y.setType !== "warmup") ?? x.sets[0]}
+                      {@const on = !!editing && editing.from === s.from && editing.to === s.to}
+                      <tr class="cursor-pointer border-t border-border transition-colors hover:bg-muted/50 {on ? 'bg-muted' : ''}" onclick={() => (editing = { from: s.from, to: s.to })}>
+                        <td class="py-1.5 pr-2"><b class="font-semibold">{P.weekRangeText(s).replace(/^Weeks? /, "")}</b>{#if stretchTitle(s) !== P.weekRangeText(s)} <span class="text-muted-foreground">{stretchTitle(s)}</span>{/if}</td>
+                        <td class="tabular-nums">{P.strengthSummary(x)}</td>
+                        <td class="tabular-nums">{w1?.restSec ? P.restText(w1.restSec) : "–"}</td>
+                        <td>{P.ruleLabel(P.ruleFor(prog, x, s.from))}</td>
+                      </tr>
+                    {/each}
+                  </tbody>
+                </table>
+              </div>
+            {/if}
             <!-- Canvas PB14: the swaps section follows the swap rule. -->
             {#if swapRule === "list" || b.alternatives?.length}
             <div class="flex flex-col gap-1.5">

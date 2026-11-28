@@ -18,7 +18,7 @@
 import { loadFromPercent } from "./oneRepMax";
 import { getExercises, type WorkoutSession } from "./workout";
 import type { ProgressionOutput } from "./progression";
-import { inWeek, phaseAt, ruleFor, type CoachProgram, type ProgramRule, type ProgramSet, type ProgramStrength, type ProgramWeek, phaseBlock } from "./CoachProgram";
+import { inWeek, phaseAt, ruleFor, type CoachProgram, type ProgramRule, type ProgramSet, type ProgramStrength, type ProgramWeek, phaseBlock, numbersAt } from "./CoachProgram";
 import { weekTypeOf, weekTypeLabel, weekSets, weekWeight, weekReps } from "./weekTypes";
 
 export type PlanCell = {
@@ -87,7 +87,8 @@ export function planExercise(program: CoachProgram, blockId: string, ctx: PlanCo
 }
 
 function findBlock(w: ProgramWeek, id: string): ProgramStrength | null {
-  for (const d of w.days) for (const b of d.blocks) if (b.id === id && b.type === "strength") return b;
+  // As it is that week (canvas PX3): a stretch's own sets, reps and progression.
+  for (const d of w.days) for (const b of d.blocks) if (b.id === id && b.type === "strength") return numbersAt(b, w.weekNumber);
   return null;
 }
 

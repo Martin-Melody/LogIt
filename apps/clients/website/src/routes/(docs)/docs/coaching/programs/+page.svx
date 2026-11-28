@@ -54,7 +54,12 @@ weeks, and every change goes to them: **+ Add** puts the exercise in those weeks
 you say so), an exercise's ⋯ has **Swap for weeks 7–9…** and **Take out of weeks 7–9**, and the
 exercises that aren't in those weeks are listed under the day with **Add to weeks 7–9**. In Every
 week each exercise shows its weeks ("Weeks 1–4"). ⋯ also has **Replace from week…** and **Only in
-some weeks…** for the same thing by hand. Their phone and Every week leave an exercise out of the
+some weeks…** for the same thing by hand.
+
+An exercise's sets, reps, rest, warm-ups and progression can differ by stretch too: while you're
+editing a stretch, the numbers you change are for those weeks only (4 × 8–12 in Hypertrophy, 3 × 3–5
+in Strength), and the exercise lists every stretch's numbers and progression; click one to edit it.
+In Every week it says "differs by stretch". A kind of week (a deload) still applies on top. Their phone and Every week leave an exercise out of the
 weeks it doesn't run in, and its progression counts only the weeks it runs.
 
 Changes save as you go, so leaving the page loses nothing. If the same program is open on another

@@ -243,10 +243,15 @@ export type ProgramPluginBlock = V2Block & {
   settingsText?: string;
 };
 
+/** Canvas PX3: an exercise's numbers for some weeks (a stretch), over its every-week ones. */
+export type WeekNumbers = { weeks: WeekRange; sets: ProgramSet[]; rule?: ProgramRule; warmups?: "on" | "off" };
+
 export type ProgramStrength = {
   type: "strength";
   id: string;
   orderIndex: number;
+  /** Canvas PX3: its sets, reps, rest and progression in some weeks, when they differ. */
+  byWeeks?: WeekNumbers[];
   /** Blocks sharing a supersetGroup are performed as a superset. */
   supersetGroup?: string;
   exerciseName: string;
@@ -871,9 +876,44 @@ export function inWeek(b: { weeks?: WeekRange }, n: number): boolean {
   return !b.weeks || (n >= b.weeks.from && n <= b.weeks.to);
 }
 
-/** The day as it is in week n: only the blocks that run that week. */
+/** The day as it is in week n: only the blocks that run that week, each with that week's numbers. */
 export function dayForWeek<D extends ProgramDay>(day: D, n: number): D {
-  return day.blocks.every((b) => inWeek(b, n)) ? day : { ...day, blocks: day.blocks.filter((b) => inWeek(b, n)) };
+  if (day.blocks.every((b) => inWeek(b, n) && !(b.type === "strength" && b.byWeeks?.length))) return day;
+  return { ...day, blocks: day.blocks.filter((b) => inWeek(b, n)).map((b) => (b.type === "strength" ? numbersAt(b, n) : b)) };
+}
+
+const NUMBER_KEYS = ["sets", "rule", "warmups"] as const;
+/** An exercise as it is in week n: the numbers of the stretch it's in, else its every-week ones. */
+export function numbersAt(b: ProgramStrength, n: number): ProgramStrength {
+  const e = b.byWeeks?.find((x) => n >= x.weeks.from && n <= x.weeks.to);
+  return e ? withNumbers(b, e) : b;
+}
+/** An exercise as it is in weeks r (the builder's Editing): numbers set for all of r, else every week's. */
+export function numbersFor(b: ProgramStrength, r: WeekRange): ProgramStrength {
+  const e = b.byWeeks?.find((x) => x.weeks.from <= r.from && x.weeks.to >= r.to);
+  return e ? withNumbers(b, e) : b;
+}
+function withNumbers(b: ProgramStrength, e: WeekNumbers): ProgramStrength {
+  const { rule: _r, warmups: _w, ...rest } = b;
+  return { ...rest, sets: e.sets, ...(e.rule ? { rule: e.rule } : b.rule ? { rule: b.rule } : {}), ...(e.warmups ? { warmups: e.warmups } : b.warmups ? { warmups: b.warmups } : {}) };
+}
+
+/** Changes an exercise's numbers in weeks r only (canvas PX3): `fn` gets it as it is there and
+ * returns it changed; the change is kept for r, trimming what other weeks had for r. Numbers the
+ * same as every week's aren't kept. */
+export function setNumbersInWeeks(b: ProgramStrength, r: WeekRange, fn: (x: ProgramStrength) => ProgramStrength): ProgramStrength {
+  const next = fn(numbersFor(b, r));
+  const pick = (x: ProgramStrength) => JSON.stringify([x.sets.map(({ id: _i, ...s }) => s), x.rule ?? null, x.warmups ?? null]);
+  const others: WeekNumbers[] = [];
+  for (const e of b.byWeeks ?? []) {
+    if (e.weeks.to < r.from || e.weeks.from > r.to) { others.push(e); continue; }
+    if (e.weeks.from < r.from) others.push({ ...e, weeks: { from: e.weeks.from, to: r.from - 1 } });
+    if (e.weeks.to > r.to) others.push({ ...e, weeks: { from: r.to + 1, to: e.weeks.to } });
+  }
+  const entry: WeekNumbers = { weeks: r, sets: next.sets, ...(next.rule ? { rule: next.rule } : {}), ...(next.warmups ? { warmups: next.warmups } : {}) };
+  const keep = pick(next) !== pick(b) ? [...others, entry] : others;
+  const { byWeeks: _b, ...rest } = b;
+  return keep.length ? { ...rest, byWeeks: keep.sort((x, y) => x.weeks.from - y.weeks.from) } : rest;
 }
 
 /** "Weeks 1–4", "Week 5". */
@@ -1248,8 +1288,10 @@ function withMinVersion(b: ProgramBlock): ProgramBlock {
 }
 
 /** The rule an exercise follows: its own, else the program's, else fixed. */
-export function ruleFor(program: Pick<CoachProgram, "rule" | "phases">, block: ProgramBlock, weekNumber?: number): ProgramRule {
+export function ruleFor(program: Pick<CoachProgram, "rule" | "phases">, block0: ProgramBlock, weekNumber?: number): ProgramRule {
   const phase = weekNumber != null ? phaseAt(program, weekNumber) : null;
+  // A stretch's own progression for this exercise wins (canvas PX3).
+  const block = block0.type === "strength" && weekNumber != null ? numbersAt(block0, weekNumber) : block0;
   return (block.type === "strength" ? block.rule : undefined) ?? phase?.rule ?? program.rule ?? { kind: "fixed" };
 }
 

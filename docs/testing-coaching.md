@@ -212,6 +212,13 @@ The stack on top of main. Each line names its PR.
 - [ ] The week after: Today › Decide "… found their maxes" → started / now / %; Send puts it in the
       conversation; Done clears it.
 
+**Numbers by stretch (#211)**
+- [ ] Pick a stretch, open an exercise: change sets and reps → the table under it shows only that
+      stretch changed; Every week says "differs by stretch".
+- [ ] Change its progression while editing the stretch → only that stretch's row changes.
+- [ ] Put the numbers back to every week's → "differs by stretch" goes.
+- [ ] Phone, in that stretch: the workout has those sets and reps; See every week shows them.
+
 ## Findings
 
 Write them here, with the section number.
