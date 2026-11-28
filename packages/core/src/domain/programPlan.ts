@@ -101,7 +101,10 @@ function planWeek(program: CoachProgram, week: ProgramWeek, block: ProgramStreng
   if (pinned) return { source: "pinned", weight: pinned.weight, reps: repsText(pinned), sets: count };
   if (!first) return { source: "words", sets: 0, words: "No working sets" };
 
-  const rule = ruleFor(program, block, week.weekNumber);
+  // A circuit that moves by its own setting (same every week, or a round every two weeks) keeps
+  // its members' numbers as typed; "each exercise's own progression" lets theirs run (6.6 r2).
+  const group = block.supersetGroup ? week.days.flatMap((d) => d.groups ?? []).find((g) => g.id === block.supersetGroup) : undefined;
+  const rule = group?.kind === "circuit" && group.progression !== "each" ? ({ kind: "fixed" } as ProgramRule) : ruleFor(program, block, week.weekNumber);
   // A rule built from blocks can set its own rep range; it wins over the exercise's.
   const r = (rule.kind === "own" && rule.recipe?.repRange) || range(first);
   // The week's type changes what the progression planned (canvas PB5): sets, load, reps, a test set.

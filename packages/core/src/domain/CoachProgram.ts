@@ -103,6 +103,22 @@ export type ProgramGroup = {
   /** Rest between one exercise and the next, and after each round. */
   memberRestSec?: number;
   roundRestSec?: number;
+  /** Builder round 2: how it moves up, like the old circuit blocks. Rounds are each member's
+   * number of sets (canvas PB15/PB16). */
+  progression?: "same" | "add-round" | "each";
+};
+
+/** What the group dialog edits (the old circuit dialog, for supersets too). */
+export type GroupDraft = {
+  kind: "superset" | "circuit";
+  name?: string;
+  rounds: number;
+  memberRestSec?: number;
+  roundRestSec?: number;
+  progression: "same" | "add-round" | "each";
+  /** In order. A member with a block id is changed; one without is added; members missing from
+   * the list leave the group and stand alone. */
+  members: { blockId?: string; exerciseName: string; exerciseId?: string; reps?: number; durationSec?: number }[];
 };
 
 /** A phase (canvas SP5): weeks with their own progression. One that finds weights hands its
@@ -149,7 +165,8 @@ export type ProgramRule =
   /** The coach's own rule (built in Programs › Rules): its blocks travel with the program so
    * the client's phone can run it. */
   | { kind: "own"; ruleId: string; name: string; recipe?: SharedRecipe }
-  | { kind: "plugin"; pluginId: string; name: string };
+  /** decidesSets: the plugin plans how many sets too (builder round 2): the builder hides Sets. */
+  | { kind: "plugin"; pluginId: string; name: string; decidesSets?: boolean };
 
 export type ProgramBlock = ProgramStrength | ProgramCardio | ProgramCircuit | ProgramMobility | ProgramPluginBlock;
 
@@ -189,6 +206,9 @@ export type ProgramMobility = V2Block & {
   sets?: number;
   /** Hold goal per set, seconds. */
   targetSec?: number;
+  /** Builder round 2 (canvas PB13): its progression (a mobility progression id); absent = the
+   * client's own for that drill. */
+  progressionId?: string;
   /** Or a time for the whole drill, minutes ("Shoulder CARs · 5 min"). */
   minutes?: number;
 };
@@ -228,6 +248,9 @@ export type ProgramStrength = {
    * reps then a harder version (or slower reps, or ask the coach then), or load past it with their
    * stack pin. Absent: weight held and reps up while the coach is asked. */
   atTop?: { then: "harder"; exercise: string } | { then: "slower" } | { then: "ask" } | { then: "pin" };
+  /** Builder round 2 (canvas PB12): warm-ups planned in ("on"), left out ("off"), or absent =
+   * the client's own choice. */
+  warmups?: "on" | "off";
   /** Phase 6.6: what it measures (absent = weight × reps), and left and right logged apart. */
   measure?: ExerciseMeasure;
   perSide?: boolean;
@@ -912,6 +935,103 @@ export function ungroup(program: CoachProgram, weekId: string, dayId: string, gr
     blocks: day.blocks.map((b) => (b.supersetGroup === groupId ? ({ ...b, supersetGroup: undefined } as ProgramBlock) : b)),
     groups: day.groups?.filter((g) => g.id !== groupId),
   }));
+}
+
+/** A group's rounds: the most sets any member has. */
+export function groupRounds(day: Pick<ProgramDay, "blocks">, groupId: string): number {
+  return Math.max(0, ...day.blocks.filter((b) => b.supersetGroup === groupId).map((b) => (b.type === "strength" ? b.sets.filter((s) => s.setType !== "warmup").length : b.type === "mobility" ? (b.sets ?? 1) : 1)));
+}
+
+/** What a member does each round: "15 reps", "0:40", "8–12". */
+export function memberAmount(b: ProgramBlock): string {
+  if (b.type === "strength") {
+    const s = b.sets.find((x) => x.setType !== "warmup") ?? b.sets[0];
+    if (b.measure === "time" && s?.durationSec) return restText(s.durationSec);
+    return s ? `${repsText(s) || "?"} reps` : "";
+  }
+  if (b.type === "mobility") return b.metric === "reps" ? `${b.targetSec ?? "?"} reps` : restText(b.targetSec ?? 30);
+  if (b.type === "cardio") return b.targetDurationSec ? restText(b.targetDurationSec) : b.targetDistanceM ? `${b.targetDistanceM} m` : "";
+  return "";
+}
+
+/** Applies the group dialog (canvas PB15): its settings, each member's amount and sets (one a
+ * round), members added and taken out, in the dialog's order. Returns the program. */
+export function applyGroupDraft(program: CoachProgram, weekId: string, dayId: string, groupId: string, draft: GroupDraft, newId: () => string): CoachProgram {
+  const rounds = Math.max(1, Math.min(20, Math.round(draft.rounds)));
+  let out = mapDay(program, weekId, dayId, (day) => {
+    const ordered = [...day.blocks].sort((a, b) => a.orderIndex - b.orderIndex);
+    const keep = new Set(draft.members.map((m) => m.blockId).filter(Boolean) as string[]);
+    const members: ProgramBlock[] = draft.members.map((m) => {
+      const cur = m.blockId ? ordered.find((b) => b.id === m.blockId) : undefined;
+      if (cur?.type === "strength") {
+        const like = cur.sets.find((s) => s.setType !== "warmup") ?? cur.sets[0];
+        const warm = cur.sets.filter((s) => s.setType === "warmup");
+        const sets = Array.from({ length: rounds }, (_, i): ProgramSet => {
+          const prev = cur.sets.filter((s) => s.setType !== "warmup")[i] ?? like;
+          const base: ProgramSet = { ...(prev ?? { setType: "normal" }), id: prev && cur.sets.filter((s) => s.setType !== "warmup")[i] ? prev.id : newId(), orderIndex: warm.length + i, setType: prev?.setType === "warmup" ? "normal" : (prev?.setType ?? "normal") } as ProgramSet;
+          if (m.durationSec != null) return { ...base, durationSec: m.durationSec, reps: undefined, repsMin: undefined, repsMax: undefined };
+          if (m.reps != null) return { ...base, reps: m.reps, repsMin: undefined, repsMax: undefined };
+          return base;
+        });
+        return { ...cur, supersetGroup: groupId, ...(m.durationSec != null ? { measure: "time" as const } : {}), sets: [...warm, ...sets] };
+      }
+      if (cur?.type === "mobility") return { ...cur, supersetGroup: groupId, sets: rounds, ...(m.durationSec != null ? { targetSec: m.durationSec, metric: "hold" as const } : m.reps != null ? { targetSec: m.reps, metric: "reps" as const } : {}) };
+      if (cur) return { ...cur, supersetGroup: groupId } as ProgramBlock;
+      // A new member: a timed one is a hold, else sets of reps.
+      const id = newId();
+      if (m.durationSec != null) return { type: "mobility", id, orderIndex: 0, supersetGroup: groupId, drillName: m.exerciseName, sets: rounds, targetSec: m.durationSec, metric: "hold", minAppVersion: V2_BLOCKS_APP_VERSION } as ProgramBlock;
+      return { type: "strength", id, orderIndex: 0, supersetGroup: groupId, exerciseName: m.exerciseName, ...(m.exerciseId ? { exerciseId: m.exerciseId } : {}),
+        sets: Array.from({ length: rounds }, (_, i) => ({ id: newId(), orderIndex: i, setType: "normal" as const, reps: m.reps ?? 10 })) } as ProgramBlock;
+    });
+    // The group sits where its first member was (or at the end, for a new one).
+    const firstAt = ordered.findIndex((b) => b.supersetGroup === groupId || keep.has(b.id));
+    const rest = ordered.filter((b) => !keep.has(b.id)).map((b) => (b.supersetGroup === groupId ? ({ ...b, supersetGroup: undefined } as ProgramBlock) : b));
+    const at = firstAt < 0 ? rest.length : Math.min(firstAt, rest.length);
+    rest.splice(at, 0, ...members);
+    return { ...day, blocks: rest.map((b, i) => ({ ...b, orderIndex: i }) as ProgramBlock) };
+  });
+  out = setGroup(out, weekId, dayId, groupId, { kind: draft.kind, name: draft.name?.trim() || undefined, memberRestSec: draft.memberRestSec, roundRestSec: draft.roundRestSec, progression: draft.progression === "same" ? undefined : draft.progression });
+  return out;
+}
+
+/** Puts a block before another (null = the end) and in a group or none (builder round 2: drag
+ * in, out of and within groups). A group left with one exercise stops being a group. */
+export function placeBlock(program: CoachProgram, weekId: string, dayId: string, blockId: string, beforeId: string | null, group: string | undefined): CoachProgram {
+  return mapDay(program, weekId, dayId, (day) => {
+    const ordered = [...day.blocks].sort((a, b) => a.orderIndex - b.orderIndex);
+    const moving = ordered.find((b) => b.id === blockId);
+    if (!moving || beforeId === blockId) return day;
+    const rest = ordered.filter((b) => b.id !== blockId);
+    const at = beforeId ? rest.findIndex((b) => b.id === beforeId) : -1;
+    rest.splice(at < 0 ? rest.length : at, 0, { ...moving, supersetGroup: group } as ProgramBlock);
+    const count = new Map<string, number>();
+    for (const b of rest) if (b.supersetGroup) count.set(b.supersetGroup, (count.get(b.supersetGroup) ?? 0) + 1);
+    const blocks = rest.map((b, i) => ({ ...b, orderIndex: i, ...(b.supersetGroup && (count.get(b.supersetGroup) ?? 0) < 2 ? { supersetGroup: undefined } : {}) }) as ProgramBlock);
+    const live = new Set(blocks.map((b) => b.supersetGroup).filter(Boolean));
+    return { ...day, blocks, ...(day.groups ? { groups: day.groups.filter((g) => live.has(g.id)) } : {}) };
+  });
+}
+
+/** One-sided lifts, where Each side makes sense for strength (canvas PB11). By name: the library
+ * has no flag. shortcut: a name list, add a library field if coaches hit misses. */
+export function isOneSided(name: string): boolean {
+  return /single[- ]?(arm|leg)|one[- ](arm|leg)|unilateral|split squat|bulgarian|lunge|step[- ]?up|pistol|suitcase|kickstand|\bb-stance\b|concentration curl|kickback/i.test(name);
+}
+
+/** An old circuit block becomes a group of its members (one kind of group, canvas PB16). */
+export function circuitToGroup(program: CoachProgram, weekId: string, dayId: string, blockId: string, newId: () => string): { program: CoachProgram; groupId: string } {
+  const day = program.weeks.find((w) => w.id === weekId)?.days.find((d) => d.id === dayId);
+  const c = day?.blocks.find((b) => b.id === blockId);
+  if (!c || c.type !== "circuit") return { program, groupId: "" };
+  const groupId = newId();
+  // The circuit block steps aside; its members take its place.
+  let p = mapDay(program, weekId, dayId, (d) => ({ ...d, blocks: d.blocks.map((b) => (b.id === blockId ? ({ ...b, supersetGroup: groupId } as ProgramBlock) : b)) }));
+  p = applyGroupDraft(p, weekId, dayId, groupId, {
+    kind: "circuit", rounds: c.rounds, memberRestSec: c.memberRestSec, roundRestSec: c.roundRestSec, progression: c.progression ?? "same",
+    members: c.members.map((m) => ({ exerciseName: m.exerciseName, exerciseId: m.exerciseId, ...(m.durationSec ? { durationSec: m.durationSec } : { reps: m.reps ?? 10 }) })),
+  }, newId);
+  p = mapDay(p, weekId, dayId, (d) => ({ ...d, blocks: d.blocks.filter((b) => b.id !== blockId).map((b, i) => ({ ...b, orderIndex: i }) as ProgramBlock) }));
+  return { program: p, groupId };
 }
 
 /** "Weight × reps", "Reps", "Reps + added weight", "Time", "Distance". */

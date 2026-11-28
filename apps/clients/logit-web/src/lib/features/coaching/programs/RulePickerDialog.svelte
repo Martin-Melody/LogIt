@@ -6,7 +6,7 @@
   import { Button } from "$lib/components/ui/button";
   import { describeRecipe } from "@logit/core/domain/progressionRecipe";
   import type { ProgramRule } from "@logit/core/domain/CoachProgram";
-  import { plugins } from "$lib/features/plugins/pluginData.svelte";
+  import { fetchSource, pluginMeta, plugins } from "$lib/features/plugins/pluginData.svelte";
   import { ownRule, rules } from "./rules.svelte";
 
   let { open = $bindable(false), current, exercise = null, onpick }: {
@@ -42,7 +42,13 @@
   const label = (r: ProgramRule | null) => !r ? "the program's" : r.kind === "adaptive" ? "LogIt Adaptive" : r.kind === "linear" ? "Linear Progression" : r.kind === "wave" ? "4-week wave" : r.kind === "fixed" ? "Fixed" : r.name;
 
   function choose(r: ProgramRule | null) { picked = r; }
-  function use() {
+  async function use() {
+    // A plugin progression that plans how many sets says so (builder round 2): Sets hides.
+    if (picked?.kind === "plugin") {
+      const p = plugins.installed.find((x) => x.manifest.id === (picked as { pluginId: string }).pluginId);
+      const meta = p ? await fetchSource(p.manifest as never).then((s) => pluginMeta("progression-algorithm", s)).catch(() => null) : null;
+      picked = { ...picked, ...(meta?.decidesSets === true ? { decidesSets: true } : {}) };
+    }
     onpick(picked, exercise ? scope : "program");
     open = false;
   }

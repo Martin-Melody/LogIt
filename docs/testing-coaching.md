@@ -173,6 +173,20 @@ The stack on top of main. Each line names its PR.
 - [ ] Coach: client › Training shows "… outgrows their gym in week N · Decide"; pick a harder
       version; the phone shows it as the coach's plan at the top.
 
+**Builder round 2 (#206)**
+- [ ] A superset/tri-set header: kind, name, "3 rounds · … · same every week", Edit… opens the
+      circuit-style dialog; switch to Circuit, set one exercise to 0:40, + round → saved and shown.
+- [ ] Members: "8 reps each round"; each still opens on its own. Drag one out, in and within
+      (grip), and Alt+↑/↓ does the same; a group left with one exercise stops being a group.
+- [ ] + Add: pick two → As a circuit → its settings open; Save → a circuit with both.
+- [ ] An old circuit block: Edit… turns it into a circuit of its exercises.
+- [ ] Strength on a progression: Sets, Rep range, Rest (blank = theirs), Tempo, Warm-ups; no Load
+      or per-set table. On Fixed: the set table and Calculate warm-ups (needs a kg load).
+- [ ] No Measures or Each side on a bench press; Each side on a Bulgarian split squat.
+- [ ] Mobility: Progression (theirs, LogIt's, Same every time, plugins).
+- [ ] Swaps: the section follows the rule; the first list on Programs › Swaps asks once.
+- [ ] Phone: a planned rest is the set's rest; blank uses their settings; Warm-ups Off drops them.
+
 ## Findings
 
 Write them here, with the section number.

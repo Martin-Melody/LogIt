@@ -20,7 +20,6 @@
   import ActionMenu from "$lib/features/commands/ActionMenu.svelte";
   import ProgramWeeks from "./ProgramWeeks.svelte";
   import RulePickerDialog from "./RulePickerDialog.svelte";
-  import CircuitDialog from "./CircuitDialog.svelte";
   import PluginBlockDialog from "./PluginBlockDialog.svelte";
   import type { RowAction } from "$lib/features/commands/commands.svelte";
   import NamePicker from "$lib/features/plan/NamePicker.svelte";
@@ -47,6 +46,10 @@
   import { createId } from "@logit/core/domain/ids";
   import { SET_TYPE_META, type SetType } from "@logit/core/domain/workout";
   import type { SwapRule } from "@logit/core/domain/swaps";
+  import * as ToggleGroup from "$lib/components/ui/toggle-group";
+  import { warmupSets } from "@logit/core/domain/warmup";
+  import { DEFAULT_MOBILITY_ALGORITHM_ID } from "@logit/core/usecases/progression/getMobilityProgressionConfig";
+  import { SAME_EVERY_TIME_ID } from "@logit/core/progression/algorithms/sameEveryTime";
 
   let {
     program,
@@ -256,15 +259,23 @@
       }
       return;
     }
-    if (as === "circuit") {
-      putBlock(null, { name: "Circuit", rounds: 3, roundRestSec: 90, members: picks.map((pk) => ({ id: createId("cm"), exerciseName: pk.name, exerciseId: index?.get(pk.name)?.id, ...(pk.kind === "strength" ? { reps: 10 } : { durationSec: 40 }) })) }, "circuit");
-      return;
-    }
-    picks.forEach((pk, i) => {
-      if (pk.kind === "strength") addExercise(pk.name, as === "group" && i > 0);
+    const ids: string[] = [];
+    for (const pk of picks) {
+      if (pk.kind === "strength") addExercise(pk.name, false);
       else if (pk.kind === "cardio") addCardio(pk.name);
       else addMobility(pk.name);
-    });
+      if (blockId) ids.push(blockId);
+    }
+    // Several as a superset or circuit (canvas PB15): one group, and its settings open.
+    if (as !== "one" && ids.length > 1) {
+      const d = day.id, gid = createId("grp");
+      edit((p, w) => P.setGroup(
+        mapTemplateDay(p, d, (dd) => ({ ...dd, blocks: dd.blocks.map((b) => (ids.includes(b.id) ? ({ ...b, supersetGroup: gid } as ProgramBlock) : b)) })),
+        w, d, gid, as === "circuit" ? { kind: "circuit", memberRestSec: 15, roundRestSec: 90 } : { kind: "superset" },
+      ));
+      blockId = null;
+      openGroup(gid, true);
+    }
   }
 
   function addExercise(name: string, superset: boolean) {
@@ -307,13 +318,16 @@
   }
 
   // ── Circuits and plugin blocks (canvas Q4) ──
-  let circuitOpen = $state(false);
   let pluginOpen = $state(false);
-  let editingCircuit = $state<P.ProgramCircuit | null>(null);
   let editingPlugin = $state<P.ProgramPluginBlock | null>(null);
+  /** An old circuit block turns into a group of its exercises, then its settings open (PB16). */
   function openCircuit(b: P.ProgramCircuit | null) {
-    editingCircuit = b;
-    circuitOpen = true;
+    if (!day || !b) return;
+    const d = day.id;
+    let gid = "";
+    edit((p, w) => { const out = P.circuitToGroup(p, w, d, b.id, () => createId("pblock")); gid = out.groupId; return out.program; });
+    if (blockId === b.id) blockId = null;
+    if (gid) openGroup(gid);
   }
   function openPluginBlock(b: P.ProgramPluginBlock | null) {
     editingPlugin = b;
@@ -366,8 +380,10 @@
     patchBlock(b.id, (x) => (x.type === "strength" ? { ...x, sets: x.sets.map((s) => (field === "rest" || field === "tempo" || s.setType !== "warmup" ? { ...s, ...p } : s)) } : x));
   }
 
-  function setOne(b: ProgramStrength, s: ProgramSet, field: "reps" | "load" | "rpe" | "type", text: string, el?: HTMLInputElement) {
+  function setOne(b: ProgramStrength, s: ProgramSet, field: "reps" | "load" | "rpe" | "type" | "rest", text: string, el?: HTMLInputElement) {
     let patch: Partial<ProgramSet> | null = null;
+    if (field === "rest") { const sec = text.trim() ? P.parseRestText(text) : undefined; patch = sec === null ? null : { restSec: sec }; }
+    else
     if (field === "reps") patch = P.parseRepsText(text, s.setType);
     else if (field === "load") patch = P.parseLoadText(text);
     else if (field === "type") patch = { setType: text as SetType };
@@ -618,23 +634,114 @@
   const shownRuns = $derived(showWeek == null ? runs : runs.map((x) => ({ ...x, blocks: x.blocks.filter((b) => P.inWeek(b, showWeek!)) })).filter((x) => x.blocks.length));
   let groupOpen = $state(false);
   let groupEditing = $state<string | null>(null);
-  const editingGroup = $derived(groupEditing ? (day?.groups?.find((g) => g.id === groupEditing) ?? { id: groupEditing }) : null);
+  let groupDraft = $state<P.GroupDraft | null>(null);
+  let groupIsNew = $state(false);
+  /** Each member's amount per round, for the dialog: reps, a range (kept), or a time. */
+  function amountOf(b: ProgramBlock): { reps?: number; durationSec?: number } {
+    if (b.type === "mobility") return b.metric === "reps" ? { reps: b.targetSec } : { durationSec: b.targetSec ?? 30 };
+    if (b.type !== "strength") return {};
+    const s = b.sets.find((x) => x.setType !== "warmup") ?? b.sets[0];
+    if (b.measure === "time" && s?.durationSec) return { durationSec: s.durationSec };
+    return s?.reps != null ? { reps: s.reps } : {};
+  }
+  function openGroup(gid: string, isNew = false) {
+    if (!day) return;
+    const g = day.groups?.find((x) => x.id === gid);
+    groupEditing = gid;
+    groupIsNew = isNew;
+    groupDraft = {
+      kind: g?.kind ?? "superset", name: g?.name, rounds: P.groupRounds(day, gid) || 3,
+      memberRestSec: g?.memberRestSec, roundRestSec: g?.roundRestSec, progression: g?.progression ?? "same",
+      members: blocks.filter((b) => b.supersetGroup === gid).map((b) => ({ blockId: b.id, exerciseName: blockMain(b), ...amountOf(b) })),
+    };
+    groupOpen = true;
+  }
   function groupActions(gid: string): RowAction[] {
     if (!day) return [];
     const d = day.id;
     return [
-      { id: "settings", label: "Settings…", run: () => { groupEditing = gid; groupOpen = true; } },
+      { id: "settings", label: "Edit…", run: () => openGroup(gid) },
       { id: "add", label: "+ Exercise to this group", run: () => { addTo = gid; addOpen = true; } },
       { id: "ungroup", label: "Ungroup", separatorBefore: true, run: () => edit((p, w) => P.ungroup(p, w, d, gid)) },
     ];
   }
+  /** "3 rounds · 0:15 between exercises · 1:30 between rounds · same every week" (canvas PB16). */
   function groupSub(gid: string): string {
     const g = day?.groups?.find((x) => x.id === gid);
-    const bits = [g?.kind === "circuit" ? "circuit timer" : "back to back"];
-    if (g?.memberRestSec) bits.push(`${P.restText(g.memberRestSec)} between`);
-    if (g?.roundRestSec) bits.push(`rest ${P.restText(g.roundRestSec)} after the round`);
+    const n = day ? P.groupRounds(day, gid) : 0;
+    const bits = [`${n} ${n === 1 ? "round" : "rounds"}`];
+    bits.push(g?.memberRestSec ? `${P.restText(g.memberRestSec)} between exercises` : g?.kind === "circuit" ? "no rest between exercises" : "back to back");
+    if (g?.roundRestSec) bits.push(`${P.restText(g.roundRestSec)} between rounds`);
+    bits.push(g?.progression === "add-round" ? "+1 round every 2 weeks" : g?.progression === "each" ? "each exercise's own progression" : "same every week");
     return bits.join(" · ");
   }
+  // ── Moving one exercise in, out of and within a group (canvas PB16) ──
+  let dragBlock = $state<string | null>(null);
+  let dropAt = $state<{ id: string; after: boolean } | null>(null);
+  const after = (b: ProgramBlock) => blocks[blocks.indexOf(b) + 1]?.id ?? null;
+  function place(id: string, beforeId: string | null, group: string | undefined) {
+    if (!day) return;
+    const d = day.id;
+    edit((p, w) => P.placeBlock(p, w, d, id, beforeId, group));
+  }
+  /** Alt+arrows on a member: up and down inside its group, and out at either end. */
+  function nudgeMember(b: ProgramBlock, dir: -1 | 1) {
+    const gid = b.supersetGroup;
+    if (!gid) return;
+    const m = blocks.filter((x) => x.supersetGroup === gid);
+    const k = m.indexOf(b);
+    const last = m.at(-1)!;
+    if (dir < 0) place(b.id, k > 0 ? m[k - 1]!.id : (m[1]?.id ?? null), k > 0 ? gid : undefined);
+    else if (k < m.length - 1) place(b.id, m[k + 2]?.id ?? after(last), gid);
+    else place(b.id, after(b), undefined);
+  }
+  /** Alt+arrows on an exercise on its own next to a group: it joins that group. */
+  function joinNext(b: ProgramBlock, dir: -1 | 1): boolean {
+    const nb = blocks[blocks.indexOf(b) + dir];
+    if (!nb?.supersetGroup || b.type === "circuit" || b.type === "plugin") return false;
+    place(b.id, dir > 0 ? nb.id : after(b), nb.supersetGroup);
+    return true;
+  }
+  function dropOn(target: ProgramBlock, e: DragEvent) {
+    const id = dragBlock ?? (runOrder.held && blocks.some((x) => x.id === runOrder.held && !x.supersetGroup) ? runOrder.held : null);
+    if (!id || id === target.id) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const below = dropAt?.id === target.id && dropAt.after;
+    const moving = blocks.find((x) => x.id === id);
+    const group = moving && (moving.type === "circuit" || moving.type === "plugin") ? undefined : target.supersetGroup;
+    place(id, below ? after(target) : target.id, group);
+    dragBlock = null;
+    dropAt = null;
+    runOrder.end();
+  }
+  function overBlock(target: ProgramBlock, e: DragEvent) {
+    const fromRun = !dragBlock && runOrder.held && blocks.some((x) => x.id === runOrder.held && !x.supersetGroup);
+    // A member being dragged, or a lone exercise dragged onto a group's member.
+    if (!dragBlock && !(fromRun && target.supersetGroup)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    dropAt = { id: target.id, after: e.clientY > r.top + r.height / 2 };
+  }
+  // ── Calculate warm-ups (canvas PB11): the phone's ramp up to the first working set ──
+  function calcWarmups(b: ProgramStrength) {
+    const work = [...b.sets].filter((s) => s.setType !== "warmup").sort((x, y) => x.orderIndex - y.orderIndex);
+    const top = work[0]?.weight;
+    if (!top) return;
+    const ramp = warmupSets(top).filter((w) => w.weight < top);
+    const rest = work[0]?.restSec;
+    patchBlock(b.id, (x) => (x.type === "strength" ? { ...x, sets: [
+      ...ramp.map((w, i): ProgramSet => ({ id: createId("pset"), orderIndex: i, setType: "warmup", reps: w.reps, weight: w.weight, ...(rest ? { restSec: 60 } : {}) })),
+      ...work.map((s, i) => ({ ...s, orderIndex: ramp.length + i })),
+    ] } : x));
+  }
+  const MOBILITY_RULES = $derived([
+    { value: "", label: "Their own mobility progression" },
+    { value: DEFAULT_MOBILITY_ALGORITHM_ID, label: "10 min an area, then longer holds" },
+    { value: SAME_EVERY_TIME_ID, label: "Same every time" },
+    ...installedPlugins.installed.filter((p) => p.manifest.family === "mobility-progression").map((p) => ({ value: p.manifest.id, label: `${p.manifest.name} (plugin)` })),
+  ]);
   function orderRuns(keys: string[]) {
     if (!day) return;
     const byKey = new Map(runs.map((x) => [x.key, x]));
@@ -810,7 +917,14 @@
               <button type="button" draggable={showWeek == null} disabled={showWeek != null} aria-label="Move {run.blocks.map(blockMain).join(' and ')} (arrow keys)"
                 ondragstart={(e) => runOrder.start(runs.map((x) => x.key), run.key, e, (e.currentTarget as HTMLElement).closest("li"))}
                 ondragend={() => runOrder.end()}
-                onkeydown={(e) => { if (e.key === "ArrowUp") { e.preventDefault(); moveRun(ri, ri - 1); } else if (e.key === "ArrowDown") { e.preventDefault(); moveRun(ri, ri + 1); } }}
+                onkeydown={(e) => {
+                  if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+                  e.preventDefault();
+                  const dir = e.key === "ArrowUp" ? -1 : 1;
+                  // Alt+arrow next to a group joins it; plain arrows move past.
+                  if (e.altKey && run.blocks.length === 1 && !run.blocks[0]!.supersetGroup && joinNext(run.blocks[0]!, dir)) return;
+                  moveRun(ri, ri + dir);
+                }}
                 class="mt-2 flex h-8 w-6 shrink-0 cursor-grab items-center justify-center rounded text-muted-foreground hover:text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-default disabled:opacity-30">
                 <GripVerticalIcon class="size-4" />
               </button>
@@ -819,12 +933,13 @@
                   {@const gid = run.blocks[0].supersetGroup}
                   <ActionMenu actions={groupActions(gid)} label="More for {P.groupLabel(day, gid)}">
                     {#snippet children({ props, more })}
-                      <div {...props} class="flex items-center gap-2 rounded-[9px] bg-muted/60 px-3 py-1.5">
-                        <button type="button" onclick={() => { groupEditing = gid; groupOpen = true; }} class="flex min-w-0 flex-1 items-baseline gap-2 text-left">
-                          <span class="text-[11px] font-bold uppercase tracking-wide">{P.groupLabel(day, gid)}</span>
+                      {@const g = day.groups?.find((x) => x.id === gid)}
+                      <div {...props} class="flex items-center gap-2 rounded-[9px] bg-muted/60 px-3 py-2">
+                        <button type="button" onclick={() => openGroup(gid)} class="flex min-w-0 flex-1 flex-col text-left">
+                          <span class="truncate text-[13px] font-semibold"><span class="mr-1.5 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{g?.kind === "circuit" ? "Circuit" : P.groupLabel({ blocks: day.blocks }, gid)}</span>{g?.name ?? ""}</span>
                           <span class="truncate text-xs text-muted-foreground">{groupSub(gid)}</span>
                         </button>
-                        <Button variant="ghost" size="sm" onclick={() => { addTo = gid; addOpen = true; }}>+ Exercise</Button>
+                        <Button variant="outline" size="sm" onclick={() => openGroup(gid)}>Edit…</Button>
                         {@render more()}
                       </div>
                     {/snippet}
@@ -834,14 +949,25 @@
                   {@const i = blocks.indexOf(b)}
                   {@const grouped = b.supersetGroup && labels.get(b.id)}
                   {@const isOpen = b.id === blockId}
-                  <div class="rounded-[9px] border transition-colors {isOpen ? 'border-primary/60' : 'border-border'} {grouped ? 'border-l-4 border-l-muted-foreground/40' : ''}">
+                  {@const circuit = !!grouped && day.groups?.find((x) => x.id === b.supersetGroup)?.kind === "circuit"}
+                  <div role="listitem" ondragover={(e) => overBlock(b, e)} ondragleave={() => { if (dropAt?.id === b.id) dropAt = null; }} ondrop={(e) => dropOn(b, e)}
+                    class="rounded-[9px] border transition-colors {isOpen ? 'border-primary/60' : 'border-border'} {grouped ? 'border-l-4 border-l-muted-foreground/40' : ''} {dropAt?.id === b.id ? (dropAt.after ? 'shadow-[0_2px_0_0_var(--primary)]' : 'shadow-[0_-2px_0_0_var(--primary)]') : ''}">
                     <ActionMenu actions={blockActions(b, i)} label="More for {blockMain(b)}">
                       {#snippet children({ props, more })}
                         <div {...props} class="flex items-center gap-2 rounded-[9px] px-3 py-2 {isOpen ? 'bg-primary/5' : 'hover:bg-muted/40'}">
-                          {#if grouped}<span class="rounded-[5px] bg-muted-foreground px-1.5 text-[11px] font-bold text-background">{labels.get(b.id)}</span>{/if}
+                          {#if grouped}
+                            <button type="button" draggable={showWeek == null} disabled={showWeek != null} aria-label="Move {blockMain(b)} in or out of the group (Alt+arrow keys)"
+                              ondragstart={(e) => { e.stopPropagation(); dragBlock = b.id; e.dataTransfer?.setData("text/plain", b.id); if (e.dataTransfer) e.dataTransfer.effectAllowed = "move"; }}
+                              ondragend={() => { dragBlock = null; dropAt = null; }}
+                              onkeydown={(e) => { if (e.key === "ArrowUp" || e.key === "ArrowDown") { e.preventDefault(); e.stopPropagation(); nudgeMember(b, e.key === "ArrowUp" ? -1 : 1); } }}
+                              class="-ml-1 flex h-8 w-5 shrink-0 cursor-grab items-center justify-center rounded text-muted-foreground hover:text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-30">
+                              <GripVerticalIcon class="size-3.5" />
+                            </button>
+                            <span class="rounded-[5px] bg-muted-foreground px-1.5 text-[11px] font-bold text-background">{labels.get(b.id)}</span>
+                          {/if}
                           <button type="button" aria-expanded={isOpen} onclick={() => (blockId = isOpen ? null : b.id)} class="flex min-w-0 flex-1 flex-col text-left">
                             <span class="truncate text-[13px] font-semibold">{#if b.type !== "strength"}<span class="mr-1.5 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{b.type === "cardio" ? "Cardio" : b.type === "mobility" ? "Mobility" : b.type === "plugin" ? "Plugin" : b.type === "circuit" ? "Circuit" : ""}</span>{/if}{blockMain(b)}</span>
-                            <span class="truncate text-xs text-muted-foreground">{blockSub(b)}</span>
+                            <span class="truncate text-xs text-muted-foreground">{circuit ? `${P.memberAmount(b)} each round` : blockSub(b)}</span>
                           </button>
                           {#if b.weeks}<button type="button" onclick={() => openRange(b, "some")} class="shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-[11px] font-semibold tabular-nums">{P.weekRangeText(b.weeks)}</button>{/if}
                           {@render more()}
@@ -865,59 +991,96 @@
           {/if}
           {#key b.id}
             {@const m = b.measure ?? "weight"}
-            <!-- What it measures (canvas PB3): the set fields follow it. -->
-            <div class="grid grid-cols-2 gap-3">
-              <div class="flex flex-col gap-1.5"><Label>Measures</Label>
-                <OptionSelect size="sm" value={m} aria-label="Measures" options={P.MEASURES.map((x) => ({ value: x.value, label: x.label }))}
-                  onValueChange={(v) => patchBlock(b.id, { measure: v === "weight" ? undefined : v } as Partial<ProgramBlock>)} />
+            {@const rule = P.ruleFor(prog, b)}
+            {@const fixed = rule.kind === "fixed"}
+            {@const decides = rule.kind === "plugin" && !!rule.decidesSets}
+            <!-- Canvas PB11/PB12: the fields that fit. Measures only for ones already set to a
+                 hold or distance; Each side only for one-sided lifts. -->
+            {#if m !== "weight" || b.perSide || P.isOneSided(b.exerciseName)}
+              <div class="grid grid-cols-2 gap-3">
+                {#if m !== "weight"}
+                  <div class="flex flex-col gap-1.5"><Label>Measures</Label>
+                    <OptionSelect size="sm" value={m} aria-label="Measures" options={P.MEASURES.map((x) => ({ value: x.value, label: x.label }))}
+                      onValueChange={(v) => patchBlock(b.id, { measure: v === "weight" ? undefined : v } as Partial<ProgramBlock>)} />
+                  </div>
+                {/if}
+                {#if b.perSide || P.isOneSided(b.exerciseName)}
+                  <label class="flex items-center justify-between gap-3 self-end pb-1.5 text-[13px]"><span>Each side</span><Switch checked={!!b.perSide} onCheckedChange={(v) => patchBlock(b.id, { perSide: v || undefined } as Partial<ProgramBlock>)} /></label>
+                {/if}
               </div>
-              <label class="flex items-center justify-between gap-3 self-end pb-1.5 text-[13px]"><span>Each side</span><Switch checked={!!b.perSide} onCheckedChange={(v) => patchBlock(b.id, { perSide: v || undefined } as Partial<ProgramBlock>)} /></label>
-            </div>
+            {/if}
             <div class="grid grid-cols-2 gap-3">
               <div class="flex flex-col gap-1.5"><Label>Sets</Label>
-                <span class="flex items-center gap-1.5">
-                  <Button variant="outline" size="icon" class="size-8" aria-label="One set fewer" disabled={b.sets.length <= 1} onclick={() => setCount(b, b.sets.length - 1)}>−</Button>
-                  <span class="w-6 text-center tabular-nums">{b.sets.length}</span>
-                  <Button variant="outline" size="icon" class="size-8" aria-label="One set more" onclick={() => setCount(b, b.sets.length + 1)}>+</Button>
-                </span>
+                {#if decides}
+                  <span class="flex h-9 items-center text-[13px] text-muted-foreground">Decided by {rule.name}</span>
+                {:else}
+                  <span class="flex items-center gap-1.5">
+                    <Button variant="outline" size="icon" class="size-9" aria-label="One set fewer" disabled={b.sets.filter((s) => s.setType !== "warmup").length <= 1} onclick={() => setCount(b, b.sets.length - 1)}>−</Button>
+                    <span class="w-6 text-center tabular-nums">{b.sets.filter((s) => s.setType !== "warmup").length}</span>
+                    <Button variant="outline" size="icon" class="size-9" aria-label="One set more" onclick={() => setCount(b, b.sets.length + 1)}>+</Button>
+                  </span>
+                {/if}
               </div>
               {#if m === "time"}
                 <div class="flex flex-col gap-1.5"><Label for="ex-hold">Hold</Label><input id="ex-hold" class={fieldCls} value={first?.durationSec ? P.restText(first.durationSec) : ""} placeholder="0:45" onchange={(e) => setAll(b, "hold", e.currentTarget.value, e.currentTarget)} /></div>
               {:else if m === "distance"}
                 <div class="flex flex-col gap-1.5"><Label for="ex-dist">Metres</Label><input id="ex-dist" class={fieldCls} inputmode="numeric" value={first?.distanceM ?? ""} placeholder="40" onchange={(e) => setAll(b, "distance", e.currentTarget.value, e.currentTarget)} /></div>
               {:else}
-                <div class="flex flex-col gap-1.5"><Label for="ex-reps">Reps</Label><input id="ex-reps" class={fieldCls} value={first ? P.repsText(first) : ""} placeholder="6-8" onchange={(e) => setAll(b, "reps", e.currentTarget.value, e.currentTarget)} /></div>
+                <div class="flex flex-col gap-1.5"><Label for="ex-reps">{fixed ? "Reps" : "Rep range"}</Label><input id="ex-reps" class={fieldCls} value={first ? P.repsText(first) : ""} placeholder={fixed ? "8" : "8-12"} onchange={(e) => setAll(b, "reps", e.currentTarget.value, e.currentTarget)} /></div>
               {/if}
-              {#if m === "weight" || m === "added"}
+              {#if fixed && (m === "weight" || m === "added")}
                 <div class="flex flex-col gap-1.5"><Label for="ex-load">{m === "added" ? "Added weight" : "Load"}</Label><input id="ex-load" class={fieldCls} value={first ? P.loadText(first) : ""} placeholder={m === "added" ? "10" : "60 or 72%"} onchange={(e) => setAll(b, "load", e.currentTarget.value, e.currentTarget)} /></div>
               {/if}
-              <div class="flex flex-col gap-1.5"><Label for="ex-rest">Rest</Label><input id="ex-rest" class={fieldCls} value={P.restText(first?.restSec)} placeholder="2:30" onchange={(e) => setAll(b, "rest", e.currentTarget.value, e.currentTarget)} /></div>
-              <div class="col-span-2 flex flex-col gap-1.5"><Label for="ex-tempo">Tempo <span class="font-normal text-muted-foreground">optional</span></Label><input id="ex-tempo" class={fieldCls} value={first?.tempo ?? ""} placeholder="3-1-1-0" onchange={(e) => setAll(b, "tempo", e.currentTarget.value, e.currentTarget)} /></div>
+              <div class="flex flex-col gap-1.5"><Label for="ex-rest">Rest <span class="font-normal text-muted-foreground">blank = theirs</span></Label><input id="ex-rest" class={fieldCls} value={first?.restSec ? P.restText(first.restSec) : ""} placeholder="Their setting" onchange={(e) => setAll(b, "rest", e.currentTarget.value, e.currentTarget)} /></div>
+              <div class="{fixed && (m === 'weight' || m === 'added') ? 'col-span-2' : ''} flex flex-col gap-1.5"><Label for="ex-tempo">Tempo <span class="font-normal text-muted-foreground">optional</span></Label><input id="ex-tempo" class={fieldCls} value={first?.tempo ?? ""} placeholder="3-1-1-0" onchange={(e) => setAll(b, "tempo", e.currentTarget.value, e.currentTarget)} /></div>
             </div>
             {#if m === "time" || m === "distance"}
               <p class="text-xs text-muted-foreground">{m === "time" ? "Runs as a timed hold on their phone" : "Logged as distance on their phone"}; progressions leave it as you set it.</p>
             {/if}
-            <details class="text-[13px]">
-              <summary class="cursor-pointer text-xs font-medium text-muted-foreground">Each set (warm-ups, drop sets, RPE)</summary>
-              <table class="mt-2 w-full text-xs">
-                <thead><tr class="text-left text-muted-foreground"><th class="py-1 font-medium">#</th><th class="font-medium">Type</th><th class="font-medium">Reps</th><th class="font-medium">Load</th><th class="font-medium">RPE</th></tr></thead>
-                <tbody>
-                  {#each [...b.sets].sort((x, y) => x.orderIndex - y.orderIndex) as s, k (s.id)}
-                    <tr>
-                      <td class="py-1 pr-1 text-muted-foreground">{k + 1}</td>
-                      <td class="pr-1"><OptionSelect size="sm" value={s.setType} aria-label="Set {k + 1} type" options={setTypes.map((m) => ({ value: m.type, label: m.label }))} onValueChange={(v) => setOne(b, s, "type", v)} /></td>
-                      <td class="pr-1"><input class="h-8 w-14 rounded-[7px] border border-input bg-background px-1.5" aria-label="Set {k + 1} reps" value={P.repsText(s)} onchange={(e) => setOne(b, s, "reps", e.currentTarget.value, e.currentTarget)} /></td>
-                      <td class="pr-1"><input class="h-8 w-14 rounded-[7px] border border-input bg-background px-1.5" aria-label="Set {k + 1} load" value={P.loadText(s)} onchange={(e) => setOne(b, s, "load", e.currentTarget.value, e.currentTarget)} /></td>
-                      <td><input class="h-8 w-11 rounded-[7px] border border-input bg-background px-1.5" aria-label="Set {k + 1} RPE" value={s.rpe ?? ""} onchange={(e) => setOne(b, s, "rpe", e.currentTarget.value, e.currentTarget)} /></td>
-                    </tr>
+            {#if !fixed}
+              <!-- Canvas PB12: a progression works out the weights; warm-ups on, off or theirs. -->
+              <div class="flex flex-col gap-1.5">
+                <Label>Warm-ups</Label>
+                <ToggleGroup.Root type="single" variant="outline" spacing={2} class="justify-start" value={b.warmups ?? "theirs"} aria-label="Warm-ups"
+                  onValueChange={(v: string) => { if (v) patchBlock(b.id, { warmups: v === "theirs" ? undefined : v } as Partial<ProgramBlock>); }}>
+                  {#each [["on", "On"], ["off", "Off"], ["theirs", "Their choice"]] as [v, l] (v)}
+                    <ToggleGroup.Item value={v} class="h-9 rounded-full px-3.5 text-[13px] data-[state=on]:border-primary! data-[state=on]:bg-primary! data-[state=on]:text-primary-foreground!">{l}</ToggleGroup.Item>
                   {/each}
-                </tbody>
-              </table>
-            </details>
+                </ToggleGroup.Root>
+              </div>
+              <p class="text-xs text-muted-foreground">{P.ruleLabel(rule)} picks the weights each workout from these{decides ? ", and how many sets" : ""}. See every week shows them.</p>
+            {:else}
+              <!-- Canvas PB11: Fixed plans every set. -->
+              {@const top = b.sets.filter((s) => s.setType !== "warmup").sort((x, y) => x.orderIndex - y.orderIndex)[0]?.weight}
+              <div class="flex flex-col gap-1.5 text-[13px]">
+                <div class="flex items-center justify-between gap-2">
+                  <Label>Each set</Label>
+                  <Button variant="outline" size="sm" disabled={!top} title={top ? undefined : "Needs a kg load on the first working set"} onclick={() => calcWarmups(b)}>Calculate warm-ups</Button>
+                </div>
+                <table class="w-full text-xs">
+                  <thead><tr class="text-left text-muted-foreground"><th class="py-1 font-medium">#</th><th class="font-medium">Type</th><th class="font-medium">Reps</th><th class="font-medium">Load</th><th class="font-medium">Rest</th><th class="font-medium">RPE</th><th></th></tr></thead>
+                  <tbody>
+                    {#each [...b.sets].sort((x, y) => x.orderIndex - y.orderIndex) as s, k (s.id)}
+                      <tr>
+                        <td class="py-1 pr-1 text-muted-foreground">{k + 1}</td>
+                        <td class="pr-1"><OptionSelect size="sm" value={s.setType} aria-label="Set {k + 1} type" options={setTypes.map((m) => ({ value: m.type, label: m.label }))} onValueChange={(v) => setOne(b, s, "type", v)} /></td>
+                        <td class="pr-1"><input class="h-9 w-14 rounded-[7px] border border-input bg-background px-1.5" aria-label="Set {k + 1} reps" value={P.repsText(s)} onchange={(e) => setOne(b, s, "reps", e.currentTarget.value, e.currentTarget)} /></td>
+                        <td class="pr-1"><input class="h-9 w-14 rounded-[7px] border border-input bg-background px-1.5" aria-label="Set {k + 1} load" value={P.loadText(s)} onchange={(e) => setOne(b, s, "load", e.currentTarget.value, e.currentTarget)} /></td>
+                        <td class="pr-1"><input class="h-9 w-14 rounded-[7px] border border-input bg-background px-1.5" aria-label="Set {k + 1} rest" value={s.restSec ? P.restText(s.restSec) : ""} placeholder="–" onchange={(e) => setOne(b, s, "rest", e.currentTarget.value, e.currentTarget)} /></td>
+                        <td class="pr-1"><input class="h-9 w-11 rounded-[7px] border border-input bg-background px-1.5" aria-label="Set {k + 1} RPE" value={s.rpe ?? ""} onchange={(e) => setOne(b, s, "rpe", e.currentTarget.value, e.currentTarget)} /></td>
+                        <td><Button variant="ghost" size="icon" class="size-9" aria-label="Remove set {k + 1}" disabled={b.sets.length <= 1} onclick={() => { const d = day!.id; edit((p, w) => P.removeSet(p, w, d, b.id, s.id)); }}>×</Button></td>
+                      </tr>
+                    {/each}
+                  </tbody>
+                </table>
+              </div>
+            {/if}
             <div class="flex items-center justify-between gap-2">
               <span class="flex flex-col"><Label>Progression</Label><span class="text-[13px]">{b.rule ? P.ruleLabel(b.rule) : `The program's · ${P.ruleLabel(prog.rule)}`}</span></span>
               <Button variant="outline" size="sm" onclick={() => { pickingFor = b; picking = true; }}>Change</Button>
             </div>
+            <!-- Canvas PB14: the swaps section follows the swap rule. -->
+            {#if swapRule === "list" || b.alternatives?.length}
             <div class="flex flex-col gap-1.5">
               <Label>Swaps they can use</Label>
               <div class="flex flex-wrap gap-1.5">
@@ -926,7 +1089,7 @@
                     <button type="button" aria-label="Remove {a.exerciseName}" class="flex size-5 items-center justify-center rounded-full hover:bg-background" onclick={() => edit((p) => P.removeAlternative(p, { exerciseName: b.exerciseName, exerciseId: b.exerciseId }, a.exerciseName))}>×</button>
                   </span>
                 {:else}
-                  <span class="text-xs text-muted-foreground">{swapRule === "list" ? "None yet, so it can't be swapped" : swapRule === "muscles" ? "None yet, so same-muscle exercises" : "None yet, so any exercise"}</span>
+                  <span class="text-xs text-muted-foreground">None yet, so it can't be swapped</span>
                 {/each}
               </div>
               {#if addingSwap}
@@ -941,6 +1104,12 @@
                 </span>
               {/if}
             </div>
+            {:else if swapRule === "muscles"}
+              {@const same = sameMuscle(b).slice(0, 3)}
+              <p class="text-[13px]"><span class="font-medium">Swaps</span> <span class="text-muted-foreground">· Same muscles{same.length ? `: ${same.join(", ")}…` : ""} worked out on their phone</span></p>
+            {:else}
+              <p class="text-[13px]"><span class="font-medium">Swaps</span> <span class="text-muted-foreground">· Any exercise: your swap rule lets them swap anything</span></p>
+            {/if}
           {/key}
         {:else if block.type === "cardio"}
           {@const b = block}
@@ -972,7 +1141,12 @@
               <div class="flex flex-col gap-1.5"><Label for="mo-hold">{b.metric === "reps" ? "Reps" : "Hold (seconds)"}</Label><input id="mo-hold" class={fieldCls} inputmode="numeric" value={b.targetSec ?? ""} onchange={(e) => { const n = Number(e.currentTarget.value); patchBlock(b.id, { targetSec: n > 0 ? Math.round(n) : undefined } as Partial<ProgramBlock>); }} /></div>
             </div>
             <label class="flex items-center justify-between gap-3 text-[13px]"><span>Each side</span><Switch checked={!!b.perSide} onCheckedChange={(v) => patchBlock(b.id, { perSide: v } as Partial<ProgramBlock>)} /></label>
-            <p class="text-xs text-muted-foreground">Progresses like their own mobility drills. Needs LogIt {P.V2_BLOCKS_APP_VERSION} or newer on their phone.</p>
+            <!-- Canvas PB13: a mobility progression, or theirs. -->
+            <div class="flex flex-col gap-1.5"><Label>Progression</Label>
+              <OptionSelect size="sm" value={b.progressionId ?? ""} aria-label="Progression" options={MOBILITY_RULES}
+                onValueChange={(v) => patchBlock(b.id, { progressionId: v || undefined } as Partial<ProgramBlock>)} />
+            </div>
+            <p class="text-xs text-muted-foreground">Needs LogIt {P.V2_BLOCKS_APP_VERSION} or newer on their phone.</p>
           {/key}
         {:else if block.type === "circuit"}
           {@const b = block}
@@ -980,6 +1154,7 @@
             <span class="text-xs font-medium text-muted-foreground">{b.rounds} {b.rounds === 1 ? "round" : "rounds"}</span>
             <Button variant="outline" size="sm" onclick={() => openCircuit(b)}>Edit…</Button>
           </div>
+          <p class="text-xs text-muted-foreground">Edit turns it into a circuit of its exercises, so each one opens like any other.</p>
           <ul class="flex flex-col gap-1 text-[13px]">
             {#each b.members as m (m.id)}<li class="flex justify-between gap-2"><span>{m.exerciseName}</span><span class="text-muted-foreground">{m.durationSec ? P.restText(m.durationSec) : `${m.reps ?? ""} reps`}</span></li>{/each}
           </ul>
@@ -1071,7 +1246,6 @@
   </Dialog.Content>
 </Dialog.Root>
 
-<CircuitDialog bind:open={circuitOpen} dayName={day?.name || "this day"} editing={editingCircuit} {index} onsave={(c) => putBlock(editingCircuit, c, "circuit")} />
 <PluginBlockDialog bind:open={pluginOpen} dayName={day?.name || "this day"} editing={editingPlugin} onsave={(b) => putBlock(editingPlugin, b, "plugin")} />
 
 <RulePickerDialog bind:open={picking} current={pickingPhase ? (prog.phases?.find((x) => x.id === pickingPhase)?.rule ?? prog.rule ?? null) : pickingFor ? (pickingFor.rule ?? null) : (prog.rule ?? null)} exercise={pickingFor?.exerciseName ?? null} onpick={pickRule} />
@@ -1081,9 +1255,9 @@
 
 <AddToDayDialog bind:open={addOpen} dayName={addTo && day ? `${P.groupLabel(day, addTo)} in ${day.name ?? "this day"}` : (day?.name ?? "this day")} {searchExercises} {searchActivities} {searchDrills} onadd={addPicks} onplugin={() => openPluginBlock(null)} />
 
-{#if editingGroup && day}
-  <GroupDialog bind:open={groupOpen} group={editingGroup} fallback={P.groupLabel({ blocks: day.blocks }, editingGroup.id)}
-    onsave={(patch) => { const d = day!.id, gid = editingGroup!.id; edit((p, w) => P.setGroup(p, w, d, gid, patch)); }} />
+{#if groupDraft && groupEditing && day}
+  <GroupDialog bind:open={groupOpen} draft={groupDraft} isNew={groupIsNew} dayName={day.name || "this day"} {index} fallback={P.groupLabel({ blocks: day.blocks }, groupEditing)}
+    onsave={(draft) => { const d = day!.id, gid = groupEditing!; edit((p, w) => P.applyGroupDraft(p, w, d, gid, draft, () => createId("pblock"))); }} />
 {/if}
 
 {#if rangeBlock && day}

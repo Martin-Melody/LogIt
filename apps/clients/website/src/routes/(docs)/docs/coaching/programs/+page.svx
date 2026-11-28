@@ -22,20 +22,30 @@ copy, or your clients'.
 
 <HowTo id="studio.program" />
 
-Each day is a list you can drag (or move with the arrow keys on its grip); a superset moves as one.
-Click an exercise to open its settings right there. **+ Add to** the day opens one search over
-exercises, cardio and mobility drills: pick one and Add, or pick several and add them one after
-another, as a superset (two), tri-set (three) or giant set (four or more), or as a circuit.
+Each day is a list you can drag (or move with the arrow keys on its grip); a superset or circuit
+moves as one. Click an exercise to open its settings right there. **+ Add to** the day opens one
+search over exercises, cardio and mobility drills: pick one and Add, or pick several and add them
+separately, as a superset or as a circuit. A superset or circuit opens its settings straight away.
 
-A superset shows a header with its name ("Superset", "Tri-set", "Giant set" or yours) and how it
-runs. It stays a superset, back to back with no timer, whatever its size; click the header to make
-it a circuit, name it, or set the rest between exercises and after the round, the same settings
-the client has in the workout. **+ Exercise** on the header adds to it, and ⋯ has Ungroup.
+Supersets and circuits are one thing with a type. The header says which, its name, its rounds and
+rests and how it moves up; **Edit…** opens its settings: Superset or Circuit, the name, rounds,
+the rest between exercises and between rounds, each exercise's reps or time per round (with
+**+ Exercise** and × to take one out), and how it moves up. Each exercise inside still opens on its
+own for everything else. Drag an exercise by its grip into a group, out of it or within it, or use
+Alt and the arrow keys. ⋯ on the header has Ungroup.
 
-Each exercise says what it **measures**: weight × reps, reps (bodyweight), reps + added weight,
-time (holds like a plank) or distance (carries), and whether left and right are logged apart. The
-set fields follow it. Holds run as a timed hold on the client's phone and carries as distance.
-Cardio can have intervals (work, easy, repeat) and an effort, shown on their phone as "Planned".
+What an exercise's settings show depends on its progression. With a progression (LogIt Adaptive,
+Linear, a wave, yours or a plugin's) you set the sets, rep range, rest and tempo it plans from,
+and whether warm-ups are on, off or the client's choice; it works out the weights each workout. A
+progression that decides the number of sets too says "Decided by …" instead of Sets. With
+**Fixed** you plan every set: its type (warm-up, normal, drop set and so on), reps, load, rest and
+RPE, and **Calculate warm-ups** builds the ramp up to the first working set, the one the phone uses.
+
+Rest and warm-ups you set are what the client's workout starts with; left blank, their own
+settings fill them in, and they can still change either during the workout. Each side appears for
+one-sided lifts like a Bulgarian split squat. Mobility drills have their measure (hold or reps),
+each side and their own progression, or the client's. Cardio can have intervals (work, easy,
+repeat) and an effort, shown on their phone as "Planned".
 
 Different exercises in different weeks don't need six copies of a day. ⋯ on an exercise has
 **Replace from week…**, which ends it the week before and starts another in its place with the same
@@ -51,10 +61,9 @@ different exercises are still edited week by week.
 
 ## Circuits and blocks from plugins
 
-**As a circuit** (in + Add) makes exercises done one after another, round after round: how many rounds, the
-rest between exercises and between rounds, and reps or a time for each exercise. It moves up the
-same every week, by a round every two weeks, or by each exercise's own rule. Clients run it
-with the circuit timer on their phone.
+A circuit runs with the circuit timer on the client's phone: each exercise, then the next, round
+after round. It moves up the same every week, by a round every two weeks, or by each exercise's own
+progression. Circuits made before were one block; Edit… turns one into a circuit of its exercises.
 
 **Plugin blocks** (in + Add) adds a block from a workout-block plugin you've added, like timed rounds of
 rolling or hangboard hangs. Each plugin asks for its own settings, plus how many rounds (or
@@ -91,7 +100,8 @@ each week's numbers from their own lifts when they start the day.
 ## Swaps
 
 What clients can swap to is in Programs › Swaps: any exercise, the same main muscles, or only the
-swaps you list for each exercise. The same page has every exercise's swap list: adding a swap
+swaps you list for each exercise. The builder follows that rule: the swap list under an exercise
+shows only when it's lists only, and your first list asks once whether to switch to it. The same page has every exercise's swap list: adding a swap
 there adds it to that exercise in every program it's in (the builder shows the same list under the
 exercise). On the phone, after a swap they choose just today or for the rest
 of the program, with a reason if they like; the rest of the program tells you, and later days start

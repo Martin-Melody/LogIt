@@ -8,6 +8,7 @@
 // plugin that isn't there) is left out, and the day's list says "Update LogIt to see this
 // part" (unrunnableBlocks); the rest of the day works.
 
+import { warmupSets } from "./warmup";
 import { canRunBlock, inWeek, restText, type ProgramBlock, type ProgramDay, type ProgramPhase } from "./CoachProgram";
 import { circuitRounds, type PlanCell } from "./programPlan";
 import { addPluginBlock, repeatLastEntry, setBlockFieldValue, updatePluginBlock, type BlockDeclaration } from "./blockPlugin";
@@ -72,7 +73,8 @@ function addDrill(
 }
 
 /** The workout a coach program day starts, not yet saved. */
-export function programDaySession(day: ProgramDay, opts: ProgramDayOptions = {}): WorkoutSession {
+export function programDaySession(day0: ProgramDay, opts: ProgramDayOptions = {}): WorkoutSession {
+  const day = withGroupRounds(day0, opts.weekNumber ?? 1);
   let session = createSession();
   const groups = new Map<string, string[]>();
   const skip = new Set(unrunnableBlocks(day, opts).map((b) => b.id));
@@ -118,8 +120,14 @@ export function programDaySession(day: ProgramDay, opts: ProgramDayOptions = {})
       // The rule's numbers for this week, when it planned some (lighter weeks have fewer sets).
       const cell = opts.plan?.(block.id) ?? null;
       const planned = cell && (cell.source === "rule" || cell.source === "pinned") ? cell : null;
-      const ordered = sortByOrderIndex(block.sets);
+      // Warm-ups the coach planned in or left out (builder round 2); otherwise as typed.
+      let ordered = sortByOrderIndex(block.sets);
+      if (block.warmups === "off") ordered = ordered.filter((s) => s.setType !== "warmup");
       const working = ordered.filter((s) => s.setType !== "warmup");
+      if (block.warmups === "on" && !ordered.some((s) => s.setType === "warmup")) {
+        const top = (planned && planned.weight) || working[0]?.weight || 0;
+        if (top > 0) ordered = [...warmupSets(top).map((w, i) => ({ id: `${block.id}_w${i}`, orderIndex: -10 + i, setType: "warmup" as const, reps: w.reps, weight: w.weight })), ...ordered];
+      }
       const keep = planned?.sets ? new Set(working.slice(0, planned.sets).map((s) => s.id)) : null;
       const plannedReps = planned?.reps ? Number.parseInt(planned.reps, 10) : NaN;
       // A week that adds sets (a week type with + sets) repeats the last working set.
@@ -134,13 +142,16 @@ export function programDaySession(day: ProgramDay, opts: ProgramDayOptions = {})
             // A bodyweight exercise ("Reps") carries no weight; "+ added weight" is the belt's.
             weight: block.measure === "reps" ? 0 : usePlan && planned!.weight != null ? planned!.weight : (set.weight ?? 0),
             setType: set.setType,
+            ...(set.restSec ? { restDurationMs: set.restSec * 1000 } : {}),
           });
         }
       }
     } else if (block.type === "cardio") {
       session = withPlanned(addCardioBlock(session, block.activityName), cardioPlanned(block));
     } else if (block.type === "mobility") {
-      session = addDrill(session, block, Math.max(1, block.sets ?? 1), block.targetSec).session;
+      const added = addDrill(session, block, Math.max(1, block.sets ?? 1), block.targetSec);
+      session = added.session;
+      if (block.progressionId) session = { ...session, blocks: session.blocks.map((b) => (b.id === added.blockId ? { ...b, data: { ...(b.data as MobilityBlockData), algorithmId: block.progressionId } } : b)) };
     } else if (block.type === "plugin") {
       const decl = opts.pluginBlock!(block.pluginId)!;
       session = addPluginBlock(session, decl);
@@ -199,6 +210,23 @@ export function programDaySession(day: ProgramDay, opts: ProgramDayOptions = {})
   // Without the phase's block on this phone, a find week still says what to do.
   if (findNote) notes.unshift("Find your weights: go up each set until you could only have done 1 or 2 more reps. That set is the one that counts.");
   return notes.length ? { ...session, note: notes.join("\n") } : session;
+}
+
+/** A group that adds a round every two weeks (6.6 r2): its members get the extra sets. */
+function withGroupRounds(day: ProgramDay, week: number): ProgramDay {
+  const extra = Math.floor((week - 1) / 2);
+  const adding = new Set((day.groups ?? []).filter((g) => g.progression === "add-round").map((g) => g.id));
+  if (!extra || !adding.size) return day;
+  return {
+    ...day,
+    blocks: day.blocks.map((b) => {
+      if (!b.supersetGroup || !adding.has(b.supersetGroup)) return b;
+      if (b.type === "mobility") return { ...b, sets: (b.sets ?? 1) + extra };
+      if (b.type !== "strength") return b;
+      const last = [...b.sets].sort((x, y) => x.orderIndex - y.orderIndex).at(-1);
+      return last ? { ...b, sets: [...b.sets, ...Array.from({ length: extra }, (_, i) => ({ ...last, id: `${last.id}_r${i + 1}`, orderIndex: last.orderIndex + i + 1 }))] } : b;
+    }),
+  };
 }
 
 /** The last block added, with what the program planned for it in words. */

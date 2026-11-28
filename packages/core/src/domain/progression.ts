@@ -211,6 +211,8 @@ export type ProgressionAlgorithm = ProgressionAlgorithmMeta & {
   preferencesSchema?: AlgorithmPreferencesField[]; // if present, app renders a settings screen for this algorithm
   /** It handles input.week itself (a deload, a test week). Without it LogIt applies the week's change. */
   readsWeekTypes?: boolean;
+  /** It plans how many sets each workout (its output's sets): a coach's builder hides Sets. */
+  decidesSets?: boolean;
   // Built-in algorithms are synchronous; community algorithms run in the
   // interpreter sandbox and resolve asynchronously. Callers must await.
   suggest(input: ProgressionInput): ProgressionOutput | Promise<ProgressionOutput>;

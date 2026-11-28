@@ -13,6 +13,8 @@
   import { addAlternative, removeAlternative, type CoachProgram } from "@logit/core/domain/CoachProgram";
   import type { SwapRule } from "@logit/core/domain/swaps";
   import { getWebCoachProgramRepo } from "$lib/deps";
+  import * as Dialog from "$lib/components/ui/dialog";
+  import { coachApi } from "@logit/core/api/coachApi";
 
   let { programs, clients, swapRule = $bindable("any"), onchange }: {
     programs: CoachProgram[];
@@ -43,6 +45,19 @@
   const searchExercises = (q: string) => (index?.search(q, 8) ?? []).map((e) => ({ name: e.name, detail: e.primaryMuscles.slice(0, 2).join(", ") || undefined }));
 
   let adding = $state<string | null>(null);
+  // Canvas PB14: the first list asks once whether to switch to lists only.
+  const ASKED = "logit:coach:asked-lists-only";
+  let askLists = $state(false);
+  function maybeAsk(hadLists: boolean) {
+    if (hadLists || swapRule === "list" || typeof localStorage === "undefined" || localStorage.getItem(ASKED)) return;
+    localStorage.setItem(ASKED, "1");
+    askLists = true;
+  }
+  async function listsOnly() {
+    askLists = false;
+    try { swapRule = (await coachApi.setDefaultSwapRule("list")).swapRule; toast.success("Only your lists from now on"); }
+    catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't save it"); }
+  }
   let busy = $state(false);
 
   async function change(row: Row, fn: (p: CoachProgram) => CoachProgram, done: string) {
@@ -83,7 +98,7 @@
           {/each}
           {#if adding === row.name}
             <NamePicker id="swap-list-add" label="Swap for {row.name}" placeholder="Search exercises" autofocus search={(q) => searchExercises(q).filter((r) => r.name !== row.name)}
-              onPick={(n) => { adding = null; guideSignal("swap.added"); void change(row, (p) => addAlternative(p, { exerciseName: row.name, exerciseId: row.id }, { exerciseName: n }), `${n} added for ${row.name}`); }}
+              onPick={(n) => { adding = null; guideSignal("swap.added"); const had = rows.some((x) => x.swaps.length); void change(row, (p) => addAlternative(p, { exerciseName: row.name, exerciseId: row.id }, { exerciseName: n }), `${n} added for ${row.name}`).then(() => maybeAsk(had)); }}
               onCancel={() => (adding = null)} />
           {:else}
             <Button variant="outline" size="sm" class="h-7" disabled={busy} onclick={() => (adding = row.name)}>+ Swap</Button>
@@ -96,3 +111,17 @@
     {/each}
   </section>
 </div>
+
+<Dialog.Root bind:open={askLists}>
+  <Dialog.Content class="sm:max-w-md">
+    <Dialog.Header>
+      <Dialog.Title>Use only your lists from now on?</Dialog.Title>
+      <Dialog.Description>You've made your first swap list. Your rule now lets clients swap {swapRule === "muscles" ? "for any exercise with the same muscles" : "for any exercise"}. Switch it to "your lists only"? Exercises without a list then can't be swapped.</Dialog.Description>
+    </Dialog.Header>
+    <p class="text-xs text-muted-foreground">Asked once. The swap rule above changes it any time.</p>
+    <Dialog.Footer>
+      <Button variant="outline" onclick={() => (askLists = false)}>Keep {swapRule === "muscles" ? "same muscles" : "any swap"}</Button>
+      <Button onclick={() => void listsOnly()}>Only my lists</Button>
+    </Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>

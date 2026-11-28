@@ -248,6 +248,9 @@ export type MobilitySet = {
 
 export type MobilityBlockData = {
   drillName: string;
+  /** A coach's program picked this drill's progression (builder round 2); wins over the
+   * lifter's own choice for this drill in this workout. */
+  algorithmId?: string;
   /** Catalog reference; undefined for a free-text drill. */
   drillId?: string;
   metric: MobilityMetric;
@@ -512,7 +515,7 @@ export function normalizeSupersets(session: WorkoutSession): WorkoutSession {
 export function addSet(
   session: WorkoutSession,
   exerciseEntryId: string,
-  defaults?: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "machineId" | "target">>,
+  defaults?: Partial<Pick<SetEntry, "reps" | "weight" | "setType" | "note" | "machineId" | "target" | "restDurationMs">>,
 ): WorkoutSession {
   return updateStrengthBlock(session, exerciseEntryId, (data) => {
     const set: SetEntry = {
@@ -524,6 +527,8 @@ export function addSet(
       orderIndex: data.sets.length,
       machineId: defaults?.machineId,
       ...(defaults?.target ? { target: defaults.target } : {}),
+      // A coach's planned rest (PB17); without one, the client's own rest settings apply.
+      ...(defaults?.restDurationMs ? { restDurationMs: defaults.restDurationMs } : {}),
     };
     return { ...data, sets: [...data.sets, set] };
   });

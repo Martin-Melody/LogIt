@@ -121,6 +121,7 @@
       name: data.drillName,
       metric: data.metric,
       perSide: data.perSide,
+      ...(data.algorithmId ? { algorithmId: data.algorithmId } : {}),
     };
     void resolveMobilityAlgorithmId(drill, getProgressionDeps()).then((id) => (keepsSame = id === SAME_EVERY_TIME_ID)).catch(() => {});
     void getMobilitySuggestion(drill, getProgressionDeps())
@@ -166,7 +167,7 @@
   }
 
   // ── The next step past the area's weekly time ──
-  const drillRef = () => ({ id: data.drillId, name: data.drillName });
+  const drillRef = () => ({ id: data.drillId, name: data.drillName, ...(data.algorithmId ? { algorithmId: data.algorithmId } : {}) });
   async function refreshSuggestion() {
     const out = await getMobilitySuggestion({ ...drillRef(), metric: data.metric, perSide: data.perSide }, getProgressionDeps()).catch(() => null);
     suggestionLabel = out?.label ?? null;
