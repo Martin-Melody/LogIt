@@ -2,6 +2,11 @@
   // Blocks re-planned onto the place's machine this run (see replanForMachine), so going back to
   // the workout screen doesn't re-plan over weights typed since.
   const replanned = new Set<string>();
+  import WorkingWeight from "$lib/features/howto/WorkingWeight.svelte";
+  import { showsHowTos } from "$lib/features/howto/howtos";
+  import * as Dialog from "$lib/components/ui/dialog/index.js";
+  import { getCoachProgramRepo } from "$lib/data/repoProvider";
+  import type { CoachProgram } from "@logit/core/domain/CoachProgram";
 </script>
 
 <script lang="ts">
@@ -183,6 +188,16 @@
   const machineKinds = ["machine", "cable", "smith"];
   // Last time this exercise was performed — shown as a "prev" hint per set row.
   let prevSets = $state<SetEntry[] | null>(null);
+  // Canvas HT2: how many times they've done it, and the coach's program with its how-tos.
+  let timesDone = $state(99);
+  let coachProgram = $state<CoachProgram | null>(null);
+  $effect(() => {
+    const src = $currentSession?.source;
+    if (src?.kind !== "program") { coachProgram = null; return; }
+    void getCoachProgramRepo().getAssignedProgram(src.parentId).then((p) => (coachProgram = p), () => (coachProgram = null));
+  });
+  const coachHowTo = $derived(coachProgram?.howtos?.find((h) => h.exerciseName.trim().toLowerCase() === data.exerciseName.trim().toLowerCase()) ?? null);
+  let weightHelpOpen = $state(false);
   // An exercise never done before (design canvas O4): its first set is the starting point
   // the plan works from, so it says how heavy to go instead of asking for a max.
   let prevLoaded = $state(false);
@@ -475,6 +490,7 @@
         }
       }
       lastOnMachine = onMachine;
+      timesDone = history.length;
       prevSets = last
         ? [...last.sets].sort((a, b) => a.orderIndex - b.orderIndex)
         : null;
@@ -1171,6 +1187,7 @@
   onAddWarmup={handleAddWarmup}
   onMenu={() => (menuOpen = true)}
   onSettings={openSettings}
+  onHowTo={timesDone < 3 && showsHowTos(coachProgram) ? openHowTo : undefined}
   onToggleCollapse={() => (collapsed = !collapsed)}
   onAddSet={handleAddSet}
   onOpenDetail={openDetail}
@@ -1273,8 +1290,10 @@
           <p class="text-xs text-muted-foreground">Do {firstTimeMin > 1 && firstTimeMin < firstTimeReps ? `${firstTimeMin}–${firstTimeReps}` : firstTimeReps} slow reps. If they felt easy, put {$profile.weightUnit === "lbs" ? "5 lb" : "2.5 kg"} on each side for the next set. LogIt plans next time from what you do today.</p>
           <button type="button" class="mt-1 h-11 w-fit rounded-[10px] border border-border px-3.5 text-sm font-medium" onclick={openHowTo}>How to</button>
         {:else}
-          <p class="text-sm font-semibold">First time? Pick a weight you could lift about {firstTimeReps} times.</p>
-          <p class="text-xs text-muted-foreground">LogIt plans every set after this one from it. No need to know your max.</p>
+          <!-- Canvas HT2: worded like "how many more could you have done?" everywhere else. -->
+          <p class="text-sm font-semibold">First time? Find your working weight.</p>
+          <p class="text-xs text-muted-foreground">Start light; stop going up when you'd have 2 more left at {firstTimeReps} reps. LogIt plans every set after it.</p>
+          <button type="button" class="mt-1 h-11 w-fit rounded-[10px] border border-border px-3.5 text-sm font-medium" onclick={() => (weightHelpOpen = true)}>How</button>
         {/if}
       </div>
     {/if}
@@ -1450,7 +1469,15 @@
   {/if}
 {/snippet}
 
+<Dialog.Root open={weightHelpOpen} onOpenChange={(v) => (weightHelpOpen = v)}>
+  <Dialog.Content class="max-h-[88svh] overflow-y-auto sm:max-w-[420px]">
+    <Dialog.Header><Dialog.Title>Finding your working weight</Dialog.Title><Dialog.Description class="sr-only">How to find the weight to use</Dialog.Description></Dialog.Header>
+    <WorkingWeight coachName={coachProgram ? (coachFor(coachProgram.coachId)?.name ?? null) : null} />
+  </Dialog.Content>
+</Dialog.Root>
+
 <ExerciseDetailSheet
+  coach={coachProgram ? { name: coachFor(coachProgram.coachId)?.name ?? "Your coach", howTo: coachHowTo } : null}
   exerciseId={detailExerciseId}
   excludeSessionId={$currentSession?.id}
   onClose={() => {

@@ -7,6 +7,8 @@
 </script>
 
 <script lang="ts">
+  import HowToCard from "$lib/features/howto/HowToCard.svelte";
+  import { howToFor, type CoachHowTo } from "@logit/core/domain/howTo";
   import * as Tabs from "$lib/components/ui/tabs/index.js";
   import * as Select from "$lib/components/ui/select/index.js";
   import VideoEmbed from "./VideoEmbed.svelte";
@@ -44,6 +46,7 @@
     onExercise = () => {},
     onDeleted = () => {},
     onMachine,
+    coach = null,
   }: {
     exerciseId: string;
     /** "auto": How to the first time (no history), else Progress. */
@@ -58,6 +61,8 @@
     onDeleted?: () => void;
     /** A "Where you do it" row: open that machine (or add one, machineId null). Default: Settings. */
     onMachine?: (place: Place | null, machineId: string | null) => void;
+    /** A coach's program: their name and their how-to for this exercise (6.12). */
+    coach?: { name: string; howTo: CoachHowTo | null } | null;
   } = $props();
 
   let exercise = $state<Exercise | null>(null);
@@ -377,21 +382,18 @@
         </section>
       {/if}
 
-      {#if ex.videoUrl}
-        <VideoEmbed url={ex.videoUrl} title="{ex.name}, how it's done" />
-      {/if}
-      <section class="flex flex-col gap-2" aria-label="How to do it">
-        <h3 class="text-[15px] font-semibold">How to do it</h3>
-        {#if editable}
-          <CuesEditor cues={draftCues} onChange={onCuesChange} idPrefix="ex-cue" />
-        {:else if ex.cues?.length}
-          <ol class="flex list-decimal flex-col gap-1.5 pl-5 text-sm leading-relaxed">
-            {#each ex.cues as cue, i (i)}<li>{cue}</li>{/each}
-          </ol>
-        {:else}
-          <p class="text-sm text-muted-foreground">No steps written for this one yet.</p>
+      {#if editable}
+        {#if ex.videoUrl}
+          <VideoEmbed url={ex.videoUrl} title="{ex.name}, how it's done" />
         {/if}
-      </section>
+        <section class="flex flex-col gap-2" aria-label="How to do it">
+          <h3 class="text-[15px] font-semibold">How to do it</h3>
+          <CuesEditor cues={draftCues} onChange={onCuesChange} idPrefix="ex-cue" />
+        </section>
+      {:else}
+        <!-- Canvas HT1/HT2: the coach's how-to where they wrote one, LogIt's for the rest. -->
+        <HowToCard howTo={howToFor(ex.name, ex, coach?.howTo ? [coach.howTo] : null)} coachName={coach?.name ?? null} />
+      {/if}
 
       {#if editable}
         <section class="flex flex-col gap-2">

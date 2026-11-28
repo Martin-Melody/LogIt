@@ -154,6 +154,19 @@ Double-click a cell, or press Enter, to type over it, like `62.5 × 7`; it stays
 rule does. Clear gives it back to the rule. Copy, paste and Fill to the end of
 the block (up to the next week with a type) are on the cell's menu.
 
+## How-tos for your clients
+
+New lifters get how-tos with your program. While it's new, their Home shows **Before your first
+session**: the working-weight explainer ("about 2 more left in you", the same question the app asks
+everywhere) and a card for each exercise in their first week, in the order they'll meet them: a
+video (YouTube or Vimeo, played in the app only when tapped), three cues, the most common mistake
+and your note if you wrote one. It goes once they've read them all, or after the first week. In
+the workout, **How to** sits beside an exercise's name for its first three sessions, and a first
+set says "Find your working weight" with a **How** that opens the explainer.
+
+LogIt writes the cues and the common mistake for every built-in exercise; pictures and your own
+versions are in Programs › Exercises.
+
 ## Give it to a client
 
 <HowTo id="studio.assign" />

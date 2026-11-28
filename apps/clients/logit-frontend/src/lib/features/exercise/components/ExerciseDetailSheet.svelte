@@ -1,6 +1,7 @@
 <!-- The exercise over a workout (design canvas E1–E3): tap the name on the card. A tall sheet
      with the three tabs; closing it lands back on the same set. -->
 <script lang="ts">
+  import type { CoachHowTo } from "@logit/core/domain/howTo";
   import { X } from "lucide-svelte";
   import type { Snippet } from "svelte";
   import { fade } from "svelte/transition";
@@ -19,6 +20,7 @@
     excludeSessionId,
     onClose = () => {},
     onMachine,
+    coach = null,
   }: {
     /** null closes the sheet. */
     exerciseId?: string | null;
@@ -27,6 +29,8 @@
     excludeSessionId?: string;
     onClose?: () => void;
     onMachine?: (place: Place | null, machineId: string | null) => void;
+    /** A coach's program: their name and their how-to for this exercise, if they wrote one (6.12). */
+    coach?: { name: string; howTo: CoachHowTo | null } | null;
   } = $props();
 
   let ex = $state<Exercise | null>(null);
@@ -71,7 +75,7 @@
     </div>
     <div class="flex-1 overflow-y-auto overscroll-contain pb-[env(safe-area-inset-bottom)]">
       {#key exerciseId}
-        <ExerciseView {exerciseId} {tab} {today} {excludeSessionId} {onMachine}
+        <ExerciseView {exerciseId} {tab} {today} {excludeSessionId} {onMachine} {coach}
           onExercise={(e) => (ex = e)} onDeleted={onClose} />
       {/key}
     </div>

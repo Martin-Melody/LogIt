@@ -106,6 +106,8 @@
 
   // At the start of a line, and mid-sentence, when the coach's name isn't known yet.
   const coachName = $derived(coached ? (coachFor(coached.program.coachId)?.name ?? "Your coach") : "");
+  // Canvas HT1: how-tos for a new program's first week, for new lifters (or as the coach set it).
+  const learning = $derived($assignedPrograms.find((p) => !p.archived && programInFirstWeek(p) && showsHowTos(p)) ?? null);
   const coachRef = $derived(coached ? (coachFor(coached.program.coachId)?.name ?? "your coach") : "");
   const coach = $derived(coached ? coachFor(coached.program.coachId) : undefined);
   const programDayName = (day: ProgramDay) => day.name?.trim() || `Day ${day.orderIndex + 1}`;
@@ -199,6 +201,8 @@
     selectDayOverride(split.id, day.id);
     await startPlannedWorkout();
   }
+  import BeforeFirstSession from "$lib/features/howto/BeforeFirstSession.svelte";
+  import { inFirstWeek as programInFirstWeek, showsHowTos } from "$lib/features/howto/howtos";
 </script>
 
 <Card.Root class="w-full">
@@ -245,6 +249,9 @@
       </div>
     {/if}
 
+    {#if learning && card.kind !== "continue"}
+      <BeforeFirstSession program={learning} coachName={coachFor(learning.coachId)?.name ?? "your coach"} />
+    {/if}
     {#if coached && card.kind !== "continue" && (coached.next || coached.doneToday.length)}
       {@const day = coached.doneToday.length ? null : coached.next?.day}
       {#if day && coached.next && coached.next.atMs <= Date.now()}

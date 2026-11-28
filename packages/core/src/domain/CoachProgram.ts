@@ -29,6 +29,10 @@ export type CoachProgram = {
   phases?: ProgramPhase[];
   /** On a client's copy: the weights a phase found, as the coach checked them (canvas SP4). */
   handoffs?: PhaseHandoff[];
+  /** Phase 6.12/6.13: the coach's own how-tos for exercises in it (theirs win over LogIt's), and
+   * who sees how-tos: new lifters (the default), always or never (canvas HT3). */
+  howtos?: import("./howTo").CoachHowTo[];
+  howtoShow?: "new" | "always" | "never";
   id: string;
   name: string;
   description?: string;

@@ -43,6 +43,7 @@
     onAddWarmup = () => {},
     onMenu = () => {},
     onSettings,
+    onHowTo,
     children,
   } = $props<{
     exerciseName?: string;
@@ -88,6 +89,8 @@
     onMenu?: () => void;
     /** "Change how it plans" in Why this weight?: the exercise's settings. */
     onSettings?: () => void;
+    /** Canvas HT2: "How to" beside the name for the first few times; after that it's in the menu. */
+    onHowTo?: () => void;
     children?: import("svelte").Snippet;
   }>();
 
@@ -154,6 +157,9 @@
       {:else if lastTime && !roundView}<span class="block truncate text-xs font-normal text-muted-foreground">{lastTime}</span>{/if}
     </button>
 
+    {#if onHowTo && !folded}
+      <button type="button" class="mr-1 h-9 shrink-0 rounded-full border border-border px-3 text-[13px] font-medium" disabled={saving} onclick={onHowTo}>How to</button>
+    {/if}
     <span class="flex shrink-0 items-center gap-1 text-xs tabular-nums {allDone ? 'text-success' : 'text-muted-foreground'}">
       {#if allDone}<Check class="h-3.5 w-3.5" strokeWidth={3} aria-hidden="true" />{/if}
       {#if setCount > 0}{doneCount} of {setCount}{:else}0 sets{/if}
