@@ -62,7 +62,9 @@
       case "checkin": return `Check-in · ${ago(i.item.submittedAtMs)}`;
       case "message": return `${i.client.unread} unread`;
       case "lasting-swap": return "Keep it, or put it back";
-      case "weights-found": return `${i.phase.name} is done · week ${i.phase.weeks.to + 1} plans from these numbers`;
+      case "weights-found": return (i.program.week ?? 0) > i.phase.weeks.to
+        ? `Applied without your check · week ${i.phase.weeks.to + 1} plans from what they found`
+        : `${i.phase.name} is done · week ${i.phase.weeks.to + 1} plans from these numbers`;
       case "waiting": return i.days >= 7 ? "They can now stop coaching with a refund" : "After 7 days they can stop coaching with a refund";
       case "missed": return `${i.client.sessions7d} session${i.client.sessions7d === 1 ? "" : "s"} in the last 7 days`;
       case "ending": return `${i.program.program.name}, week ${i.program.week} of ${i.program.totalWeeks}`;
