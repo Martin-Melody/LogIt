@@ -1,3 +1,4 @@
+import type { CoachHowTo } from "../domain/howTo";
 import { ApiError, apiClient, type ApiFetcher } from "./client";
 import type { SwapRule } from "../domain/swaps";
 import type { ClientPayment, LinkPackage } from "../domain/coachPayments";
@@ -654,6 +655,15 @@ export function coachApiFor(api: ApiFetcher) {
     },
     /** Canvas W10: my saved replies. */
     /** Messages sent for you (canvas MS3). */
+    /** The coach's own how-tos (canvas HT4), shown to their clients instead of LogIt's. */
+    async getHowTos(): Promise<CoachHowTo[]> {
+      return (await api.fetch<{ howTos: CoachHowTo[] }>("/coach/howtos")).howTos;
+    },
+
+    async saveHowTos(howTos: CoachHowTo[]): Promise<CoachHowTo[]> {
+      return (await api.fetch<{ howTos: CoachHowTo[] }>("/coach/howtos", { method: "PUT", body: JSON.stringify({ howTos }) })).howTos;
+    },
+
     async getAutoMessages(): Promise<AutoMessages> {
       return api.fetch("/coach/auto-messages");
     },

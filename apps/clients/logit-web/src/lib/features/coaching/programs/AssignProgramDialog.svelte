@@ -111,6 +111,8 @@
         return;
       }
       if (!giving) return;
+      // Your how-tos for its exercises go with each copy (canvas HT4).
+      const howtos = await allHowTos();
       let done = 0;
       for (const c of people) {
         const current = onNow.get(c.client.id);
@@ -124,7 +126,7 @@
         } else if (current && choice === "after" && current.endsAtMs) {
           start = { mode: "fixed-date", startDateMs: P.startOfLocalDayMs(current.endsAtMs) };
         }
-        let copy = P.copyProgramForClient(giving, start);
+        let copy = withHowTos(P.copyProgramForClient(giving, start), howtos);
         // What the fit check changed, in their copy only (canvas SP2).
         if (checking) {
           for (const [from, to] of Object.entries(swaps)) copy = P.renameExercise(copy, from, to);
@@ -144,6 +146,7 @@
     }
   }
   import FitCheck from "./FitCheck.svelte";
+  import { allHowTos, withHowTos } from "./howtoData";
 </script>
 
 <Dialog.Root bind:open>

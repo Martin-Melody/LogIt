@@ -1,0 +1,37 @@
+---
+title: How-to packs
+description: "How-to packs: pictures, a video link, three cues and the common mistake for exercises, which coaches show their clients. Data only."
+---
+
+A how-to pack gives exercises a how-to: pictures, a video, three cues and the most common
+mistake. Coaches add it in Coaching › Plugins › How-to packs. Their own how-tos come first; a
+pack's fill in the exercises they haven't written one for, and LogIt's cover the rest. The
+how-tos go to their clients with the programs that use those exercises, and show on the client's
+Home before their first session and under **How to** in the workout.
+
+A pack is data only: installing one asks nothing and it runs no code.
+
+## howtos.json
+
+```json
+{
+  "formatVersion": 1,
+  "howtos": [
+    {
+      "exercise": "Kettlebell Swing",
+      "pictures": ["https://example.com/swing-top.jpg", "https://example.com/swing-hinge.jpg"],
+      "video": "https://youtu.be/XXXXXXXXXXX?t=12",
+      "cues": ["Hips back, not down", "Snap the hips", "Arms are ropes"],
+      "mistake": "Squatting the swing: keep shins nearly vertical"
+    }
+  ]
+}
+```
+
+- `exercise`: matched to the exercise by name, ignoring case.
+- `pictures`: up to four `https` links.
+- `video`: a YouTube or Vimeo link, with a start time if you like (`?t=12`). Anything else is
+  refused. It plays inside LogIt only when tapped: YouTube's privacy-enhanced player, Vimeo with
+  do-not-track.
+- `cues`: up to three, 140 characters each. `mistake`: up to 200.
+- Up to 200 how-tos in a pack.

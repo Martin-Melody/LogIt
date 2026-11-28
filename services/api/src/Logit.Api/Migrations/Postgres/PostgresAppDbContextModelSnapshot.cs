@@ -3142,6 +3142,9 @@ namespace Logit.Api.Migrations.Postgres
                     b.Property<string>("CoachFoodSwapRule")
                         .HasColumnType("text");
 
+                    b.Property<string>("CoachHowTosJson")
+                        .HasColumnType("text");
+
                     b.Property<string>("CoachNutritionPrefsJson")
                         .HasColumnType("text");
 

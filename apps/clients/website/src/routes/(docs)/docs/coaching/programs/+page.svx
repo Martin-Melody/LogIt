@@ -164,8 +164,12 @@ and your note if you wrote one. It goes once they've read them all, or after the
 the workout, **How to** sits beside an exercise's name for its first three sessions, and a first
 set says "Find your working weight" with a **How** that opens the explainer.
 
-LogIt writes the cues and the common mistake for every built-in exercise; pictures and your own
-versions are in Programs › Exercises.
+LogIt writes the cues and the common mistake for every built-in exercise. **Programs › Exercises ›
+How-tos** lists every exercise in your programs with whose how-to clients see (Yours, LogIt, None
+yet); **Write yours** adds pictures, a YouTube or Vimeo link (with its start time), three cues, the
+mistake and your note. Saving updates the programs your clients have. How-to packs from Coaching ›
+Plugins fill in the ones you haven't written. Each program's **How-tos** setting in the builder
+says who gets them: new lifters (from their LogIt setup; the default), always or never.
 
 ## Give it to a client
 

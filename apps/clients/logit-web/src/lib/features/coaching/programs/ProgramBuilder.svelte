@@ -717,6 +717,13 @@
     {:else}
       <span class="text-muted-foreground">Starts: chosen when you assign it</span>
     {/if}
+    <!-- Canvas HT3: who gets how-tos with this program. -->
+    <span class="flex items-center gap-2">
+      <span class="text-muted-foreground">How-tos</span>
+      <OptionSelect size="sm" value={prog.howtoShow ?? "new"} aria-label="How-tos"
+        onValueChange={(v) => edit((p) => { const { howtoShow: _h, ...rest } = p; return v === "new" ? rest : { ...rest, howtoShow: v as "always" | "never" }; })}
+        options={[{ value: "new", label: "For new lifters" }, { value: "always", label: "Always" }, { value: "never", label: "Never" }]} />
+    </span>
     {#if prog.weeks.length > 1}
       <span class="flex basis-full flex-wrap items-center gap-1.5">
         <span class="text-muted-foreground">Phases</span>

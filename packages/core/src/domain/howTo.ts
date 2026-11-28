@@ -84,3 +84,9 @@ export function howToFor(name: string, exercise: Pick<Exercise, "id" | "cues" | 
     from: c ? "coach" : exercise?.isCore ? "logit" : "yours",
   };
 }
+
+/** The coach's how-tos a program uses: the ones for its exercises, to go with a client's copy. */
+export function howTosForProgram(program: { weeks: { days: { blocks: { type: string; exerciseName?: string }[] }[] }[] }, all: CoachHowTo[]): CoachHowTo[] {
+  const names = new Set(program.weeks.flatMap((w) => w.days.flatMap((d) => d.blocks.flatMap((b) => (b.type === "strength" && b.exerciseName ? [b.exerciseName.trim().toLowerCase()] : [])))));
+  return all.filter((h) => names.has(h.exerciseName.trim().toLowerCase()));
+}

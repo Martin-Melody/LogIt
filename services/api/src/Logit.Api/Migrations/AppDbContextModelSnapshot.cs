@@ -3137,6 +3137,9 @@ namespace Logit.Api.Migrations
                     b.Property<string>("CoachFoodSwapRule")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("CoachHowTosJson")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("CoachNutritionPrefsJson")
                         .HasColumnType("TEXT");
 

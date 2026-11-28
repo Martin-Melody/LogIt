@@ -162,6 +162,20 @@
   },
   {
     "method": "GET",
+    "route": "/coach/howtos/",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": true
+  },
+  {
+    "method": "PUT",
+    "route": "/coach/howtos/",
+    "plan": "Studio",
+    "orActivelyCoached": false,
+    "orSampleCoach": true
+  },
+  {
+    "method": "GET",
     "route": "/coach/intake",
     "plan": "Studio",
     "orActivelyCoached": false,

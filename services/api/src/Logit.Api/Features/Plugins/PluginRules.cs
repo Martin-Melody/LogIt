@@ -28,6 +28,8 @@ public static partial class PluginRules
         "question-pack",
         // Canvas SP8: a starting phase with the block, progression and questions it comes with.
         "phase-pack",
+        // Canvas HT5: how-tos coaches show their clients (data only).
+        "howto-pack",
     ];
 
     public static readonly HashSet<string> CodeFamilies =
@@ -131,6 +133,7 @@ public static partial class PluginRules
         "card-pack" => new JsonObject { ["family"] = family, ["cardPackId"] = pluginId, ["slot"] = "coaching" },
         "question-pack" => new JsonObject { ["family"] = family, ["questionPackId"] = pluginId },
         "phase-pack" => new JsonObject { ["family"] = family, ["phasePackId"] = pluginId },
+        "howto-pack" => new JsonObject { ["family"] = family, ["howtoPackId"] = pluginId },
         _ => new JsonObject { ["family"] = family, ["algorithmId"] = pluginId },
     };
 

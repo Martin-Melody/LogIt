@@ -22,6 +22,7 @@ export const PLUGIN_FAMILIES = [
   "card-pack",
   "question-pack",
   "phase-pack",
+  "howto-pack",
 ] as const;
 export type BuildablePluginFamily = (typeof PLUGIN_FAMILIES)[number];
 
@@ -55,6 +56,7 @@ export const FAMILY_LABELS: Record<string, string> = {
   "card-pack": "Card pack",
   "question-pack": "Question pack",
   "phase-pack": "Starting phase",
+  "howto-pack": "How-to pack",
   "muscle-group-insight": "Muscle insight",
 };
 
@@ -171,6 +173,8 @@ export function pluginCan(family: string): string[] {
       return ["Show cards on your coaching Today and Your month"];
     case "question-pack":
       return ["Add questions coaches can put in check-in forms"];
+    case "howto-pack":
+      return ["Add how-tos (pictures, a video link, cues) coaches show their clients"];
     case "phase-pack":
       return ["Add a starting phase coaches can put in a program, with the block, progression and questions it comes with"];
     default:

@@ -468,7 +468,7 @@ export const FEATURES: Feature[] = [
     phone: ["/clients/[id]/programs/[programId]"],
     whereWeb: "Coaching › Programs",
     docs: "/docs/coaching/programs",
-    server: ["/coach/programs"],
+    server: ["/coach/programs", "/coach/howtos"],
     can: [
       "Loads in kg or as a % of the client's best",
       "Start on a fixed date, or when the client taps Start",

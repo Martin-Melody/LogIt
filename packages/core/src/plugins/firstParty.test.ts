@@ -9,7 +9,7 @@ import { runInSandbox } from "./sandbox";
 const ROOT = join(__dirname, "../../../../plugins/first-party");
 // The file says the family; a bundle.js says its own (pluginBundle.family).
 const FILES: [string, string][] = [
-  ["block.json", "workout-block"], ["questions.json", "question-pack"], ["phase.json", "phase-pack"], ["exercises.json", "exercise-pack"], ["drills.json", "mobility-pack"],
+  ["block.json", "workout-block"], ["questions.json", "question-pack"], ["phase.json", "phase-pack"], ["howtos.json", "howto-pack"], ["exercises.json", "exercise-pack"], ["drills.json", "mobility-pack"],
   ["programs.json", "program-pack"], ["recipes.json", "recipe-pack"], ["meal-plans.json", "meal-plan-pack"], ["bundle.js", ""],
 ];
 const NOW = Date.UTC(2026, 10, 27, 12);

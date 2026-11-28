@@ -24,7 +24,7 @@
 
   const KINDS: [string, string][] = [
     ["all", "All"], ["progression-algorithm", "Progression rules"], ["nutrition-algorithm", "Nutrition targets"], ["workout-block", "Workout blocks"],
-    ["exercise-pack", "Exercise packs"], ["program-pack", "Program packs"], ["meal-plan-pack", "Meal plan packs"], ["recipe-pack", "Recipe packs"], ["card-pack", "Card packs"], ["question-pack", "Question packs"], ["phase-pack", "Starting phases"],
+    ["exercise-pack", "Exercise packs"], ["program-pack", "Program packs"], ["meal-plan-pack", "Meal plan packs"], ["recipe-pack", "Recipe packs"], ["card-pack", "Card packs"], ["question-pack", "Question packs"], ["phase-pack", "Starting phases"], ["howto-pack", "How-to packs"],
     // Canvas W9/W11: a widget can be a card on a client's page (+ Card), over their data.
     ["widget", "Client cards"],
   ];

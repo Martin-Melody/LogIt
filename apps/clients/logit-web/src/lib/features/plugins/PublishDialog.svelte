@@ -96,6 +96,7 @@
       case "card-pack": return { family: plugin.family, cardPackId: id, slot: "coaching" };
       case "question-pack": return { family: plugin.family, questionPackId: id };
       case "phase-pack": return { family: plugin.family, phasePackId: id };
+      case "howto-pack": return { family: plugin.family, howtoPackId: id };
       default: return { family: plugin.family, algorithmId: id };
     }
   }
