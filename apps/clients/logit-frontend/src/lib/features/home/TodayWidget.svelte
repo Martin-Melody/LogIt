@@ -36,7 +36,7 @@
   import { getCheckinRepo, getCoachProgramRepo } from "$lib/data/repoProvider";
   import { listRecentSessions } from "$lib/usecases/listRecentSessions";
   import { cachedReviews, coachFor } from "$lib/features/coaching/coachCache";
-  import { checkinRows, type CheckinRow } from "@logit/core/domain/Checkin";
+  import { asksNow, checkinRows, type CheckinRow } from "@logit/core/domain/Checkin";
   import { programToday, type ProgramToday } from "@logit/core/domain/programToday";
   import type { ProgramDay, ProgramStrength } from "@logit/core/domain/CoachProgram";
 
@@ -97,7 +97,7 @@
       // A coach's check-in only while signed in: without a server it can't be sent, and an
       // account kept on the phone after signing out has no coach any more.
       checkin = authStore.isAuthenticated
-        ? checkinRows(schedules, submissions, cachedReviews()).current.find((r) => r.state === "due" || r.state === "draft" || r.state === "late") ?? null
+        ? checkinRows(schedules, submissions, cachedReviews()).current.find((r) => asksNow(r)) ?? null
         : null;
     } catch {
       coached = null;

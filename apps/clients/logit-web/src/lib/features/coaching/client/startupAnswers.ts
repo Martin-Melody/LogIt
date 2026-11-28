@@ -20,4 +20,4 @@ export async function startupAnswers(clientId: string): Promise<{ prompt: string
 
 /** The answers that say what hurts or what to watch ("What hurts", "Injuries", "Anything to avoid"). */
 export const hurtsAnswers = (all: { prompt: string; answer: string }[]) =>
-  all.filter((a) => /hurt|injur|pain|avoid|niggle|limit/i.test(a.prompt));
+  all.filter((a) => /hurt|injur|pain|avoid|niggle|limit/i.test(a.prompt) && !/^(no|none|nothing|nope|n\/a|na|-)\.?$/i.test(a.answer.trim()));

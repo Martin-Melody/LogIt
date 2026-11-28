@@ -11,7 +11,8 @@
   import { startupAnswers, hurtsAnswers } from "../client/startupAnswers";
   import { knownLifts, relatedEstimate, isBodyweightLift } from "@logit/core/domain/relatedLifts";
   import { cellText, planForWeek } from "@logit/core/domain/programPlan";
-  import type { CoachProgram } from "@logit/core/domain/CoachProgram";
+  import { weekRangeText, type CoachProgram } from "@logit/core/domain/CoachProgram";
+  import { stretchesOf, stretchTitle } from "@logit/core/domain/stretches";
   import type { WorkoutSession } from "@logit/core/domain/workout";
 
   let { clientId, name, sharesWorkouts, sharesCheckins, program, swaps = $bindable({}), findFirst = $bindable(false) }: {
@@ -68,11 +69,17 @@
     }
     return out;
   });
+  // The program may already start by finding weights (its first stretch): then nothing to ask.
+  const opening = $derived.by(() => {
+    const s = stretchesOf(program)[0];
+    return s && !s.plain && (s.what.kind === "find" || (s.what.kind === "pack" && s.what.findsWeights)) ? s : null;
+  });
+  const nothingKnown = $derived(rows.length > 0 && rows.every((r) => r.kind === "none"));
   // With nothing to go on for most of it, Find your weights first is picked (they can turn it off).
   $effect(() => {
     if (decided || !rows.length) return;
     decided = true;
-    findFirst = rows.filter((r) => r.kind === "none").length * 2 >= rows.length;
+    findFirst = !opening && rows.filter((r) => r.kind === "none").length * 2 >= rows.length;
   });
   const search = (q: string) => (index?.search(q, 8) ?? []).map((e) => ({ name: e.name, detail: e.primaryMuscles.slice(0, 2).join(", ") || undefined }));
 </script>
@@ -88,7 +95,7 @@
         {#each rows as r (r.blockId)}
           <tr class="border-t border-border align-top">
             <td class="py-2 font-medium">{#if swaps[r.name]}<s class="text-muted-foreground">{r.name}</s> {swaps[r.name]!.exerciseName}{:else}{r.name}{/if}</td>
-            <td class="py-2 tabular-nums {r.kind === 'related' ? 'text-info' : r.kind === 'none' ? 'text-muted-foreground' : ''}">{swaps[r.name] ? "Its own estimate" : r.starts}</td>
+            <td class="py-2 tabular-nums {r.kind === 'related' ? 'text-info' : r.kind === 'none' ? 'text-muted-foreground' : ''}">{swaps[r.name] ? "Its own estimate" : opening ? `Found in ${weekRangeText(opening).toLowerCase()}` : r.starts}</td>
             <td class="py-2 text-xs text-muted-foreground">{r.from}</td>
             <td class="py-1.5 text-right">
               {#if swaps[r.name]}
@@ -113,17 +120,25 @@
   {#if hurts.length}
     <div class="rounded-[10px] bg-muted/60 px-3.5 py-3 text-[13px]">
       <b class="font-semibold">{first} said, in their start-up form</b>
-      {#each hurts as h (h.prompt)}<p class="mt-1">"{h.answer}"</p>{/each}
+      {#each hurts as h (h.prompt)}<p class="mt-1"><span class="text-muted-foreground">{h.prompt} ·</span> "{h.answer}"</p>{/each}
     </div>
   {/if}
 
-  <div class="flex flex-col gap-2" role="radiogroup" aria-label="First phase">
-    <span class="text-xs font-semibold text-muted-foreground">First phase</span>
-    {#each [{ v: false, t: "Start straight away", d: "Week 1 plans from the numbers above." }, { v: true, t: "Find your weights first (1 week)", d: "A week of LogIt's Weight finder on each lift; you check what they found before the program starts." }] as o (o.t)}
+  {#if opening}
+    <!-- The program already opens with it (its first stretch): nothing to choose. -->
+    <div class="rounded-[10px] border border-info/40 bg-info/5 px-3.5 py-2.5 text-[13px]">
+      <b class="font-semibold">{weekRangeText(opening)} · {stretchTitle(opening)}</b>
+      <p class="text-xs text-muted-foreground">Planned in the program: they find their weights first, and week {opening.to + 1} plans from what they find. You check the numbers on Today before it starts.</p>
+    </div>
+  {:else}
+  <div class="flex flex-col gap-2" role="radiogroup" aria-label="First week">
+    <span class="text-xs font-semibold text-muted-foreground">First week</span>
+    {#each [{ v: true, t: "Find your weights first (1 week)", d: "A week of LogIt's Weight finder on each lift; you check what they found before the program starts." }, { v: false, t: "Start straight away", d: nothingKnown ? `With nothing to go on, the first set of each lift in week 1 finds its weight.` : "Week 1 plans from the numbers above." }] as o (o.t)}
       <button type="button" role="radio" aria-checked={findFirst === o.v} onclick={() => (findFirst = o.v)}
         class="flex flex-col gap-0.5 rounded-[10px] border px-3.5 py-2.5 text-left transition-colors {findFirst === o.v ? 'border-foreground bg-muted' : 'border-border hover:bg-muted/50'}">
         <span class="text-[13px] font-semibold">{o.t}</span><span class="text-xs text-muted-foreground">{o.d}</span>
       </button>
     {/each}
   </div>
+  {/if}
 </div>

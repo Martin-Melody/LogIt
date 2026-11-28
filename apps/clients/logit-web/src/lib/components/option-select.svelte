@@ -8,6 +8,7 @@
 
 <script lang="ts">
   import * as Select from "$lib/components/ui/select";
+  import { cn } from "$lib/utils";
 
   let {
     options,
@@ -50,8 +51,9 @@
     onValueChange?.(value);
   }}
 >
-  <Select.Trigger {id} {size} class={className} aria-label={ariaLabel}>
-    <span data-slot="select-value" class={picked ? "" : "text-muted-foreground"}>{picked?.label ?? placeholder}</span>
+  <!-- A long label (a program's name and summary) ends in … rather than widening its dialog. -->
+  <Select.Trigger {id} {size} class={cn("min-w-0 max-w-full", className)} aria-label={ariaLabel} title={picked?.label}>
+    <span data-slot="select-value" class="min-w-0 {picked ? '' : 'text-muted-foreground'}"><span class="truncate">{picked?.label ?? placeholder}</span></span>
   </Select.Trigger>
   <Select.Content>
     {#each groups as g (g)}

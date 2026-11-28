@@ -150,7 +150,7 @@
 </script>
 
 <Dialog.Root bind:open>
-  <Dialog.Content class="max-h-[90svh] overflow-y-auto sm:max-w-[520px]">
+  <Dialog.Content class="max-h-[90svh] min-w-0 overflow-y-auto sm:max-w-[520px] [&>*]:min-w-0">
     <Dialog.Header>
       <Dialog.Title>{program ? `Assign ${program.name}` : people.length === 1 ? `Give ${first(people[0]!)} a program` : "Assign a program"}</Dialog.Title>
       <Dialog.Description>Each client gets their own copy. Changing your program later asks which copies to update.</Dialog.Description>
@@ -165,7 +165,7 @@
       <div class="flex flex-col gap-4">
         {#if !program}
           <label class="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground">Program
-            <OptionSelect bind:value={pick} aria-label="Program"
+            <OptionSelect bind:value={pick} aria-label="Program" class="w-full"
               options={[...library.map((p) => ({ value: p.id, label: `${p.name} · ${P.programSummary(p)}` })), ...(people.length <= 1 ? [{ value: BLANK, label: "Start from scratch, just for them" }] : [])]} />
           </label>
         {/if}
