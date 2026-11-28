@@ -130,8 +130,17 @@ is on top of what the progression works out:
 The client's Home shows the week's type with one line on what it means. A progression from a
 plugin is told the week's type; if it doesn't handle it, LogIt applies the change to its numbers.
 
+## Every week
+
+**See every week** shows what each week asks for, with the week types in the headings and a
+deload tinted. On one of your programs there's no lifter yet, so **Numbers for** shows an example
+lifter (bench 80 kg; **Change their lifts** to change them) or any client with a copy; other
+exercises are worked out from those lifts the way their phone would. Blue numbers come from the
+progression and move as they train; black ones with ✎ are typed by you and stay. "+" on the reps
+means the last set is as many as they can.
+
 Double-click a cell, or press Enter, to type over it, like `62.5 × 7`; it stays put whatever the
-rule does, with a blue edge. Clear gives it back to the rule. Copy, paste and Fill to the end of
+rule does. Clear gives it back to the rule. Copy, paste and Fill to the end of
 the block (up to the next week with a type) are on the cell's menu.
 
 ## Give it to a client

@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "TVBntApBuPU=",
+  "dgSpecHash": "ppCjRNO7TVQ=",
   "success": true,
-  "projectFilePath": "/home/martin/Projects/logit-shadcn/services/api/tests/Logit.Api.Tests/Logit.Api.Tests.csproj",
+  "projectFilePath": "/home/martin/Projects/logit-coaching/services/api/tests/Logit.Api.Tests/Logit.Api.Tests.csproj",
   "expectedPackageFiles": [
     "/home/martin/.nuget/packages/awssdk.core/4.1.1.1/awssdk.core.4.1.1.1.nupkg.sha512",
     "/home/martin/.nuget/packages/awssdk.extensions.numerics/4.1.0/awssdk.extensions.numerics.4.1.0.nupkg.sha512",

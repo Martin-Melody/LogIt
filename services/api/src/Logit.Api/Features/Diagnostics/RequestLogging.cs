@@ -89,6 +89,14 @@ public static class RequestLogging
         app.UseExceptionHandler(errorApp => errorApp.Run(async ctx =>
         {
             var feature = ctx.Features.Get<IExceptionHandlerFeature>();
+            // A malformed request (a query value that isn't a GUID, unreadable JSON) is the
+            // caller's mistake: 400 with what was wrong, not a server error.
+            if (feature?.Error is BadHttpRequestException bad)
+            {
+                ctx.Response.StatusCode = bad.StatusCode;
+                await ctx.Response.WriteAsJsonAsync(new { error = bad.Message, requestId = ctx.TraceIdentifier });
+                return;
+            }
             // A client that went away mid-request isn't a server fault.
             var status = feature?.Error is OperationCanceledException && ctx.RequestAborted.IsCancellationRequested
                 ? 499
