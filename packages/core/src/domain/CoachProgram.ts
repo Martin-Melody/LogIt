@@ -110,7 +110,16 @@ export type ProgramPhase = {
   rule?: ProgramRule;
   /** It works up to the weights that fit; the next phase plans from what it found. */
   findsWeights?: boolean;
+  /** Phase 6.10: a block plugin that runs each lift in these weeks (its exercise field set to
+   * the lift), like LogIt's Weight finder. Without it on the phone, the lift runs as usual. */
+  blockPluginId?: string;
+  /** The pack it came from (canvas SP8), for "From the Find your weights pack". */
+  pack?: { id: string; name: string };
 };
+
+/** LogIt's own Find your weights: the Weight finder block, one week (canvas SP6). */
+export const WEIGHT_FINDER_ID = "app.getlogit.weight-finder";
+export const FIND_YOUR_WEIGHTS_PACK = { id: "app.getlogit.find-your-weights", name: "Find your weights" };
 
 /** What a weight-finding phase found, as the coach checked it. `e1rm` holds only the lifts the
  * coach changed; the rest come from the client's own sets as usual. */

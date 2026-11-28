@@ -1,0 +1,65 @@
+---
+title: Starting phases
+description: "Phase packs: a starting phase for programs, like Find your weights, with the block, progression and questions it comes with, under one listing and one install."
+---
+
+A starting phase is the first weeks of a program that does something different, like LogIt's
+**Find your weights**: a week that works up to a hard set on each lift, so the program after it
+starts from real numbers. A coach adds one in the program builder with **+ Phase**; it brings its
+weeks, the block that runs each lift in them, and a progression for them.
+
+A phase pack is data only. The parts it uses are ordinary plugins, listed in `includes` and
+installed with it: a [workout block](/docs/plugins/workout-blocks), a
+[progression](/docs/plugins/progression) and a question pack. Coaches find phase packs under
+Coaching › Plugins › Starting phases.
+
+## phase.json
+
+```json
+{
+  "formatVersion": 1,
+  "id": "app.getlogit.find-your-weights",
+  "name": "Find your weights",
+  "description": "A first week that works up to a hard set on each lift.",
+  "phase": { "name": "Find your weights", "weeks": 1, "findsWeights": true, "block": "app.getlogit.weight-finder" },
+  "includes": ["app.getlogit.weight-finder"]
+}
+```
+
+- `phase.weeks`: how long it usually runs, 1 to 12. The coach can change it.
+- `phase.findsWeights`: it works up to the weights that fit. Its weeks become "Find your weights"
+  weeks; when it ends the coach checks what it found on Today, and the next phase plans from it.
+- `phase.block`: a workout block that runs each lift in the phase's weeks. Its field of type
+  `exercise` is set to the lift. Give the block `countsAs.sets` so each entry is a real set of the
+  lift; history, estimates and records then see it like any other set.
+- `phase.progression`: a progression for the phase's weeks. It's told the week (`input.week`) and
+  where each estimate came from (`input.estimate`).
+- `includes`: the plugins installed with the pack, up to 6. Anything `block` or `progression`
+  names has to be here.
+
+## The Weight finder block
+
+LogIt's own Find your weights runs this block. Each entry is a jump; "how many more could you have
+done?" is reps in reserve, so 2 more is RPE 8.
+
+```json
+{
+  "id": "app.getlogit.weight-finder",
+  "name": "Weight finder",
+  "entry": { "one": "Jump", "many": "Jumps" },
+  "blockFields": [{ "key": "lift", "type": "exercise", "label": "Lift" }],
+  "fields": [
+    { "key": "kg", "type": "weight", "label": "kg", "column": true },
+    { "key": "reps", "type": "number", "label": "Reps", "default": 6, "column": true },
+    { "key": "left", "type": "choice", "label": "How many more could you have done?", "options": ["0", "1", "2", "3", "4+"], "column": true }
+  ],
+  "countsAs": { "sets": { "exercise": "lift", "weight": "kg", "reps": "reps", "rir": "left" } }
+}
+```
+
+## On the client's phone
+
+A block from a pack runs code only if its parts do. LogIt's own blocks (`app.getlogit.`) are data
+and come with the program; other plugins are allowed by the client once, like any plugin a coach's
+program uses. Without the block on their phone, the lift runs as a normal exercise with a note on
+what to do.

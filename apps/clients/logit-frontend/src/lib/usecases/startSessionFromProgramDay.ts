@@ -1,7 +1,8 @@
+import { ensureOwnBlocks } from "$lib/features/coaching/programPlugins";
 import { weekTypeOf, weekTypeLabel, weekSets, weekWeight, weekReps } from "@logit/core/domain/weekTypes";
 import { withStartingPlace } from "$lib/features/places/sessionPlace";
 import { getCoachProgramRepo, getWorkoutRepo } from "$lib/data/repoProvider";
-import { getProgramProgress, PROGRAM_BLOCKS_THIS_APP_RUNS, ruleFor, withHandoffs, type CoachProgram, type ProgramDay } from "@logit/core/domain/CoachProgram";
+import { getProgramProgress, PROGRAM_BLOCKS_THIS_APP_RUNS, phaseAt, ruleFor, withHandoffs, type CoachProgram, type ProgramDay } from "@logit/core/domain/CoachProgram";
 import { cellFromSuggestion, estimatesFrom, lastTimeCell, planForWeek, type PlanCell } from "@logit/core/domain/programPlan";
 import { getSuggestion } from "@logit/core/usecases/progression/getSuggestion";
 import { getProgressionDeps } from "./progressionDeps";
@@ -61,12 +62,14 @@ export async function startSessionFromProgramDay(
   // the day's list says so (program data v2). The program's rule plans this week's numbers from
   // their own lifts (canvas PG3/PG4); without a rule, or before it starts, the typed ones.
   const full = program ? await getCoachProgramRepo().getAssignedProgram(program.id).catch(() => null) : null;
+  // LogIt's own blocks the program uses (the Weight finder) come with it.
+  if (full) await ensureOwnBlocks(full).catch(() => {});
   const progress = full ? getProgramProgress(full) : null;
   const weekNumber = progress?.status === "running" ? progress.weekNumber : 1;
   const plan = full && progress?.status === "running" ? await weekPlan(full, day, weekNumber).catch(() => undefined) : undefined;
   // Their swaps "for the rest of the program" (canvas SW1), unless the coach kept or put them back.
   const lasting = program ? await lastingFor(program.id).catch(() => []) : [];
-  const built = programDaySession(applyLastingSwaps(day, lasting), { appVersion: PROGRAM_BLOCKS_THIS_APP_RUNS, pluginBlock: getBlockDeclaration, plan, weekNumber });
+  const built = programDaySession(applyLastingSwaps(day, lasting), { appVersion: PROGRAM_BLOCKS_THIS_APP_RUNS, pluginBlock: getBlockDeclaration, plan, weekNumber, phase: full && progress?.status === "running" ? phaseAt(full, weekNumber) : null });
   // A coach's program also keeps which coach (whose swap rule applies) and their alternatives.
   const session = withStartingPlace(program ? { ...built, source: sourceFromProgramDay(program, day, built) } : built);
   await repo.saveDraftSession(session);

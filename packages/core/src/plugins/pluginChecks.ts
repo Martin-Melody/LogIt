@@ -1,6 +1,7 @@
 import { parseMealPlanPack, parseRecipePack } from "./nutritionPacks";
 import { cardPackCards } from "./cardPack";
 import { parseQuestionPack } from "./questionPack";
+import { parsePhasePack } from "./phasePack";
 import { parseProgramPack } from "./programPack";
 import { parseBlockDeclaration } from "../domain/blockPlugin";
 import { parseExercisePack } from "./exercisePack";
@@ -175,6 +176,15 @@ function checkPack(family: string, pluginId: string, source: string): CheckResul
     checks.push({ id: "json", label: "Valid JSON", ok: true });
   } catch (e) {
     checks.push({ id: "json", label: "Valid JSON", ok: false, detail: message(e) });
+    return done(checks);
+  }
+  if (family === "phase-pack") {
+    try {
+      const p = parsePhasePack(raw, pluginId);
+      checks.push({ id: "pack", label: `"${p.phase.name}", ${p.phase.weeks} ${p.phase.weeks === 1 ? "week" : "weeks"}, with ${p.includes.length} ${p.includes.length === 1 ? "part" : "parts"}, readable`, ok: true });
+    } catch (e) {
+      checks.push({ id: "pack", label: "The phase is readable", ok: false, detail: message(e) });
+    }
     return done(checks);
   }
   if (family === "workout-block") {

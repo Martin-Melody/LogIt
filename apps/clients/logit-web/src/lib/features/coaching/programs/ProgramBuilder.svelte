@@ -27,7 +27,9 @@
   import AddToDayDialog, { type AddPick } from "./AddToDayDialog.svelte";
   import GroupDialog from "./GroupDialog.svelte";
   import WeekRangeDialog from "./WeekRangeDialog.svelte";
-  import PhaseDialog from "./PhaseDialog.svelte";
+  import PhaseDialog, { type PhaseChoice } from "./PhaseDialog.svelte";
+  import { parsePhasePack, type PhasePack } from "@logit/core/plugins/phasePack";
+  import { plugins as installedPlugins, fetchSource } from "$lib/features/plugins/pluginData.svelte";
   import { cardioPlanned } from "@logit/core/domain/programDaySession";
   import GripVerticalIcon from "@lucide/svelte/icons/grip-vertical";
   import { flip } from "svelte/animate";
@@ -496,12 +498,32 @@
   let phaseOpen = $state(false);
   let phaseEditing = $state<P.ProgramPhase | null>(null);
   const phaseTaken = $derived(new Set((prog.phases ?? []).filter((x) => x.id !== phaseEditing?.id).flatMap((x) => Array.from({ length: x.weeks.to - x.weeks.from + 1 }, (_, i) => x.weeks.from + i))));
-  function savePhase(v: { name: string; from: number; to: number; findsWeights: boolean }) {
+  function savePhase(v: PhaseChoice) {
     const id = phaseEditing?.id ?? createId("phase");
     const old = phaseEditing;
-    edit((p) => P.putPhase(p, { id, name: v.name, weeks: { from: v.from, to: v.to }, ...(v.findsWeights ? { findsWeights: true } : old?.rule ? { rule: old.rule } : {}) }));
-    if (!v.findsWeights && !old) { pickingFor = null; pickingPhase = id; picking = true; }
+    const rule = v.rule ?? (!v.findsWeights && !v.pack ? old?.rule : undefined);
+    edit((p) => P.putPhase(p, {
+      id, name: v.name, weeks: { from: v.from, to: v.to },
+      ...(v.findsWeights ? { findsWeights: true } : {}),
+      ...(v.blockPluginId ? { blockPluginId: v.blockPluginId } : {}),
+      ...(v.pack ? { pack: v.pack } : {}),
+      ...(rule ? { rule } : {}),
+    }));
+    if (!v.findsWeights && !v.pack && !old) { pickingFor = null; pickingPhase = id; picking = true; }
   }
+  // Starting phases from installed phase packs (canvas SP8).
+  let phasePacks = $state<(PhasePack & { name: string; description: string })[]>([]);
+  $effect(() => {
+    if (!phaseOpen) return;
+    void (async () => {
+      if (!installedPlugins.installsLoaded) await installedPlugins.loadInstalls().catch(() => {});
+      const found = installedPlugins.installed.filter((p) => p.enabled && p.manifest.family === "phase-pack" && p.manifest.id !== P.FIND_YOUR_WEIGHTS_PACK.id);
+      phasePacks = (await Promise.all(found.map(async (p) => {
+        try { return { ...parsePhasePack(JSON.parse(await fetchSource(p.manifest as never)), p.manifest.id), name: p.manifest.name, description: String(p.manifest.description ?? "") }; }
+        catch { return null; }
+      }))).filter((x): x is NonNullable<typeof x> => !!x);
+    })();
+  });
   function phaseActions(ph: P.ProgramPhase): RowAction[] {
     return [
       { id: "edit", label: "Change…", run: () => { phaseEditing = ph; phaseOpen = true; } },
@@ -1046,7 +1068,7 @@
 <PluginBlockDialog bind:open={pluginOpen} dayName={day?.name || "this day"} editing={editingPlugin} onsave={(b) => putBlock(editingPlugin, b, "plugin")} />
 
 <RulePickerDialog bind:open={picking} current={pickingPhase ? (prog.phases?.find((x) => x.id === pickingPhase)?.rule ?? prog.rule ?? null) : pickingFor ? (pickingFor.rule ?? null) : (prog.rule ?? null)} exercise={pickingFor?.exerciseName ?? null} onpick={pickRule} />
-<PhaseDialog bind:open={phaseOpen} phase={phaseEditing} total={prog.weeks.length} taken={phaseTaken} onsave={savePhase} />
+<PhaseDialog bind:open={phaseOpen} phase={phaseEditing} total={prog.weeks.length} taken={phaseTaken} packs={phasePacks} onsave={savePhase} />
 
 <WeeksDialog bind:open={weeksOpen} program={prog} onset={(n, type) => edit((p) => setWeekType(p, n, type))} />
 

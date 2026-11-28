@@ -8,7 +8,7 @@
 // plugin that isn't there) is left out, and the day's list says "Update LogIt to see this
 // part" (unrunnableBlocks); the rest of the day works.
 
-import { canRunBlock, inWeek, restText, type ProgramBlock, type ProgramDay } from "./CoachProgram";
+import { canRunBlock, inWeek, restText, type ProgramBlock, type ProgramDay, type ProgramPhase } from "./CoachProgram";
 import { circuitRounds, type PlanCell } from "./programPlan";
 import { addPluginBlock, repeatLastEntry, setBlockFieldValue, updatePluginBlock, type BlockDeclaration } from "./blockPlugin";
 import {
@@ -45,6 +45,8 @@ export type ProgramDayOptions = {
   pluginBlock?: (pluginId: string) => BlockDeclaration | null;
   /** This week of the program (1-based), for circuits that add a round every two weeks. */
   weekNumber?: number;
+  /** The phase this week is in (6.10): its block plugin runs each lift, like the Weight finder. */
+  phase?: ProgramPhase | null;
 };
 
 /** The blocks of a day this app can't run, for "Update LogIt to see this part". */
@@ -78,6 +80,7 @@ export function programDaySession(day: ProgramDay, opts: ProgramDayOptions = {})
   // A plugin block that can't run here (not added or not allowed) is a note, so it's still
   // done, just logged by hand (canvas Q4/PG8). Newer block types say "Update LogIt" on the day.
   const notes: string[] = [];
+  let findNote = false;
   for (const block of sortByOrderIndex(day.blocks)) {
     // An exercise for part of the program only runs in its weeks (6.7).
     if (opts.weekNumber != null && !inWeek(block, opts.weekNumber)) continue;
@@ -95,7 +98,18 @@ export function programDaySession(day: ProgramDay, opts: ProgramDayOptions = {})
       } else {
         session = withPlanned(addCardioBlock(session, block.exerciseName), `${count} × ${first?.distanceM ?? "?"} m${block.perSide ? " each side" : ""}`);
       }
+    } else if (block.type === "strength" && opts.phase?.blockPluginId && (block.measure ?? "weight") !== "reps" && opts.pluginBlock?.(opts.phase.blockPluginId)) {
+      // A phase's block runs the lift (canvas SP6): its exercise field is the lift, one entry a
+      // set to start; its entries count as sets of the lift (6.1).
+      const decl = opts.pluginBlock(opts.phase.blockPluginId)!;
+      session = addPluginBlock(session, decl);
+      const blockId = session.blocks.at(-1)!.id;
+      const liftKey = [...decl.blockFields, ...decl.fields].find((f) => f.type === "exercise")?.key;
+      if (liftKey) session = updatePluginBlock(session, blockId, decl, setBlockFieldValue(liftKey, block.exerciseName));
+      const count = Math.max(1, sortByOrderIndex(block.sets).filter((s) => s.setType !== "warmup").length);
+      for (let i = 1; i < count; i++) session = updatePluginBlock(session, blockId, decl, repeatLastEntry);
     } else if (block.type === "strength") {
+      if (opts.phase?.findsWeights) findNote = true;
       session = addExercise(session, {
         exerciseName: block.exerciseName,
         exerciseId: block.exerciseId,
@@ -182,6 +196,8 @@ export function programDaySession(day: ProgramDay, opts: ProgramDayOptions = {})
       });
     }
   }
+  // Without the phase's block on this phone, a find week still says what to do.
+  if (findNote) notes.unshift("Find your weights: go up each set until you could only have done 1 or 2 more reps. That set is the one that counts.");
   return notes.length ? { ...session, note: notes.join("\n") } : session;
 }
 

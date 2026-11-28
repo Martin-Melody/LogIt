@@ -128,7 +128,10 @@ plugin is told the week's type; if it doesn't handle it, LogIt applies the chang
 ## Phases
 
 A phase is a run of weeks with its own progression: **+ Phase** in the builder. **Find your
-weights** works up to a hard set on each lift, and the next phase plans from what they found. **A
+weights** runs LogIt's Weight finder on each lift: a jump at a time, asking "how many more could
+you have done?", until they could only do 1 or 2 more. The next phase plans from what they found.
+Starting phases from plugins you've installed (Coaching › Plugins › Starting phases) are offered
+there too, with the block and progression they come with. **A
 progression** gives those weeks their own, like hypertrophy in weeks 1–4 and strength in 5–8.
 Weeks outside any phase use the program's progression; week types still work inside a phase.
 

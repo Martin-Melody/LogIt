@@ -17,7 +17,22 @@ import { setCoachAllowed } from "$lib/plugins/coachAllowed";
  */
 export type ProgramPlugin = NeededPlugin & { ready: boolean; entry: RegistryEntry | null };
 
+/** LogIt's own blocks (app.getlogit.*, data only, no code) come with the program, like the
+ * Weight finder in a Find your weights week: a coach using one means the client gets it too. */
+export async function ensureOwnBlocks(program: CoachProgram): Promise<void> {
+  const own = pluginsNeeded(program).filter((n) => n.kind === "block" && n.pluginId.startsWith("app.getlogit.") && !getBlockDeclaration(n.pluginId));
+  if (!own.length) return;
+  const entries = (await fetchRegistry().catch(() => ({ entries: [] as RegistryEntry[] }))).entries;
+  for (const n of own) {
+    const entry = entries.find((e) => e.id === n.pluginId);
+    if (!entry) continue;
+    const manifest = await resolvePluginManifest({ kind: "url", url: entry.manifestUrl }).catch(() => null);
+    if (manifest?.id === n.pluginId && manifest.family === "workout-block") await installPluginFromManifest(manifest, true, { source: "registry" }).catch(() => {});
+  }
+}
+
 export async function programPlugins(program: CoachProgram): Promise<ProgramPlugin[]> {
+  await ensureOwnBlocks(program).catch(() => {});
   const needed = pluginsNeeded(program);
   if (!needed.length) return [];
   const installed = await listInstalledPluginManifests();
