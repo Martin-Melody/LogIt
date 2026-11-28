@@ -312,7 +312,7 @@ export const STUDIO_CHAPTERS: Chapter[] = [
       {
         id: "new", on: "web", route: "/coaching/programs", target: "programs-new", kind: "do", signal: "program.created",
         title: "Start a program",
-        body: "Open Coaching › Programs and choose New program, or Start from a program to copy one of LogIt's (or a community pack's) and change it. A new one starts with one week and one day.",
+        body: "Open Coaching › Programs and choose New program, or Start from a program to copy one of LogIt's (or a community pack's) and change it. A new one asks how many weeks and what they do first (weeks 1 to 3 finding their weights, then a progression, a deload), or Skip for every week the same.",
       },
       {
         id: "editor", on: "web", route: "/coaching/programs", target: "program-editor", kind: "look",

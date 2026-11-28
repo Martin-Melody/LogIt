@@ -83,7 +83,11 @@ const ACTIONS: Record<string, (page: Page) => Promise<void>> = {
     // "Send and go to {next}" when more are waiting (canvas K4).
     await p.getByRole("button", { name: /^Send and (mark reviewed|go to )/ }).click();
   },
-  "program.created": (p) => p.locator('[data-guide="programs-new"]').click(),
+  // New program sets up its weeks first (canvas PW1); start building straight away.
+  "program.created": async (p) => {
+    await p.locator('[data-guide="programs-new"]').click();
+    await p.getByRole("dialog", { name: "New program" }).getByRole("button", { name: "Start building Day 1" }).click();
+  },
   "program.saved": (p) => p.locator('[data-guide="program-save"]').click(),
   "program.assigned": async (p) => {
     // On the list the mark is the first program: open it, then its Assign….
