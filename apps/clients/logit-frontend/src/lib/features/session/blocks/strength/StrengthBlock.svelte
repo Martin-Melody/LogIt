@@ -1290,7 +1290,7 @@
     {:else if pinPlanned}
       <div transition:reveal class="mx-3 my-1.5 flex items-center justify-between gap-2 rounded-lg bg-muted/40 px-3 py-2 text-xs">
         <span>Past the stack with your pin.</span>
-        <button type="button" class="min-h-9 rounded-lg border border-border bg-background px-3 text-xs font-medium" onclick={() => void notToday()}>Not today</button>
+        <button type="button" class="min-h-10 rounded-lg border border-border bg-background px-3 text-xs font-medium" onclick={() => void notToday()}>Not today</button>
       </div>
     {:else if atTheTop && topLabel && sessionCoach && coachAtTop && coachAtTop.then !== "pin"}
       <!-- Canvas EQ3 (1): the coach planned for it. -->
