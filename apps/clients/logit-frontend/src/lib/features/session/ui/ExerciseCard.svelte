@@ -158,7 +158,7 @@
     </button>
 
     {#if onHowTo && !folded}
-      <button type="button" class="mr-1 h-9 shrink-0 rounded-full border border-border px-3 text-[13px] font-medium" disabled={saving} onclick={onHowTo}>How to</button>
+      <button type="button" class="mr-1 h-10 shrink-0 rounded-full border border-border px-3 text-[13px] font-medium" disabled={saving} onclick={onHowTo}>How to</button>
     {/if}
     <span class="flex shrink-0 items-center gap-1 text-xs tabular-nums {allDone ? 'text-success' : 'text-muted-foreground'}">
       {#if allDone}<Check class="h-3.5 w-3.5" strokeWidth={3} aria-hidden="true" />{/if}
