@@ -14,6 +14,7 @@ import type { PlannedTargets } from "../../domain/WorkoutSplit";
 import { getExerciseHistory } from "./getExerciseHistory";
 import type { ProgressionDeps } from "./deps";
 import { startingLiftEntry, startingLiftLine, type StartingLift } from "../../domain/startingLift";
+import { estimated1RM } from "../../domain/oneRepMax";
 import { knownLifts, MIN_RELATED_E1RM_KG, relatedEstimate, solidLifts, type RelatedEstimate } from "../../domain/relatedLifts";
 
 // How many of *this exercise's own* most recent sessions the algorithm sees —
@@ -84,7 +85,12 @@ export async function getSuggestion(
   // as a 5-rep set it stands for. "From your deadlift 200 × 5 · a guess".
   let related: RelatedEstimate | null = null;
   if (fullHistory.length === 0 && !typedLift) {
-    related = relatedEstimate(exercise.name, solidLifts(knownLifts(await workoutRepo.listAllSessions().catch(() => []), nowMs())));
+    // Best lifts typed in at setup count too: a deliberate heavy set, as solid as two workouts.
+    const typed = ((await deps.progressionRepo.listExerciseSettings?.().catch(() => [])) ?? [])
+      .filter((r) => !r.deletedAtMs && r.startingLift && r.startingLift.weightKg > 0)
+      .map((r) => ({ name: r.exerciseName, e1rm: estimated1RM(r.startingLift!.weightKg, r.startingLift!.reps), weight: r.startingLift!.weightKg, reps: r.startingLift!.reps, atMs: r.startingLift!.enteredAtMs, sessions: 2 }));
+    const logged = solidLifts(knownLifts(await workoutRepo.listAllSessions().catch(() => []), nowMs()));
+    related = relatedEstimate(exercise.name, [...logged, ...typed.filter((t) => !logged.some((l) => l.name.toLowerCase() === t.name.toLowerCase()))]);
     if (related && related.e1rmKg < MIN_RELATED_E1RM_KG) related = null;
   }
   const startingLift: StartingLift | null = typedLift
