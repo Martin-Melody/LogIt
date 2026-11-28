@@ -47,12 +47,15 @@ one-sided lifts like a Bulgarian split squat. Mobility drills have their measure
 each side and their own progression, or the client's. Cardio can have intervals (work, easy,
 repeat) and an effort, shown on their phone as "Planned".
 
-Different exercises in different weeks don't need six copies of a day. ⋯ on an exercise has
-**Replace from week…**, which ends it the week before and starts another in its place with the same
-sets, rest and progression, and **Only in some weeks…**, which sets the weeks it runs in. The
-exercise shows its weeks ("Weeks 1–4"); **Show: Week 5** reads the day as the client will see it
-that week. Their phone and Every week leave it out of the other weeks, and its progression counts
-only the weeks it runs.
+Different exercises in different weeks don't need six copies of a day. **Editing**, above the
+day, says which weeks you're changing: Every week (the default), a stretch, or one week; clicking
+a stretch in the bar picks it too (its ⋯ opens its settings). The day then shows as it is in those
+weeks, and every change goes to them: **+ Add** puts the exercise in those weeks (or every week, if
+you say so), an exercise's ⋯ has **Swap for weeks 7–9…** and **Take out of weeks 7–9**, and the
+exercises that aren't in those weeks are listed under the day with **Add to weeks 7–9**. In Every
+week each exercise shows its weeks ("Weeks 1–4"). ⋯ also has **Replace from week…** and **Only in
+some weeks…** for the same thing by hand. Their phone and Every week leave an exercise out of the
+weeks it doesn't run in, and its progression counts only the weeks it runs.
 
 Changes save as you go, so leaving the page loses nothing. If the same program is open on another
 device, changes to different things come across by themselves with a note; only when both changed

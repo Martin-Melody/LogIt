@@ -198,6 +198,13 @@ The stack on top of main. Each line names its PR.
 - [ ] An old program (Full-Body) shows Find your weights · 2–3 · Deload · 5 · Test, nothing changed.
 - [ ] Phone Home: "week 5 of 8 · Hypertrophy".
 
+**Editing some weeks (#209)**
+- [ ] Click the Deload in the bar: it's outlined; Editing says Week 4 · Deload; exercises that
+      don't run then are listed under the day.
+- [ ] ⋯ on Squat → Take out of week 4 → Every week shows Squat weeks 1–3 and 5–6; Add to week 4
+      makes it one again.
+- [ ] Swap for week 4… → Dumbbell bench in week 4 only. + Add while editing → "In: Week 4 / Every week".
+
 ## Findings
 
 Write them here, with the section number.

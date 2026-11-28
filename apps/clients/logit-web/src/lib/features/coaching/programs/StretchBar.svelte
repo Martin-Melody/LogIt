@@ -18,7 +18,7 @@
   import { stretchTitle, stretchWhatText, type Stretch } from "@logit/core/domain/stretches";
   import type { ProgramRule } from "@logit/core/domain/CoachProgram";
 
-  let { stretches, total, rule, onopen, onedge, preview = false }: {
+  let { stretches, total, rule, onopen, onedge, preview = false, selected = null, onpick }: {
     stretches: Stretch[];
     total: number;
     rule: ProgramRule | undefined;
@@ -27,6 +27,10 @@
     onedge: (i: number, start: number) => void;
     /** Just shows them (the new-program setup): no clicking or dragging. */
     preview?: boolean;
+    /** The weeks being edited (canvas PX1): that stretch is outlined. */
+    selected?: { from: number; to: number } | null;
+    /** Clicking a stretch picks it for editing; its ⋯ opens its settings. Without this, a click opens them. */
+    onpick?: (s: Stretch) => void;
   } = $props();
 
   let bar = $state<HTMLDivElement | null>(null);
@@ -44,9 +48,14 @@
 
 <div bind:this={bar} class="flex w-full min-w-0 gap-1" role="list" aria-label="Weeks">
   {#each shown as s, i (s.key + ":" + i)}
+    {@const on = !!selected && selected.from === s.from && selected.to === s.to}
     <div role="listitem" class="relative flex min-w-0" style="flex: {s.to - s.from + 1} 1 0%">
-      <button type="button" disabled={preview} onclick={() => onopen(stretches[i]!)} title="{stretchTitle(s)} · {stretchWhatText(s, rule)}"
-        class="flex min-w-0 flex-1 flex-col gap-0.5 rounded-[9px] border px-2.5 py-1.5 text-left transition-[background-color,flex-grow] duration-150 enabled:hover:brightness-110 disabled:cursor-default {tone(s)}">
+      {#if onpick && !preview}
+        <button type="button" aria-label="Settings for {stretchTitle(s)}" onclick={() => onopen(stretches[i]!)}
+          class="absolute right-1 top-1 z-[5] flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-background/60 hover:text-foreground">⋯</button>
+      {/if}
+      <button type="button" disabled={preview} aria-pressed={onpick ? on : undefined} onclick={() => (onpick ? onpick(stretches[i]!) : onopen(stretches[i]!))} title="{stretchTitle(s)} · {stretchWhatText(s, rule)}"
+        class="flex min-w-0 flex-1 flex-col gap-0.5 rounded-[9px] border px-2.5 py-1.5 text-left transition-[background-color,flex-grow] duration-150 enabled:hover:brightness-110 disabled:cursor-default {tone(s)} {onpick ? 'pr-7' : ''} {on ? 'ring-2 ring-foreground ring-offset-1 ring-offset-background' : ''}">
         <span class="truncate text-xs font-semibold {s.plain ? 'text-muted-foreground' : ''}">{stretchTitle(s)}</span>
         <span class="truncate text-[11px] text-muted-foreground">{stretchWhatText(s, rule)}</span>
         <span class="flex">{#each Array.from({ length: s.to - s.from + 1 }, (_, k) => s.from + k) as n (n)}<span class="flex-1 text-center text-[11px] font-medium tabular-nums text-muted-foreground">{n}</span>{/each}</span>

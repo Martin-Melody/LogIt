@@ -19,6 +19,7 @@
     searchDrills,
     onadd,
     onplugin,
+    range = null,
   }: {
     open?: boolean;
     dayName: string;
@@ -26,9 +27,12 @@
     searchActivities: (q: string) => Hit[];
     searchDrills: (q: string) => Hit[];
     /** "one" adds them one after another; "group" as a superset (strength only); "circuit" as one circuit. */
-    onadd: (picks: AddPick[], as: "one" | "group" | "circuit") => void;
+    onadd: (picks: AddPick[], as: "one" | "group" | "circuit", inRange: boolean) => void;
     onplugin: () => void;
+    /** The weeks being edited (canvas PX2), e.g. "Weeks 7–9"; null when editing every week. */
+    range?: string | null;
   } = $props();
+  let inRange = $state(true);
 
   const FILTERS = [
     { id: "all", label: "All" },
@@ -42,7 +46,7 @@
   let picked = $state<AddPick[]>([]);
 
   $effect(() => {
-    if (!open) { q = ""; picked = []; filter = "all"; }
+    if (!open) { q = ""; picked = []; filter = "all"; inRange = true; }
   });
 
   const groups = $derived.by(() => {
@@ -61,7 +65,7 @@
   const allStrength = $derived(picked.length > 1 && picked.every((p) => p.kind === "strength"));
   const groupName = $derived(picked.length === 2 ? "superset" : picked.length === 3 ? "tri-set" : "giant set");
   function add(as: "one" | "group" | "circuit") {
-    onadd(picked, as);
+    onadd(picked, as, !!range && inRange);
     open = false;
   }
 </script>
@@ -105,6 +109,15 @@
         {/each}
       {/if}
     </div>
+    {#if range}
+      <div class="flex items-center gap-2 text-[13px]" role="radiogroup" aria-label="Add it to">
+        <span class="text-muted-foreground">In</span>
+        {#each [[true, range], [false, "Every week"]] as [v, l] (String(v))}
+          <button type="button" role="radio" aria-checked={inRange === v} onclick={() => (inRange = v as boolean)}
+            class="h-9 rounded-full border px-3.5 transition-colors {inRange === v ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:text-foreground'}">{l}</button>
+        {/each}
+      </div>
+    {/if}
     <Dialog.Footer class="items-center gap-2 sm:justify-between">
       <span class="min-w-0 truncate text-xs text-muted-foreground">{picked.length ? `${picked.length} picked: ${picked.map((p) => p.name).join(", ")}` : "Nothing picked yet"}</span>
       <span class="flex shrink-0 justify-end gap-2">

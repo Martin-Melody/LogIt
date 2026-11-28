@@ -28,7 +28,7 @@
   import WeekRangeDialog from "./WeekRangeDialog.svelte";
   import StretchDialog, { type StretchPack } from "./StretchDialog.svelte";
   import StretchBar from "./StretchBar.svelte";
-  import { fitStretches, putStretch, removeStretch, stretchesOf, type Stretch } from "@logit/core/domain/stretches";
+  import { fitStretches, putStretch, removeStretch, stretchesOf, stretchTitle, type Stretch } from "@logit/core/domain/stretches";
   import { parsePhasePack } from "@logit/core/plugins/phasePack";
   import { plugins as installedPlugins, fetchSource } from "$lib/features/plugins/pluginData.svelte";
   import { cardioPlanned } from "@logit/core/domain/programDaySession";
@@ -245,8 +245,19 @@
   /** "+ Exercise to this superset": what's picked joins that group (canvas PB2). */
   let addTo = $state<string | null>(null);
   $effect(() => { if (!addOpen) addTo = null; });
-  function addPicks(picks: AddPick[], as: "one" | "group" | "circuit") {
+  function addPicks(picks: AddPick[], as: "one" | "group" | "circuit", inRange = false) {
     if (!day || !picks.length) return;
+    const d = day.id;
+    const before = new Set(blocks.map((b) => b.id));
+    addPicksAll(picks, as);
+    // Canvas PX2: added while editing some weeks, they run in those weeks only.
+    const range = inRange ? editing : null;
+    const fresh = range ? (templateOf(prog).days.find((x) => x.id === d)?.blocks ?? []).filter((b) => !before.has(b.id)) : [];
+    if (range && fresh.length) edit((p, w) => fresh.reduce((q, b) => P.setBlockWeeks(q, w, d, b.id, range), p));
+  }
+
+  function addPicksAll(picks: AddPick[], as: "one" | "group" | "circuit") {
+    if (!day) return;
     const into = addTo;
     addTo = null;
     if (into) {
@@ -422,8 +433,10 @@
       ...(b.type === "circuit" ? [{ id: "edit", label: "Edit circuit…", run: () => openCircuit(b) }] : b.type === "plugin" ? [{ id: "edit", label: `Edit ${b.name}…`, run: () => openPluginBlock(b) }] : []),
       ...(b.type === "strength" && prog.weeks.length > 1 ? [{ id: "replace-from", label: "Replace from week…", separatorBefore: true, run: () => openRange(b, "replace") }] : []),
       ...(prog.weeks.length > 1 ? [{ id: "some-weeks", label: "Only in some weeks…", ...(b.type === "strength" ? {} : { separatorBefore: true }), run: () => openRange(b, "some") }] : []),
+      ...(editing && b.type === "strength" ? [{ id: "swap-weeks", label: `Swap for ${editingText.toLowerCase()}…`, separatorBefore: true, run: () => (swapping = b) }] : []),
       { id: "dup", label: "Duplicate", run: () => duplicateBlock(b) },
-      { id: "remove", label: "Remove", danger: true, separatorBefore: true, run: () => { edit((p, w) => P.removeBlock(p, w, d, b.id)); if (blockId === b.id) blockId = null; } },
+      ...(editing ? [{ id: "take-out", label: `Take out of ${editingText.toLowerCase()}`, danger: true, separatorBefore: true, run: () => { const r = editing!; edit((p, w) => P.takeOutOfWeeks(p, w, d, b.id, r, createId("pblock"))); if (blockId === b.id) blockId = null; } }] : []),
+      { id: "remove", label: editing ? "Remove from every week" : "Remove", danger: true, separatorBefore: !editing, run: () => { edit((p, w) => P.removeBlock(p, w, d, b.id)); if (blockId === b.id) blockId = null; } },
     ];
   }
 
@@ -626,8 +639,33 @@
   let rangeBlock = $state<ProgramBlock | null>(null);
   function openRange(b: ProgramBlock, mode: "replace" | "some") { rangeBlock = b; rangeMode = mode; rangeOpen = true; }
   /** "Show: Week 5" reads the day as the client sees it that week; dragging is for all weeks. */
-  let showWeek = $state<number | null>(null);
-  const shownRuns = $derived(showWeek == null ? runs : runs.map((x) => ({ ...x, blocks: x.blocks.filter((b) => P.inWeek(b, showWeek!)) })).filter((x) => x.blocks.length));
+  // Canvas PX1: the weeks being edited (null = every week). The day reads as it is in them.
+  let editing = $state<P.WeekRange | null>(null);
+  const spanOf = (b: ProgramBlock): P.WeekRange => b.weeks ?? { from: 1, to: prog.weeks.length };
+  const inEditing = (b: ProgramBlock) => !editing || (spanOf(b).from <= editing.to && editing.from <= spanOf(b).to);
+  const shownRuns = $derived(editing == null ? runs : runs.map((x) => ({ ...x, blocks: x.blocks.filter(inEditing) })).filter((x) => x.blocks.length));
+  // Each exercise once (Squat in weeks 1–3 and 5–6 is one row): the part nearest these weeks.
+  const notShown = $derived.by(() => {
+    if (editing == null) return [];
+    const shownNames = new Set(blocks.filter(inEditing).map(blockMain));
+    const byName = new Map<string, ProgramBlock>();
+    for (const b of blocks) {
+      if (inEditing(b) || b.type === "circuit" || shownNames.has(blockMain(b))) continue;
+      const cur = byName.get(blockMain(b));
+      const gap = (x: ProgramBlock) => Math.min(Math.abs(spanOf(x).to - editing!.from), Math.abs(spanOf(x).from - editing!.to));
+      if (!cur || gap(b) < gap(cur)) byName.set(blockMain(b), b);
+    }
+    return [...byName.values()];
+  });
+  const editingText = $derived(editing ? P.weekRangeText(editing) : "Every week");
+  $effect(() => { if (editing && editing.to > prog.weeks.length) editing = null; });
+  const editOptions = $derived([
+    { value: "all", label: "Every week", group: "" },
+    ...stretches.map((s) => ({ value: `${s.from}-${s.to}`, label: `${P.weekRangeText(s)} · ${stretchTitle(s)}`, group: "Stretches" })),
+    ...[...prog.weeks].sort((a, c) => a.weekNumber - c.weekNumber).map((w) => ({ value: `${w.weekNumber}-${w.weekNumber}`, label: `Week ${w.weekNumber}`, group: "One week" })),
+  ].filter((o, i, all) => all.findIndex((x) => x.value === o.value) === i));
+  // Canvas PX2: swapping an exercise for the weeks being edited.
+  let swapping = $state<ProgramStrength | null>(null);
   let groupOpen = $state(false);
   let groupEditing = $state<string | null>(null);
   let groupDraft = $state<P.GroupDraft | null>(null);
@@ -817,8 +855,11 @@
         options={[{ value: "new", label: "For new lifters" }, { value: "always", label: "Always" }, { value: "never", label: "Never" }]} />
     </span>
     <!-- Canvas PW2: the weeks as one bar of stretches. -->
-    <div class="flex basis-full items-center gap-3">
-      <StretchBar {stretches} total={prog.weeks.length} rule={prog.rule} onopen={openStretch} onedge={moveEdge} />
+    <div class="flex min-w-0 basis-full items-center gap-3">
+      <div class="min-w-0 flex-1">
+        <StretchBar {stretches} total={prog.weeks.length} rule={prog.rule} onopen={openStretch} onedge={moveEdge} selected={editing}
+          onpick={(s) => (editing = editing && editing.from === s.from && editing.to === s.to ? null : { from: s.from, to: s.to })} />
+      </div>
       <Button variant="outline" size="sm" class="shrink-0" onclick={() => (weeksOpen = true)}>Edit weeks</Button>
     </div>
   </section>
@@ -875,18 +916,19 @@
             class="h-8 rounded-full border px-3 text-xs transition-colors {day.weekday == null ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:text-foreground'}">Any day</button>
         </div>
 
-        {#if prog.weeks.length > 1 && blocks.some((b) => b.weeks)}
-          <span class="flex items-center gap-2 text-[13px]"><span class="text-muted-foreground">Show</span>
-            <OptionSelect size="sm" value={showWeek == null ? "all" : String(showWeek)} aria-label="Show"
-              options={[{ value: "all", label: "All weeks" }, ...[...prog.weeks].sort((a, c) => a.weekNumber - c.weekNumber).map((w) => ({ value: String(w.weekNumber), label: `Week ${w.weekNumber}` }))]}
-              onValueChange={(v) => (showWeek = v === "all" ? null : Number(v))} />
+        {#if prog.weeks.length > 1}
+          <!-- Canvas PX1: which weeks you're editing; every change below goes to them. -->
+          <span class="flex flex-wrap items-center gap-2 text-[13px]"><span class="text-muted-foreground">Editing</span>
+            <OptionSelect size="sm" class="min-w-56" value={editing ? `${editing.from}-${editing.to}` : "all"} aria-label="Editing"
+              options={editOptions} onValueChange={(v) => { if (v === "all") editing = null; else { const [a, c] = v.split("-").map(Number); editing = { from: a!, to: c! }; } }} />
+            <span class="text-xs text-muted-foreground">{editing ? "Changes here apply to these weeks only." : "Changes here apply to every week."}</span>
           </span>
         {/if}
         <ul class="flex flex-col gap-1.5" aria-label="Blocks" ondragenter={(e) => runOrder.allow(e)} ondragover={(e) => runOrder.allow(e)} ondrop={(e) => { const k = runOrder.drop(e); if (k) orderRuns(k); }}>
-          {#each showWeek == null ? runOrder.arrange(runs, (x) => x.key) : shownRuns as run, ri (run.key)}
+          {#each editing == null ? runOrder.arrange(runs, (x) => x.key) : shownRuns as run, ri (run.key)}
             <li animate:flip={{ duration: SLIDE_MS }} ondragover={(e) => runOrder.over(run.key, e)}
               class="flex items-start gap-1 rounded-[10px] {runOrder.held === run.key ? 'bg-primary/10 outline-dashed outline-[1.5px] -outline-offset-2 outline-primary [&>*]:invisible' : ''}">
-              <button type="button" draggable={showWeek == null} disabled={showWeek != null} aria-label="Move {run.blocks.map(blockMain).join(' and ')} (arrow keys)"
+              <button type="button" draggable={editing == null} disabled={editing != null} title={editing ? "Order is the same every week: switch to Every week to move it" : undefined} aria-label="Move {run.blocks.map(blockMain).join(' and ')} (arrow keys)"
                 ondragstart={(e) => runOrder.start(runs.map((x) => x.key), run.key, e, (e.currentTarget as HTMLElement).closest("li"))}
                 ondragend={() => runOrder.end()}
                 onkeydown={(e) => {
@@ -928,7 +970,7 @@
                       {#snippet children({ props, more })}
                         <div {...props} class="flex items-center gap-2 rounded-[9px] px-3 py-2 {isOpen ? 'bg-primary/5' : 'hover:bg-muted/40'}">
                           {#if grouped}
-                            <button type="button" draggable={showWeek == null} disabled={showWeek != null} aria-label="Move {blockMain(b)} in or out of the group (Alt+arrow keys)"
+                            <button type="button" draggable={editing == null} disabled={editing != null} aria-label="Move {blockMain(b)} in or out of the group (Alt+arrow keys)"
                               ondragstart={(e) => { e.stopPropagation(); dragBlock = b.id; e.dataTransfer?.setData("text/plain", b.id); if (e.dataTransfer) e.dataTransfer.effectAllowed = "move"; }}
                               ondragend={() => { dragBlock = null; dropAt = null; }}
                               onkeydown={(e) => { if (e.key === "ArrowUp" || e.key === "ArrowDown") { e.preventDefault(); e.stopPropagation(); nudgeMember(b, e.key === "ArrowUp" ? -1 : 1); } }}
@@ -1159,7 +1201,19 @@
             <li class="rounded-[9px] border border-dashed border-border px-3 py-6 text-center text-[13px] text-muted-foreground">No exercises yet. Add the first one below.</li>
           {/each}
         </ul>
-        <Button variant="outline" class="self-start" onclick={() => (addOpen = true)}>+ Add to {day.name ?? "this day"}</Button>
+        {#if notShown.length}
+          <!-- Exercises that aren't in these weeks, to bring back. -->
+          <div class="flex flex-col gap-1.5" aria-label="Not in {editingText.toLowerCase()}">
+            <span class="text-xs font-medium text-muted-foreground">Not in {editingText.toLowerCase()}</span>
+            {#each notShown as b (b.id)}
+              <div class="flex items-center gap-2 rounded-[9px] border border-dashed border-border px-3 py-2 opacity-70">
+                <span class="flex min-w-0 flex-1 flex-col"><span class="truncate text-[13px] font-semibold">{blockMain(b)}</span><span class="text-xs text-muted-foreground">only {P.weekRangeText(spanOf(b)).toLowerCase()}</span></span>
+                <Button variant="outline" size="sm" onclick={() => { const d = day!.id, id = b.id, r = editing!; edit((p, w) => P.addToWeeks(p, w, d, id, r, createId("pblock"))); }}>Add to {editingText.toLowerCase()}</Button>
+              </div>
+            {/each}
+          </div>
+        {/if}
+        <Button variant="outline" class="self-start" onclick={() => (addOpen = true)}>+ Add to {day.name ?? "this day"}{editing ? ` in ${editingText.toLowerCase()}` : ""}</Button>
       </section>
     {/if}
 
@@ -1227,7 +1281,22 @@
 
 <WeeksDialog bind:open={weeksOpen} program={prog} onopen={(s) => openStretch(s)} onadd={() => openStretch(null)} />
 
-<AddToDayDialog bind:open={addOpen} dayName={addTo && day ? `${P.groupLabel(day, addTo)} in ${day.name ?? "this day"}` : (day?.name ?? "this day")} {searchExercises} {searchActivities} {searchDrills} onadd={addPicks} onplugin={() => openPluginBlock(null)} />
+<AddToDayDialog bind:open={addOpen} dayName={addTo && day ? `${P.groupLabel(day, addTo)} in ${day.name ?? "this day"}` : (day?.name ?? "this day")} {searchExercises} {searchActivities} {searchDrills} onadd={addPicks} range={editing ? editingText : null} onplugin={() => openPluginBlock(null)} />
+
+{#if swapping && day}
+  <!-- Canvas PX2: swap an exercise for the weeks being edited only. -->
+  <Dialog.Root open={!!swapping} onOpenChange={(o) => { if (!o) swapping = null; }}>
+    <Dialog.Content class="sm:max-w-md">
+      <Dialog.Header>
+        <Dialog.Title>Swap {swapping.exerciseName} in {editingText.toLowerCase()}</Dialog.Title>
+        <Dialog.Description>{swapping.exerciseName} stays in the other weeks. The new one takes its place in {editingText.toLowerCase()} with the same sets, rest and progression.</Dialog.Description>
+      </Dialog.Header>
+      <NamePicker id="swap-weeks" label="Swap for" placeholder="Search exercises" autofocus search={(q) => searchExercises(q).filter((x) => x.name !== swapping?.exerciseName)}
+        onPick={(n) => { const d = day!.id, id = swapping!.id, r = editing!; edit((p, w) => P.swapInWeeks(p, w, d, id, r, { exerciseName: n, exerciseId: index?.get(n)?.id }, () => createId("pblock"))); swapping = null; }}
+        onCancel={() => (swapping = null)} />
+    </Dialog.Content>
+  </Dialog.Root>
+{/if}
 
 {#if groupDraft && groupEditing && day}
   <GroupDialog bind:open={groupOpen} draft={groupDraft} isNew={groupIsNew} dayName={day.name || "this day"} {index} fallback={P.groupLabel({ blocks: day.blocks }, groupEditing)}

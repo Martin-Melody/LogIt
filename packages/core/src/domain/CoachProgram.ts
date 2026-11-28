@@ -885,6 +885,83 @@ export function setBlockWeeks(program: CoachProgram, weekId: string, dayId: stri
   }));
 }
 
+/** The weeks a block runs in, as a range (every week = 1 to the last). */
+const spanOf = (b: { weeks?: WeekRange }, total: number): WeekRange => b.weeks ?? { from: 1, to: total };
+const copyBlock = (b: ProgramBlock, id: string): ProgramBlock =>
+  (b.type === "strength" ? { ...b, id, sets: b.sets.map((s) => ({ ...s, id: `${s.id}_${id.slice(-4)}` })) } : { ...b, id }) as ProgramBlock;
+
+/** Takes an exercise out of weeks r (canvas PX2). Out of the middle of its weeks it becomes two:
+ * before r, and a copy after r. Out of all of them, it goes. */
+export function takeOutOfWeeks(program: CoachProgram, weekId: string, dayId: string, blockId: string, r: WeekRange, newId: string): CoachProgram {
+  const total = program.weeks.length;
+  return mapDay(program, weekId, dayId, (day) => {
+    const ordered = [...day.blocks].sort((a, b) => a.orderIndex - b.orderIndex);
+    const at = ordered.findIndex((b) => b.id === blockId);
+    const old = ordered[at];
+    if (!old) return day;
+    const s = spanOf(old, total);
+    if (r.to < s.from || r.from > s.to) return day;
+    const parts: ProgramBlock[] = [];
+    if (s.from < r.from) parts.push({ ...old, weeks: { from: s.from, to: r.from - 1 } } as ProgramBlock);
+    if (s.to > r.to) parts.push({ ...(parts.length ? copyBlock(old, newId) : old), weeks: { from: r.to + 1, to: s.to } } as ProgramBlock);
+    ordered.splice(at, 1, ...parts);
+    return { ...day, blocks: ordered.map((b, i) => ({ ...b, orderIndex: i }) as ProgramBlock) };
+  });
+}
+
+/** Swaps an exercise for another in weeks r only (canvas PX2): the new one takes its place in
+ * those weeks with the same sets, rest and progression; the old one keeps the others. */
+export function swapInWeeks(program: CoachProgram, weekId: string, dayId: string, blockId: string, r: WeekRange, next: { exerciseName: string; exerciseId?: string }, newId: () => string): CoachProgram {
+  const total = program.weeks.length;
+  const day = program.weeks.find((w) => w.id === weekId)?.days.find((d) => d.id === dayId);
+  const old = day?.blocks.find((b) => b.id === blockId);
+  if (!old || old.type !== "strength") return program;
+  const s = spanOf(old, total);
+  const inside = { from: Math.max(s.from, r.from), to: Math.min(s.to, r.to) };
+  if (inside.from > inside.to) return program;
+  const { alternatives: _a, ...base } = old;
+  const fresh = { ...copyBlock(base as ProgramBlock, newId()), ...next, weeks: inside } as ProgramBlock;
+  if (!next.exerciseId) delete (fresh as { exerciseId?: string }).exerciseId;
+  const out = takeOutOfWeeks(program, weekId, dayId, blockId, inside, newId());
+  // The new one goes where the old one was in those weeks: right after its earlier part.
+  return mapDay(out, weekId, dayId, (d) => {
+    const ordered = [...d.blocks].sort((a, b) => a.orderIndex - b.orderIndex);
+    const before = ordered.findIndex((b) => b.id === blockId && spanOf(b, total).to < inside.from);
+    const at = before >= 0 ? before + 1 : Math.max(0, ordered.findIndex((b) => b.id === blockId));
+    ordered.splice(at === -1 ? ordered.length : at, 0, fresh);
+    return { ...d, blocks: ordered.map((b, i) => ({ ...b, orderIndex: i }) as ProgramBlock) };
+  });
+}
+
+/** Puts an exercise into weeks r too (canvas PX1, "bring it back"): next to its weeks it grows
+ * to cover them; apart from them, a copy runs in r. */
+export function addToWeeks(program: CoachProgram, weekId: string, dayId: string, blockId: string, r: WeekRange, newId: string): CoachProgram {
+  const total = program.weeks.length;
+  return mapDay(program, weekId, dayId, (day) => {
+    const ordered = [...day.blocks].sort((a, b) => a.orderIndex - b.orderIndex);
+    const at = ordered.findIndex((b) => b.id === blockId);
+    const old = ordered[at];
+    if (!old) return day;
+    const s = spanOf(old, total);
+    const touches = r.from <= s.to + 1 && s.from <= r.to + 1;
+    const span = { from: Math.min(s.from, r.from), to: Math.max(s.to, r.to) };
+    if (touches) ordered[at] = { ...old, weeks: span } as ProgramBlock;
+    else ordered.splice(at + 1, 0, { ...copyBlock(old, newId), weeks: r } as ProgramBlock);
+    // Parts of the same exercise that now meet (Squat 1–4 and 5–6) join into one.
+    const same = (x: ProgramBlock) => JSON.stringify({ ...x, id: 0, orderIndex: 0, weeks: 0, sets: x.type === "strength" ? x.sets.map(({ id: _i, ...s }) => s) : 0 });
+    const kept: ProgramBlock[] = [];
+    for (const blk of ordered) {
+      const s = spanOf(blk, total);
+      const mate = kept.findIndex((k) => same(k) === same(blk) && spanOf(k, total).to + 1 >= s.from && s.to + 1 >= spanOf(k, total).from);
+      if (mate < 0) { kept.push(blk); continue; }
+      const m = spanOf(kept[mate]!, total);
+      kept[mate] = { ...kept[mate]!, weeks: { from: Math.min(m.from, s.from), to: Math.max(m.to, s.to) } } as ProgramBlock;
+    }
+    const all = kept.map((x) => { const s = x.weeks; if (s && s.from <= 1 && s.to >= total) { const { weeks: _w, ...rest } = x; return rest as ProgramBlock; } return x; });
+    return { ...day, blocks: all.map((x, i) => ({ ...x, orderIndex: i }) as ProgramBlock) };
+  });
+}
+
 /** Ends an exercise before week `from` and starts another in its place, with the same sets,
  * rest and progression (canvas PB7). Returns the program and the new block's id. */
 export function replaceFromWeek(program: CoachProgram, weekId: string, dayId: string, blockId: string, from: number, next: { exerciseName: string; exerciseId?: string }, newId: string): CoachProgram {
