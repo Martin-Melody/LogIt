@@ -9,6 +9,18 @@ import { resolvePluginManifest } from "$lib/plugins/discovery";
 import { fetchRegistry, type RegistryEntry } from "$lib/plugins/registry";
 import { mayRunPlugin } from "$lib/plugins/sandboxedPlugin";
 import { setCoachAllowed } from "$lib/plugins/coachAllowed";
+import type { PluginManifest } from "$lib/plugins/types";
+import weightFinder from "../../../../../../../plugins/first-party/app.getlogit.weight-finder/block.json";
+
+/** LogIt's own data-only blocks, shipped with the app so a Find your weights week works even
+ * when the registry doesn't have them (or the phone is offline). */
+const BUNDLED_BLOCKS: Record<string, PluginManifest> = {
+  [weightFinder.id]: {
+    id: weightFinder.id, family: "workout-block", name: weightFinder.name, description: weightFinder.description,
+    version: "1.0.0", author: "LogIt", distribution: { origin: "inline", data: weightFinder },
+    capabilities: [{ family: "workout-block", blockId: weightFinder.id }],
+  } as PluginManifest,
+};
 
 /**
  * The plugins a coach's program uses and whether they run on this phone (canvas PG8). One
@@ -25,9 +37,14 @@ export async function ensureOwnBlocks(program: CoachProgram): Promise<void> {
   const entries = (await fetchRegistry().catch(() => ({ entries: [] as RegistryEntry[] }))).entries;
   for (const n of own) {
     const entry = entries.find((e) => e.id === n.pluginId);
-    if (!entry) continue;
-    const manifest = await resolvePluginManifest({ kind: "url", url: entry.manifestUrl }).catch(() => null);
-    if (manifest?.id === n.pluginId && manifest.family === "workout-block") await installPluginFromManifest(manifest, true, { source: "registry" }).catch(() => {});
+    const manifest = entry ? await resolvePluginManifest({ kind: "url", url: entry.manifestUrl }).catch(() => null) : null;
+    if (manifest?.id === n.pluginId && manifest.family === "workout-block") {
+      await installPluginFromManifest(manifest, true, { source: "registry" }).catch(() => {});
+      continue;
+    }
+    // Not in any registry (offline, or not published there): the copy that ships with the app.
+    const bundled = BUNDLED_BLOCKS[n.pluginId];
+    if (bundled) await installPluginFromManifest(bundled, true, { source: "registry" }).catch(() => {});
   }
 }
 

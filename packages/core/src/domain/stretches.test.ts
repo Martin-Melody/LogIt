@@ -61,3 +61,12 @@ describe("stretches", () => {
     expect(view(p)).toEqual(["1-1 Week 1", "2-4 Strength*"]);
   });
 });
+
+describe("phaseBlock", () => {
+  it("an old Find your weights phase (no block named) runs the Weight finder", async () => {
+    const { phaseBlock, WEIGHT_FINDER_ID } = await import("./CoachProgram");
+    expect(phaseBlock({ findsWeights: true })).toBe(WEIGHT_FINDER_ID);
+    expect(phaseBlock({ findsWeights: true, pack: { id: "other.pack", name: "X" } })).toBeUndefined();
+    expect(phaseBlock({ blockPluginId: "x.block" })).toBe("x.block");
+  });
+});

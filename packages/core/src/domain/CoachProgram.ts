@@ -122,6 +122,13 @@ export type GroupDraft = {
   members: { blockId?: string; exerciseName: string; exerciseId?: string; reps?: number; durationSec?: number }[];
 };
 
+/** The block a phase runs each lift with. Find your weights made before 6.10 named none: it
+ * means LogIt's Weight finder, so it gets that rather than the plain lifts. */
+export function phaseBlock(phase: Pick<ProgramPhase, "blockPluginId" | "findsWeights" | "pack">): string | undefined {
+  if (phase.blockPluginId) return phase.blockPluginId;
+  return phase.findsWeights && (!phase.pack || phase.pack.id === FIND_YOUR_WEIGHTS_PACK.id) ? WEIGHT_FINDER_ID : undefined;
+}
+
 /** A phase (canvas SP5): weeks with their own progression. One that finds weights hands its
  * numbers to the next; the coach checks them on Today (SP4). */
 export type ProgramPhase = {

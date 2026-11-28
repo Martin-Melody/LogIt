@@ -18,7 +18,7 @@
 import { loadFromPercent } from "./oneRepMax";
 import { getExercises, type WorkoutSession } from "./workout";
 import type { ProgressionOutput } from "./progression";
-import { inWeek, phaseAt, ruleFor, type CoachProgram, type ProgramRule, type ProgramSet, type ProgramStrength, type ProgramWeek } from "./CoachProgram";
+import { inWeek, phaseAt, ruleFor, type CoachProgram, type ProgramRule, type ProgramSet, type ProgramStrength, type ProgramWeek, phaseBlock } from "./CoachProgram";
 import { weekTypeOf, weekTypeLabel, weekSets, weekWeight, weekReps } from "./weekTypes";
 
 export type PlanCell = {
@@ -301,7 +301,8 @@ export function pluginsNeeded(program: CoachProgram): NeededPlugin[] {
   // A phase's block and progression (6.10): "Weight finder" in "Find your weights, week 1".
   for (const ph of program.phases ?? []) {
     const where = `${ph.name}, ${ph.weeks.from === ph.weeks.to ? `week ${ph.weeks.from}` : `weeks ${ph.weeks.from}–${ph.weeks.to}`}`;
-    if (ph.blockPluginId) add(ph.blockPluginId, ph.pack?.name ?? ph.name, "block", where);
+    const blk = phaseBlock(ph);
+    if (blk) add(blk, ph.pack?.name ?? ph.name, "block", where);
     if (ph.rule?.kind === "plugin") add(ph.rule.pluginId, ph.rule.name, "rule", where);
   }
   const first = [...program.weeks].sort((a, b) => a.weekNumber - b.weekNumber)[0];

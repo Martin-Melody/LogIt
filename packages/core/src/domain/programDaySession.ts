@@ -9,7 +9,7 @@
 // part" (unrunnableBlocks); the rest of the day works.
 
 import { warmupSets } from "./warmup";
-import { canRunBlock, inWeek, restText, type ProgramBlock, type ProgramDay, type ProgramPhase } from "./CoachProgram";
+import { canRunBlock, inWeek, restText, type ProgramBlock, type ProgramDay, type ProgramPhase, phaseBlock } from "./CoachProgram";
 import { circuitRounds, type PlanCell } from "./programPlan";
 import { addPluginBlock, repeatLastEntry, setBlockFieldValue, updatePluginBlock, type BlockDeclaration } from "./blockPlugin";
 import {
@@ -100,10 +100,10 @@ export function programDaySession(day0: ProgramDay, opts: ProgramDayOptions = {}
       } else {
         session = withPlanned(addCardioBlock(session, block.exerciseName), `${count} × ${first?.distanceM ?? "?"} m${block.perSide ? " each side" : ""}`);
       }
-    } else if (block.type === "strength" && opts.phase?.blockPluginId && (block.measure ?? "weight") !== "reps" && opts.pluginBlock?.(opts.phase.blockPluginId)) {
+    } else if (block.type === "strength" && opts.phase && phaseBlock(opts.phase) && (block.measure ?? "weight") !== "reps" && opts.pluginBlock?.(phaseBlock(opts.phase)!)) {
       // A phase's block runs the lift (canvas SP6): its exercise field is the lift, one entry a
       // set to start; its entries count as sets of the lift (6.1).
-      const decl = opts.pluginBlock(opts.phase.blockPluginId)!;
+      const decl = opts.pluginBlock(phaseBlock(opts.phase)!)!;
       session = addPluginBlock(session, decl);
       const blockId = session.blocks.at(-1)!.id;
       const liftKey = [...decl.blockFields, ...decl.fields].find((f) => f.type === "exercise")?.key;
