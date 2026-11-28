@@ -1,6 +1,6 @@
 # Testing the coaching overhaul
 
-The coaching overhaul is PRs #143–#185, stacked. This is the hand test before they merge: one
+The coaching overhaul was PRs #143–#186, merged as #187; section 12 covers the stack after it. This is the hand test before they merge: one
 pass on the lab with two people, the coach on the web and phone, a client on the phone. Each
 section says which PRs it covers, so a failure points at a branch. Tick as you go; write what
 went wrong under the line.
@@ -125,6 +125,53 @@ went wrong under the line.
 - [ ] No browser-native selects, checkboxes or time inputs anywhere in coaching.
 - [ ] Every row (clients, conversations, check-ins, cards, habits, plugins) has a right-click
       and ⋯ menu with the same items, and a key to open it.
+
+## 12. After the merge: messages, invites, programs that start from the client (#188–#204)
+
+The stack on top of main. Each line names its PR.
+
+**Messages and invites (#188, #189)**
+- [ ] Me › Messages: chips All / Friends / Coaches / Requests; a coach's conversation opens the
+      coaching pane; My coach has a Message button, no chat. Phone: the same chips.
+- [ ] Coach: ⋯ › Invite to coaching in a chat sends a card (headline, packages, an offer if picked).
+- [ ] Profile › Messages sent for you: turn one on; ask as a client; it arrives marked "Sent automatically".
+
+**Sets, estimates, wording (#190–#192)**
+- [ ] A plugin block whose entries are sets (the Weight finder) shows in the exercise's history.
+- [ ] A lift never logged starts from a related one ("From your deadlift 200 × 5"), on the light side.
+- [ ] Programs › Progressions and › Swaps; nothing says "Rule" any more.
+
+**Builder (#193–#197, #204)**
+- [ ] Edit weeks: Deload, Test, your own type; the client's Home names the week.
+- [ ] + Add: pick three curls, As a tri-set; drag the group by its grip; it stays a superset on the phone.
+- [ ] Group header → settings (name, Circuit, rests); + Exercise into it; Ungroup.
+- [ ] An exercise measuring Time (plank) runs as a timed hold on the phone; cardio intervals show as "Planned".
+- [ ] ⋯ › Replace from week… and Only in some weeks…; Show: Week N; Every week shows "–" outside.
+- [ ] See every week: an example lifter's numbers, Change their lifts, week types in the headings.
+- [ ] An old program whose weeks differ now opens in the builder.
+
+**Phases and starting points (#198–#200)**
+- [ ] + Phase: Find your weights (week 1), then a progression. On the phone, week 1 runs each lift
+      as the Weight finder ("How many more could you have done?").
+- [ ] After week 1, Today › Decide: "… found their weights" → Check them → change one → Looks right.
+- [ ] Taking a spot: "Your training from before" with the real count; off hides older workouts from the coach.
+- [ ] Client › Training: Starting point (lifts, how they train, weekly sets, start-up answers, kit, experience).
+- [ ] Assign to one client → Next: check it fits → swap one in their copy → Find your weights first.
+- [ ] Phone: swapping asks why; the coach gets a message.
+
+**How-tos (#201, #202)**
+- [ ] A new lifter's Home: Before your first session; step through; Got it · next.
+- [ ] In the workout: How to beside the name; the first-set hint says "Find your working weight".
+- [ ] Programs › Exercises › How-tos: Write yours (a picture, a YouTube link with ?t=, cues, a note);
+      the client's How to shows it; Use LogIt's puts it back. Builder: How-tos → Never hides them.
+
+**Equipment (#203)**
+- [ ] Phone: Settings › Workout › What you bring → stack pin on.
+- [ ] A machine with no settings: when the plan asks for more than you've done, "Is X the most this
+      machine goes?" → the machine editor, Past the top.
+- [ ] At the top with the pin: Not today → this session at the top with more reps.
+- [ ] Coach: client › Training shows "… outgrows their gym in week N · Decide"; pick a harder
+      version; the phone shows it as the coach's plan at the top.
 
 ## Findings
 

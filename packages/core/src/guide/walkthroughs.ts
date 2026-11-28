@@ -305,7 +305,7 @@ export const STUDIO_CHAPTERS: Chapter[] = [
     id: "studio.program",
     walkthrough: "studio",
     title: "Build a program",
-    blurb: "One week of days, a rule, sets and loads",
+    blurb: "One week of days, a progression, week types and phases",
     minutes: 4,
     feature: "coach-programs",
     steps: [
@@ -317,7 +317,7 @@ export const STUDIO_CHAPTERS: Chapter[] = [
       {
         id: "editor", on: "web", route: "/coaching/programs", target: "program-editor", kind: "look",
         title: "One week of days",
-        body: "You build one week and it applies to every week. Pick a day, add exercises, supersets, cardio or mobility, and click one to set its sets, reps (8 or 8-10), load (kg, or 75% of their best), rest and tempo, its swaps and a note. Choose the rule that moves the numbers each week, the length, and any lighter weeks.",
+        body: "You build one week and it applies to every week. Pick a day and use + Add to search exercises, cardio and drills; pick several to add them as a superset or circuit. Click an exercise to open it in place: what it measures, sets, reps (8 or 8-10), load (kg, or 75% of their best), rest, tempo, swaps and a note. Drag the grip to reorder. Above the days: the progression that moves the numbers, the length, each week's type (Deload, Test, your own) and phases like Find your weights first. See every week shows it with an example lifter's numbers.",
       },
       {
         id: "save", on: "web", route: "/coaching/programs", target: "program-save", kind: "do", signal: "program.saved",
@@ -339,7 +339,7 @@ export const STUDIO_CHAPTERS: Chapter[] = [
       {
         id: "assign", on: "web", route: "/coaching/programs", target: "programs-assign", kind: "do", signal: "program.assigned",
         title: "Assign to a client",
-        body: "Open the program and choose Assign…. Pick who gets it (Niamh, if you're using the sample clients; you can pick several) and when it starts: when they tap Start, or a date you choose. Someone already on a program can switch now or start this one when theirs ends. Each gets their own copy.",
+        body: "Open the program and choose Assign…. Pick who gets it (Niamh, if you're using the sample clients; you can pick several) and when it starts: when they tap Start, or a date you choose. Someone already on a program can switch now or start this one when theirs ends. For one client, Next: check it fits shows where each weight starts from, lets you swap in their copy, and offers a Find your weights week first. Each gets their own copy.",
       },
       {
         // The tab in the route takes them back to the list from the program they just assigned.
