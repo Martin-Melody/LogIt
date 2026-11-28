@@ -3,14 +3,11 @@
      start-up form said (what hurts, goal) is shown in their own words: nothing is matched. -->
 <script lang="ts">
   import { onMount } from "svelte";
-  import { coachApi, type Sharing } from "@logit/core/api/coachApi";
-  import { getWebCheckinRepo } from "$lib/deps";
+  import type { Sharing } from "@logit/core/api/coachApi";
   import { loadWebLibrary } from "$lib/features/library/libraryData";
-  import { answerText } from "@logit/core/domain/coachCards";
   import { startingPoint, type StartingLift } from "@logit/core/domain/startingPoint";
-  import type { CheckinSubmission } from "@logit/core/domain/Checkin";
   import type { WorkoutSession } from "@logit/core/domain/workout";
-  import { parseSubmission } from "../coachingData";
+  import { startupAnswers } from "./startupAnswers";
 
   let { clientId, name, sharing, sessions, programExercises = [] }: {
     clientId: string;
@@ -30,19 +27,7 @@
       for (const e of lib.entries) if (e.kind === "strength") by.set(e.item.name.trim().toLowerCase(), e.item.primaryMuscles.map(String));
       muscleOf = (n) => by.get(n.trim().toLowerCase()) ?? [];
     }, () => {});
-    if (!sharing.checkins) return;
-    void (async () => {
-      const schedules = await getWebCheckinRepo().listMySchedules().catch(() => []);
-      const startupIds = new Set(schedules.filter((r) => r.recipientUserId === clientId && r.schedule.kind === "startup").map((r) => r.schedule.id));
-      if (!startupIds.size) return;
-      const items = (await coachApi.checkinInbox(365).catch(() => [])).filter((i) => i.clientUserId === clientId);
-      const sub = items.map(parseSubmission).find((s): s is CheckinSubmission => !!s && startupIds.has(s.scheduleId) && !!s.submittedAtMs);
-      if (!sub?.asked) return;
-      startup = sub.asked
-        .filter((q) => q.type !== "heading" && q.type !== "photo")
-        .map((q) => ({ prompt: q.prompt, answer: answerText(q, sub.answers.find((a) => a.questionId === q.id)) }))
-        .filter((x) => x.answer && x.answer !== "–");
-    })();
+    if (sharing.checkins) void startupAnswers(clientId).then((a) => (startup = a));
   });
 
   const sp = $derived(startingPoint(sessions, Date.now(), { muscleOf, also: programExercises }));

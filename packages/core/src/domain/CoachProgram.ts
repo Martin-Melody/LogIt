@@ -1069,6 +1069,29 @@ export function removePhase(program: CoachProgram, phaseId: string): CoachProgra
   };
 }
 
+/** "Find your weights first" when assigning (canvas SP2): a week of LogIt's Weight finder before
+ * week 1, the same days, everything after moving on a week. */
+export function addFindWeekFirst(program: CoachProgram): CoachProgram {
+  const weeks = [...program.weeks].sort((a, b) => a.weekNumber - b.weekNumber);
+  const first = weeks[0];
+  if (!first || program.phases?.some((p) => p.findsWeights && p.weeks.from === 1)) return program;
+  // Everything moves on a week; what started in week 1 starts in the find week instead.
+  const shiftBlock = (r: WeekRange): WeekRange => ({ from: r.from === 1 ? 1 : r.from + 1, to: r.to + 1 });
+  const shift = (r: WeekRange): WeekRange => ({ from: r.from + 1, to: r.to + 1 });
+  const moveDays = (days: ProgramDay[]) => days.map((d) => ({ ...d, blocks: d.blocks.map((b) => (b.weeks ? ({ ...b, weeks: shiftBlock(b.weeks) } as ProgramBlock) : b)) }));
+  const { type: _t, lighter: _l, ...plain } = first;
+  const moved: CoachProgram = {
+    ...program,
+    weeks: [
+      // Week 1's days with the same block ids, so each exercise is the same one in every week.
+      { ...plain, id: createId("pweek"), weekNumber: 1, days: moveDays(first.days) },
+      ...weeks.map((w) => ({ ...w, weekNumber: w.weekNumber + 1, days: moveDays(w.days) })),
+    ],
+    ...(program.phases ? { phases: program.phases.map((p) => ({ ...p, weeks: shift(p.weeks) })) } : {}),
+  };
+  return putPhase(moved, { id: createId("phase"), name: "Find your weights", weeks: { from: 1, to: 1 }, findsWeights: true, blockPluginId: WEIGHT_FINDER_ID, pack: FIND_YOUR_WEIGHTS_PACK });
+}
+
 /** A weight-finding phase in its last week, or the week after, that the coach hasn't checked:
  * "Niamh found her weights · Check them" (canvas SP4). Unchecked, its numbers apply anyway. */
 export function handoffDue(program: Pick<CoachProgram, "phases" | "handoffs">, n: number): ProgramPhase | null {

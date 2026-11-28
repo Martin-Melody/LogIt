@@ -100,6 +100,9 @@ const ACTIONS: Record<string, (page: Page) => Promise<void>> = {
     // Niamh if she's joined by now, else whoever's first.
     if (await niamh.count()) await niamh.first().click();
     else await p.getByRole("option").first().click();
+    // One client: the Check it fits step comes first (canvas SP2).
+    const next = dialog.getByRole("button", { name: "Next: check it fits" });
+    if (await next.count()) await next.click();
     await dialog.getByRole("button", { name: "Assign", exact: true }).click();
   },
   "swap.added": async (p) => {

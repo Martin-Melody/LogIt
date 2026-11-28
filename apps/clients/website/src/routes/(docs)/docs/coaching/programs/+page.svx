@@ -158,7 +158,12 @@ the block (up to the next week with a type) are on the cell's menu.
 
 <HowTo id="studio.assign" />
 
-From a program, or from a client's page, Assign gives one or several clients their own copy. It
+From a program, or from a client's page, Assign gives one or several clients their own copy.
+For one client, **Next: check it fits** shows each exercise's starting weight and where it came
+from (their logged sets, a related lift in blue, or "first set finds it"), lets you swap an
+exercise in their copy only, shows what they said hurts in their start-up form word for word, and
+asks whether to start straight away or with a Find your weights week first (picked for you when
+there's nothing to go on). It
 starts when they tap Start on their phone, or on a date you choose. Someone already on a program
 can switch now at week 1, or start the new one the day theirs ends. Gave someone the wrong program
 a few weeks ago? **Replace, at week N** starts the right one on the date the wrong one did, as if

@@ -38,6 +38,8 @@
   let pending = $state<{ name: string; id?: string } | null>(null);
   let rest = $state(false);
   let reason = $state("");
+  const WHY = ["It hurts", "I don't feel safe", "Not at my gym", "Something else"] as const;
+  let why = $state<(typeof WHY)[number] | null>(null);
   /** "Do something else today": any exercise, whatever the coach's rule. */
   let free = $state(false);
 
@@ -53,6 +55,7 @@
       pending = null;
       rest = false;
       reason = "";
+      why = null;
       free = false;
       return;
     }
@@ -78,9 +81,12 @@
     pending = c;
   }
   async function confirm() {
-    if (!pending) return;
-    await onPick({ name: pending.name, exerciseId: pending.id }, rest ? { reason: reason.trim() || undefined } : null);
-    if (rest) toast.success(`${coach.name} has been told.`);
+    if (!pending || !why) return;
+    const full = [why, reason.trim()].filter(Boolean).join(": ");
+    await onPick({ name: pending.name, exerciseId: pending.id }, rest ? { reason: full } : null);
+    // "For the rest of the program" sends its own card; just today is a message with the why.
+    if (!rest) await sendMessage(coach.relationshipId, `I swapped ${target.name} for ${pending.name} today. ${full}.`).catch(() => {});
+    toast.success(`${coach.name} has been told.`);
     onOpenChange(false);
   }
 
@@ -127,14 +133,20 @@
             <span class="text-[15px] font-medium">For the rest of the program</span><span class="text-xs text-muted-foreground">Later days start with {pending.name}. {coach.name} is told.</span>
           </button>
         </div>
-        {#if rest}
-          <label for="swap-why" class="text-sm font-medium">Why <span class="font-normal text-muted-foreground">optional, {coach.name} sees it</span></label>
-          <input id="swap-why" bind:value={reason} maxlength="140" placeholder="The hack squat at my gym is always taken"
-            class="h-11 w-full rounded-[12px] border border-border bg-background px-3.5 text-[15px] focus:outline-none focus:ring-1 focus:ring-ring" />
-        {/if}
+        <!-- Canvas SP2: why, so the coach hears about it whatever their swap rule allows. -->
+        <span class="text-sm font-medium">Why? <span class="font-normal text-muted-foreground">{coach.name} is told</span></span>
+        <div class="flex flex-wrap gap-2" role="radiogroup" aria-label="Why">
+          {#each WHY as w (w)}
+            <button type="button" role="radio" aria-checked={why === w} onclick={() => (why = w)}
+              class="h-10 rounded-full border px-3.5 text-sm transition-colors {why === w ? 'border-primary bg-primary/10 font-medium' : 'border-border'}">{w}</button>
+          {/each}
+        </div>
+        <label for="swap-why" class="sr-only">More about why</label>
+        <input id="swap-why" bind:value={reason} maxlength="140" placeholder={why === "It hurts" ? "Left knee when I go deep" : why === "Not at my gym" ? "No hack squat here" : "Anything else to say (optional)"}
+          class="h-11 w-full rounded-[12px] border border-border bg-background px-3.5 text-[15px] focus:outline-none focus:ring-1 focus:ring-ring" />
         <div class="flex gap-2">
           <Button variant="outline" class="h-11 flex-1" onclick={() => (pending = null)}>Back</Button>
-          <Button class="h-11 flex-1" onclick={() => void confirm()}>Swap</Button>
+          <Button class="h-11 flex-1" disabled={!why} onclick={() => void confirm()}>Swap</Button>
         </div>
       </div>
     {:else if asking !== null}

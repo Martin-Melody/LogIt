@@ -32,3 +32,17 @@ describe("exercises in some weeks (6.7)", () => {
     expect(programDaySession(d, { weekNumber: 2 }).blocks).toHaveLength(2);
   });
 });
+
+describe("Find your weights first (6.11)", () => {
+  it("adds a find week before week 1 and moves everything on a week", async () => {
+    const { addFindWeekFirst, inWeek } = await import("./CoachProgram");
+    const p = setBlockWeeks(setBlockWeeks(program, "w1", "d", "bench", { from: 1, to: 4 }), "w1", "d", "row", { from: 5, to: 6 });
+    const q = addFindWeekFirst(p);
+    expect(q.weeks).toHaveLength(7);
+    expect(q.phases?.[0]).toMatchObject({ weeks: { from: 1, to: 1 }, findsWeights: true });
+    const blocks = q.weeks[0]!.days[0]!.blocks;
+    expect(blocks.map((b) => [b.id, b.weeks])).toEqual([["bench", { from: 1, to: 5 }], ["row", { from: 6, to: 7 }]]);
+    expect(blocks.filter((b) => inWeek(b, 1)).map((b) => b.id)).toEqual(["bench"]);
+    expect(q.weeks[0]!.type?.kind).toBe("find");
+  });
+});
