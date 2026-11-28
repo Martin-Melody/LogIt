@@ -1187,7 +1187,7 @@
   onAddWarmup={handleAddWarmup}
   onMenu={() => (menuOpen = true)}
   onSettings={openSettings}
-  onHowTo={timesDone < 3 && showsHowTos(coachProgram) ? openHowTo : undefined}
+  onHowTo={timesDone < 3 && showsHowTos(coachProgram) && !(showFirstSetHint && emptyBarStart) ? openHowTo : undefined}
   onToggleCollapse={() => (collapsed = !collapsed)}
   onAddSet={handleAddSet}
   onOpenDetail={openDetail}
