@@ -86,14 +86,17 @@ export function liftKind(name: string): LiftKind | null {
 }
 
 /** What someone has logged, per lift: their best estimated max in the window and the set it came from. */
-export type KnownLift = { name: string; e1rm: number; weight: number; reps: number; atMs: number };
+export type KnownLift = { name: string; e1rm: number; weight: number; reps: number; atMs: number; /** In how many workouts. */ sessions?: number };
 
 /** Best estimated max of each lift in the last `days` (working sets, 1–12 reps), from logged sessions. */
 export function knownLifts(sessions: WorkoutSession[], now: number, days = 180): KnownLift[] {
   const by = new Map<string, KnownLift>();
+  const times = new Map<string, Set<string>>();
   for (const s of sessions) {
     if (s.excludeFromProgression || (s.startedAtMs ?? 0) < now - days * 86_400_000) continue;
     for (const ex of loggedExercises(s)) {
+      const k = ex.exerciseName.trim().toLowerCase();
+      if (ex.sets.some((x) => x.setType !== "warmup" && x.weight > 0 && x.reps > 0)) times.set(k, (times.get(k) ?? new Set()).add(s.id));
       for (const set of ex.sets) {
         if (set.setType === "warmup" || set.weight <= 0 || set.reps < 1 || set.reps > 12) continue;
         const e1rm = estimated1RM(set.weight, set.reps);
@@ -103,8 +106,16 @@ export function knownLifts(sessions: WorkoutSession[], now: number, days = 180):
       }
     }
   }
-  return [...by.values()];
+  return [...by.values()].map((k) => ({ ...k, sessions: times.get(k.name.toLowerCase())?.size ?? 1 }));
 }
+
+/** Known lifts worth working others out from: done in two or more workouts, so not someone's
+ * very first, careful sets (a beginner's empty-bar squat says little about their deadlift). */
+export const solidLifts = (known: KnownLift[]) => known.filter((k) => (k.sessions ?? 1) >= 2);
+
+/** The smallest estimated max a related start is planned from: below it, 2.5 kg steps and
+ * rounding make nonsense ("7.5 kg × 19"), so the first set finds the weight instead. */
+export const MIN_RELATED_E1RM_KG = 30;
 
 export type RelatedEstimate = {
   /** A cautious estimated max for the target, kg. */

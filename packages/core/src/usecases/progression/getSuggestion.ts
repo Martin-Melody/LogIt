@@ -14,7 +14,7 @@ import type { PlannedTargets } from "../../domain/WorkoutSplit";
 import { getExerciseHistory } from "./getExerciseHistory";
 import type { ProgressionDeps } from "./deps";
 import { startingLiftEntry, startingLiftLine, type StartingLift } from "../../domain/startingLift";
-import { knownLifts, relatedEstimate, type RelatedEstimate } from "../../domain/relatedLifts";
+import { knownLifts, MIN_RELATED_E1RM_KG, relatedEstimate, solidLifts, type RelatedEstimate } from "../../domain/relatedLifts";
 
 // How many of *this exercise's own* most recent sessions the algorithm sees —
 // not a global cap across every exercise (that was the bug: fetching "the last
@@ -84,7 +84,8 @@ export async function getSuggestion(
   // as a 5-rep set it stands for. "From your deadlift 200 × 5 · a guess".
   let related: RelatedEstimate | null = null;
   if (fullHistory.length === 0 && !typedLift) {
-    related = relatedEstimate(exercise.name, knownLifts(await workoutRepo.listAllSessions().catch(() => []), nowMs()));
+    related = relatedEstimate(exercise.name, solidLifts(knownLifts(await workoutRepo.listAllSessions().catch(() => []), nowMs())));
+    if (related && related.e1rmKg < MIN_RELATED_E1RM_KG) related = null;
   }
   const startingLift: StartingLift | null = typedLift
     ?? (related ? { exerciseId: exercise.id, exerciseName: exercise.name, weightKg: Math.max(2.5, Math.floor(related.e1rmKg / (1 + 5 / 30) / 2.5) * 2.5), reps: 5, enteredAtMs: nowMs() } : null);
